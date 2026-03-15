@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mcprowler-scan
+  namespace: mcprowler
+  labels:
+    app.kubernetes.io/name: mcprowler
+    app.kubernetes.io/part-of: agentsmith
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mcprowler
+    spec:
+      serviceAccountName: mcprowler
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: scanner
+          image: mcprowler:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--k8s-discover"
+            - "--k8s-discover-namespaces"
+            - "hammerhand"
+            - "--k8s-namespace"
+            - "hammerhand"
+            - "--verbose"
+            - "--json"
+            - "/reports/scan.json"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: reports
+              mountPath: /reports
+      volumes:
+        - name: reports
+          emptyDir: {}

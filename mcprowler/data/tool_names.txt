@@ -1,0 +1,105 @@
+# Default tool names for ToolServerSession enumeration.
+# One per line. Lines starting with # are ignored. Blank lines ignored.
+# Add engagement-specific names to a custom file and pass via --tool-names-file.
+
+# Cluster / K8s operations
+get_cluster_health
+get_pod_status
+get_node_metrics
+get_pods
+get_nodes
+get_services
+get_namespaces
+get_deployments
+get_events
+get_logs
+get_config
+get_configmap
+get_secret
+get_secrets
+list_pods
+list_services
+list_namespaces
+list_deployments
+list_nodes
+
+# Service management
+restart_service
+restart_pod
+scale_service
+scale_deployment
+deploy
+rollback
+upgrade
+
+# Diagnostics / execution
+cluster_diagnostics
+run_diagnostics
+run_command
+run_query
+execute
+execute_command
+exec
+shell
+eval
+diagnose
+troubleshoot
+
+# CRUD / data
+list_tools
+list_resources
+get_tool
+get_resource
+create
+read
+update
+delete
+query
+search
+find
+fetch
+lookup
+
+# Health / status / info
+health
+status
+info
+version
+ping
+whoami
+help
+describe
+inspect
+check
+
+# Auth / identity
+authenticate
+login
+verify_token
+get_user
+get_users
+get_roles
+get_permissions
+
+# File / storage
+read_file
+write_file
+list_files
+upload
+download
+
+# Network / HTTP
+send_request
+http_get
+http_post
+call_api
+webhook
+
+# AI / LLM
+generate
+summarize
+analyze
+classify
+embed
+chat
+complete

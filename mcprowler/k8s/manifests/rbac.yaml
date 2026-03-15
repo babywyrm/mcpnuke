@@ -1,0 +1,40 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mcprowler-reader
+  labels:
+    app.kubernetes.io/name: mcprowler
+    app.kubernetes.io/part-of: agentsmith
+rules:
+  # Service discovery: find MCP endpoints
+  - apiGroups: [""]
+    resources: ["services", "endpoints"]
+    verbs: ["get", "list"]
+  # RBAC audit: enumerate what service accounts can do
+  - apiGroups: [""]
+    resources: ["pods", "secrets", "configmaps", "serviceaccounts"]
+    verbs: ["get", "list"]
+  # Network policy audit
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list"]
+  # Deployment/StatefulSet enumeration for pod spec analysis
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mcprowler-reader
+  labels:
+    app.kubernetes.io/name: mcprowler
+    app.kubernetes.io/part-of: agentsmith
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: mcprowler-reader
+subjects:
+  - kind: ServiceAccount
+    name: mcprowler
+    namespace: mcprowler

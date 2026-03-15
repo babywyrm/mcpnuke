@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mcprowler-impersonate
+  labels:
+    app.kubernetes.io/name: mcprowler
+    app.kubernetes.io/part-of: agentsmith
+rules:
+  # SA blast radius mapping: impersonate other ServiceAccounts to enumerate
+  # their effective permissions via SelfSubjectRulesReview.
+  # This is an elevated privilege -- only apply if you want full RBAC auditing.
+  - apiGroups: [""]
+    resources: ["users", "groups", "serviceaccounts"]
+    verbs: ["impersonate"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mcprowler-impersonate
+  labels:
+    app.kubernetes.io/name: mcprowler
+    app.kubernetes.io/part-of: agentsmith
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: mcprowler-impersonate
+subjects:
+  - kind: ServiceAccount
+    name: mcprowler
+    namespace: mcprowler
