@@ -647,8 +647,15 @@ def detect_transport(
     connect_timeout: float = 25.0,
     verbose: bool = False,
     auth_token: str | None = None,
+    log=None,
     **kwargs,
 ) -> MCPSession | HTTPSession | ToolServerSession | None:
+    """Detect MCP transport at the given URL.
+
+    Tries SSE, HTTP POST (Streamable HTTP), SSE+POST combos, and custom tool servers.
+    When verbose=True and log is provided, emits detailed probe status.
+    """
+    _log = log or (lambda msg: None)
     parsed = urlparse(url)
     base = f"{parsed.scheme}://{parsed.netloc}"
     hint = parsed.path.rstrip("/") or None
@@ -660,13 +667,22 @@ def detect_transport(
             seen_paths.add(p)
             ordered_paths.append(p)
 
+    if verbose:
+        _log(f"  [dim]Probing {len(ordered_paths)} SSE path(s) on {base}[/dim]")
+
     for sse_path in ordered_paths:
+        if verbose:
+            _log(f"  [dim]  SSE probe: {base}{sse_path}[/dim]")
         if not _probe_sse_path(base, sse_path, timeout=6.0, auth_token=auth_token):
             continue
 
+        if verbose:
+            _log(f"  [dim]  SSE stream found at {sse_path}, waiting for endpoint...[/dim]")
         session = MCPSession(base, sse_path, timeout=connect_timeout, auth_token=auth_token)
 
         if session.wait_ready(timeout=12.0) and session.post_url:
+            if verbose:
+                _log(f"  [dim]  SSE ready: post_url={session.post_url}[/dim]")
             return session
 
         session.close()
@@ -680,31 +696,62 @@ def detect_transport(
             seen_post.add(p)
             ordered_post.append(p)
 
+    if verbose:
+        _log(f"  [dim]Probing {len(ordered_post)} HTTP POST path(s) on {base}[/dim]")
+
     mcp_headers = _mcp_headers(auth_token)
     for path in ordered_post:
         post_url = base + path
         try:
+            if verbose:
+                _log(f"  [dim]  POST probe: {post_url}[/dim]")
             r = client.post(
                 post_url,
                 json=_jrpc("initialize", MCP_INIT_PARAMS),
                 headers=mcp_headers,
                 timeout=5,
             )
+            if verbose:
+                _log(f"  [dim]  → HTTP {r.status_code} ({r.headers.get('content-type', 'no ct')})[/dim]")
+
+            if r.status_code in (401, 403):
+                www_auth = r.headers.get("www-authenticate", "")
+                if verbose:
+                    hint_msg = f" ({www_auth})" if www_auth else ""
+                    _log(f"  [yellow]  Auth required: HTTP {r.status_code} at {path}{hint_msg}[/yellow]")
+                # Auth failure on an MCP endpoint means transport EXISTS but needs auth
+                # Still return the session — the caller can handle auth
+                if "jsonrpc" in r.text or "Bearer" in (www_auth or "") or "token" in r.text.lower():
+                    client.close()
+                    if verbose:
+                        _log(f"  [yellow]  MCP endpoint found at {path} but requires authentication[/yellow]")
+                    return HTTPSession(base, post_url, timeout=connect_timeout, headers=mcp_headers)
+
             is_jsonrpc_body = "jsonrpc" in r.text or "JSON-RPC" in r.text
             is_jsonrpc_error = r.status_code in (400, 422) and (
                 is_jsonrpc_body
                 or "method" in r.text
             )
-            # 200 with JSON or SSE body; 202 Accepted (Streamable HTTP)
             if (
                 (r.status_code in (200, 202) and is_jsonrpc_body)
                 or (r.status_code == 200 and "text/event-stream" in r.headers.get("content-type", ""))
                 or is_jsonrpc_error
             ):
+                if verbose:
+                    _log(f"  [dim]  HTTP MCP endpoint confirmed at {path}[/dim]")
                 client.close()
                 return HTTPSession(base, post_url, timeout=connect_timeout, headers=mcp_headers)
+        except httpx.ConnectError:
+            if verbose:
+                _log(f"  [dim]  → Connection refused[/dim]")
+        except httpx.TimeoutException:
+            if verbose:
+                _log(f"  [dim]  → Timeout[/dim]")
         except Exception:
             pass
+
+    if verbose:
+        _log(f"  [dim]Trying SSE+POST combinations...[/dim]")
 
     for sse_path in ["/sse", ""]:
         for post_path in ["/messages", "/mcp"]:
@@ -729,12 +776,18 @@ def detect_transport(
 
     client.close()
 
-    # Fallback: try custom tool-server detection (non-MCP /execute APIs)
+    if verbose:
+        _log(f"  [dim]Trying ToolServer detection...[/dim]")
+
     tool_session = _detect_tool_server(
         base, hint, connect_timeout, auth_token,
         tool_names_file=kwargs.get("tool_names_file"),
     )
     if tool_session:
+        if verbose:
+            fp = tool_session.fingerprint
+            fw = fp.get("framework", "unknown")
+            _log(f"  [dim]  ToolServer detected (framework={fw})[/dim]")
         return tool_session
 
     return None

@@ -13,6 +13,7 @@ from datetime import datetime
 
 from mcpredator import __version__
 from mcpredator.cli import parse_args, build_url_list
+from mcpredator.core.auth import resolve_auth_token, detect_auth_requirements
 from mcpredator.scanner import scan_target, run_parallel, detect_cross_shadowing
 from mcpredator.reporting import print_report, write_json
 from mcpredator.k8s import run_k8s_checks, discover_services, fingerprint_services
@@ -35,6 +36,24 @@ def main():
     else:
         urls = build_url_list(args)
 
+    # Resolve auth token (direct, OIDC client_credentials, or auto-detect)
+    auth_token = args.auth_token
+    if not auth_token and args.client_id and args.client_secret:
+        try:
+            auth_token = resolve_auth_token(args)
+            console.print(f"  [green]✓[/green] Token acquired via OIDC client_credentials")
+        except RuntimeError as e:
+            console.print(f"  [red]✗[/red] OIDC token fetch failed: {e}")
+            sys.exit(1)
+    elif not auth_token and urls and args.verbose:
+        # Auto-detect auth requirements on first target
+        info = detect_auth_requirements(urls[0])
+        if info.requires_auth:
+            console.print(f"  [yellow]⚠[/yellow]  Target requires auth: {info.summary()}")
+            if info.token_endpoint:
+                console.print(f"  [dim]  Token endpoint: {info.token_endpoint}[/dim]")
+                console.print(f"  [dim]  Use: --oidc-url {info.issuer or '...'} --client-id ID --client-secret SECRET[/dim]")
+
     baseline = {}
     if args.baseline:
         baseline = load_baseline(args.baseline)
@@ -53,8 +72,11 @@ def main():
         panel_lines.append(f"Baseline: {args.baseline}")
     if args.save_baseline:
         panel_lines.append(f"Save baseline: {args.save_baseline}")
-    if args.auth_token:
-        panel_lines.append("Auth: Bearer token")
+    if auth_token:
+        if args.client_id:
+            panel_lines.append(f"Auth: OIDC client_credentials (client={args.client_id})")
+        else:
+            panel_lines.append("Auth: Bearer token")
 
     console.print(
         Panel(
@@ -160,7 +182,7 @@ def main():
                 [],
                 timeout=args.timeout,
                 verbose=args.verbose,
-                auth_token=args.auth_token,
+                auth_token=auth_token,
                 probe_opts=probe_opts,
             )
         ]
@@ -170,7 +192,7 @@ def main():
             timeout=args.timeout,
             workers=args.workers,
             verbose=args.verbose,
-            auth_token=args.auth_token,
+            auth_token=auth_token,
             probe_opts=probe_opts,
         )
 

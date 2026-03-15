@@ -55,9 +55,11 @@ def scan_target(
     console.print(f"\n[bold cyan]▶ {url}[/bold cyan]")
 
     opts = probe_opts or {}
+    _log = console.print if verbose else lambda msg: None
     session = detect_transport(
         url, connect_timeout=timeout, verbose=verbose, auth_token=auth_token,
         tool_names_file=opts.get("tool_names_file"),
+        log=_log,
     )
 
     if not session:
@@ -100,7 +102,16 @@ def scan_target(
         base = f"{parsed.scheme}://{parsed.netloc}"
         sse_path = urlparse(session.sse_url).path
 
-    enumerate_server(session, result, verbose=verbose)
+    enumerate_server(session, result, verbose=verbose, log=_log)
+
+    # Print server info if available
+    if result.server_info:
+        si = result.server_info.get("serverInfo", {})
+        if si:
+            console.print(
+                f"  [dim]Server: {si.get('name', '?')} v{si.get('version', '?')}[/dim]"
+            )
+
     console.print(
         f"  [dim]Tools={len(result.tools)} "
         f"Resources={len(result.resources)} "

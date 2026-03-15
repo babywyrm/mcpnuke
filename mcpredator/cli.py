@@ -59,6 +59,25 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         f"Or set {AUTH_TOKEN_ENV} env var.",
     )
     p.add_argument(
+        "--oidc-url",
+        metavar="URL",
+        default=os.environ.get("MCP_OIDC_URL") or None,
+        help="OIDC issuer URL for token fetch (e.g. http://keycloak:8080/realms/myapp). "
+        "Used with --client-id and --client-secret for automatic token acquisition.",
+    )
+    p.add_argument(
+        "--client-id",
+        metavar="ID",
+        default=os.environ.get("MCP_CLIENT_ID") or None,
+        help="OAuth2 client ID for client_credentials grant. Or set MCP_CLIENT_ID env var.",
+    )
+    p.add_argument(
+        "--client-secret",
+        metavar="SECRET",
+        default=os.environ.get("MCP_CLIENT_SECRET") or None,
+        help="OAuth2 client secret for client_credentials grant. Or set MCP_CLIENT_SECRET env var.",
+    )
+    p.add_argument(
         "--timeout",
         type=float,
         default=25.0,
