@@ -60,6 +60,16 @@ COMMAND_INJECTION_PROBES = [
     f"test $({CANARY})",
 ]
 
+INTERPRETER_INJECTION_PROBES = [
+    ("perl", f'perl -e \'print "{CANARY}"\''),
+    ("ruby", f'ruby -e \'puts "{CANARY}"\''),
+    ("lua", f'lua -e \'print("{CANARY}")\''),
+    ("awk", f"awk 'BEGIN{{print \"{CANARY}\"}}'"),
+    ("python3", f'python3 -c \'print("{CANARY}")\''),
+    ("node", f'node -e \'console.log("{CANARY}")\''),
+    ("php", f'php -r \'echo "{CANARY}";\''),
+]
+
 TEMPLATE_INJECTION_PROBES = [
     "{{7*7}}",
     "${7*7}",

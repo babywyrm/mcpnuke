@@ -23,6 +23,7 @@ from mcpredator.patterns.probes import (
     PARAM_SAFE_VALUES,
     PATH_TRAVERSAL_PROBES,
     COMMAND_INJECTION_PROBES,
+    INTERPRETER_INJECTION_PROBES,
     TEMPLATE_INJECTION_PROBES,
     TEMPLATE_INJECTION_PROBES_V2,
     SQL_INJECTION_PROBES,
@@ -362,6 +363,22 @@ def check_input_sanitization(session, result: TargetResult, probe_opts: dict | N
                             f"Probe: {probe_type}, param: {pname}",
                             evidence=f"Sent: {probe_value}\nGot: {text[:300]}",
                         )
+
+                # Interpreter diversity: try non-bash interpreters that blocklists often miss
+                if any(kw in pname_lower for kw in ("command", "cmd", "exec", "code", "script", "expression", "query")):
+                    for interp_name, interp_probe in INTERPRETER_INJECTION_PROBES:
+                        test_args = {**base_args, pname: interp_probe}
+                        resp = _call_tool(session, name, test_args, timeout=8)
+                        text = _response_text(resp)
+                        if text and CANARY in text:
+                            result.add(
+                                "input_sanitization",
+                                "CRITICAL",
+                                f"Blocklist bypass: '{interp_name}' executed in tool '{name}'",
+                                f"Interpreter '{interp_name}' not blocked — param '{pname}'",
+                                evidence=f"Sent: {interp_probe}\nGot: {text[:300]}",
+                            )
+                            break
 
                 # Dedicated template injection with distinctive products (low false-positive)
                 if pdef.get("type") in (None, "string"):

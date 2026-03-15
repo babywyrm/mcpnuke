@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **Three new static security checks (MCP-T07, MCP-T09, MCP-T14):**
+  - `config_tampering` (MCP-T09) — Flags tools that can modify agent config, system prompt, or tool registry
+  - `webhook_persistence` (MCP-T14) — Flags callback/webhook params enabling persistent re-injection
+  - `credential_in_schema` (MCP-T07) — Detects hardcoded credentials in tool schema definitions
+
 - **Rename: mcprowler → mcpredator** — Full project rename across all source, tests, docs, K8s manifests, and Dockerfile.
 
 - **Verbose mode (`-v`)** — Now emits real output throughout the scan pipeline:

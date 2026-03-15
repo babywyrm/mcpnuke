@@ -55,7 +55,7 @@ packages = ["mcpredator"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --ignore=tests/test_targets"
 
 [tool.ruff]
 target-version = "py311"

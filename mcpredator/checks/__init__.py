@@ -41,6 +41,12 @@ from mcpredator.checks.tool_probes import (
     check_resource_poisoning,
 )
 from mcpredator.checks.response_credentials import check_response_credentials
+from mcpredator.checks.config_tampering import check_config_tampering
+from mcpredator.checks.webhook_persistence import check_webhook_persistence
+from mcpredator.checks.credential_in_schema import check_credential_in_schema
+from mcpredator.checks.exfil_flow import check_exfil_flow
+from mcpredator.checks.ssrf_probe import check_ssrf_probe
+from mcpredator.checks.actuator_probe import check_actuator_probe
 
 
 def run_all_checks(
@@ -77,6 +83,10 @@ def run_all_checks(
     check_rate_limit(result)
     check_prompt_leakage(result)
     check_supply_chain(result)
+    check_config_tampering(result)
+    check_webhook_persistence(result)
+    check_credential_in_schema(result)
+    check_exfil_flow(result)
 
     # ── Behavioral checks (light interaction — always run unless --no-invoke)
     if not no_invoke:
@@ -92,12 +102,18 @@ def run_all_checks(
         check_temporal_consistency(session, result, probe_opts=opts)
         check_resource_poisoning(session, result)
         check_response_credentials(session, result, probe_opts=opts)
+        check_ssrf_probe(session, result, probe_opts=opts)
         check_state_mutation(session, result)
         check_notification_abuse(session, result)
 
     # ── Transport checks ───────────────────────────────────────────────
     if base and sse_path:
         check_sse_security(base, sse_path, result)
+
+    # ── Target surface checks (probe base URL, not tools) ─────────────
+    if base:
+        auth_token = opts.get("auth_token")
+        check_actuator_probe(base, result, auth_token=auth_token)
 
     # ── Cross-cutting / aggregate (run last, they read other findings) ─
     check_multi_vector(result)

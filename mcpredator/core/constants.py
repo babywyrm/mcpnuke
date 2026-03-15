@@ -41,6 +41,18 @@ ATTACK_CHAIN_PATTERNS = [
     ("cross_tool_manipulation", "token_theft"),
     ("response_credentials", "token_theft"),
     ("response_credentials", "remote_access"),
+    ("config_tampering", "code_execution"),
+    ("config_tampering", "tool_poisoning"),
+    ("webhook_persistence", "tool_response_injection"),
+    ("webhook_persistence", "token_theft"),
+    ("credential_in_schema", "token_theft"),
+    ("ssrf_probe", "token_theft"),
+    ("ssrf_probe", "remote_access"),
+    ("actuator_probe", "response_credentials"),
+    ("actuator_probe", "token_theft"),
+    ("exfil_flow", "token_theft"),
+    ("exfil_flow", "remote_access"),
+    ("config_tampering", "webhook_persistence"),
 ]
 
 SHADOW_TARGETS = {

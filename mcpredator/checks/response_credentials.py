@@ -1,4 +1,4 @@
-"""Scan tool response content for leaked credentials (MCP-T07)."""
+"""Scan tool and resource response content for leaked credentials (MCP-T07)."""
 
 import re
 
@@ -8,8 +8,23 @@ from mcpredator.checks.tool_probes import _build_safe_args, _call_tool, _respons
 from mcpredator.patterns.probes import CREDENTIAL_CONTENT_PATTERNS
 
 
+def _scan_text_for_creds(text: str, source: str, result: TargetResult):
+    """Scan a text blob for credential patterns, adding findings."""
+    for pat, cred_type in CREDENTIAL_CONTENT_PATTERNS:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            result.add(
+                "response_credentials",
+                "CRITICAL",
+                f"Credential leak in {source}: {cred_type}",
+                f"Response contains what appears to be a live {cred_type}",
+                evidence=m.group()[:200],
+            )
+            break
+
+
 def check_response_credentials(session, result: TargetResult, probe_opts: dict | None = None):
-    """Call each tool with safe inputs and scan responses for credential patterns.
+    """Scan tool responses and resource content for credential patterns.
 
     Goes beyond error_leakage by checking ALL responses (success and error)
     for secrets like API keys, connection strings, private keys, and passwords
@@ -17,6 +32,7 @@ def check_response_credentials(session, result: TargetResult, probe_opts: dict |
     """
     opts = probe_opts or {}
     with time_check("response_credentials", result):
+        # Scan tool responses
         for tool in result.tools:
             if not _should_invoke(tool, opts):
                 continue
@@ -24,17 +40,25 @@ def check_response_credentials(session, result: TargetResult, probe_opts: dict |
             args = _build_safe_args(tool)
             resp = _call_tool(session, name, args)
             text = _response_text(resp)
-            if not text:
-                continue
+            if text:
+                _scan_text_for_creds(text, f"tool '{name}' response", result)
 
-            for pat, cred_type in CREDENTIAL_CONTENT_PATTERNS:
-                m = re.search(pat, text, re.IGNORECASE)
-                if m:
-                    result.add(
-                        "response_credentials",
-                        "CRITICAL",
-                        f"Credential leak in tool '{name}' response: {cred_type}",
-                        f"Tool response contains what appears to be a live {cred_type}",
-                        evidence=m.group()[:200],
-                    )
-                    break
+        # Scan resource contents
+        for resource in result.resources:
+            uri = resource.get("uri", "")
+            try:
+                resp = session.call("resources/read", {"uri": uri}, timeout=15)
+                if not resp or "result" not in resp:
+                    continue
+                for content in resp["result"].get("contents", []):
+                    text = content.get("text", "") or content.get("blob", "")
+                    if text:
+                        _scan_text_for_creds(text, f"resource '{uri}'", result)
+            except Exception:
+                pass
+
+        # Scan server_info from initialize (may contain leaked config)
+        if result.server_info:
+            import json
+            info_text = json.dumps(result.server_info, default=str)
+            _scan_text_for_creds(info_text, "server initialize response", result)
