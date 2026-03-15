@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Zero-config mcpredator runner — no venv activation needed.
+# Usage: ./scan --targets http://localhost:9090
+#        ./scan --port-range localhost:9001-9010 --verbose
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
+
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "Error: .venv not found — run ./quickstart.sh first" >&2
+    exit 1
+fi
+
+exec "$VENV_PYTHON" -m mcpredator "$@"

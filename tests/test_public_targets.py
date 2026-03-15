@@ -2,8 +2,7 @@
 Smoke tests against public MCP servers.
 
 Fast transport-detection only — no full scans (those are slow and flaky).
-Run with:  pytest mcpredator/tests/test_public_targets.py -v
-Skip with: MCP_ATTACK_SKIP_REMOTE=1 pytest ...
+Skipped by default — opt in with:  MCP_PUBLIC_TARGETS=1 pytest tests/test_public_targets.py -v
 """
 
 import os
@@ -14,8 +13,8 @@ from mcpredator.core.models import TargetResult
 from mcpredator.core.enumerator import enumerate_server
 
 skip_remote = pytest.mark.skipif(
-    os.environ.get("MCP_ATTACK_SKIP_REMOTE", "0") == "1",
-    reason="MCP_ATTACK_SKIP_REMOTE=1",
+    os.environ.get("MCP_PUBLIC_TARGETS", "0") != "1",
+    reason="MCP_PUBLIC_TARGETS!=1 — set MCP_PUBLIC_TARGETS=1 to run against live public servers",
 )
 
 TARGETS = {

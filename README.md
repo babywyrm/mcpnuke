@@ -19,21 +19,25 @@ for training, or point at any MCP server in dev/staging/prod.
 
 ## Install
 
-**uv (recommended):**
+**Quickstart (recommended):**
 ```bash
-uv pip install -e .
-mcpredator --targets http://localhost:9090
+git clone https://github.com/babywyrm/mcpredator.git && cd mcpredator
+./quickstart.sh
 ```
 
-**pip:**
+This creates a `.venv`, installs everything, runs tests, and prints usage.
+After that, `./scan` just works — no activation needed.
+
+**Manual (uv):**
 ```bash
-pip install -e .
-mcpredator --targets http://localhost:9090
+uv venv .venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
 ```
 
-**No install (run as module):**
+**Manual (pip):**
 ```bash
-python -m mcpredator --targets http://localhost:9090
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
 **From PyPI** (coming soon):
@@ -47,22 +51,26 @@ uv pip install mcpredator
 
 ```bash
 # Single target
-mcpredator --targets http://localhost:2266
+./scan --targets http://localhost:2266
 
 # DVMCP challenges 1–10
-mcpredator --port-range localhost:9001-9010 --verbose
+./scan --port-range localhost:9001-9010 --verbose
 
 # Authenticated endpoint (JWT, PAT, etc.)
-mcpredator --targets https://api.githubcopilot.com/mcp/ --auth-token ghp_xxx
+./scan --targets https://api.githubcopilot.com/mcp/ --auth-token ghp_xxx
 
 # JSON report for CI
-mcpredator --port-range localhost:9001-9010 --json report.json
+./scan --port-range localhost:9001-9010 --json report.json
 
 # Differential scan (compare to baseline)
-mcpredator --targets http://localhost:9001 --baseline baseline.json
+./scan --targets http://localhost:9001 --baseline baseline.json
+
+# Run tests
+.venv/bin/pytest tests/ -v
 ```
 
-All commands also work as `mcpredator` or `python3 -m mcpredator`.
+All `./scan` commands also work as `mcpredator` (with venv activated)
+or `.venv/bin/mcpredator`.
 
 ---
 
@@ -193,7 +201,7 @@ Every tool response is scanned for:
 ## CLI Reference
 
 ```
-mcpredator [OPTIONS]
+./scan [OPTIONS]
 
 Target Selection:
   --targets URL [URL ...]     One or more MCP target URLs
@@ -261,17 +269,17 @@ In `--safe-mode`, these are skipped while read-only tools (`get`, `list`,
 ./tests/dvmcp_reset.sh --setup-only
 
 # Terminal 2: scan
-mcpredator --port-range localhost:9001-9010 --verbose
+./scan --port-range localhost:9001-9010 --verbose
 ```
 
 ### Custom tool server (non-MCP /execute API)
 
 ```bash
 # Servers that use POST /execute with {"tool": "...", "query": "..."} instead of MCP
-mcpredator --targets http://localhost:5000/execute --verbose
+./scan --targets http://localhost:5000/execute --verbose
 
 # With custom tool names wordlist for a specific engagement
-mcpredator --targets http://localhost:5000/execute --tool-names-file my_tools.txt
+./scan --targets http://localhost:5000/execute --tool-names-file my_tools.txt
 ```
 
 The scanner auto-detects non-MCP tool servers by probing 20+ common
@@ -283,17 +291,17 @@ custom wordlist. All static + behavioral checks run against discovered tools.
 ### Authenticated endpoint (GitHub MCP)
 
 ```bash
-mcpredator --targets https://api.githubcopilot.com/mcp/ --auth-token ghp_xxx
+./scan --targets https://api.githubcopilot.com/mcp/ --auth-token ghp_xxx
 
 # Or via env var
 export MCP_AUTH_TOKEN=ghp_xxx
-mcpredator --targets https://api.githubcopilot.com/mcp/
+./scan --targets https://api.githubcopilot.com/mcp/
 ```
 
 ### Remote public MCP (DeepWiki)
 
 ```bash
-mcpredator --targets https://mcp.deepwiki.com/mcp
+./scan --targets https://mcp.deepwiki.com/mcp
 ```
 
 Use `/mcp` (Streamable HTTP), not `/sse`.
@@ -302,10 +310,10 @@ Use `/mcp` (Streamable HTTP), not `/sse`.
 
 ```bash
 # Save baseline
-mcpredator --targets http://localhost:9001 --save-baseline baseline.json
+./scan --targets http://localhost:9001 --save-baseline baseline.json
 
 # Later: detect regressions
-mcpredator --targets http://localhost:9001 --baseline baseline.json
+./scan --targets http://localhost:9001 --baseline baseline.json
 ```
 
 Reports added/removed/modified tools, resources, prompts. New tools
@@ -314,7 +322,7 @@ flagged as MEDIUM for review.
 ### JSON report for CI
 
 ```bash
-mcpredator --port-range localhost:9001-9010 --json report.json
+./scan --port-range localhost:9001-9010 --json report.json
 ```
 
 Exit code is 1 if any CRITICAL or HIGH findings; 0 otherwise. Use in
@@ -323,9 +331,7 @@ CI pipelines to gate deployments.
 ### Run tests
 
 ```bash
-uv run pytest
-# or
-python -m pytest tests/ -v
+.venv/bin/pytest tests/ -v
 ```
 
 ---
@@ -348,6 +354,9 @@ When a cluster has many services (dozens or hundreds of potential MCP endpoints)
   to export a URL list for triage or splitting across jobs.
 - **Service fingerprinting** — Uses the same worker count for parallel HTTP
   probes when enumerating frameworks and exposed actuator/debug paths.
+
+> **Note:** Use `mcpredator` (not `./scan`) in K8s manifests — inside the
+> container the package is installed globally.
 
 ### Quick deploy
 
@@ -418,8 +427,10 @@ args:
 ## Project Structure
 
 ```
-mcpredator/                     # repo root
-├── mcpredator/                 # Python package
+.
+├── quickstart.sh              # One-command setup (venv + install + tests)
+├── scan                       # Zero-config runner (no venv activation needed)
+├── mcpredator/                # Python package
 │   ├── __init__.py            # Version, package docstring
 │   ├── __main__.py            # Entry point (python -m mcpredator)
 │   ├── cli.py                 # Argument parsing
@@ -458,7 +469,12 @@ mcpredator/                     # repo root
 │   └── reporting/
 │       ├── console.py         # Rich table output
 │       └── json_out.py        # JSON report writer
-├── tests/                     # Pytest suite
+├── tests/                     # Pytest suite (145 tests, incl. DVMCP challenges)
+│   ├── test_dvmcp.py          # DVMCP challenges 1-10 (offline + optional live)
+│   ├── test_cli.py            # CLI argument parsing
+│   ├── test_diff.py           # Differential scanning
+│   ├── test_k8s.py            # Kubernetes checks
+│   └── ...
 ├── pyproject.toml             # Project metadata, dependencies, entry points
 ├── CHANGELOG.md
 └── README.md
@@ -528,7 +544,10 @@ section of the scan output.
 | 10. Multi-Vector Attack | 9010 | Chained vulnerabilities |
 
 ```bash
-# One-time setup
+# Run offline DVMCP challenge tests (no servers needed)
+.venv/bin/pytest tests/test_dvmcp.py -v
+
+# One-time setup for live testing
 git clone https://github.com/harishsg993010/damn-vulnerable-MCP-server.git \
     tests/test_targets/DVMCP
 
@@ -537,16 +556,19 @@ git clone https://github.com/harishsg993010/damn-vulnerable-MCP-server.git \
 
 # Or step by step:
 ./tests/dvmcp_reset.sh                  # reset + start servers
-mcpredator --port-range localhost:9001-9010 --verbose
+./scan --port-range localhost:9001-9010 --verbose
 
 # Scan specific challenges
-mcpredator --targets http://localhost:9002 http://localhost:9008
+./scan --targets http://localhost:9002 http://localhost:9008
 
 # Deeper rug pull probing (more calls per tool)
-mcpredator --port-range localhost:9001-9010 --probe-calls 10
+./scan --port-range localhost:9001-9010 --probe-calls 10
 
 # Static-only scan (no tool calls)
-mcpredator --port-range localhost:9001-9010 --no-invoke
+./scan --port-range localhost:9001-9010 --no-invoke
+
+# Run live DVMCP tests
+DVMCP_LIVE=1 .venv/bin/pytest tests/test_dvmcp.py -v
 
 # Kill servers + clean state
 ./tests/dvmcp_reset.sh --kill-only
