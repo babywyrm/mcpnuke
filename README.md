@@ -26,15 +26,18 @@ git clone https://github.com/babywyrm/mcpredator.git && cd mcpredator
 ```
 
 This creates a `.venv`, installs everything, runs tests, and prints usage.
-After that, `./scan` just works — no activation needed.
+After that, `./scan` and `uv run mcpredator` just work — no activation needed.
 
-**Manual (uv):**
+**uv (manual):**
 ```bash
-uv venv .venv && source .venv/bin/activate
+uv venv .venv
 uv pip install -e ".[dev]"
+uv run mcpredator --help
 ```
 
-**Manual (pip):**
+No `source .venv/bin/activate` needed — `uv run` finds the project venv automatically.
+
+**pip (manual):**
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
@@ -59,6 +62,11 @@ uv pip install mcpredator
 # Authenticated endpoint (JWT, PAT, etc.)
 ./scan --targets https://api.githubcopilot.com/mcp/ --auth-token ghp_xxx
 
+# OIDC auto-token (Keycloak, etc.)
+./scan --targets http://localhost:9090/mcp \
+  --oidc-url http://keycloak:8080/realms/myapp \
+  --client-id myapp --client-secret SECRET
+
 # JSON report for CI
 ./scan --port-range localhost:9001-9010 --json report.json
 
@@ -66,11 +74,11 @@ uv pip install mcpredator
 ./scan --targets http://localhost:9001 --baseline baseline.json
 
 # Run tests
-.venv/bin/pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
-All `./scan` commands also work as `mcpredator` (with venv activated)
-or `.venv/bin/mcpredator`.
+All `./scan` commands also work as `uv run mcpredator` (no activation needed),
+`mcpredator` (with venv activated), or `.venv/bin/mcpredator`.
 
 ---
 
@@ -331,7 +339,14 @@ CI pipelines to gate deployments.
 ### Run tests
 
 ```bash
-.venv/bin/pytest tests/ -v
+# Full suite
+uv run pytest tests/ -v
+
+# DVMCP challenges only
+uv run pytest tests/test_dvmcp.py -v
+
+# Stop on first failure
+uv run pytest tests/ -v -x
 ```
 
 ---

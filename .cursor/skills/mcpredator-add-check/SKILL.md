@@ -154,7 +154,7 @@ def test_your_check_timing(result_with_tools):
 ### 6. Run tests
 
 ```bash
-.venv/bin/pytest tests/test_your_check.py tests/test_checks_integration.py -v
+uv run pytest tests/test_your_check.py tests/test_checks_integration.py -v
 ```
 
 ### 7. Update CHANGELOG.md

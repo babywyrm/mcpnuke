@@ -51,7 +51,7 @@ def test_your_patterns_no_false_positive():
 ### 3. Run tests
 
 ```bash
-.venv/bin/pytest tests/test_patterns.py -v
+uv run pytest tests/test_patterns.py -v
 ```
 
 ## Adding Probe Payloads

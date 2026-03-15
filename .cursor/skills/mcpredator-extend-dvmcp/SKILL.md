@@ -98,5 +98,5 @@ DVMCP_PORTS = list(range(9001, 9011))  # extend range if needed
 ## Run
 
 ```bash
-.venv/bin/pytest tests/test_dvmcp.py -v
+uv run pytest tests/test_dvmcp.py -v
 ```

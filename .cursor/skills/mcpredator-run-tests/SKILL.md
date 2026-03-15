@@ -9,24 +9,26 @@ description: >-
 
 ## Quick Reference
 
+All commands use `uv run` — no venv activation needed.
+
 ```bash
 # Full suite
-.venv/bin/pytest tests/ -v
+uv run pytest tests/ -v
 
 # Specific test file
-.venv/bin/pytest tests/test_dvmcp.py -v
+uv run pytest tests/test_dvmcp.py -v
 
 # Specific test class
-.venv/bin/pytest tests/test_dvmcp.py::TestDVMCPChallenge1PromptInjection -v
+uv run pytest tests/test_dvmcp.py::TestDVMCPChallenge1PromptInjection -v
 
 # Specific test
-.venv/bin/pytest tests/test_dvmcp.py::TestDVMCPChallenge1PromptInjection::test_ignore_instructions_payload -v
+uv run pytest tests/test_dvmcp.py::TestDVMCPChallenge1PromptInjection::test_ignore_instructions_payload -v
 
 # Stop on first failure
-.venv/bin/pytest tests/ -v -x
+uv run pytest tests/ -v -x
 
 # With output capture disabled (see print statements)
-.venv/bin/pytest tests/ -v -s
+uv run pytest tests/ -v -s
 ```
 
 ## Test Categories
@@ -51,6 +53,8 @@ description: >-
 Package not installed. Fix:
 ```bash
 cd ~/mcprowler && uv pip install -e ".[dev]"
+# Or just re-run quickstart:
+./quickstart.sh --skip-tests
 ```
 
 ### Assertion errors in checks
@@ -67,7 +71,7 @@ A check isn't finding what it should. Look at:
 
 Always re-run the full suite before committing:
 ```bash
-.venv/bin/pytest tests/ -v --tb=short
+uv run pytest tests/ -v --tb=short
 ```
 
-Expected: 109 passed, 36 skipped, 0 failed.
+Expected: 115 passed, 36 skipped, 0 failed.
