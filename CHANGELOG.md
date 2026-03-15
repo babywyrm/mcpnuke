@@ -6,6 +6,35 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **Rename: mcprowler → mcpredator** — Full project rename across all source, tests, docs, K8s manifests, and Dockerfile.
+
+- **Verbose mode (`-v`)** — Now emits real output throughout the scan pipeline:
+  - Transport detection: shows each SSE/HTTP path probed, HTTP status codes, content types
+  - Server info: prints server name, version, protocol version, capabilities
+  - Enumeration: lists every discovered tool, resource, and prompt with descriptions
+  - Timing: shows per-phase duration
+
+- **OIDC client_credentials auth** — Automatic token acquisition from Keycloak or any OIDC provider:
+  - `--oidc-url URL` — OIDC issuer URL (e.g. `http://keycloak:8080/realms/myapp`)
+  - `--client-id ID` / `--client-secret SECRET` — OAuth2 client credentials
+  - Env vars: `MCP_OIDC_URL`, `MCP_CLIENT_ID`, `MCP_CLIENT_SECRET`
+  - Auto-discovers token endpoint via `.well-known/openid-configuration`
+  - Falls back to standard Keycloak path if discovery fails
+  - `mcpredator/core/auth.py` — `AuthInfo`, `detect_auth_requirements`, `fetch_client_credentials_token`, `resolve_auth_token`
+
+- **Auth-aware transport detection** — Distinguishes "server needs auth" from "no transport found":
+  - Detects 401/403 during transport probing and surfaces `WWW-Authenticate` header
+  - Returns a valid session for auth-required endpoints (so auth can be resolved separately)
+  - In verbose mode, auto-probes first target and suggests the right `--oidc-url` to use
+
+- **DVMCP challenge test suite** (`tests/test_dvmcp.py`) — 44 offline tests covering all 10 DVMCP challenges:
+  - Ch1: Prompt injection (5 tests), Ch2: Tool poisoning (5), Ch3: Permissions (5), Ch4: Rug pull (2), Ch5: Token theft (5), Ch6: Code execution (4), Ch7: Remote access (4), Ch8: Rate limit + prompt leakage (4), Ch9: Supply chain (4), Ch10: Multi-vector (4), Full pipeline integration (2)
+  - 30 optional live tests (`DVMCP_LIVE=1`) for transport, tools, and findings per port 9001-9010
+
+- **Quickstart script** (`quickstart.sh`) — One-command setup: detects uv/pip, creates venv, installs deps, runs tests
+  - `--skip-tests` and `--with-dvmcp` flags
+  - `./scan` wrapper for zero-config execution without venv activation
+
 - **Kubernetes deployment and in-cluster scanning** — Run mcpredator as a K8s Job with full cluster posture auditing:
   - `k8s/discovery.py` — Auto-discover MCP endpoints via service annotations (`mcp.io/enabled`, `mcp.io/transport`, `mcp.io/path`), well-known port matching, and active MCP protocol probing
   - `k8s/scanner.py` — Enhanced with pod security checks (privileged containers, hostNetwork/PID, dangerous capabilities, hostPath mounts, missing resource limits), ConfigMap secret scanning, and NetworkPolicy auditing
@@ -135,23 +164,43 @@ All notable changes to this submodule are documented here.
 
 ## Planned
 
+_Roadmap aligned with [MCP Red Team Playbook](https://github.com/babywyrm/sysadmin/tree/master/mcp/redteam) threat taxonomy (MCP-T01–T14)._
+
 ### Quick wins
 
-- **DVMCP scoreboard** — Auto-run all 10 DVMCP challenges, report pass/fail per challenge, optional JSON output
-- **Batch scan** — `scan_mcp url1 url2` or `scan_mcp_batch urls.txt` from main Agent Smith
-
-### Medium effort
-
-- ~~**Differential MCP scanning**~~ — ✓ Done. `--baseline` and `--save-baseline`
-- ~~**Fuzzing / live probing**~~ — ✓ Done. Behavioral probe engine with safe tool invocation
-- **AI-powered MCP description analysis** — Use Claude to detect subtle tool poisoning, hidden instructions, misleading descriptions
+- ~~**DVMCP scoreboard**~~ — ✓ Done. `tests/test_dvmcp.py` with offline + live tests
+- **DVMCP scoreboard CLI** — `./scan --dvmcp-scoreboard` to auto-run all 10 challenges, report pass/fail per challenge, optional JSON
 - **SARIF export** — Export findings as SARIF for IDE/CI (VS Code, GitHub Code Scanning)
+- **Encoding bypass probes** (MCP-T01) — Hex, base64, unicode homoglyph, delimiter escape variants for prompt injection
 
-### Larger investments
+### Medium effort — new checks from playbook taxonomy
 
-- ~~**Docker image**~~ — ✓ Done. `k8s/Dockerfile` with multi-stage Python 3.12-slim build
-- ~~**Kubernetes deployment**~~ — ✓ Done. Job, CronJob, RBAC, Kustomize manifests with full pod security hardening
-- **Metrics endpoint** — Prometheus `/metrics` for request counts, scan latency, tool usage
-- ~~**Attack chain profiling**~~ — ✓ Done. 17 attack chain patterns with aggregate detection
-- **MCP registry** — Curated list of public MCP servers for periodic scanning
+- **JWT audience validation** (MCP-T04) — Decode JWT tokens, verify `aud` claim matches the target MCP endpoint, detect cross-tool token replay
+- **Active SSRF probing** (MCP-T06) — Beyond pattern matching: probe tools with IMDS URLs (169.254.169.254), internal K8s API, RFC1918 ranges, DNS rebinding detection, IP encoding bypasses (decimal, hex, octal, IPv6-mapped)
+- **Confused deputy detection** (MCP-T03) — Check if tool calls propagate user identity vs agent SA; detect privilege gaps between caller and tool permissions
+- **Exfiltration flow analysis** (MCP-T12) — Track data flow across tools: flag when a read-tool's output feeds into a communication-tool's input (Slack, email, webhook)
+- **Audit log evasion** (MCP-T13) — Verify that downstream audit logs attribute actions to the originating user, not just the agent service account
+- **AI-powered description analysis** — Use LLM to detect subtle tool poisoning, hidden instructions, misleading descriptions that bypass regex
+
+### Larger investments — campaign framework
+
+- **Multi-stage campaign runner** (playbook Section 5) — Chain individual checks into named attack scenarios (CONTENT-TO-INFRA, COMMS-TO-CLUSTER, CODE-TO-PROD, etc.) with stage-gating and blast radius tracking
+- **Purple team mode** — `--purple-team`: timestamp every attack, measure MTTD/MTTR, generate detection scorecard, SIEM alert correlation
+- **Agent config tampering** (MCP-T09) — Detect if an agent can write its own config, system prompt, or tool registry via any connected MCP
+- **Hallucination-driven destruction** (MCP-T10) — Send ambiguous instructions to tool-calling endpoints, verify confirmation gates and dry-run behavior before destructive ops
+- **Cross-tenant memory leak** (MCP-T11) — Plant canary strings via one session, probe retrieval from another; test vector DB tenant isolation
+- **Webhook/callback persistence** (MCP-T14) — Detect registered callbacks or webhooks that could re-inject payloads across sessions
+- **Metrics endpoint** — Prometheus `/metrics` for scan counts, finding rates, tool coverage
 - **Active exploitation mode** — Controlled, opt-in exploit verification (beyond safe probing)
+- **MCP registry** — Curated list of public MCP servers for periodic scanning
+
+### Done (previously planned)
+
+- ~~**Differential MCP scanning**~~ — ✓ `--baseline` and `--save-baseline`
+- ~~**Fuzzing / live probing**~~ — ✓ Behavioral probe engine with safe tool invocation
+- ~~**Docker image**~~ — ✓ `k8s/Dockerfile` with multi-stage Python 3.12-slim build
+- ~~**Kubernetes deployment**~~ — ✓ Job, CronJob, RBAC, Kustomize manifests
+- ~~**Attack chain profiling**~~ — ✓ 17 attack chain patterns with aggregate detection
+- ~~**OIDC auth**~~ — ✓ `--oidc-url` / `--client-id` / `--client-secret`
+- ~~**Verbose mode**~~ — ✓ Real output in transport detection, enumeration, and checks
+- ~~**DVMCP test suite**~~ — ✓ 44 offline + 30 live tests covering all 10 challenges
