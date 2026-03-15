@@ -52,6 +52,10 @@ uv pip install mcpvenom
 
 ## Quick Start
 
+**New to mcpvenom?** Try the **[DVMCP Walkthrough](walkthrough/README.md)** --
+a hands-on guide that scans 10 vulnerable MCP servers and explains every finding.
+Or run `./walkthrough/demo.sh` for the fully automated version.
+
 ```bash
 # Single target
 ./scan --targets http://localhost:2266
@@ -490,6 +494,9 @@ args:
 │   ├── test_diff.py           # Differential scanning
 │   ├── test_k8s.py            # Kubernetes checks
 │   └── ...
+├── walkthrough/               # Hands-on DVMCP guide + automated demo
+│   ├── README.md              # Progressive walkthrough with annotated findings
+│   └── demo.sh                # Zero-to-findings automated demo script
 ├── pyproject.toml             # Project metadata, dependencies, entry points
 ├── CHANGELOG.md
 └── README.md
