@@ -57,6 +57,7 @@ def run_all_checks(
     sse_path: str = "",
     verbose: bool = False,
     probe_opts: dict | None = None,
+    log=None,
 ):
     """Run all security checks against a target result.
 
@@ -70,8 +71,21 @@ def run_all_checks(
     """
     opts = probe_opts or {}
     no_invoke = opts.get("no_invoke", False)
+    _log = log or (lambda msg: None)
+
+    def _run(name, fn, *args, **kwargs):
+        if verbose:
+            _log(f"  [dim]  ▸ {name}...[/dim]")
+        t0 = time.time()
+        fn(*args, **kwargs)
+        elapsed = time.time() - t0
+        count = len([f for f in result.findings if f.check == name.split("(")[0].strip()])
+        if verbose and elapsed > 0.5:
+            _log(f"  [dim]    {name} done ({elapsed:.1f}s)[/dim]")
 
     # ── Static checks (metadata only — always run) ─────────────────────
+    if verbose:
+        _log("  [cyan]Running static checks...[/cyan]")
     check_tool_shadowing(all_results, result)
     check_prompt_injection(result)
     check_tool_poisoning(result)
@@ -87,34 +101,49 @@ def run_all_checks(
     check_webhook_persistence(result)
     check_credential_in_schema(result)
     check_exfil_flow(result)
+    if verbose:
+        static_count = len(result.findings)
+        _log(f"  [dim]  Static checks complete: {static_count} finding(s)[/dim]")
 
     # ── Behavioral checks (light interaction — always run unless --no-invoke)
     if not no_invoke:
-        check_rug_pull(session, result)
-        check_indirect_injection(session, result)
-        check_protocol_robustness(session, result)
+        if verbose:
+            _log("  [cyan]Running behavioral probes...[/cyan]")
+        _run("rug_pull", check_rug_pull, session, result)
+        _run("indirect_injection", check_indirect_injection, session, result)
+        _run("protocol_robustness", check_protocol_robustness, session, result)
 
         # ── Deep behavioral probes (invoke tools, analyze responses) ───
-        check_deep_rug_pull(session, result, probe_opts=opts)
-        check_tool_response_injection(session, result, probe_opts=opts)
-        check_input_sanitization(session, result, probe_opts=opts)
-        check_error_leakage(session, result, probe_opts=opts)
-        check_temporal_consistency(session, result, probe_opts=opts)
-        check_resource_poisoning(session, result)
-        check_response_credentials(session, result, probe_opts=opts)
-        check_ssrf_probe(session, result, probe_opts=opts)
-        check_state_mutation(session, result)
-        check_notification_abuse(session, result)
+        if verbose:
+            _log("  [cyan]Running deep behavioral probes...[/cyan]")
+        _run("deep_rug_pull", check_deep_rug_pull, session, result, probe_opts=opts)
+        _run("tool_response_injection", check_tool_response_injection, session, result, probe_opts=opts)
+        _run("input_sanitization", check_input_sanitization, session, result, probe_opts=opts)
+        _run("error_leakage", check_error_leakage, session, result, probe_opts=opts)
+        _run("temporal_consistency", check_temporal_consistency, session, result, probe_opts=opts)
+        _run("resource_poisoning", check_resource_poisoning, session, result)
+        _run("response_credentials", check_response_credentials, session, result, probe_opts=opts)
+        _run("ssrf_probe", check_ssrf_probe, session, result, probe_opts=opts)
+        _run("state_mutation", check_state_mutation, session, result)
+        _run("notification_abuse", check_notification_abuse, session, result)
+
+        behavioral_count = len(result.findings) - static_count
+        if verbose:
+            _log(f"  [dim]  Behavioral probes complete: {behavioral_count} new finding(s)[/dim]")
 
     # ── Transport checks ───────────────────────────────────────────────
     if base and sse_path:
-        check_sse_security(base, sse_path, result)
+        _run("sse_security", check_sse_security, base, sse_path, result)
 
     # ── Target surface checks (probe base URL, not tools) ─────────────
     if base:
         auth_token = opts.get("auth_token")
-        check_actuator_probe(base, result, auth_token=auth_token)
+        _run("actuator_probe", check_actuator_probe, base, result, auth_token=auth_token)
 
     # ── Cross-cutting / aggregate (run last, they read other findings) ─
+    if verbose:
+        _log("  [cyan]Running aggregate analysis...[/cyan]")
     check_multi_vector(result)
     check_attack_chains(result)
+    if verbose:
+        _log(f"  [dim]  All checks complete: {len(result.findings)} total finding(s)[/dim]")

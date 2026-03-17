@@ -126,6 +126,7 @@ def scan_target(
         sse_path=sse_path,
         verbose=verbose,
         probe_opts=probe_opts or {},
+        log=_log,
     )
 
     # AI-powered analysis (optional, runs after deterministic checks)
