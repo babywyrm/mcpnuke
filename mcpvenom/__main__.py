@@ -95,6 +95,7 @@ def main():
         "tool_names_file": getattr(args, "tool_names_file", None),
         "claude": args.claude,
         "claude_model": args.claude_model,
+        "claude_max_tools": args.claude_max_tools,
     }
 
     if args.no_invoke:

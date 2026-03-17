@@ -177,7 +177,7 @@ def _parse_findings(text: str) -> list[LLMFinding]:
                 severity=item.get("severity", "MEDIUM"),
                 title=item.get("title", "LLM finding"),
                 detail=item.get("detail", ""),
-                taxonomy_id=item.get("taxonomy_id", ""),
+                taxonomy_id=item.get("taxonomy_id") or "",
             )
             for item in items
             if isinstance(item, dict)

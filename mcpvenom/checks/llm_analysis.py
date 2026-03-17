@@ -56,9 +56,14 @@ def run_llm_analysis(
             _log("  [cyan]AI Phase 2: Calling tools and analyzing responses...[/cyan]")
             response_findings = 0
             try:
-                for tool in result.tools[:6]:
+                max_tools = opts.get("claude_max_tools", 10)
+                tool_subset = result.tools[:max_tools]
+                skipped = [t.get("name", "?") for t in tool_subset if not _should_invoke(t, opts)]
+                if skipped:
+                    _log(f"  [yellow]  Skipping dangerous tools ({len(skipped)}): {', '.join(skipped)}[/yellow]")
+                _log(f"  [dim]  Analyzing up to {max_tools} tools (--claude-max-tools)[/dim]")
+                for tool in tool_subset:
                     if not _should_invoke(tool, opts):
-                        _log(f"  [dim]  Skipping dangerous tool: {tool.get('name', '?')}[/dim]")
                         continue
                     name = tool.get("name", "")
                     desc = tool.get("description", "")

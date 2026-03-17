@@ -191,6 +191,14 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "(one per line, # comments). Supplements the built-in list.",
     )
     p.add_argument(
+        "--claude-max-tools",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Max tools for Claude AI response analysis (default: 10). "
+        "Higher = more thorough but slower and costs more.",
+    )
+    p.add_argument(
         "--claude",
         action="store_true",
         help="Enable AI-powered analysis using Claude. Requires ANTHROPIC_API_KEY env var. "
