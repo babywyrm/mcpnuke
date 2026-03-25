@@ -47,7 +47,11 @@ INTERNAL_INDICATORS = [
 
 def check_ssrf_probe(session, result: TargetResult, probe_opts: dict | None = None):
     opts = probe_opts or {}
+    _log = opts.get("_log", lambda msg: None)
     with time_check("ssrf_probe", result):
+        invokable = [t for t in result.tools if _should_invoke(t, opts)]
+        _log(f"    [dim]    SSRF-probing {len(invokable)} tools[/dim]")
+        tool_idx = 0
         for tool in result.tools:
             if not _should_invoke(tool, opts):
                 continue

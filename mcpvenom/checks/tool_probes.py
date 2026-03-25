@@ -253,13 +253,17 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
     ends up in the LLM context via tool output).
     """
     opts = probe_opts or {}
+    _log = opts.get("_log", lambda msg: None)
     with time_check("tool_response_injection", result):
         tool_names = {t["name"].lower() for t in result.tools}
+        invokable = [t for t in result.tools if _should_invoke(t, opts)]
+        _log(f"    [dim]    scanning {len(invokable)} tools for response injection[/dim]")
 
-        for tool in result.tools:
+        for idx, tool in enumerate(result.tools):
             if not _should_invoke(tool, opts):
                 continue
             name = tool.get("name", "")
+            _log(f"    [dim]    [{idx+1}/{len(invokable)}] {name}[/dim]")
             args = _build_safe_args(tool)
 
             resp = _call_tool(session, name, args)
@@ -323,11 +327,17 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
 def check_input_sanitization(session, result: TargetResult, probe_opts: dict | None = None):
     """Send injection probe payloads and detect missing sanitization."""
     opts = probe_opts or {}
+    _log = opts.get("_log", lambda msg: None)
     with time_check("input_sanitization", result):
+        invokable = [t for t in result.tools if _should_invoke(t, opts)]
+        _log(f"    [dim]    fuzzing {len(invokable)} tools for input sanitization[/dim]")
+        tool_idx = 0
         for tool in result.tools:
             if not _should_invoke(tool, opts):
                 continue
+            tool_idx += 1
             name = tool.get("name", "")
+            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
             props = tool.get("inputSchema", {}).get("properties", {})
 
             for pname, pdef in props.items():
@@ -417,11 +427,17 @@ def check_input_sanitization(session, result: TargetResult, probe_opts: dict | N
 def check_error_leakage(session, result: TargetResult, probe_opts: dict | None = None):
     """Send malformed inputs to tools and look for information disclosure in errors."""
     opts = probe_opts or {}
+    _log = opts.get("_log", lambda msg: None)
     with time_check("error_leakage", result):
+        invokable = [t for t in result.tools if _should_invoke(t, opts)]
+        _log(f"    [dim]    probing {len(invokable)} tools for error leakage[/dim]")
+        tool_idx = 0
         for tool in result.tools:
             if not _should_invoke(tool, opts):
                 continue
+            tool_idx += 1
             name = tool.get("name", "")
+            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
             schema = tool.get("inputSchema", {})
             required = schema.get("required", [])
 
@@ -483,11 +499,18 @@ def check_error_leakage(session, result: TargetResult, probe_opts: dict | None =
 def check_temporal_consistency(session, result: TargetResult, probe_opts: dict | None = None):
     """Call the same tool repeatedly and detect behavioral drift or escalation."""
     opts = probe_opts or {}
+    _log = opts.get("_log", lambda msg: None)
     with time_check("temporal_consistency", result):
-        for tool in result.tools[:5]:
+        capped = result.tools[:5]
+        invokable = [t for t in capped if _should_invoke(t, opts)]
+        _log(f"    [dim]    temporal probing {len(invokable)} tools × 3 calls each[/dim]")
+        tool_idx = 0
+        for tool in capped:
             if not _should_invoke(tool, opts):
                 continue
+            tool_idx += 1
             name = tool.get("name", "")
+            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
             args = _build_safe_args(tool)
 
             responses: list[str] = []

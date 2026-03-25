@@ -69,53 +69,79 @@ def run_all_checks(
       safe_mode  (bool)  — skip invoking dangerous tools (delete, send, exec, write)
       probe_calls (int)  — invocations per tool for deep rug pull (default 6)
     """
+    from mcpvenom.core.constants import SEV_COLOR
+
     opts = probe_opts or {}
     no_invoke = opts.get("no_invoke", False)
     _log = log or (lambda msg: None)
+    if verbose:
+        opts["_log"] = _log
+    check_num = 0
+    total_checks = 0
 
     def _run(name, fn, *args, **kwargs):
+        nonlocal check_num
+        check_num += 1
+        before = len(result.findings)
         if verbose:
-            _log(f"  [dim]  ▸ {name}...[/dim]")
+            _log(f"  [dim]  [{check_num}/{total_checks}][/dim] [white]▸ {name}[/white]")
         t0 = time.time()
         fn(*args, **kwargs)
         elapsed = time.time() - t0
-        count = len([f for f in result.findings if f.check == name.split("(")[0].strip()])
-        if verbose and elapsed > 0.5:
-            _log(f"  [dim]    {name} done ({elapsed:.1f}s)[/dim]")
+        new_findings = result.findings[before:]
+        if verbose and new_findings:
+            for f in new_findings:
+                color = SEV_COLOR.get(f.severity, "white")
+                _log(f"    [{color}]  ■ {f.severity:8s}[/{color}] {f.title}")
+                if f.detail:
+                    _log(f"    [dim]           {f.detail[:120]}[/dim]")
+        if verbose:
+            status = f"[green]✓[/green] {len(new_findings)} finding(s)" if new_findings else "[dim]clean[/dim]"
+            _log(f"  [dim]    └─ {status}  ({elapsed:.2f}s)[/dim]")
+
+    # Count total checks for progress display
+    total_checks = 17  # static
+    if not no_invoke:
+        total_checks += 13  # behavioral + deep
+    if base and sse_path:
+        total_checks += 1
+    if base:
+        total_checks += 1
+    total_checks += 2  # aggregate
 
     # ── Static checks (metadata only — always run) ─────────────────────
     if verbose:
-        _log("  [cyan]Running static checks...[/cyan]")
-    check_tool_shadowing(all_results, result)
-    check_prompt_injection(result)
-    check_tool_poisoning(result)
-    check_excessive_permissions(result)
-    check_token_theft(result)
-    check_code_execution(result)
-    check_remote_access(result)
-    check_schema_risks(result)
-    check_rate_limit(result)
-    check_prompt_leakage(result)
-    check_supply_chain(result)
-    check_config_tampering(result)
-    check_webhook_persistence(result)
-    check_credential_in_schema(result)
-    check_exfil_flow(result)
+        _log("  [bold cyan]── Static Analysis ──[/bold cyan]")
+    _run("tool_shadowing", check_tool_shadowing, all_results, result)
+    _run("prompt_injection", check_prompt_injection, result)
+    _run("tool_poisoning", check_tool_poisoning, result)
+    _run("excessive_permissions", check_excessive_permissions, result)
+    _run("token_theft", check_token_theft, result)
+    _run("code_execution", check_code_execution, result)
+    _run("remote_access", check_remote_access, result)
+    _run("schema_risks", check_schema_risks, result)
+    _run("rate_limit", check_rate_limit, result)
+    _run("prompt_leakage", check_prompt_leakage, result)
+    _run("supply_chain", check_supply_chain, result)
+    _run("config_tampering", check_config_tampering, result)
+    _run("webhook_persistence", check_webhook_persistence, result)
+    _run("credential_in_schema", check_credential_in_schema, result)
+    _run("exfil_flow", check_exfil_flow, result)
     if verbose:
         static_count = len(result.findings)
-        _log(f"  [dim]  Static checks complete: {static_count} finding(s)[/dim]")
+        _log(f"  [bold]  Static total: {static_count} finding(s)[/bold]")
 
     # ── Behavioral checks (light interaction — always run unless --no-invoke)
     if not no_invoke:
         if verbose:
-            _log("  [cyan]Running behavioral probes...[/cyan]")
+            _log("\n  [bold cyan]── Behavioral Probes ──[/bold cyan]")
         _run("rug_pull", check_rug_pull, session, result)
         _run("indirect_injection", check_indirect_injection, session, result)
         _run("protocol_robustness", check_protocol_robustness, session, result)
 
         # ── Deep behavioral probes (invoke tools, analyze responses) ───
         if verbose:
-            _log("  [cyan]Running deep behavioral probes...[/cyan]")
+            _log("\n  [bold cyan]── Deep Behavioral Probes ──[/bold cyan]")
         _run("deep_rug_pull", check_deep_rug_pull, session, result, probe_opts=opts)
         _run("tool_response_injection", check_tool_response_injection, session, result, probe_opts=opts)
         _run("input_sanitization", check_input_sanitization, session, result, probe_opts=opts)
@@ -129,21 +155,22 @@ def run_all_checks(
 
         behavioral_count = len(result.findings) - static_count
         if verbose:
-            _log(f"  [dim]  Behavioral probes complete: {behavioral_count} new finding(s)[/dim]")
+            _log(f"  [bold]  Behavioral total: {behavioral_count} finding(s)[/bold]")
 
     # ── Transport checks ───────────────────────────────────────────────
     if base and sse_path:
+        if verbose:
+            _log("\n  [bold cyan]── Transport Checks ──[/bold cyan]")
         _run("sse_security", check_sse_security, base, sse_path, result)
 
     # ── Target surface checks (probe base URL, not tools) ─────────────
     if base:
-        auth_token = opts.get("auth_token")
-        _run("actuator_probe", check_actuator_probe, base, result, auth_token=auth_token)
+        _run("actuator_probe", check_actuator_probe, base, result, auth_token=opts.get("auth_token"))
 
     # ── Cross-cutting / aggregate (run last, they read other findings) ─
     if verbose:
-        _log("  [cyan]Running aggregate analysis...[/cyan]")
-    check_multi_vector(result)
-    check_attack_chains(result)
+        _log("\n  [bold cyan]── Aggregate Analysis ──[/bold cyan]")
+    _run("multi_vector", check_multi_vector, result)
+    _run("attack_chains", check_attack_chains, result)
     if verbose:
-        _log(f"  [dim]  All checks complete: {len(result.findings)} total finding(s)[/dim]")
+        _log(f"\n  [bold green]  ✓ All {check_num} checks complete: {len(result.findings)} total finding(s)[/bold green]")

@@ -31,12 +31,17 @@ def check_response_credentials(session, result: TargetResult, probe_opts: dict |
     that slip through incomplete server-side redaction.
     """
     opts = probe_opts or {}
+    _log = opts.get("_log", lambda msg: None)
     with time_check("response_credentials", result):
-        # Scan tool responses
+        invokable = [t for t in result.tools if _should_invoke(t, opts)]
+        _log(f"    [dim]    scanning {len(invokable)} tool responses for credentials[/dim]")
+        tool_idx = 0
         for tool in result.tools:
             if not _should_invoke(tool, opts):
                 continue
+            tool_idx += 1
             name = tool.get("name", "")
+            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
             args = _build_safe_args(tool)
             resp = _call_tool(session, name, args)
             text = _response_text(resp)

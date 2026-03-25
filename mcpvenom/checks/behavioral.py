@@ -96,8 +96,10 @@ def check_deep_rug_pull(session, result: TargetResult, probe_opts: dict | None =
     """
     opts = probe_opts or {}
     calls_per_tool = opts.get("probe_calls", 6)
+    _log = opts.get("_log", lambda msg: None)
     with time_check("deep_rug_pull", result):
         # Phase 1: snapshot tool list
+        _log("    [dim]    phase 1: snapshot tool list[/dim]")
         snap1 = session.call("tools/list", timeout=15)
         if not snap1 or "result" not in snap1:
             return
@@ -107,7 +109,12 @@ def check_deep_rug_pull(session, result: TargetResult, probe_opts: dict | None =
         first_responses: dict[str, str] = {}
         last_responses: dict[str, str] = {}
 
-        for tool in list(before.values())[:6]:
+        probe_tools = list(before.values())[:6]
+        total_probes = len(probe_tools) * calls_per_tool
+        probe_num = 0
+        _log(f"    [dim]    phase 2: probing {len(probe_tools)} tools × {calls_per_tool} calls = {total_probes} invocations[/dim]")
+
+        for tool in probe_tools:
             name = tool.get("name", "")
             props = tool.get("inputSchema", {}).get("properties", {})
             args: dict = {}
@@ -122,14 +129,16 @@ def check_deep_rug_pull(session, result: TargetResult, probe_opts: dict | None =
                     args[pname] = "test"
 
             for i in range(calls_per_tool):
+                probe_num += 1
                 try:
                     resp = session.call("tools/call", {"name": name, "arguments": args}, timeout=8)
                     text = _extract_text(resp)
                     if i == 0:
                         first_responses[name] = text
+                        _log(f"    [dim]    [{probe_num}/{total_probes}] {name} → {len(text)} chars[/dim]")
                     last_responses[name] = text
                 except Exception:
-                    pass
+                    _log(f"    [dim]    [{probe_num}/{total_probes}] {name} → error[/dim]")
                 time.sleep(0.3)
 
         # Phase 3: re-enumerate and diff metadata
