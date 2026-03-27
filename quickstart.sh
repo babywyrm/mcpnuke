@@ -83,33 +83,38 @@ fi
 
 banner "Setting up virtual environment"
 
-if [ -d ".venv" ]; then
-    ok "Existing .venv found"
-else
-    if [ "$PKG_MGR" = "uv" ]; then
+if [ "$PKG_MGR" = "uv" ]; then
+    if [ ! -d ".venv" ]; then
         uv venv --python "$PYTHON_CMD" .venv
+        ok "Created .venv"
     else
-        "$PYTHON_CMD" -m venv .venv
+        ok "Existing .venv found"
     fi
-    ok "Created .venv"
+else
+    if [ ! -d ".venv" ]; then
+        "$PYTHON_CMD" -m venv .venv
+        ok "Created .venv"
+    else
+        ok "Existing .venv found"
+    fi
 fi
 
-# Activate for the rest of this script
+# Activate for the rest of this script (needed for pytest, etc.)
 # shellcheck disable=SC1091
 source .venv/bin/activate
 ok "Activated .venv ($(python --version))"
 
 # ── Install mcpvenom ───────────────────────────────────────────────────
 
-banner "Installing mcpvenom + dev dependencies"
+banner "Installing mcpvenom + all dependencies"
 
 if [ "$PKG_MGR" = "uv" ]; then
-    uv pip install -e ".[dev]" 2>&1 | tail -3
+    uv sync --all-extras 2>&1 | tail -5
+    ok "mcpvenom installed (uv sync --all-extras)"
 else
-    pip install -e ".[dev]" 2>&1 | tail -3
+    pip install -e ".[dev,ai,k8s]" 2>&1 | tail -3
+    ok "mcpvenom installed (pip editable)"
 fi
-
-ok "mcpvenom installed"
 
 # Verify CLI entry point
 ok "CLI wrapper: ./scan"

@@ -283,6 +283,8 @@ def _pick_security_relevant(tools: list[dict], n: int) -> list[dict]:
         "send", "email", "notify", "webhook", "upload", "write",
         "delete", "query", "sql", "deploy", "fetch", "proxy",
         "read", "file", "path", "transfer",
+        "config", "secret", "credential", "admin", "backup",
+        "password", "token", "key", "maintenance", "system",
     }
 
     def score(tool: dict) -> int:

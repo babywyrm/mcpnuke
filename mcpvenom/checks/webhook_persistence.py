@@ -22,6 +22,10 @@ WEBHOOK_DESC_PATTERNS = [
     r"subscribe\s+to\s+(event|notification|update)",
 ]
 
+WEBHOOK_NAME_PATTERNS = [
+    r"(webhook|hook|callback|subscribe|notify|listener)",
+]
+
 
 def check_webhook_persistence(result: TargetResult):
     with time_check("webhook_persistence", result):
@@ -29,6 +33,22 @@ def check_webhook_persistence(result: TargetResult):
             name = tool.get("name", "")
             desc = tool.get("description", "")
             props = tool.get("inputSchema", {}).get("properties", {})
+
+            has_url_param = any(
+                "url" in pname.lower() or pdef.get("format") == "uri"
+                for pname, pdef in props.items()
+            )
+
+            for pat in WEBHOOK_NAME_PATTERNS:
+                if re.search(pat, name, re.IGNORECASE) and has_url_param:
+                    result.add(
+                        "webhook_persistence",
+                        "HIGH",
+                        f"Webhook/callback tool '{name}' accepts URL",
+                        "Tool name indicates webhook/callback registration with a URL parameter "
+                        "— attacker-controlled URLs enable persistent re-injection across sessions",
+                    )
+                    break
 
             for pname, pdef in props.items():
                 for pat in WEBHOOK_PARAM_PATTERNS:

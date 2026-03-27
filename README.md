@@ -26,22 +26,24 @@ git clone https://github.com/babywyrm/mcpvenom.git && cd mcpvenom
 ./quickstart.sh
 ```
 
-This creates a `.venv`, installs everything, runs tests, and prints usage.
-After that, `./scan` and `uv run mcpvenom` just work — no activation needed.
+This creates a `.venv`, installs all extras (dev, ai, k8s), runs tests, and
+prints usage. After that, `./scan` and `uv run mcpvenom` just work — no
+activation needed.
 
 **uv (manual):**
 ```bash
-uv venv .venv
-uv pip install -e ".[dev]"
+uv sync --all-extras
 uv run mcpvenom --help
 ```
 
 No `source .venv/bin/activate` needed — `uv run` finds the project venv automatically.
 
+Optional extras: `dev` (testing/linting), `ai` (Claude analysis), `k8s` (Kubernetes checks).
+
 **pip (manual):**
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,ai,k8s]"
 ```
 
 **From PyPI** (coming soon):
@@ -122,11 +124,12 @@ The scanner runs checks in a deliberate order:
 
 | Phase | Checks | What Happens |
 |-------|--------|-------------|
-| **Static** | prompt_injection, tool_poisoning, excessive_permissions, token_theft, code_execution, remote_access, schema_risks, rate_limit, prompt_leakage, supply_chain, tool_shadowing | Pattern-match on tool names, descriptions, schemas. No server interaction beyond enumeration. |
+| **Static** | prompt_injection, tool_poisoning, excessive_permissions, token_theft, code_execution, remote_access, schema_risks, rate_limit, prompt_leakage, supply_chain, tool_shadowing, webhook_persistence, credential_in_schema, config_tampering, exfil_flow | Pattern-match on tool names, descriptions, schemas. No server interaction beyond enumeration. |
 | **Behavioral** | rug_pull, indirect_injection, protocol_robustness | Light interaction: re-list tools, read resources, send invalid methods. |
-| **Deep Probes** | deep_rug_pull, tool_response_injection, input_sanitization, error_leakage, temporal_consistency, resource_poisoning, state_mutation, notification_abuse | Active tool invocation with safe payloads. Analyze responses for threats. |
+| **Deep Probes** | deep_rug_pull, tool_response_injection, input_sanitization, error_leakage, temporal_consistency, resource_poisoning, response_credentials, state_mutation, notification_abuse | Active tool invocation with safe payloads. Analyze responses for threats. |
 | **Transport** | sse_security | CORS, unauthenticated SSE, cross-origin POST. |
 | **Aggregate** | multi_vector, attack_chains | Cross-reference all prior findings to detect compound threats. |
+| **AI** (optional) | llm_tool_analysis, llm_response_analysis, llm_chain_reasoning | Claude reads definitions, tool output, and all findings to identify subtle risks and multi-step attack chains. Requires `--claude`. |
 
 ---
 
@@ -296,16 +299,30 @@ Kubernetes:
 ### AI-Powered Analysis (Claude)
 
 Add `--claude` to any scan to layer LLM reasoning on top of deterministic checks.
-Requires `ANTHROPIC_API_KEY` env var. Install with `uv pip install -e ".[ai]"`.
+Requires the `anthropic` package and `ANTHROPIC_API_KEY` env var.
 
+**Setup:**
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+# If installed via quickstart.sh or uv sync --all-extras, anthropic is included.
+# Otherwise install the AI extra:
+uv pip install -e ".[ai]"    # or: pip install anthropic
 
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+If `--claude` is used without the package or API key, mcpvenom exits immediately
+with a clear error message instead of running the full scan first.
+
+**Usage:**
+```bash
 # Sonnet (fast, default)
 ./scan --targets http://localhost:9002/sse --claude --verbose
 
 # Opus (deepest reasoning)
 ./scan --targets http://localhost:9002/sse --claude --claude-model claude-opus-4-20250514
+
+# Fast mode + Claude (deterministic fast scan, then AI analysis)
+./scan --targets http://localhost:9090 --fast --claude --verbose
 ```
 
 mcpvenom uses a three-layer analysis architecture. Each layer catches what

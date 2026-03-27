@@ -318,6 +318,10 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
             if not text:
                 continue
 
+            # Cache response for reuse by downstream checks (response_credentials)
+            cache = opts.setdefault("_response_cache", {})
+            cache[name] = text
+
             for category, severity, detail in _scan_response_threats(text):
                 result.add(
                     "tool_response_injection",

@@ -1,6 +1,6 @@
 [project]
 name = "mcpvenom"
-version = "5.0.0"
+version = "6.0.0"
 description = "MCP red teaming & security scanner — enumerate, probe, and exploit Model Context Protocol servers"
 readme = "README.md"
 license = { text = "MIT" }

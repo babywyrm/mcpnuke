@@ -34,6 +34,25 @@ console = Console()
 def main():
     args = parse_args()
 
+    if args.claude:
+        try:
+            import anthropic  # noqa: F401
+        except ImportError:
+            print(
+                "Error: --claude requires the 'anthropic' package.\n"
+                "Install it with:  uv pip install mcpvenom[ai]   (or: pip install anthropic)",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        import os
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            print(
+                "Error: --claude requires ANTHROPIC_API_KEY environment variable.\n"
+                "  export ANTHROPIC_API_KEY=sk-ant-...",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
     # --stdio mode: scan a local server via stdin/stdout, then exit
     if args.stdio:
         probe_opts = {

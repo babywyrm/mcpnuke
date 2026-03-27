@@ -32,9 +32,12 @@ def check_response_credentials(session, result: TargetResult, probe_opts: dict |
     """
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
+    cache = opts.get("_response_cache", {})
     with time_check("response_credentials", result):
         invokable = [t for t in result.tools if _should_invoke(t, opts)]
         _log(f"    [dim]    scanning {len(invokable)} tool responses for credentials[/dim]")
+        if cache:
+            _log(f"    [dim]    ({len(cache)} cached responses available, skipping re-invocation)[/dim]")
         tool_idx = 0
         for tool in result.tools:
             if not _should_invoke(tool, opts):
@@ -42,9 +45,11 @@ def check_response_credentials(session, result: TargetResult, probe_opts: dict |
             tool_idx += 1
             name = tool.get("name", "")
             _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
-            args = _build_safe_args(tool)
-            resp = _call_tool(session, name, args)
-            text = _response_text(resp)
+            text = cache.get(name)
+            if text is None:
+                args = _build_safe_args(tool)
+                resp = _call_tool(session, name, args)
+                text = _response_text(resp)
             if text:
                 _scan_text_for_creds(text, f"tool '{name}' response", result)
 
