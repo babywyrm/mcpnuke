@@ -83,7 +83,7 @@ Or run `./walkthrough/demo.sh` for the fully automated version.
 # Scan a local MCP server via stdin/stdout (no proxy needed)
 ./scan --stdio 'npx -y @modelcontextprotocol/server-everything'
 
-# Fast scan (~2min vs ~30min) — samples top 5 tools, skips heavy probes
+# Fast scan (~2min vs ~30min) — samples top 5 security-relevant tools, skips heavy probes
 ./scan --targets http://localhost:9090 --fast --verbose
 
 # Grouped findings (compact report)
@@ -150,6 +150,10 @@ The scanner runs checks in a deliberate order:
 | `tool_shadowing` | HIGH–MEDIUM | Tool names that collide with common tools or other servers |
 | `prompt_leakage` | HIGH | Tools that may echo, log, or expose internal prompts |
 | `rate_limit` | MEDIUM | Descriptions suggesting unbounded/unthrottled usage |
+| `webhook_persistence` | HIGH–MEDIUM | Callback/webhook params or tool names enabling persistent re-injection |
+| `credential_in_schema` | CRITICAL–HIGH | Hardcoded credentials (API keys, JWTs, connection strings) in tool schemas |
+| `config_tampering` | HIGH | Tools that can modify agent config, system prompt, or tool registry |
+| `exfil_flow` | CRITICAL | Data flow from sensitive source tools to communication/network sinks |
 
 ### Behavioral Checks (active server interaction)
 
@@ -166,6 +170,7 @@ The scanner runs checks in a deliberate order:
 | `state_mutation` | HIGH–MEDIUM | Resources that appear, disappear, or change content after tool invocations |
 | `notification_abuse` | CRITICAL–MEDIUM | Unsolicited `sampling/createMessage`, `roots/list`, or other server-initiated requests |
 | `indirect_injection` | CRITICAL–HIGH | Injection/poison patterns and exfil URLs in resource content |
+| `response_credentials` | CRITICAL–HIGH | Credentials (API keys, passwords, private keys, connection strings) in tool responses |
 
 ### Transport & Aggregate Checks
 
@@ -216,6 +221,13 @@ parameter semantics:
 
 The canary string `MCP_PROBE_8f4c2a` is embedded in probes. If it appears
 in the response, the tool reflected input without sanitization.
+
+### Response Caching
+
+When `tool_response_injection` calls a tool, the response is cached in
+`probe_opts["_response_cache"]`. Downstream checks like `response_credentials`
+reuse the cache instead of re-invoking the same tools, eliminating redundant
+calls and reducing scan time.
 
 ### Response Analysis
 
@@ -291,10 +303,29 @@ Kubernetes:
 | Mode | Flag | What Runs | Use Case |
 |------|------|-----------|----------|
 | **Full** | (default) | Static + all behavioral probes | Dev/staging, DVMCP, CTFs |
-| **Fast** | `--fast` | Static + top-5 tools, skip heavy probes, cap workers at 2 | Quick triage, large tool sets |
+| **Fast** | `--fast` | Static + top-5 tools (tiered scoring), skip heavy probes, cap workers at 2 | Quick triage, large tool sets |
 | **Safe** | `--safe-mode` | Static + probes on read-only tools only | Prod servers with mixed tool risk |
 | **Static** | `--no-invoke` | Static checks only, no tool calls | Prod servers, zero side-effect risk |
 | **AI** | `--claude` | All checks + Claude analysis | Deep analysis, subtle vuln hunting |
+
+### Fast Mode Scoring
+
+In `--fast` mode, mcpnuke ranks all discovered tools using a tiered weighted
+scoring algorithm (`_tool_security_score`) and selects the top 5. The scorer
+considers:
+
+| Factor | How It Works |
+|--------|-------------|
+| **Keyword tiers** (6 levels) | Exec/eval/shell keywords score highest (10), followed by secret/credential (8), webhook/callback (7), run/command (6), upload/write/file (4), admin/root (3) |
+| **Name vs description** | Keywords in the tool *name* get 3x the weight of keywords in the description |
+| **Dangerous parameters** | Params named `url`, `command`, `code`, `query`, `script`, `host`, etc. add +8 each |
+| **Schema complexity** | Number of input properties (capped at 3) adds a small bonus |
+| **High-value floor** | Tools with names containing `secret`, `credential`, `password`, `token`, `config`, etc. get a minimum score of 15, even if other signals are weak |
+
+This ensures zero-parameter tools like `server-config` and `secrets.leak_config`
+rank above benign tools like `smelt-item` or `move-to-position`, and that tools
+with dangerous parameter surfaces (`run-maintenance`, `admin-webhook`, `fetch-skin`)
+are consistently selected.
 
 ### AI-Powered Analysis (Claude)
 
@@ -563,7 +594,12 @@ args:
 │   │   ├── transport.py       # sse_security (CORS, unauth SSE, cross-origin POST)
 │   │   ├── rate_limit.py      # rate_limit
 │   │   ├── prompt_leakage.py  # prompt_leakage
-│   │   └── supply_chain.py    # supply_chain
+│   │   ├── supply_chain.py    # supply_chain
+│   │   ├── webhook_persistence.py  # webhook_persistence (name + param detection)
+│   │   ├── credential_in_schema.py # credential_in_schema
+│   │   ├── config_tampering.py     # config_tampering
+│   │   ├── exfil_flow.py           # exfil_flow (source→sink with live verification)
+│   │   └── response_credentials.py # response_credentials (cached response reuse)
 │   ├── data/
 │   │   ├── public_targets.txt # Built-in target URLs (DVMCP, public MCP servers)
 │   │   └── tool_names.txt     # Wordlist for ToolServer tool enumeration
@@ -576,11 +612,17 @@ args:
 │   └── reporting/
 │       ├── console.py         # Rich table output
 │       └── json_out.py        # JSON report writer
-├── tests/                     # Pytest suite (145 tests, incl. DVMCP challenges)
+├── tests/                     # Pytest suite (163 tests, incl. DVMCP challenges)
 │   ├── test_dvmcp.py          # DVMCP challenges 1-10 (offline + optional live)
 │   ├── test_cli.py            # CLI argument parsing
 │   ├── test_diff.py           # Differential scanning
 │   ├── test_k8s.py            # Kubernetes checks
+│   ├── test_fast_sampling.py  # _tool_security_score + _pick_security_relevant
+│   ├── test_webhook_persistence.py
+│   ├── test_response_credentials.py
+│   ├── test_exfil_flow.py
+│   ├── test_config_tampering.py
+│   ├── test_credential_in_schema.py
 │   └── ...
 ├── walkthrough/               # Hands-on DVMCP guide + automated demo
 │   ├── README.md              # Progressive walkthrough with annotated findings
@@ -629,6 +671,14 @@ vulnerability pairs** that combine into compound attack paths:
 | `input_sanitization → code_execution` | Unsanitized input to RCE |
 | `resource_poisoning → tool_response_injection` | Poisoned resource feeds tool |
 | `cross_tool_manipulation → token_theft` | Tool chaining steals creds |
+| `webhook_persistence → tool_response_injection` | Persistent callback feeds poisoned responses |
+| `webhook_persistence → token_theft` | Webhook exfils credentials |
+| `config_tampering → code_execution` | Config rewrite enables RCE |
+| `config_tampering → webhook_persistence` | Config rewrite installs persistent callback |
+| `response_credentials → token_theft` | Leaked creds enable further theft |
+| `response_credentials → remote_access` | Leaked creds enable lateral movement |
+| `exfil_flow → token_theft` | Source→sink pipeline steals creds |
+| `exfil_flow → remote_access` | Source→sink pipeline enables remote access |
 
 Chains are reported as CRITICAL and appear in the "Attack Chains Detected"
 section of the scan output.

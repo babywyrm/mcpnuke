@@ -11,8 +11,8 @@ All notable changes to this submodule are documented here.
   Eliminates the need for a proxy when scanning npm/npx/python-based MCP servers.
   E.g. `--stdio 'npx -y @modelcontextprotocol/server-everything'`
 
-- **Fast mode (`--fast`)** — Samples top 5 security-relevant tools (ranked by danger
-  keywords, URL/command params, schema size), skips heavy probes (input_sanitization,
+- **Fast mode (`--fast`)** — Samples top 5 security-relevant tools via a tiered
+  weighted scoring algorithm, skips heavy probes (input_sanitization,
   error_leakage, temporal_consistency, ssrf_probe), caps probe workers at 2. Cuts
   LLM-backed scan time from ~30min to ~2min.
 
@@ -39,6 +39,63 @@ All notable changes to this submodule are documented here.
 
 - **SSE+POST fallback fix** — Added `/message` to `POST_PATHS` and the SSE+POST
   fallback combo loop for supergateway compatibility.
+
+- **Tiered tool security scoring (`_tool_security_score`)** — Replaced the flat
+  keyword-count heuristic in `_pick_security_relevant` with a weighted, multi-tier
+  scoring algorithm for fast-mode tool sampling:
+  - 6 keyword tiers (exec=10, secret/credential=8, webhook/callback=7,
+    run/command=6, upload/write/file=4, admin/root=3)
+  - Name keywords get 3× the weight of description keywords
+  - Dangerous parameter names (`url`, `command`, `code`, `query`, `script`,
+    `host`, `endpoint`, `callback`, etc.) add +8 per match
+  - Schema complexity capped at +3
+  - High-value floor of 15 for tool names containing `secret`, `credential`,
+    `password`, `token`, `config`, `leak`, `dump`, `env`, `private`, `key`
+  - Ensures zero-parameter tools like `server-config` rank above benign tools
+
+- **Response caching across checks** — `tool_response_injection` now caches tool
+  responses in `probe_opts["_response_cache"]`. Downstream checks
+  (`response_credentials`) reuse cached responses, eliminating redundant tool
+  invocations.
+
+- **Webhook name-based detection** — `webhook_persistence` now checks if
+  "webhook", "hook", "callback", "subscribe", "notify", or "listener" appear
+  in the tool *name* itself (not just parameter names/descriptions) when a URL
+  parameter is present. Catches tools like `admin-webhook` that were previously
+  missed when parameter names were generic.
+
+- **Fail-fast for `--claude`** — If `--claude` is specified but `anthropic` is not
+  installed or `ANTHROPIC_API_KEY` is not set, mcpnuke exits immediately with a
+  clear error message instead of running the full deterministic scan and failing
+  at the AI phase.
+
+- **`uv`-first quickstart** — `quickstart.sh` now prioritizes `uv` over `pip`,
+  uses `uv sync --all-extras` to install all optional dependencies (dev, ai, k8s),
+  and creates the venv via `uv venv` when available.
+
+- **Scan duration estimates** — The scanner now prints an estimated scan time at
+  the start (based on tool count, mode, and transport type).
+
+- **Stdio-aware adaptive backoff** — Stdio transport uses shorter initial timeouts
+  (1s vs 3s) and smaller retry caps appropriate for local subprocess latency.
+
+- **Truncated target labels** — Long URLs in console output are shortened to
+  host:port for readability.
+
+- **Self-referencing exfil exclusion** — `exfil_flow` no longer flags a tool as
+  both source and sink of its own data.
+
+- **Single-pass `tool_response_injection`** — Merged the reflection-detection pass
+  into the main response scan loop, reducing per-tool overhead.
+
+### Tests
+
+- **17 new tests for fast-mode scoring** (`tests/test_fast_sampling.py`):
+  9 `TestToolSecurityScore` tests validating keyword tier weights, name vs
+  description multipliers, dangerous parameter bonuses, and high-value floor;
+  8 `TestPickSecurityRelevant` tests validating top-5 selection, benign tool
+  exclusion, edge cases (empty list, n > count), and Camazotz tool ranking.
+- Total test suite: **163 passed, 36 skipped** (199 collected).
 
 ## [5.0.0] - 2026-03
 
@@ -222,7 +279,7 @@ _Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadm
 
 - **JWT audience validation** (MCP-T04) — Decode JWT tokens, verify `aud` claim matches the target MCP endpoint, detect cross-tool token replay. Flag servers with `verify_aud: False`.
 - **Cross-role token replay** (MCP-T04) — If a token is provided, attempt `tools/list` and `tools/call` for tools outside the token's role to detect role-only isolation gaps (e.g. same OIDC realm for users and agents).
-- **Response credential scanning** (MCP-T07) — Scan ALL tool response content (not just errors) for credential patterns. Catches incomplete env var redaction where secrets like `CLIENT_SECRET` slip through regex filters.
+- ~~**Response credential scanning**~~ (MCP-T07) — ✓ Done. `response_credentials` check with cached response reuse.
 - **LLM-mediated response detection** — Detect when tool responses are LLM-generated (hallucination risk, context bleed). Flag tools whose output shows LLM patterns (Ollama/OpenAI formatting, system prompt leakage through tool output).
 - **AI prompt injection via tool parameters** — Detect when user-controlled tool parameters are passed into LLM prompts, creating an injection surface through tool args rather than tool descriptions.
 - **Active SSRF probing** (MCP-T06) — Beyond pattern matching: probe tools with IMDS URLs (169.254.169.254), internal K8s API, RFC1918 ranges, DNS rebinding detection, IP encoding bypasses (decimal, hex, octal, IPv6-mapped).
@@ -230,19 +287,19 @@ _Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadm
 - **Actuator/debug endpoint probing** — Probe scan targets for exposed Spring Boot actuator (`/actuator/env`, `/actuator/beans`), Flask debug, pprof, Swagger, and GraphiQL. Actuator endpoints commonly leak signing keys and credentials.
 - **DPoP token support** (RFC 9449) — `--dpop-key FILE` flag to sign DPoP proofs with `htm`/`htu` claims for RFC 9449-protected MCP gateways.
 - **Confused deputy detection** (MCP-T03) — Check if tool calls propagate user identity vs agent SA; detect privilege gaps between caller and tool permissions.
-- **Exfiltration flow analysis** (MCP-T12) — Track data flow across tools: flag when a read-tool's output feeds into a communication-tool's input (Slack, email, webhook).
+- ~~**Exfiltration flow analysis**~~ (MCP-T12) — ✓ Done. `exfil_flow` check with live source→sink canary verification.
 - **Audit log evasion** (MCP-T13) — Verify that downstream audit logs attribute actions to the originating user, not just the agent service account.
-- **AI-powered description analysis** — Use LLM to detect subtle tool poisoning, hidden instructions, misleading descriptions that bypass regex.
+- ~~**AI-powered description analysis**~~ — ✓ Done. `--claude` with three-phase analysis (tool definitions, tool responses, chain reasoning).
 
 ### Larger investments — campaign framework
 
 - **Multi-stage campaign runner** (playbook Section 5) — Chain individual checks into named attack scenarios (CONTENT-TO-INFRA, COMMS-TO-CLUSTER, CODE-TO-PROD, etc.) with stage-gating and blast radius tracking
 - **Purple team mode** — `--purple-team`: timestamp every attack, measure MTTD/MTTR, generate detection scorecard, SIEM alert correlation
 - **LLM-as-proxy detection** — Detect when an LLM sits between the user and dangerous tools (e.g. chat endpoint → LLM → shell exec tool). Map the indirect execution path and flag the amplified blast radius.
-- **Agent config tampering** (MCP-T09) — Detect if an agent can write its own config, system prompt, or tool registry via any connected MCP
+- ~~**Agent config tampering**~~ (MCP-T09) — ✓ Done. `config_tampering` check detects tools that modify agent config, system prompt, or tool registry.
 - **Hallucination-driven destruction** (MCP-T10) — Send ambiguous instructions to tool-calling endpoints, verify confirmation gates and dry-run behavior before destructive ops
 - **Cross-tenant memory leak** (MCP-T11) — Plant canary strings via one session, probe retrieval from another; test vector DB tenant isolation
-- **Webhook/callback persistence** (MCP-T14) — Detect registered callbacks or webhooks that could re-inject payloads across sessions
+- ~~**Webhook/callback persistence**~~ (MCP-T14) — ✓ Done. `webhook_persistence` with name-based + parameter-based detection.
 - **Metrics endpoint** — Prometheus `/metrics` for scan counts, finding rates, tool coverage
 - **Active exploitation mode** — Controlled, opt-in exploit verification (beyond safe probing)
 - **MCP registry** — Curated list of public MCP servers for periodic scanning
@@ -250,7 +307,7 @@ _Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadm
 ### Done (previously planned)
 
 - ~~**Stdio transport**~~ — ✓ `--stdio CMD` for local MCP servers via stdin/stdout
-- ~~**Fast mode**~~ — ✓ `--fast` samples top 5 tools, skips heavy probes
+- ~~**Fast mode**~~ — ✓ `--fast` samples top 5 tools via tiered scoring, skips heavy probes
 - ~~**Grouped findings**~~ — ✓ `--group-findings` collapses similar findings
 - ~~**Parallel probes**~~ — ✓ `--probe-workers N` with ThreadPoolExecutor
 - ~~**Adaptive backoff**~~ — ✓ Per-tool latency tracking, exponential retry with jitter
@@ -260,7 +317,11 @@ _Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadm
 - ~~**Fuzzing / live probing**~~ — ✓ Behavioral probe engine with safe tool invocation
 - ~~**Docker image**~~ — ✓ `k8s/Dockerfile` with multi-stage Python 3.12-slim build
 - ~~**Kubernetes deployment**~~ — ✓ Job, CronJob, RBAC, Kustomize manifests
-- ~~**Attack chain profiling**~~ — ✓ 17 attack chain patterns with aggregate detection
+- ~~**Attack chain profiling**~~ — ✓ 25 attack chain patterns with aggregate detection
 - ~~**OIDC auth**~~ — ✓ `--oidc-url` / `--client-id` / `--client-secret`
 - ~~**Verbose mode**~~ — ✓ Real output in transport detection, enumeration, and checks
 - ~~**DVMCP test suite**~~ — ✓ 44 offline + 30 live tests covering all 10 challenges
+- ~~**Response credential scanning**~~ — ✓ `response_credentials` with cached response reuse
+- ~~**Webhook/callback persistence**~~ — ✓ `webhook_persistence` with name-based detection
+- ~~**Exfiltration flow analysis**~~ — ✓ `exfil_flow` with live source→sink canary verification
+- ~~**AI-powered description analysis**~~ — ✓ `--claude` three-phase AI analysis (tool defs, responses, chain reasoning)
