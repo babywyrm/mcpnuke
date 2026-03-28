@@ -12,16 +12,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from mcpnuke.core.constants import MCP_INIT_PARAMS, SSE_PATHS, POST_PATHS
-
-
-def _jrpc(method: str, params: dict | None = None, req_id: int = 1) -> dict:
-    return {
-        "jsonrpc": "2.0",
-        "id": req_id,
-        "method": method,
-        "params": params or {},
-    }
+from mcpnuke.core.constants import MCP_INIT_PARAMS, SSE_PATHS, POST_PATHS, build_jsonrpc_request as _jrpc
 
 
 def _auth_headers(auth_token: str | None) -> dict:

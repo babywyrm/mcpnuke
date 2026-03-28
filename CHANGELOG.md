@@ -2,6 +2,52 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.1.0] - 2026-03
+
+### Fixed
+
+- **Client version drift** — `MCP_INIT_PARAMS.clientInfo.version` now reads
+  `__version__` from `mcpnuke/__init__.py` (was hardcoded as `"4.1"`).
+  Single source of truth for version strings.
+
+- **Swallowed exceptions in parallel probes** — `ThreadPoolExecutor` deep
+  checks now log failures via `logging.debug` instead of bare `except: pass`.
+  Enables post-hoc diagnosis of intermittent probe failures.
+
+- **Incorrect `callable` type annotation** — `deep_checks` list in
+  `checks/__init__.py` now uses `Callable[..., Any]` from `collections.abc`
+  instead of the non-generic builtin `callable`.
+
+- **Unused imports across 7 source modules** — Removed dead imports:
+  `SEV_COLOR` in `models.py`, `MCP_INIT_PARAMS` in `behavioral.py`,
+  `defaultdict` in `chaining.py`, `json` in `exfil_flow.py`, `field` in
+  `auth.py`, `TargetResult` in `k8s/scanner.py`, `Panel` in `scanner.py`,
+  `__version__` in `cli.py`.
+
+- **Duplicate `_jrpc` helper** — Extracted `build_jsonrpc_request()` into
+  `core/constants.py` as the single JSON-RPC envelope builder. `session.py`
+  and `transport.py` now import from there instead of each defining their own.
+
+### Added
+
+- **`--no-color` flag** — Disables Rich color/markup output for terminals
+  without color support, accessibility needs, or piped output. Also respects
+  the `NO_COLOR` environment variable (https://no-color.org). Console instance
+  flows through `print_report()` to ensure all output respects the setting.
+
+- **`py.typed` PEP 561 marker** — Downstream consumers and IDEs now
+  recognize `mcpnuke` as a typed package for improved type-checking support.
+
+- **`from __future__ import annotations`** — Added to `constants.py`,
+  `models.py`, `checks/__init__.py`, `transport.py`, and
+  `reporting/console.py` for forward-compatible type annotations.
+
+- **Properly typed `TargetResult` fields** — `tools`, `resources`, `prompts`
+  now typed as `list[dict[str, Any]]` and `server_info` as `dict[str, Any]`
+  (was bare `list`/`dict`).
+
+---
+
 ## [6.0.0] - 2026-03
 
 ### Added

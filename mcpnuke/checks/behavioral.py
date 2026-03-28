@@ -5,7 +5,6 @@ import queue
 import time
 
 from mcpnuke.core.models import TargetResult
-from mcpnuke.core.constants import MCP_INIT_PARAMS
 from mcpnuke.checks.base import time_check
 
 

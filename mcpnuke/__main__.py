@@ -28,11 +28,10 @@ from mcpnuke.diff import (
 from rich.console import Console
 from rich.panel import Panel
 
-console = Console()
-
 
 def main():
     args = parse_args()
+    console = Console(no_color=args.no_color, force_terminal=not args.no_color)
 
     if args.claude:
         try:
@@ -83,7 +82,7 @@ def main():
             verbose=args.verbose,
             probe_opts=probe_opts,
         )
-        print_report([result], group_findings=args.group_findings)
+        print_report([result], group_findings=args.group_findings, console=console)
         if args.json_out:
             write_json([result], args.json_out, console=console)
         if any(f.severity in ("CRITICAL", "HIGH") for f in result.findings):
@@ -295,7 +294,7 @@ def main():
                     )
         print_diff_report(diff_results, args.baseline, console=console)
 
-    print_report(results, group_findings=args.group_findings)
+    print_report(results, group_findings=args.group_findings, console=console)
 
     if args.save_baseline:
         save_baseline(results, args.save_baseline, console=console)

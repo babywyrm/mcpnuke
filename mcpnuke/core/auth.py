@@ -1,7 +1,7 @@
 """OAuth2/OIDC authentication support for mcpnuke."""
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from urllib.parse import urlparse
 
 import httpx

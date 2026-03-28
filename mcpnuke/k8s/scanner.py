@@ -6,7 +6,7 @@ import json
 import os
 from typing import Any
 
-from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.core.models import Finding
 
 GLOBAL_K8S_FINDINGS: list[Finding] = []
 

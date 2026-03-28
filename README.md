@@ -280,6 +280,7 @@ Tool Server:
 Output:
   --json FILE                 Write JSON report to FILE
   --group-findings            Collapse similar findings into compact grouped rows
+  --no-color                  Disable colored output (respects NO_COLOR env var)
   --verbose, -v               Verbose output
   --debug                     Debug output (very noisy)
 

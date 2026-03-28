@@ -1,8 +1,9 @@
 """Data models for scan results."""
 
-from dataclasses import dataclass, field
+from __future__ import annotations
 
-from mcpnuke.core.constants import SEV_COLOR
+from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -19,10 +20,10 @@ class Finding:
 class TargetResult:
     url: str
     transport: str = "unknown"
-    server_info: dict = field(default_factory=dict)
-    tools: list = field(default_factory=list)
-    resources: list = field(default_factory=list)
-    prompts: list = field(default_factory=list)
+    server_info: dict[str, Any] = field(default_factory=dict)
+    tools: list[dict[str, Any]] = field(default_factory=list)
+    resources: list[dict[str, Any]] = field(default_factory=list)
+    prompts: list[dict[str, Any]] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     timings: dict[str, float] = field(default_factory=dict)
     error: str = ""

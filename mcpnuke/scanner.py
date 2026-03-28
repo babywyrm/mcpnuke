@@ -6,7 +6,6 @@ from collections import defaultdict
 from urllib.parse import urlparse
 
 from rich.console import Console
-from rich.panel import Panel
 from rich.progress import (
     BarColumn,
     Progress,

@@ -1,5 +1,7 @@
 """Rich console reporting with optional grouped findings."""
 
+from __future__ import annotations
+
 import re
 from collections import Counter, defaultdict
 
@@ -12,7 +14,7 @@ from mcpnuke.core.models import TargetResult, Finding
 from mcpnuke.core.constants import SEV_COLOR
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 
-console = Console()
+_default_console = Console()
 
 _TOOL_NAME_RE = re.compile(r"'([^']+)'")
 
@@ -61,7 +63,12 @@ def _group_findings(findings: list[Finding]) -> list[dict]:
     return rows
 
 
-def print_report(results: list[TargetResult], group_findings: bool = False):
+def print_report(
+    results: list[TargetResult],
+    group_findings: bool = False,
+    console: Console | None = None,
+) -> None:
+    console = console or _default_console
     all_findings = (
         [f for r in results for f in r.findings] + GLOBAL_K8S_FINDINGS
     )

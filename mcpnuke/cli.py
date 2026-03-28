@@ -6,8 +6,6 @@ import re
 import sys
 from pathlib import Path
 
-from mcpnuke import __version__
-
 # Env var for auth token (alternative to --auth-token)
 AUTH_TOKEN_ENV = "MCP_AUTH_TOKEN"
 
@@ -239,6 +237,12 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         default="claude-sonnet-4-20250514",
         help="Claude model to use for AI analysis (default: claude-sonnet-4-20250514). "
         "Use claude-opus-4-20250514 for deepest analysis.",
+    )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        default=bool(os.environ.get("NO_COLOR")),
+        help="Disable colored output. Respects the NO_COLOR env var (https://no-color.org).",
     )
     return p.parse_args(args)
 

@@ -7,7 +7,6 @@ then attempts to send canary data through a sink tool, confirming
 reachability of theoretical exfiltration paths.
 """
 
-import json
 import re
 
 from mcpnuke.core.models import TargetResult

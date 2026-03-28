@@ -1,10 +1,17 @@
 """Security check registry and runner."""
 
+from __future__ import annotations
+
+import logging
 import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
 from mcpnuke.core.models import TargetResult
+
+_log_internal = logging.getLogger("mcpnuke.checks")
 from mcpnuke.checks.injection import (
     check_prompt_injection,
     check_tool_poisoning,
@@ -213,7 +220,7 @@ def run_all_checks(
             if probe_workers > 1:
                 _log(f"  [dim]  (running with {probe_workers} parallel probe workers)[/dim]")
 
-        deep_checks: list[tuple[str, callable, tuple, dict]] = [
+        deep_checks: list[tuple[str, Callable[..., Any], tuple[Any, ...], dict[str, Any]]] = [
             ("deep_rug_pull", check_deep_rug_pull, (session, result), {"probe_opts": opts}),
             ("tool_response_injection", check_tool_response_injection, (session, result), {"probe_opts": opts}),
             ("input_sanitization", check_input_sanitization, (session, result), {"probe_opts": opts}),
@@ -243,8 +250,9 @@ def run_all_checks(
                 for f in as_completed(futures):
                     try:
                         f.result()
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        check_name = futures[f]
+                        _log_internal.debug("Deep check %s failed: %s", check_name, exc)
         else:
             for name, fn, a, kw in deep_checks:
                 _run(name, fn, *a, **kw)

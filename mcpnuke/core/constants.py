@@ -1,10 +1,28 @@
 """MCP protocol constants and configuration."""
 
-MCP_PROTOCOL_VERSION = "2024-11-05"
-MCP_INIT_PARAMS = {
+from __future__ import annotations
+
+from mcpnuke import __version__
+
+MCP_PROTOCOL_VERSION: str = "2024-11-05"
+
+
+def build_jsonrpc_request(
+    method: str,
+    params: dict[str, object] | None = None,
+    req_id: int = 1,
+) -> dict[str, object]:
+    """Build a JSON-RPC 2.0 request envelope."""
+    return {
+        "jsonrpc": "2.0",
+        "id": req_id,
+        "method": method,
+        "params": params or {},
+    }
+MCP_INIT_PARAMS: dict[str, object] = {
     "protocolVersion": MCP_PROTOCOL_VERSION,
     "capabilities": {},
-    "clientInfo": {"name": "mcpnuke", "version": "4.1"},
+    "clientInfo": {"name": "mcpnuke", "version": __version__},
 }
 
 SEVERITY_WEIGHTS = {"CRITICAL": 10, "HIGH": 7, "MEDIUM": 4, "LOW": 1}

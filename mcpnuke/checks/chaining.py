@@ -1,7 +1,5 @@
 """Tool shadowing, multi-vector, attack chain checks."""
 
-from collections import defaultdict
-
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.constants import SHADOW_TARGETS, ATTACK_CHAIN_PATTERNS
 from mcpnuke.checks.base import time_check

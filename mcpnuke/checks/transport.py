@@ -1,19 +1,12 @@
 """SSE/transport security checks."""
 
+from __future__ import annotations
+
 import httpx
 
 from mcpnuke.core.models import TargetResult
-from mcpnuke.core.constants import MCP_INIT_PARAMS
+from mcpnuke.core.constants import MCP_INIT_PARAMS, build_jsonrpc_request as _jrpc
 from mcpnuke.checks.base import time_check
-
-
-def _jrpc(method: str, params: dict | None = None, req_id: int = 1) -> dict:
-    return {
-        "jsonrpc": "2.0",
-        "id": req_id,
-        "method": method,
-        "params": params or {},
-    }
 
 
 def check_sse_security(base: str, sse_path: str, result: TargetResult):
