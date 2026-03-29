@@ -2,6 +2,42 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.2.0] - 2026-03
+
+### Added
+
+- **`config_dump` check** — New deep probe that identifies tools whose purpose
+  is to expose internal config (names matching `config`, `env`, `status`,
+  `diagnostics`, etc.), calls them, and scans responses for infrastructure
+  leaks: internal IPs, Kubernetes DNS, secret env vars, SA token paths, private
+  keys, and AI safety config exposure. 10 leak patterns, severity-escalating.
+
+- **`behavioral_rate_limit` check** — Active probe that fires 10 rapid calls
+  to a safe tool and flags when all succeed with no throttling or 429 response.
+  Complements the existing static `rate_limit` check.
+
+- **23 credential content patterns** — Expanded `CREDENTIAL_CONTENT_PATTERNS`
+  to catch RCON passwords, admin API keys, Anthropic/OpenAI/GitHub/GitLab/Slack
+  keys, file path references to secrets (`[file:...]`), Kubernetes SA token
+  paths, internal service endpoints, and key-value password formats in JSON/env
+  dumps.
+
+### Fixed
+
+- **SSRF probe early exit** — `check_ssrf_probe` no longer returns after the
+  first CRITICAL or HIGH finding. All URL-accepting parameters across all tools
+  are now fully probed, surfacing the complete SSRF attack surface.
+
+- **Claude AI analysis silent failures** — `run_llm_analysis` now checks for
+  `ANTHROPIC_API_KEY` and the `anthropic` package up front, logging clear
+  warnings instead of silently skipping. Exception messages include the
+  exception type for easier diagnosis.
+
+### Changed
+
+- Check count increased from 30 to 33 (`config_dump`, `behavioral_rate_limit`,
+  plus existing Claude AI phases now properly counted).
+
 ## [6.1.0] - 2026-03
 
 ### Fixed

@@ -172,17 +172,37 @@ def has_invisible_unicode(text: str, threshold: int = 3) -> list[str]:
 # ---------------------------------------------------------------------------
 
 CREDENTIAL_CONTENT_PATTERNS = [
-    (r"(?:password|passwd|pwd)\s*[:=]\s*\S+", "password"),
-    (r"(?:api[_-]?key|apikey)\s*[:=]\s*\S+", "api_key"),
+    # Private keys (highest priority — unmistakable)
+    (r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----", "private_key"),
+    # Cloud provider keys
+    (r"AKIA[0-9A-Z]{16}", "aws_access_key"),
+    (r"sk-ant-[a-zA-Z0-9_\-]{20,}", "anthropic_api_key"),
     (r"sk-[a-zA-Z0-9]{20,}", "openai_key"),
     (r"ghp_[a-zA-Z0-9]{36}", "github_pat"),
+    (r"gho_[a-zA-Z0-9]{36}", "github_oauth_token"),
+    (r"glpat-[a-zA-Z0-9\-]{20,}", "gitlab_pat"),
+    (r"xox[bporas]-[a-zA-Z0-9\-]{10,}", "slack_token"),
+    (r"AIza[a-zA-Z0-9_\-]{35}", "gcp_api_key"),
+    # Connection strings
+    (r"(?:postgres|mysql|mongodb|redis|amqp|mssql)://\w+:\S+@", "connection_string"),
+    # Bearer/JWT tokens
     (r"(?:bearer|token)\s+[a-zA-Z0-9._\-]{20,}", "bearer_token"),
-    (r"(?:postgres|mysql|mongodb|redis)://\w+:\w+@", "connection_string"),
-    (r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----", "private_key"),
-    (r"AKIA[0-9A-Z]{16}", "aws_access_key"),
-    (r"(?:secret|credential)\s*[:=]\s*\S+", "secret"),
-    (r"(?:admin|root)\s+(?:password|pwd|pass)\s*[:=]\s*\S+", "admin_password"),
+    (r"eyJ[a-zA-Z0-9_\-]+\.eyJ[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+", "jwt_token"),
+    # Passwords in key-value output (JSON, env, config dumps)
+    (r"[\"']?(?:RCON_PASSWORD|rcon_password)[\"']?\s*[:=]\s*[\"']?\S{6,}", "rcon_password"),
+    (r"[\"']?(?:ADMIN[_-]?(?:API[_-]?)?KEY|admin[_-]?(?:api[_-]?)?key)[\"']?\s*[:=]\s*[\"']?\S{6,}", "admin_api_key"),
+    (r"[\"']?(?:password|passwd|pwd)[\"']?\s*[:=]\s*[\"']?\S{6,}", "password"),
+    (r"[\"']?(?:api[_-]?key|apikey)[\"']?\s*[:=]\s*[\"']?\S{6,}", "api_key"),
+    (r"[\"']?(?:secret|credential)[\"']?\s*[:=]\s*[\"']?\S{6,}", "secret"),
+    (r"[\"']?(?:admin|root)\s+(?:password|pwd|pass)[\"']?\s*[:=]\s*[\"']?\S{4,}", "admin_password"),
     (r"(?:database|db)\s+(?:connection|conn)\s*[:=]?\s*\S+://", "db_connection"),
+    # File path references to secrets (e.g. [file:/etc/.../key], SSH_KEY: /path/to/key)
+    (r"\[file:[^\]]*(?:key|secret|credential|cert|pem)[^\]]*\]", "secret_file_reference"),
+    (r"(?:KEY|key|cert|pem|secret)\s*[:=]\s*[\"']?/(?:etc|var|run|opt|home)/\S+", "secret_path_reference"),
+    # Kubernetes service account tokens
+    (r"/var/run/secrets/kubernetes\.io/serviceaccount/token", "k8s_sa_token_path"),
+    # Internal service endpoint exposure (ClusterIP, internal DNS)
+    (r"(?:KUBERNETES_SERVICE_HOST|SERVICE_HOST)\s*[:=]\s*\S+", "k8s_service_endpoint"),
 ]
 
 # ---------------------------------------------------------------------------

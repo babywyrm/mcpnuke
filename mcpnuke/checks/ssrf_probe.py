@@ -81,6 +81,7 @@ def check_ssrf_probe(session, result: TargetResult, probe_opts: dict | None = No
                     if not text:
                         continue
 
+                    found_critical = False
                     for pat in CLOUD_METADATA_INDICATORS:
                         if re.search(pat, text, re.IGNORECASE):
                             result.add(
@@ -90,18 +91,20 @@ def check_ssrf_probe(session, result: TargetResult, probe_opts: dict | None = No
                                 f"Payload: {payload_name} via param '{pname}'",
                                 evidence=text[:400],
                             )
-                            return
+                            found_critical = True
+                            break
 
-                    for pat in INTERNAL_INDICATORS:
-                        if re.search(pat, text, re.IGNORECASE) and not re.search(pat, safe_text or "", re.IGNORECASE):
-                            result.add(
-                                "ssrf_probe",
-                                "HIGH",
-                                f"SSRF: internal service accessed via tool '{name}'",
-                                f"Payload: {payload_name} via param '{pname}'",
-                                evidence=text[:400],
-                            )
-                            return
+                    if not found_critical:
+                        for pat in INTERNAL_INDICATORS:
+                            if re.search(pat, text, re.IGNORECASE) and not re.search(pat, safe_text or "", re.IGNORECASE):
+                                result.add(
+                                    "ssrf_probe",
+                                    "HIGH",
+                                    f"SSRF: internal service accessed via tool '{name}'",
+                                    f"Payload: {payload_name} via param '{pname}'",
+                                    evidence=text[:400],
+                                )
+                                break
 
                     if safe_text and text and len(text) > 50 and text != safe_text:
                         len_ratio = len(text) / max(len(safe_text), 1)

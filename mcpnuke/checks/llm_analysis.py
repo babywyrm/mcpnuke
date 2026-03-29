@@ -30,6 +30,20 @@ def run_llm_analysis(
     _log = console.print if console else lambda msg: None
     no_invoke = opts.get("no_invoke", False)
 
+    # Verify API key is set
+    import os
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        _log("  [red]✗ ANTHROPIC_API_KEY not set — skipping AI analysis[/red]")
+        _log("  [dim]  Set the env var or pass --claude to enable.[/dim]")
+        return
+
+    try:
+        import anthropic  # noqa: F401
+    except ImportError:
+        _log("  [red]✗ anthropic package not installed — skipping AI analysis[/red]")
+        _log("  [dim]  Install with: pip install anthropic[/dim]")
+        return
+
     # Phase 1: Tool description analysis
     with time_check("llm_tool_analysis", result):
         _log("  [cyan]AI Phase 1: Analyzing tool definitions...[/cyan]")
@@ -48,7 +62,7 @@ def run_llm_analysis(
             _log(f"  [yellow]  Phase 1 interrupted[/yellow]")
             return
         except Exception as e:
-            _log(f"  [yellow]  Phase 1 failed: {e}[/yellow]")
+            _log(f"  [yellow]  Phase 1 failed: {type(e).__name__}: {e}[/yellow]")
 
     # Phase 2: Response analysis (call tools, analyze what comes back)
     if not no_invoke:
@@ -91,7 +105,7 @@ def run_llm_analysis(
                 _log(f"  [yellow]  Phase 2 interrupted[/yellow]")
                 return
             except Exception as e:
-                _log(f"  [yellow]  Phase 2 failed: {e}[/yellow]")
+                _log(f"  [yellow]  Phase 2 failed: {type(e).__name__}: {e}[/yellow]")
     else:
         _log("  [dim]  Phase 2 skipped (--no-invoke): use --safe-mode to enable response analysis[/dim]")
 
@@ -117,4 +131,4 @@ def run_llm_analysis(
         except KeyboardInterrupt:
             _log(f"  [yellow]  Phase 3 interrupted[/yellow]")
         except Exception as e:
-            _log(f"  [yellow]  Phase 3 failed: {e}[/yellow]")
+            _log(f"  [yellow]  Phase 3 failed: {type(e).__name__}: {e}[/yellow]")

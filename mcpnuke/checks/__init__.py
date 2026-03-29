@@ -39,7 +39,7 @@ from mcpnuke.checks.chaining import (
     check_attack_chains,
 )
 from mcpnuke.checks.transport import check_sse_security
-from mcpnuke.checks.rate_limit import check_rate_limit
+from mcpnuke.checks.rate_limit import check_rate_limit, check_behavioral_rate_limit
 from mcpnuke.checks.prompt_leakage import check_prompt_leakage
 from mcpnuke.checks.supply_chain import check_supply_chain
 from mcpnuke.checks.tool_probes import (
@@ -50,6 +50,7 @@ from mcpnuke.checks.tool_probes import (
     check_resource_poisoning,
 )
 from mcpnuke.checks.response_credentials import check_response_credentials
+from mcpnuke.checks.config_dump import check_config_dump
 from mcpnuke.checks.config_tampering import check_config_tampering
 from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 from mcpnuke.checks.credential_in_schema import check_credential_in_schema
@@ -176,7 +177,7 @@ def run_all_checks(
     total_checks = 15  # static (exfil_flow counted separately below)
     total_checks += 1  # exfil_flow
     if not no_invoke:
-        deep_count = 10 if not fast_mode else (10 - len(FAST_SKIP_CHECKS))
+        deep_count = 12 if not fast_mode else (12 - len(FAST_SKIP_CHECKS))
         total_checks += 3 + deep_count  # light behavioral + deep
     if base and sse_path:
         total_checks += 1
@@ -229,6 +230,8 @@ def run_all_checks(
             ("resource_poisoning", check_resource_poisoning, (session, result), {}),
             ("response_credentials", check_response_credentials, (session, result), {"probe_opts": opts}),
             ("ssrf_probe", check_ssrf_probe, (session, result), {"probe_opts": opts}),
+            ("config_dump", check_config_dump, (session, result), {"probe_opts": opts}),
+            ("behavioral_rate_limit", check_behavioral_rate_limit, (session, result), {"probe_opts": opts}),
             ("state_mutation", check_state_mutation, (session, result), {}),
             ("notification_abuse", check_notification_abuse, (session, result), {}),
         ]
