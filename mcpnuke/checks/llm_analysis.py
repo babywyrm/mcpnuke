@@ -41,7 +41,7 @@ def run_llm_analysis(
         import anthropic  # noqa: F401
     except ImportError:
         _log("  [red]✗ anthropic package not installed — skipping AI analysis[/red]")
-        _log("  [dim]  Install with: pip install anthropic[/dim]")
+        _log("  [dim]  Install with: uv pip install mcpnuke[ai]  (or: pip install anthropic)[/dim]")
         return
 
     # Phase 1: Tool description analysis

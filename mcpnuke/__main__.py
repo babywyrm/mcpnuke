@@ -29,9 +29,107 @@ from rich.console import Console
 from rich.panel import Panel
 
 
+def _run_doctor(console: Console) -> None:
+    """Check installation health and report missing deps / config."""
+    from mcpnuke import __version__
+    import shutil
+
+    console.print(f"\n[bold cyan]mcpnuke v{__version__} — doctor[/bold cyan]\n")
+    ok_count = 0
+    warn_count = 0
+
+    def _ok(msg: str) -> None:
+        nonlocal ok_count
+        ok_count += 1
+        console.print(f"  [green]✓[/green] {msg}")
+
+    def _warn(msg: str, hint: str = "") -> None:
+        nonlocal warn_count
+        warn_count += 1
+        console.print(f"  [yellow]✗[/yellow] {msg}")
+        if hint:
+            from rich.markup import escape
+            console.print(f"    [dim]{escape(hint)}[/dim]")
+
+    def _pkg_version(name: str) -> str:
+        try:
+            mod = __import__(name)
+            ver = getattr(mod, "__version__", None)
+            if ver:
+                return ver
+        except ImportError:
+            return "missing"
+        try:
+            from importlib.metadata import version as meta_ver
+            return meta_ver(name)
+        except Exception:
+            return "?"
+
+    # Core deps (always installed)
+    for pkg in ("httpx", "rich"):
+        ver = _pkg_version(pkg)
+        if ver == "missing":
+            _warn(f"{pkg} not found", f"pip install {pkg}")
+        else:
+            _ok(f"{pkg} {ver}")
+
+    # Optional: AI
+    try:
+        import anthropic
+        ver = getattr(anthropic, "__version__", "?")
+        _ok(f"anthropic {ver}  [dim](extra: ai)[/dim]")
+    except ImportError:
+        _warn("anthropic not installed — --claude disabled",
+              "uv pip install 'mcpnuke[ai]'  or:  pip install anthropic")
+
+    # Optional: K8s
+    try:
+        import kubernetes
+        ver = getattr(kubernetes, "__version__", "?")
+        _ok(f"kubernetes {ver}  [dim](extra: k8s)[/dim]")
+    except ImportError:
+        _warn("kubernetes not installed — K8s discovery/checks disabled",
+              "uv pip install 'mcpnuke[k8s]'  or:  pip install kubernetes")
+
+    # Env vars
+    import os
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        key = os.environ["ANTHROPIC_API_KEY"]
+        _ok(f"ANTHROPIC_API_KEY set ({key[:12]}...)")
+    else:
+        _warn("ANTHROPIC_API_KEY not set — --claude will fail",
+              "export ANTHROPIC_API_KEY=sk-ant-...")
+
+    if os.environ.get("MCP_AUTH_TOKEN"):
+        _ok("MCP_AUTH_TOKEN set")
+    else:
+        console.print(f"  [dim]─[/dim] MCP_AUTH_TOKEN not set  [dim](optional, for authenticated targets)[/dim]")
+
+    # Python version
+    _ok(f"Python {sys.version.split()[0]}")
+
+    # Platform tools
+    for tool in ("curl", "ssh", "tmux"):
+        if shutil.which(tool):
+            _ok(f"{tool} available")
+        else:
+            _warn(f"{tool} not found on PATH",
+                  f"Install with your package manager (apt/brew install {tool})")
+
+    console.print(f"\n  [bold]{ok_count} ok[/bold], [bold yellow]{warn_count} warning(s)[/bold yellow]\n")
+    if warn_count == 0:
+        console.print("  [bold green]All good — ready to scan.[/bold green]\n")
+    else:
+        console.print("  [dim]Fix warnings above for full functionality.[/dim]\n")
+
+
 def main():
     args = parse_args()
     console = Console(no_color=args.no_color, force_terminal=not args.no_color)
+
+    if args.doctor:
+        _run_doctor(console)
+        sys.exit(0)
 
     if args.claude:
         try:

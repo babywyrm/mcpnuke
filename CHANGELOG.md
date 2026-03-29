@@ -33,10 +33,20 @@ All notable changes to this submodule are documented here.
   warnings instead of silently skipping. Exception messages include the
   exception type for easier diagnosis.
 
+- **`--doctor` flag** — Verifies installation health: core deps, optional
+  extras (`ai`, `k8s`), env vars (`ANTHROPIC_API_KEY`, `MCP_AUTH_TOKEN`),
+  Python version, and platform tools (`curl`, `ssh`, `tmux`). Run
+  `mcpnuke --doctor` to diagnose setup issues before scanning.
+
+- **`all` optional extra** — `uv pip install 'mcpnuke[all]'` installs both
+  `ai` and `k8s` extras in one shot.
+
 ### Changed
 
 - Check count increased from 30 to 33 (`config_dump`, `behavioral_rate_limit`,
   plus existing Claude AI phases now properly counted).
+- Install hints across CLI and checks now consistently reference
+  `mcpnuke[ai]` / `mcpnuke[k8s]` extras.
 
 ## [6.1.0] - 2026-03
 

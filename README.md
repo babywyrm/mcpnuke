@@ -38,17 +38,22 @@ uv run mcpnuke --help
 
 No `source .venv/bin/activate` needed — `uv run` finds the project venv automatically.
 
-Optional extras: `dev` (testing/linting), `ai` (Claude analysis), `k8s` (Kubernetes checks).
+Optional extras: `dev` (testing/linting), `ai` (Claude analysis), `k8s` (Kubernetes checks), `all` (everything).
 
 **pip (manual):**
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,ai,k8s]"
+pip install -e ".[all,dev]"
 ```
 
 **From PyPI** (coming soon):
 ```bash
-uv pip install mcpnuke
+uv pip install 'mcpnuke[all]'
+```
+
+**Verify your install:**
+```bash
+mcpnuke --doctor
 ```
 
 ---

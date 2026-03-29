@@ -112,7 +112,7 @@ if [ "$PKG_MGR" = "uv" ]; then
     uv sync --all-extras 2>&1 | tail -5
     ok "mcpnuke installed (uv sync --all-extras)"
 else
-    pip install -e ".[dev,ai,k8s]" 2>&1 | tail -3
+    pip install -e ".[all,dev]" 2>&1 | tail -3
     ok "mcpnuke installed (pip editable)"
 fi
 

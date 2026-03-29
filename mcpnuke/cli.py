@@ -244,6 +244,11 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         default=bool(os.environ.get("NO_COLOR")),
         help="Disable colored output. Respects the NO_COLOR env var (https://no-color.org).",
     )
+    p.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Check installation health: core deps, optional extras, env vars, connectivity.",
+    )
     return p.parse_args(args)
 
 

@@ -41,6 +41,9 @@ k8s = [
 ai = [
     "anthropic>=0.40",
 ]
+all = [
+    "mcpnuke[ai,k8s]",
+]
 
 [project.scripts]
 mcpnuke = "mcpnuke.__main__:main"
