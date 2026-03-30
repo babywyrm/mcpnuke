@@ -28,6 +28,10 @@ from mcpnuke.diff import (
 from rich.console import Console
 from rich.panel import Panel
 
+EXIT_CLEAN = 0
+EXIT_FINDINGS = 1
+EXIT_ERROR = 2
+
 
 def _run_doctor(console: Console) -> None:
     """Check installation health and report missing deps / config."""
@@ -123,13 +127,13 @@ def _run_doctor(console: Console) -> None:
         console.print("  [dim]Fix warnings above for full functionality.[/dim]\n")
 
 
-def main():
+def _main_inner() -> None:
     args = parse_args()
     console = Console(no_color=args.no_color, force_terminal=not args.no_color)
 
     if args.doctor:
         _run_doctor(console)
-        sys.exit(0)
+        sys.exit(EXIT_CLEAN)
 
     if args.claude:
         try:
@@ -140,7 +144,7 @@ def main():
                 "Install it with:  uv pip install mcpnuke[ai]   (or: pip install anthropic)",
                 file=sys.stderr,
             )
-            sys.exit(1)
+            sys.exit(EXIT_ERROR)
         import os
         if not os.environ.get("ANTHROPIC_API_KEY"):
             print(
@@ -148,7 +152,7 @@ def main():
                 "  export ANTHROPIC_API_KEY=sk-ant-...",
                 file=sys.stderr,
             )
-            sys.exit(1)
+            sys.exit(EXIT_ERROR)
 
     # --stdio mode: scan a local server via stdin/stdout, then exit
     if args.stdio:
@@ -184,8 +188,8 @@ def main():
         if args.json_out:
             write_json([result], args.json_out, console=console)
         if any(f.severity in ("CRITICAL", "HIGH") for f in result.findings):
-            sys.exit(1)
-        sys.exit(0)
+            sys.exit(EXIT_FINDINGS)
+        sys.exit(EXIT_CLEAN)
 
     if args.k8s_discover and not args.targets and not args.targets_file and not args.public_targets and not args.port_range:
         urls = []
@@ -200,7 +204,7 @@ def main():
             console.print(f"  [green]✓[/green] Token acquired via OIDC client_credentials")
         except RuntimeError as e:
             console.print(f"  [red]✗[/red] OIDC token fetch failed: {e}")
-            sys.exit(1)
+            sys.exit(EXIT_ERROR)
     elif not auth_token and urls and args.verbose:
         info = detect_auth_requirements(urls[0])
         if info.requires_auth:
@@ -312,7 +316,7 @@ def main():
                 from pathlib import Path
                 Path(args.json_out).write_text(json.dumps(report, indent=2))
                 console.print(f"[green]JSON written to {args.json_out}[/green]")
-            sys.exit(0)
+            sys.exit(EXIT_CLEAN)
         for ep in discovered:
             if ep.url not in urls:
                 urls.append(ep.url)
@@ -338,10 +342,10 @@ def main():
                 Path(args.json_out).write_text(json.dumps(report, indent=2))
                 console.print(f"\n[green]JSON report written to {args.json_out}[/green]")
             if any(f.severity in ("CRITICAL", "HIGH") for f in GLOBAL_K8S_FINDINGS):
-                sys.exit(1)
-            sys.exit(0)
+                sys.exit(EXIT_FINDINGS)
+            sys.exit(EXIT_CLEAN)
         console.print("[red]No targets specified and K8s discovery found nothing.[/red]")
-        sys.exit(1)
+        sys.exit(EXIT_ERROR)
 
     if len(urls) == 1:
         results = [
@@ -402,7 +406,14 @@ def main():
 
     all_findings = [f for r in results for f in r.findings]
     if any(f.severity in ("CRITICAL", "HIGH") for f in all_findings):
-        sys.exit(1)
+        sys.exit(EXIT_FINDINGS)
+
+
+def main() -> None:
+    try:
+        _main_inner()
+    except Exception:
+        sys.exit(EXIT_ERROR)
 
 
 if __name__ == "__main__":

@@ -108,6 +108,10 @@ uv run pytest tests/ -v
 All `./scan` commands also work as `uv run mcpnuke` (no activation needed),
 `mcpnuke` (with venv activated), or `.venv/bin/mcpnuke`.
 
+**Exit codes:** `0` — no findings (clean); `1` — findings reported; `2` — scan
+error (connection failure, invalid args, etc.). Use `1` vs `2` in CI to
+distinguish “vulns found” from “scanner failed.”
+
 ---
 
 ## How It Works
@@ -168,7 +172,7 @@ The scanner runs checks in a deliberate order:
 | `deep_rug_pull` | CRITICAL | Tool list/schema changes **after invoking tools** — catches state-dependent rug pulls that the shallow check misses |
 | `tool_response_injection` | CRITICAL–HIGH | Injection payloads, exfil URLs, hidden content, invisible Unicode, or base64-encoded attacks in tool **responses** |
 | `cross_tool_manipulation` | HIGH | Tool output that directs the LLM to invoke a different tool |
-| `input_sanitization` | CRITICAL–HIGH | Path traversal, command injection, template injection, SQL injection probes reflected unsanitized |
+| `input_sanitization` | CRITICAL–HIGH | Path traversal, command injection, template injection, SQL injection probes reflected unsanitized. **LLM-aware SSTI:** confirmed engine fingerprints (Jinja2/Mako/ERB/EL) stay CRITICAL; math-style template probes evaluated by the LLM (e.g. `{{7*7}}` → `49`) are downgraded to MEDIUM so LLM-backed MCP servers are not false-flagged as code SSTI. |
 | `error_leakage` | HIGH–MEDIUM | Stack traces, internal paths, connection strings, or secrets in error responses |
 | `temporal_consistency` | CRITICAL–MEDIUM | Escalating injection, wildly inconsistent responses, or new threats across repeated identical calls |
 | `resource_poisoning` | CRITICAL–HIGH | Base64-encoded injection, data URIs, steganographic Unicode, CSS-hidden HTML, or markdown image exfiltration in resource content |
@@ -462,8 +466,9 @@ flagged as MEDIUM for review.
 ./scan --port-range localhost:9001-9010 --json report.json
 ```
 
-Exit code is 1 if any CRITICAL or HIGH findings; 0 otherwise. Use in
-CI pipelines to gate deployments.
+Exit code is `1` if the scan completes and reports findings, `0` if clean,
+and `2` on scan errors. Use in CI pipelines to gate deployments and to
+separate “findings” from “scanner failure.”
 
 ### Run tests
 
@@ -744,4 +749,8 @@ DVMCP_LIVE=1 .venv/bin/pytest tests/test_dvmcp.py -v
 
 ## Exit Code
 
-Exits **1** if any CRITICAL or HIGH findings; **0** otherwise.
+| Code | Meaning |
+|------|---------|
+| **0** | Clean — scan finished with no findings |
+| **1** | Findings — at least one finding was reported |
+| **2** | Error — scan did not complete successfully (e.g. unreachable target, bad flags) |

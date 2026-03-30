@@ -1,6 +1,6 @@
 """Tool shadowing, multi-vector, attack chain checks."""
 
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import TargetResult, AttackChain
 from mcpnuke.core.constants import SHADOW_TARGETS, ATTACK_CHAIN_PATTERNS
 from mcpnuke.checks.base import time_check
 
@@ -67,6 +67,7 @@ def check_attack_chains(result: TargetResult):
         checks = {f.check for f in result.findings}
         for a, b in ATTACK_CHAIN_PATTERNS:
             if a in checks and b in checks:
+                result.attack_chains.append(AttackChain(source=a, target=b))
                 result.add(
                     "attack_chain",
                     "CRITICAL",

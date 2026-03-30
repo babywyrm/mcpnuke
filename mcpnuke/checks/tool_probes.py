@@ -24,7 +24,6 @@ from mcpnuke.patterns.probes import (
     PATH_TRAVERSAL_PROBES,
     COMMAND_INJECTION_PROBES,
     INTERPRETER_INJECTION_PROBES,
-    TEMPLATE_INJECTION_PROBES,
     TEMPLATE_INJECTION_PROBES_V2,
     SQL_INJECTION_PROBES,
     ENCODING_BYPASS_PROBES,
@@ -37,6 +36,7 @@ from mcpnuke.patterns.probes import (
     REFLECTION_PAYLOAD,
     CSS_HIDDEN_PATTERN,
     MD_IMAGE_EXFIL_PATTERN,
+    SSTI_ENGINE_FINGERPRINTS,
     has_invisible_unicode,
 )
 
@@ -369,116 +369,211 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
 # Check: Input Sanitization
 # ---------------------------------------------------------------------------
 
+SSTI_LATENCY_THRESHOLD: float = 0.1
+
+
+def _classify_ssti(
+    *,
+    math_hit: bool,
+    engine_hits: list[str],
+    response_latency: float,
+) -> str:
+    """Classify an SSTI finding as code-level or LLM-evaluated.
+
+    Returns: engine name (e.g. 'jinja2'), 'code_ssti', 'llm_evaluated', or 'unknown'.
+    """
+    if engine_hits:
+        return engine_hits[0]
+    if response_latency < SSTI_LATENCY_THRESHOLD and math_hit:
+        return "code_ssti"
+    if math_hit:
+        return "llm_evaluated"
+    return "unknown"
+
+
+def _fuzz_single_tool(
+    session,
+    tool: dict,
+    result: TargetResult,
+    opts: dict,
+    _log,
+    idx: int,
+    total: int,
+) -> None:
+    name = tool.get("name", "")
+    _log(f"    [dim]    [{idx + 1}/{total}] {name}[/dim]")
+    props = tool.get("inputSchema", {}).get("properties", {})
+
+    for pname, pdef in props.items():
+        if pdef.get("type") not in (None, "string"):
+            continue
+
+        base_args = _build_safe_args(tool)
+        pname_lower = pname.lower()
+
+        # Pick probes based on param semantics
+        if any(kw in pname_lower for kw in ("path", "file", "dir", "folder")):
+            probes = [("path_traversal", p) for p in PATH_TRAVERSAL_PROBES[:2]]
+        elif any(kw in pname_lower for kw in ("command", "cmd", "exec", "code", "script", "expression")):
+            probes = [("command_injection", p) for p in COMMAND_INJECTION_PROBES[:2]]
+        elif any(kw in pname_lower for kw in ("query", "sql")):
+            probes = [("sql_injection", p) for p in SQL_INJECTION_PROBES[:2]]
+        else:
+            probes = []
+
+        text = ""
+        probe_type = "input"
+        for probe_type, probe_value in probes:
+            test_args = {**base_args, pname: probe_value}
+            resp = _call_tool(session, name, test_args, timeout=8)
+            text = _response_text(resp)
+            if not text:
+                continue
+
+            # Canary reflected back = no sanitization
+            if CANARY in text and probe_type in ("command_injection", "path_traversal"):
+                result.add(
+                    "input_sanitization",
+                    "HIGH",
+                    f"Tool '{name}' reflects probe canary unsanitized",
+                    f"Probe: {probe_type}, param: {pname}",
+                    evidence=f"Sent: {probe_value}\nGot: {text[:300]}",
+                )
+
+        probe_text = text  # main-loop responses for error leakage (before interpreter/SSTI)
+
+        # Interpreter diversity: try non-bash interpreters that blocklists often miss
+        if any(kw in pname_lower for kw in ("command", "cmd", "exec", "code", "script", "expression", "query")):
+            for interp_name, interp_probe in INTERPRETER_INJECTION_PROBES:
+                test_args = {**base_args, pname: interp_probe}
+                resp = _call_tool(session, name, test_args, timeout=8)
+                text = _response_text(resp)
+                if text and CANARY in text:
+                    result.add(
+                        "input_sanitization",
+                        "CRITICAL",
+                        f"Blocklist bypass: '{interp_name}' executed in tool '{name}'",
+                        f"Interpreter '{interp_name}' not blocked — param '{pname}'",
+                        evidence=f"Sent: {interp_probe}\nGot: {text[:300]}",
+                    )
+                    break
+
+        # Encoding bypass probes: 9 techniques that evade blocklists
+        if any(kw in pname_lower for kw in ("command", "cmd", "exec", "code", "script", "expression", "query")):
+            for enc_name, enc_payload in ENCODING_BYPASS_PROBES:
+                test_args = {**base_args, pname: enc_payload}
+                resp = _call_tool(session, name, test_args, timeout=8)
+                text = _response_text(resp)
+                if text and CANARY in text:
+                    result.add(
+                        "input_sanitization",
+                        "CRITICAL",
+                        f"Encoding bypass ({enc_name}): canary executed in tool '{name}'",
+                        f"Technique '{enc_name}' bypassed input filter — param '{pname}'",
+                        evidence=f"Sent: {enc_payload[:120]}\nGot: {text[:300]}",
+                    )
+                    break
+
+        # Dedicated template injection with engine fingerprinting
+        math_hit = False
+        engine_hits: list[str] = []
+        tpl_latency = 0.0
+        tpl_evidence = ""
+
+        for tpl_payload, tpl_expected in TEMPLATE_INJECTION_PROBES_V2[:2]:
+            t0 = time.time()
+            test_args = {**base_args, pname: tpl_payload}
+            resp = _call_tool(session, name, test_args, timeout=8)
+            tpl_latency = time.time() - t0
+            text = _response_text(resp)
+            if text and tpl_expected in text:
+                math_hit = True
+                tpl_evidence = text[:300]
+                break
+
+        if math_hit:
+            for fp in SSTI_ENGINE_FINGERPRINTS:
+                fp_args = {**base_args, pname: fp["payload"]}
+                resp = _call_tool(session, name, fp_args, timeout=8)
+                fp_text = _response_text(resp)
+                if fp_text and fp["expected"] in fp_text:
+                    engine_hits.append(fp["engine"])
+                    break
+
+            classification = _classify_ssti(
+                math_hit=math_hit,
+                engine_hits=engine_hits,
+                response_latency=tpl_latency,
+            )
+
+            if classification == "llm_evaluated":
+                severity = "MEDIUM"
+                title = f"LLM evaluates template syntax in '{name}' param '{pname}'"
+                detail = (
+                    f"Payload evaluated to expected result but no engine-specific "
+                    f"fingerprint matched — likely LLM math evaluation, not code SSTI"
+                )
+            elif classification == "code_ssti":
+                severity = "CRITICAL"
+                title = f"Probable code-level SSTI in '{name}' param '{pname}'"
+                detail = (
+                    f"Fast response ({tpl_latency:.2f}s) with math evaluation "
+                    f"but no engine fingerprint — likely unidentified template engine"
+                )
+            else:
+                severity = "CRITICAL"
+                title = f"SSTI ({classification}) in '{name}' param '{pname}'"
+                detail = f"Engine '{classification}' confirmed via fingerprint payload"
+
+            result.add(
+                "input_sanitization", severity, title, detail,
+                evidence=tpl_evidence,
+            )
+
+        if not probe_text and tpl_evidence:
+            probe_text = tpl_evidence
+
+        # Error leakage triggered by injection probe
+        for pat in ERROR_LEAKAGE_PATTERNS:
+            m = re.search(pat, probe_text, re.IGNORECASE)
+            if m:
+                result.add(
+                    "error_leakage",
+                    "MEDIUM",
+                    f"Tool '{name}' leaks internals on {probe_type} probe",
+                    f"Leaked: {m.group()[:200]}",
+                    evidence=probe_text[:400],
+                )
+                break
+
+
 def check_input_sanitization(session, result: TargetResult, probe_opts: dict | None = None):
     """Send injection probe payloads and detect missing sanitization."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
+    probe_workers = opts.get("probe_workers", 1)
     with time_check("input_sanitization", result):
         invokable = [t for t in result.tools if _should_invoke(t, opts)]
         _log(f"    [dim]    fuzzing {len(invokable)} tools for input sanitization[/dim]")
-        tool_idx = 0
-        for tool in result.tools:
-            if not _should_invoke(tool, opts):
-                continue
-            tool_idx += 1
-            name = tool.get("name", "")
-            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
-            props = tool.get("inputSchema", {}).get("properties", {})
 
-            for pname, pdef in props.items():
-                if pdef.get("type") not in (None, "string"):
-                    continue
+        if probe_workers > 1 and len(invokable) > 1:
+            from concurrent.futures import ThreadPoolExecutor, as_completed
 
-                base_args = _build_safe_args(tool)
-                pname_lower = pname.lower()
-
-                # Pick probes based on param semantics
-                if any(kw in pname_lower for kw in ("path", "file", "dir", "folder")):
-                    probes = [("path_traversal", p) for p in PATH_TRAVERSAL_PROBES[:2]]
-                elif any(kw in pname_lower for kw in ("command", "cmd", "exec", "code", "script", "expression")):
-                    probes = [("command_injection", p) for p in COMMAND_INJECTION_PROBES[:2]]
-                elif any(kw in pname_lower for kw in ("query", "sql")):
-                    probes = [("sql_injection", p) for p in SQL_INJECTION_PROBES[:2]]
-                else:
-                    probes = [("template_injection", p) for p in TEMPLATE_INJECTION_PROBES[:2]]
-
-                for probe_type, probe_value in probes:
-                    test_args = {**base_args, pname: probe_value}
-                    resp = _call_tool(session, name, test_args, timeout=8)
-                    text = _response_text(resp)
-                    if not text:
-                        continue
-
-                    # Canary reflected back = no sanitization
-                    if CANARY in text and probe_type in ("command_injection", "path_traversal"):
-                        result.add(
-                            "input_sanitization",
-                            "HIGH",
-                            f"Tool '{name}' reflects probe canary unsanitized",
-                            f"Probe: {probe_type}, param: {pname}",
-                            evidence=f"Sent: {probe_value}\nGot: {text[:300]}",
-                        )
-
-                # Interpreter diversity: try non-bash interpreters that blocklists often miss
-                if any(kw in pname_lower for kw in ("command", "cmd", "exec", "code", "script", "expression", "query")):
-                    for interp_name, interp_probe in INTERPRETER_INJECTION_PROBES:
-                        test_args = {**base_args, pname: interp_probe}
-                        resp = _call_tool(session, name, test_args, timeout=8)
-                        text = _response_text(resp)
-                        if text and CANARY in text:
-                            result.add(
-                                "input_sanitization",
-                                "CRITICAL",
-                                f"Blocklist bypass: '{interp_name}' executed in tool '{name}'",
-                                f"Interpreter '{interp_name}' not blocked — param '{pname}'",
-                                evidence=f"Sent: {interp_probe}\nGot: {text[:300]}",
-                            )
-                            break
-
-                # Encoding bypass probes: 9 techniques that evade blocklists
-                if any(kw in pname_lower for kw in ("command", "cmd", "exec", "code", "script", "expression", "query")):
-                    for enc_name, enc_payload in ENCODING_BYPASS_PROBES:
-                        test_args = {**base_args, pname: enc_payload}
-                        resp = _call_tool(session, name, test_args, timeout=8)
-                        text = _response_text(resp)
-                        if text and CANARY in text:
-                            result.add(
-                                "input_sanitization",
-                                "CRITICAL",
-                                f"Encoding bypass ({enc_name}): canary executed in tool '{name}'",
-                                f"Technique '{enc_name}' bypassed input filter — param '{pname}'",
-                                evidence=f"Sent: {enc_payload[:120]}\nGot: {text[:300]}",
-                            )
-                            break
-
-                # Dedicated template injection with distinctive products (low false-positive)
-                if pdef.get("type") in (None, "string"):
-                    for tpl_payload, tpl_expected in TEMPLATE_INJECTION_PROBES_V2[:2]:
-                        test_args = {**base_args, pname: tpl_payload}
-                        resp = _call_tool(session, name, test_args, timeout=8)
-                        text = _response_text(resp)
-                        if text and tpl_expected in text:
-                            result.add(
-                                "input_sanitization",
-                                "CRITICAL",
-                                f"Template injection in '{name}' param '{pname}'",
-                                f"Payload '{tpl_payload}' evaluated to '{tpl_expected}'",
-                                evidence=text[:300],
-                            )
-                            break
-
-                    # Error leakage triggered by injection probe
-                    for pat in ERROR_LEAKAGE_PATTERNS:
-                        m = re.search(pat, text, re.IGNORECASE)
-                        if m:
-                            result.add(
-                                "error_leakage",
-                                "MEDIUM",
-                                f"Tool '{name}' leaks internals on {probe_type} probe",
-                                f"Leaked: {m.group()[:200]}",
-                                evidence=text[:400],
-                            )
-                            break
+            with ThreadPoolExecutor(max_workers=min(probe_workers, len(invokable))) as pool:
+                futures = {
+                    pool.submit(
+                        _fuzz_single_tool, session, tool, result, opts, _log, idx, len(invokable)
+                    ): tool
+                    for idx, tool in enumerate(invokable)
+                }
+                for f in as_completed(futures):
+                    try:
+                        f.result()
+                    except Exception:
+                        pass
+        else:
+            for idx, tool in enumerate(invokable):
+                _fuzz_single_tool(session, tool, result, opts, _log, idx, len(invokable))
 
 
 # ---------------------------------------------------------------------------

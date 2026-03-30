@@ -17,6 +17,12 @@ class Finding:
 
 
 @dataclass
+class AttackChain:
+    source: str
+    target: str
+
+
+@dataclass
 class TargetResult:
     url: str
     transport: str = "unknown"
@@ -25,6 +31,7 @@ class TargetResult:
     resources: list[dict[str, Any]] = field(default_factory=list)
     prompts: list[dict[str, Any]] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
+    attack_chains: list[AttackChain] = field(default_factory=list)
     timings: dict[str, float] = field(default_factory=dict)
     error: str = ""
 

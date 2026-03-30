@@ -2,6 +2,37 @@
 
 All notable changes to this submodule are documented here.
 
+## 6.3.0 (2026-03)
+
+### Added
+
+- **LLM-aware SSTI classification** — Template injection findings now distinguish
+  between confirmed code-level SSTI (Jinja2/Mako/ERB/EL fingerprinting, CRITICAL)
+  and LLM-evaluated math expressions (MEDIUM). Eliminates false CRITICALs on
+  LLM-backed MCP servers.
+
+- **Structured attack chains in JSON output** — `attack_chains` array populated
+  with `{source, target}` objects alongside finding-level chain data.
+  Machine-parseable for consumers.
+
+### Changed
+
+- **Exit code semantics** — `0` = clean, `1` = findings found, `2` = scan error.
+  Previously both findings and errors returned `1`.
+
+- **Parallel `input_sanitization`** — `check_input_sanitization` now uses
+  `probe_workers` threads for per-tool fuzzing. Typical speedup 3–5× on 25+
+  tool targets.
+
+### Fixed
+
+- **Test suite optimization** — Fixed 85s network timeout in actuator probe
+  test (now under 0.2s total suite runtime).
+
+### Notes
+
+- Check count: **33** (unchanged).
+
 ## [6.2.0] - 2026-03
 
 ### Added

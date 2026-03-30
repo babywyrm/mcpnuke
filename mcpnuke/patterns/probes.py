@@ -70,14 +70,6 @@ INTERPRETER_INJECTION_PROBES = [
     ("php", f'php -r \'echo "{CANARY}";\''),
 ]
 
-TEMPLATE_INJECTION_PROBES = [
-    "{{7*7}}",
-    "${7*7}",
-    "<%= 7*7 %>",
-    f"${{'{CANARY}'}}",
-    "#{7*7}",
-]
-
 SQL_INJECTION_PROBES = [
     "' OR '1'='1",
     f"1; SELECT '{CANARY}'--",
@@ -89,6 +81,14 @@ TEMPLATE_INJECTION_PROBES_V2 = [
     ("${1333*7}", "9331"),
     ("<%= 1333*7 %>", "9331"),
     ("#{1333*7}", "9331"),
+]
+
+SSTI_ENGINE_FINGERPRINTS: list[dict[str, str]] = [
+    {"engine": "jinja2", "payload": "{{7*'7'}}", "expected": "7777777"},
+    {"engine": "jinja2", "payload": "{{config.items()}}", "expected": "dict_items"},
+    {"engine": "mako",   "payload": "${'7'*7}",            "expected": "7777777"},
+    {"engine": "erb",    "payload": "<%= '7'*7 %>",         "expected": "7777777"},
+    {"engine": "el",     "payload": "${'7'.repeat(7)}",     "expected": "7777777"},
 ]
 
 # ---------------------------------------------------------------------------
