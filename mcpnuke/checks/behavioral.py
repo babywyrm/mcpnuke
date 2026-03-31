@@ -2,10 +2,12 @@
 
 import json
 import queue
+import re
 import time
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
+from mcpnuke.patterns.probes import RESPONSE_INJECTION_PATTERNS
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +96,7 @@ def check_deep_rug_pull(session, result: TargetResult, probe_opts: dict | None =
          (e.g. helpful → error/paywall/injection).
     """
     opts = probe_opts or {}
-    calls_per_tool = opts.get("probe_calls", 6)
+    calls_per_tool = opts.get("probe_calls", 10)
     _log = opts.get("_log", lambda msg: None)
     with time_check("deep_rug_pull", result):
         # Phase 1: snapshot tool list
@@ -175,6 +177,24 @@ def check_deep_rug_pull(session, result: TargetResult, probe_opts: dict | None =
                     f"First response: {first[:200]}\n"
                     f"Later response: {last[:200]}",
                     evidence=f"Length ratio: {len_ratio:.1f}, keyword shift: {has_shift}",
+                )
+
+            # Injection drift: clean on call 1 but injection patterns by call N
+            first_injections = sum(
+                1 for p in RESPONSE_INJECTION_PATTERNS
+                if re.search(p, first, re.IGNORECASE)
+            )
+            last_injections = sum(
+                1 for p in RESPONSE_INJECTION_PATTERNS
+                if re.search(p, last, re.IGNORECASE)
+            )
+            if first_injections == 0 and last_injections > 0:
+                result.add(
+                    "deep_rug_pull", "CRITICAL",
+                    f"Injection drift: tool '{name}' output clean initially, "
+                    f"contains {last_injections} injection pattern(s) after {calls_per_tool} calls",
+                    f"Late-trigger injection — tool was clean on call 1 but poisoned by call {calls_per_tool}",
+                    evidence=last[:400],
                 )
 
 

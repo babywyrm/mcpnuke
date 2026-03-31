@@ -169,7 +169,7 @@ The scanner runs checks in a deliberate order:
 | Check | Severity | What It Detects |
 |-------|----------|----------------|
 | `rug_pull` | CRITICAL–HIGH | Tool list changes between two `tools/list` calls |
-| `deep_rug_pull` | CRITICAL | Tool list/schema changes **after invoking tools** — catches state-dependent rug pulls that the shallow check misses |
+| `deep_rug_pull` | CRITICAL | Tool list/schema changes **after invoking tools** — catches state-dependent rug pulls, injection pattern drift (clean → poisoned after N calls) |
 | `tool_response_injection` | CRITICAL–HIGH | Injection payloads, exfil URLs, hidden content, invisible Unicode, or base64-encoded attacks in tool **responses** |
 | `cross_tool_manipulation` | HIGH | Tool output that directs the LLM to invoke a different tool |
 | `input_sanitization` | CRITICAL–HIGH | Path traversal, command injection, template injection, SQL injection probes reflected unsanitized. **LLM-aware SSTI:** confirmed engine fingerprints (Jinja2/Mako/ERB/EL) stay CRITICAL; math-style template probes evaluated by the LLM (e.g. `{{7*7}}` → `49`) are downgraded to MEDIUM so LLM-backed MCP servers are not false-flagged as code SSTI. |
@@ -178,7 +178,8 @@ The scanner runs checks in a deliberate order:
 | `resource_poisoning` | CRITICAL–HIGH | Base64-encoded injection, data URIs, steganographic Unicode, CSS-hidden HTML, or markdown image exfiltration in resource content |
 | `state_mutation` | HIGH–MEDIUM | Resources that appear, disappear, or change content after tool invocations |
 | `notification_abuse` | CRITICAL–MEDIUM | Unsolicited `sampling/createMessage`, `roots/list`, or other server-initiated requests |
-| `indirect_injection` | CRITICAL–HIGH | Injection/poison patterns and exfil URLs in resource content |
+| `indirect_injection` | CRITICAL–HIGH | Injection/poison patterns in resource content; probes content-processing tools with embedded injection payloads |
+| `active_prompt_injection` | CRITICAL | Sends injection payloads as tool inputs — detects instruction following, system prompt leaks, and role overrides |
 | `response_credentials` | CRITICAL–HIGH | Credentials (API keys, passwords, private keys, connection strings) in tool responses |
 
 ### Transport & Aggregate Checks
@@ -243,11 +244,13 @@ calls and reducing scan time.
 Every tool response is scanned for:
 
 - **Injection payloads** — "ignore previous instructions", role overrides, system prompt markers
+- **Semantic injection** — mode switches, secrecy directives, credential requests, XML/delimiter tool-call injection
 - **Exfiltration URLs** — webhook, ngrok, burp, requestbin, pipedream, interactsh
 - **Hidden content** — HTML comments, `<hidden>` blocks, `<script>` tags
 - **Invisible Unicode** — zero-width chars, bidi overrides, invisible formatters
 - **Base64-encoded attacks** — decoded and re-scanned for injection patterns
 - **Cross-tool references** — "call tool X", "invoke function Y"
+- **LLM classification** (with `--claude`) — ambiguous responses sent to Claude for malicious/benign classification
 
 ---
 
@@ -277,7 +280,7 @@ Stdio Transport:
 Safety Controls:
   --no-invoke                 Static-only: skip all behavioral probes (safe for production)
   --safe-mode                 Skip dangerous tools (delete/send/exec/write), probe read-only
-  --probe-calls N             Invocations per tool for deep rug pull (default: 6)
+  --probe-calls N             Invocations per tool for deep rug pull (default: 10)
 
 Performance:
   --fast                      Sample top 5 security-relevant tools, skip heavy probes
@@ -313,7 +316,7 @@ Kubernetes:
 | Mode | Flag | What Runs | Use Case |
 |------|------|-----------|----------|
 | **Full** | (default) | Static + all behavioral probes | Dev/staging, DVMCP, CTFs |
-| **Fast** | `--fast` | Static + top-5 tools (tiered scoring), skip heavy probes, cap workers at 2 | Quick triage, large tool sets |
+| **Fast** | `--fast` | Static + top-5 tools (tiered scoring), skip heavy probes (risk-aware: retains `input_sanitization` when dangerous params detected), cap workers at 2 | Quick triage, large tool sets |
 | **Safe** | `--safe-mode` | Static + probes on read-only tools only | Prod servers with mixed tool risk |
 | **Static** | `--no-invoke` | Static checks only, no tool calls | Prod servers, zero side-effect risk |
 | **AI** | `--claude` | All checks + Claude analysis | Deep analysis, subtle vuln hunting |
@@ -595,7 +598,7 @@ args:
 │   │   └── probes.py          # Behavioral probe payloads, canary strings, response analysis
 │   ├── checks/
 │   │   ├── __init__.py        # Check registry and run_all_checks() orchestrator
-│   │   ├── injection.py       # prompt_injection, tool_poisoning, indirect_injection
+│   │   ├── injection.py       # prompt_injection, tool_poisoning, indirect_injection, active_prompt_injection
 │   │   ├── permissions.py     # excessive_permissions, schema_risks
 │   │   ├── behavioral.py      # rug_pull, deep_rug_pull, state_mutation, notification_abuse
 │   │   ├── tool_probes.py     # response_injection, input_sanitization, error_leakage
@@ -623,7 +626,7 @@ args:
 │   └── reporting/
 │       ├── console.py         # Rich table output
 │       └── json_out.py        # JSON report writer
-├── tests/                     # Pytest suite (163 tests, incl. DVMCP challenges)
+├── tests/                     # Pytest suite (224 tests, incl. DVMCP challenges)
 │   ├── test_dvmcp.py          # DVMCP challenges 1-10 (offline + optional live)
 │   ├── test_cli.py            # CLI argument parsing
 │   ├── test_diff.py           # Differential scanning
@@ -691,8 +694,9 @@ vulnerability pairs** that combine into compound attack paths:
 | `exfil_flow → token_theft` | Source→sink pipeline steals creds |
 | `exfil_flow → remote_access` | Source→sink pipeline enables remote access |
 
-Chains are reported as CRITICAL and appear in the "Attack Chains Detected"
-section of the scan output.
+Chains are reported as CRITICAL with evidence-based tool names (e.g.
+`input_sanitization → code_execution (execute_command)`) and appear in the
+"Attack Chains Detected" section of the scan output.
 
 ---
 
@@ -732,8 +736,8 @@ git clone https://github.com/harishsg993010/damn-vulnerable-MCP-server.git \
 # Scan specific challenges
 ./scan --targets http://localhost:9002 http://localhost:9008
 
-# Deeper rug pull probing (more calls per tool)
-./scan --port-range localhost:9001-9010 --probe-calls 10
+# Deeper rug pull probing (more calls per tool, default is 10)
+./scan --port-range localhost:9001-9010 --probe-calls 15
 
 # Static-only scan (no tool calls)
 ./scan --port-range localhost:9001-9010 --no-invoke

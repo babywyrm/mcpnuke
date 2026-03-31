@@ -37,6 +37,7 @@ from mcpnuke.patterns.probes import (
     CSS_HIDDEN_PATTERN,
     MD_IMAGE_EXFIL_PATTERN,
     SSTI_ENGINE_FINGERPRINTS,
+    SEMANTIC_INJECTION_PATTERNS,
     has_invisible_unicode,
 )
 
@@ -273,6 +274,15 @@ def _scan_response_threats(text: str) -> list[tuple[str, str, str]]:
             f"{len(inv)} invisible Unicode chars — possible steganographic instructions",
         ))
 
+    # Semantic injection — instruction-like patterns that bypass explicit markers
+    for pat, category in SEMANTIC_INJECTION_PATTERNS:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            threats.append((
+                f"semantic_injection:{category}", "HIGH",
+                f"Semantic injection ({category}): \"{m.group()[:120]}\"",
+            ))
+
     # Decode suspicious base64 blobs
     for b64 in re.findall(r"[A-Za-z0-9+/]{50,}={0,2}", text)[:3]:
         try:
@@ -322,7 +332,8 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
             cache = opts.setdefault("_response_cache", {})
             cache[name] = text
 
-            for category, severity, detail in _scan_response_threats(text):
+            threats = _scan_response_threats(text)
+            for category, severity, detail in threats:
                 result.add(
                     "tool_response_injection",
                     severity,
@@ -330,6 +341,27 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
                     detail,
                     evidence=text[:500],
                 )
+
+            # LLM-augmented classification for responses that regex couldn't classify
+            if not threats and opts.get("claude") and len(text) >= 50:
+                try:
+                    from mcpnuke.core.llm import classify_probe_response
+                    classification = classify_probe_response(
+                        name, "tool_response",
+                        text,
+                        model=opts.get("claude_model", "claude-sonnet-4-20250514"),
+                        log=opts.get("_log"),
+                    )
+                    if classification == "malicious":
+                        result.add(
+                            "tool_response_injection",
+                            "HIGH",
+                            f"[AI] Tool '{name}' response classified as malicious",
+                            "LLM classification detected manipulation that regex missed",
+                            evidence=text[:500],
+                        )
+                except Exception:
+                    pass
 
             # Cross-tool manipulation: does the response tell the LLM to call another tool?
             for pat in CROSS_TOOL_PATTERNS:

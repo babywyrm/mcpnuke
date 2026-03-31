@@ -2,6 +2,48 @@
 
 All notable changes to this submodule are documented here.
 
+## 6.4.0 (2026-03)
+
+### Added
+
+- **Active prompt injection check** — New `active_prompt_injection` behavioral check
+  sends injection payloads as tool inputs and confirms whether the server follows
+  injected instructions, leaks system prompts, or accepts role overrides. Catches
+  vulnerabilities that static-only `prompt_injection` misses.
+
+- **Enhanced indirect injection** — `check_indirect_injection` now probes
+  content-processing tools (process, analyze, summarize, etc.) with embedded
+  injection payloads, not just resources. Detects injection via document/message
+  processing pipelines.
+
+- **Semantic injection detection** — `_scan_response_threats` now detects
+  instruction-like patterns in tool responses: mode switches, secrecy directives,
+  credential requests, and XML/delimiter tool-call injection tags.
+
+- **LLM-augmented probe classification** — New `classify_probe_response` function
+  (300-token budget) classifies ambiguous probe responses via Claude when regex is
+  inconclusive. Gated behind `--claude`, wired into `tool_response_injection`.
+
+- **Evidence-based attack chains** — `AttackChain` now carries `evidence_tools`
+  listing specific tool names extracted from findings. Chain messages show e.g.
+  `input_sanitization → code_execution (execute_command)` instead of generic text.
+
+### Changed
+
+- **Risk-aware `--fast` mode** — `--fast` no longer blindly skips
+  `input_sanitization`. If any tool has dangerous params (command, exec, code,
+  sql, url, etc.), the check is retained.
+
+- **Deep rug pull defaults** — `--probe-calls` default increased from 6 to 10.
+  Added injection pattern drift detection: flags tools whose output is clean on
+  call 1 but contains injection patterns by call N.
+
+- **Permissions debouncing** — Description-only matches in `excessive_permissions`
+  now require 2+ matching categories before reporting. Reduces noise from tools
+  that incidentally mention keywords like "file" or "query" in descriptions.
+
+---
+
 ## 6.3.0 (2026-03)
 
 ### Added

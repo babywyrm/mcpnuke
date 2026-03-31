@@ -130,9 +130,9 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--probe-calls",
         type=int,
-        default=6,
+        default=10,
         metavar="N",
-        help="Number of tool invocations per tool for deep rug pull detection (default: 6)",
+        help="Number of tool invocations per tool for deep rug pull detection (default: 10)",
     )
     p.add_argument(
         "--k8s-namespace",

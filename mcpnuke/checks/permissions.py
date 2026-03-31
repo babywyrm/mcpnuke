@@ -7,15 +7,35 @@ from mcpnuke.checks.base import time_check
 from mcpnuke.patterns.rules import DANGEROUS_TOOL_PATTERNS
 
 
+_WEAK_SIGNAL_THRESHOLD = 2
+
+
 def check_excessive_permissions(result: TargetResult):
     with time_check("excessive_permissions", result):
         for tool in result.tools:
             name = tool.get("name", "").lower()
             desc = tool.get("description", "").lower()
-            combined = f"{name} {desc}"
+
+            name_hits: list[tuple[str, str, str]] = []
+            desc_only_hits: list[tuple[str, str, str]] = []
 
             for category, (pattern, severity) in DANGEROUS_TOOL_PATTERNS.items():
-                if re.search(pattern, combined, re.IGNORECASE):
+                if re.search(pattern, name, re.IGNORECASE):
+                    name_hits.append((category, pattern, severity))
+                elif re.search(pattern, desc, re.IGNORECASE):
+                    desc_only_hits.append((category, pattern, severity))
+
+            for category, pattern, severity in name_hits:
+                result.add(
+                    "excessive_permissions",
+                    severity,
+                    f"Dangerous capability [{category}]: '{tool['name']}'",
+                    tool.get("description", "")[:200],
+                    evidence=f"Pattern: {pattern}",
+                )
+
+            if len(desc_only_hits) >= _WEAK_SIGNAL_THRESHOLD:
+                for category, pattern, severity in desc_only_hits:
                     result.add(
                         "excessive_permissions",
                         severity,

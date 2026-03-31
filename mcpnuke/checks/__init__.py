@@ -16,6 +16,7 @@ from mcpnuke.checks.injection import (
     check_prompt_injection,
     check_tool_poisoning,
     check_indirect_injection,
+    check_active_prompt_injection,
 )
 from mcpnuke.checks.permissions import (
     check_excessive_permissions,
@@ -65,6 +66,21 @@ FAST_SKIP_CHECKS = {
     "temporal_consistency",
     "ssrf_probe",
 }
+
+_FAST_RETAIN_PARAM_NAMES = frozenset({
+    "command", "cmd", "exec", "code", "script", "expression",
+    "sql", "query", "url", "uri", "path", "file",
+})
+
+
+def _has_dangerous_params(tools: list[dict]) -> bool:
+    """Return True if any tool has params whose names suggest attack surface."""
+    for tool in tools:
+        props = tool.get("inputSchema", {}).get("properties", {})
+        for pname in props:
+            if pname.lower() in _FAST_RETAIN_PARAM_NAMES:
+                return True
+    return False
 
 
 def _emit_duration_estimate(
@@ -212,7 +228,7 @@ def run_all_checks(
         if verbose:
             _log("\n  [bold cyan]── Behavioral Probes ──[/bold cyan]")
         _run("rug_pull", check_rug_pull, session, result)
-        _run("indirect_injection", check_indirect_injection, session, result)
+        _run("indirect_injection", check_indirect_injection, session, result, probe_opts=opts)
         _run("protocol_robustness", check_protocol_robustness, session, result)
 
         # ── Deep behavioral probes (invoke tools, analyze responses) ───
@@ -234,15 +250,21 @@ def run_all_checks(
             ("behavioral_rate_limit", check_behavioral_rate_limit, (session, result), {"probe_opts": opts}),
             ("state_mutation", check_state_mutation, (session, result), {}),
             ("notification_abuse", check_notification_abuse, (session, result), {}),
+            ("active_prompt_injection", check_active_prompt_injection, (session, result), {"probe_opts": opts}),
         ]
 
         if fast_mode:
+            skip = set(FAST_SKIP_CHECKS)
+            if "input_sanitization" in skip and _has_dangerous_params(result.tools):
+                skip.discard("input_sanitization")
+                if verbose:
+                    _log("  [yellow]--fast: retaining input_sanitization (dangerous params detected)[/yellow]")
             deep_checks = [
                 (name, fn, a, kw) for name, fn, a, kw in deep_checks
-                if name not in FAST_SKIP_CHECKS
+                if name not in skip
             ]
             if verbose:
-                _log(f"  [yellow]--fast: skipping {', '.join(sorted(FAST_SKIP_CHECKS))}[/yellow]")
+                _log(f"  [yellow]--fast: skipping {', '.join(sorted(skip))}[/yellow]")
 
         if probe_workers > 1:
             with ThreadPoolExecutor(max_workers=probe_workers) as pool:

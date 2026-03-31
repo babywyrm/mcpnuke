@@ -26,7 +26,12 @@ def _build_target_dict(r: TargetResult) -> dict:
             for f in r.findings
         ],
         "attack_chains": [
-            {"source": c.source, "target": c.target} for c in r.attack_chains
+            {
+                "source": c.source,
+                "target": c.target,
+                "evidence_tools": c.evidence_tools,
+            }
+            for c in r.attack_chains
         ],
     }
 

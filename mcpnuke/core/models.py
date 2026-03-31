@@ -20,6 +20,7 @@ class Finding:
 class AttackChain:
     source: str
     target: str
+    evidence_tools: list[str] = field(default_factory=list)
 
 
 @dataclass
