@@ -100,6 +100,7 @@ Or run `./walkthrough/demo.sh` for the fully automated version.
 # AI-powered analysis (requires ANTHROPIC_API_KEY)
 ./scan --targets http://localhost:9002/sse --claude --verbose
 ./scan --targets http://localhost:9002/sse --claude --claude-model claude-opus-4-20250514
+./scan --targets http://localhost:9002/sse --claude --claude-max-tools 25 --claude-phase2-workers 3
 
 # Run tests
 uv run pytest tests/ -v
@@ -285,6 +286,7 @@ Safety Controls:
 Performance:
   --fast                      Sample top 5 security-relevant tools, skip heavy probes
   --probe-workers N           Parallel deep behavioral probe threads (default: 1)
+  --claude-phase2-workers N   Parallel Claude workers for AI Phase 2 (default: 1)
 
 Tool Server:
   --tool-names-file FILE      Custom wordlist for ToolServer enumeration (supplements built-in)
@@ -367,7 +369,16 @@ with a clear error message instead of running the full scan first.
 
 # Fast mode + Claude (deterministic fast scan, then AI analysis)
 ./scan --targets http://localhost:9090 --fast --claude --verbose
+
+# Faster Claude Phase 2 on medium/large toolsets
+./scan --targets http://localhost:9090 --fast --claude --claude-max-tools 25 --claude-phase2-workers 3
 ```
+
+**`--claude-phase2-workers` guidance:**
+- Default is `1` (serial). This is safe and works out of the box.
+- Use `2-4` to reduce wall-clock time when Phase 2 dominates runtime.
+- Keep `1` if your key is rate-limited or target/network is unstable.
+- This flag is optional; scans run normally without it.
 
 mcpnuke uses a three-layer analysis architecture. Each layer catches what
 the previous one can't:

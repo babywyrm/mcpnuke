@@ -2,6 +2,27 @@
 
 All notable changes to this submodule are documented here.
 
+## 6.5.0 (2026-03)
+
+### Added
+
+- **Parallel AI Phase 2 workers** — New `--claude-phase2-workers N` flag to run
+  `llm_response_analysis` response reviews concurrently. Default remains `1`
+  (serial) for safe, backward-compatible behavior.
+
+- **Typed LLM backend interface for analysis pipeline** — `run_llm_analysis()`
+  now supports typed backend injection via `LLMBackend`, enabling cleaner
+  integration tests with explicit fake backends.
+
+### Changed
+
+- **AI Phase 2 payload handling** — `llm_response_analysis` no longer skips
+  short-but-meaningful tool responses. It now falls back to a structured raw
+  response envelope when extracted text is empty or low-signal, improving
+  Claude coverage on compact/structured tool outputs.
+
+---
+
 ## 6.4.0 (2026-03)
 
 ### Added
