@@ -10,6 +10,11 @@ All notable changes to this submodule are documented here.
   `llm_response_analysis` response reviews concurrently. Default remains `1`
   (serial) for safe, backward-compatible behavior.
 
+- **Optional Bedrock Claude backend** — New `--bedrock` runtime path for
+  `--claude` scans with `--bedrock-region`, `--bedrock-profile`, and
+  `--bedrock-model`. Default remains direct Anthropic API unless `--bedrock`
+  is explicitly set.
+
 - **Typed LLM backend interface for analysis pipeline** — `run_llm_analysis()`
   now supports typed backend injection via `LLMBackend`, enabling cleaner
   integration tests with explicit fake backends.
@@ -20,6 +25,9 @@ All notable changes to this submodule are documented here.
   short-but-meaningful tool responses. It now falls back to a structured raw
   response envelope when extracted text is empty or low-signal, improving
   Claude coverage on compact/structured tool outputs.
+
+- **Doctor Bedrock visibility** — `--doctor` now reports boto3 presence and
+  whether AWS credentials appear available for Bedrock scans.
 
 ---
 

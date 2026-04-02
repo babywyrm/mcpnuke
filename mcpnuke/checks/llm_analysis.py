@@ -125,18 +125,27 @@ def run_llm_analysis(
 
     # Verify API prereqs only when using default Anthropic backend.
     if llm_backend is None:
-        import os
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            _log("  [red]✗ ANTHROPIC_API_KEY not set — skipping AI analysis[/red]")
-            _log("  [dim]  Set the env var or pass --claude to enable.[/dim]")
-            return
+        from mcpnuke.core.llm import is_bedrock_enabled
+        if is_bedrock_enabled():
+            try:
+                import boto3  # noqa: F401
+            except ImportError:
+                _log("  [red]✗ boto3 not installed — skipping AI analysis[/red]")
+                _log("  [dim]  Install with: uv pip install boto3[/dim]")
+                return
+        else:
+            import os
+            if not os.environ.get("ANTHROPIC_API_KEY"):
+                _log("  [red]✗ ANTHROPIC_API_KEY not set — skipping AI analysis[/red]")
+                _log("  [dim]  Set the env var or pass --claude to enable.[/dim]")
+                return
 
-        try:
-            import anthropic  # noqa: F401
-        except ImportError:
-            _log("  [red]✗ anthropic package not installed — skipping AI analysis[/red]")
-            _log("  [dim]  Install with: uv pip install mcpnuke[ai]  (or: pip install anthropic)[/dim]")
-            return
+            try:
+                import anthropic  # noqa: F401
+            except ImportError:
+                _log("  [red]✗ anthropic package not installed — skipping AI analysis[/red]")
+                _log("  [dim]  Install with: uv pip install mcpnuke[ai]  (or: pip install anthropic)[/dim]")
+                return
 
     # Phase 1: Tool description analysis
     with time_check("llm_tool_analysis", result):

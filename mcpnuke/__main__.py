@@ -86,6 +86,28 @@ def _run_doctor(console: Console) -> None:
         _warn("anthropic not installed — --claude disabled",
               "uv pip install 'mcpnuke[ai]'  or:  pip install anthropic")
 
+    # Optional: Bedrock runtime
+    try:
+        import boto3  # noqa: F401
+        _ok("boto3 available  [dim](Bedrock runtime)[/dim]")
+        try:
+            session = boto3.Session()
+            creds = session.get_credentials()
+            if creds and creds.access_key:
+                _ok("AWS credentials available for Bedrock")
+            else:
+                _warn(
+                    "AWS credentials not found — --bedrock may fail",
+                    "Configure AWS creds (env vars, profile, or instance role).",
+                )
+        except Exception as e:
+            _warn(
+                f"AWS credential check failed: {type(e).__name__}",
+                "Use aws configure / profile / role, then re-run --doctor.",
+            )
+    except ImportError:
+        _warn("boto3 not installed — --bedrock disabled", "uv pip install 'mcpnuke[ai]'  or:  pip install boto3")
+
     # Optional: K8s
     try:
         import kubernetes
@@ -130,29 +152,49 @@ def _run_doctor(console: Console) -> None:
 def _main_inner() -> None:
     args = parse_args()
     console = Console(no_color=args.no_color, force_terminal=not args.no_color)
+    from mcpnuke.core.llm import configure_bedrock
+    configure_bedrock(enabled=False)
 
     if args.doctor:
         _run_doctor(console)
         sys.exit(EXIT_CLEAN)
 
     if args.claude:
-        try:
-            import anthropic  # noqa: F401
-        except ImportError:
-            print(
-                "Error: --claude requires the 'anthropic' package.\n"
-                "Install it with:  uv pip install mcpnuke[ai]   (or: pip install anthropic)",
-                file=sys.stderr,
+        if args.bedrock:
+            try:
+                import boto3  # noqa: F401
+            except ImportError:
+                print(
+                    "Error: --bedrock requires boto3.\n"
+                    "Install it with:  uv pip install boto3",
+                    file=sys.stderr,
+                )
+                sys.exit(EXIT_ERROR)
+            configure_bedrock(
+                enabled=True,
+                region=args.bedrock_region,
+                profile=args.bedrock_profile,
+                model=args.bedrock_model,
             )
-            sys.exit(EXIT_ERROR)
-        import os
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            print(
-                "Error: --claude requires ANTHROPIC_API_KEY environment variable.\n"
-                "  export ANTHROPIC_API_KEY=sk-ant-...",
-                file=sys.stderr,
-            )
-            sys.exit(EXIT_ERROR)
+        else:
+            configure_bedrock(enabled=False)
+            try:
+                import anthropic  # noqa: F401
+            except ImportError:
+                print(
+                    "Error: --claude requires the 'anthropic' package.\n"
+                    "Install it with:  uv pip install mcpnuke[ai]   (or: pip install anthropic)",
+                    file=sys.stderr,
+                )
+                sys.exit(EXIT_ERROR)
+            import os
+            if not os.environ.get("ANTHROPIC_API_KEY"):
+                print(
+                    "Error: --claude requires ANTHROPIC_API_KEY environment variable.\n"
+                    "  export ANTHROPIC_API_KEY=sk-ant-...",
+                    file=sys.stderr,
+                )
+                sys.exit(EXIT_ERROR)
 
     # --stdio mode: scan a local server via stdin/stdout, then exit
     if args.stdio:
@@ -163,6 +205,10 @@ def _main_inner() -> None:
             "tool_names_file": getattr(args, "tool_names_file", None),
             "claude": args.claude,
             "claude_model": args.claude_model,
+            "bedrock": args.bedrock,
+            "bedrock_region": args.bedrock_region,
+            "bedrock_profile": args.bedrock_profile,
+            "bedrock_model": args.bedrock_model,
             "claude_max_tools": args.claude_max_tools,
             "claude_phase2_workers": args.claude_phase2_workers,
             "fast": args.fast,
@@ -242,7 +288,14 @@ def _main_inner() -> None:
         else:
             panel_lines.append("Auth: Bearer token")
     if args.claude:
-        panel_lines.append(f"AI: Claude ({args.claude_model})")
+        if args.bedrock:
+            panel_lines.append(f"AI: Claude via Bedrock ({args.bedrock_model})")
+            if args.bedrock_region:
+                panel_lines.append(f"Bedrock region: {args.bedrock_region}")
+            if args.bedrock_profile:
+                panel_lines.append(f"Bedrock profile: {args.bedrock_profile}")
+        else:
+            panel_lines.append(f"AI: Claude ({args.claude_model})")
         if args.claude_phase2_workers > 1:
             panel_lines.append(f"AI Phase2 workers: {args.claude_phase2_workers}")
 
@@ -261,6 +314,10 @@ def _main_inner() -> None:
         "tool_names_file": getattr(args, "tool_names_file", None),
         "claude": args.claude,
         "claude_model": args.claude_model,
+        "bedrock": args.bedrock,
+        "bedrock_region": args.bedrock_region,
+        "bedrock_profile": args.bedrock_profile,
+        "bedrock_model": args.bedrock_model,
         "claude_max_tools": args.claude_max_tools,
         "claude_phase2_workers": args.claude_phase2_workers,
         "fast": args.fast,

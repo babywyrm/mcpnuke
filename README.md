@@ -102,6 +102,9 @@ Or run `./walkthrough/demo.sh` for the fully automated version.
 ./scan --targets http://localhost:9002/sse --claude --claude-model claude-opus-4-20250514
 ./scan --targets http://localhost:9002/sse --claude --claude-max-tools 25 --claude-phase2-workers 3
 
+# AI-powered analysis via AWS Bedrock Claude (optional)
+./scan --targets http://localhost:9002/sse --claude --bedrock --bedrock-region us-east-1
+
 # Run tests
 uv run pytest tests/ -v
 ```
@@ -287,6 +290,10 @@ Performance:
   --fast                      Sample top 5 security-relevant tools, skip heavy probes
   --probe-workers N           Parallel deep behavioral probe threads (default: 1)
   --claude-phase2-workers N   Parallel Claude workers for AI Phase 2 (default: 1)
+  --bedrock                   Route Claude calls through AWS Bedrock runtime
+  --bedrock-region REGION     Bedrock region (e.g. us-east-1)
+  --bedrock-profile PROFILE   AWS profile for Bedrock credentials
+  --bedrock-model MODEL_ID    Bedrock model ID (default: anthropic.claude-3-5-sonnet-20241022-v2:0)
 
 Tool Server:
   --tool-names-file FILE      Custom wordlist for ToolServer enumeration (supplements built-in)
@@ -346,6 +353,7 @@ are consistently selected.
 
 Add `--claude` to any scan to layer LLM reasoning on top of deterministic checks.
 Requires the `anthropic` package and `ANTHROPIC_API_KEY` env var.
+By default, mcpnuke uses direct Claude API calls; Bedrock is opt-in via `--bedrock`.
 
 **Setup:**
 ```bash
@@ -355,6 +363,9 @@ uv pip install -e ".[ai]"    # or: pip install anthropic
 
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+For Bedrock mode, the same `ai` extra includes `boto3`; configure AWS credentials
+and pass `--bedrock` (plus optional region/profile/model flags).
 
 If `--claude` is used without the package or API key, mcpnuke exits immediately
 with a clear error message instead of running the full scan first.
@@ -372,6 +383,9 @@ with a clear error message instead of running the full scan first.
 
 # Faster Claude Phase 2 on medium/large toolsets
 ./scan --targets http://localhost:9090 --fast --claude --claude-max-tools 25 --claude-phase2-workers 3
+
+# Claude via Bedrock (no ANTHROPIC_API_KEY required)
+./scan --targets http://localhost:9090 --fast --claude --bedrock --bedrock-region us-east-1
 ```
 
 **`--claude-phase2-workers` guidance:**

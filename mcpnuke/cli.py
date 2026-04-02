@@ -240,6 +240,32 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "Layers LLM reasoning on top of deterministic checks to catch subtle issues.",
     )
     p.add_argument(
+        "--bedrock",
+        action="store_true",
+        help="Use AWS Bedrock runtime for Claude API calls instead of direct Anthropic API. "
+        "Requires boto3 and AWS credentials.",
+    )
+    p.add_argument(
+        "--bedrock-region",
+        metavar="REGION",
+        default=None,
+        help="AWS region for Bedrock Runtime (e.g. us-east-1). "
+        "Defaults to AWS_REGION/AWS_DEFAULT_REGION if unset.",
+    )
+    p.add_argument(
+        "--bedrock-profile",
+        metavar="PROFILE",
+        default=None,
+        help="AWS profile name for Bedrock credentials resolution.",
+    )
+    p.add_argument(
+        "--bedrock-model",
+        metavar="MODEL_ID",
+        default="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        help="Bedrock model ID to invoke when --bedrock is enabled "
+        "(default: anthropic.claude-3-5-sonnet-20241022-v2:0).",
+    )
+    p.add_argument(
         "--claude-model",
         metavar="MODEL",
         default="claude-sonnet-4-20250514",

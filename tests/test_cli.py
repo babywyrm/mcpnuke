@@ -134,3 +134,26 @@ def test_parse_args_claude_phase2_workers():
     )
     assert args.claude is True
     assert args.claude_phase2_workers == 3
+
+
+def test_parse_args_bedrock_options():
+    """--bedrock options should parse cleanly with --claude."""
+    args = parse_args(
+        [
+            "--targets",
+            "http://localhost:9001",
+            "--claude",
+            "--bedrock",
+            "--bedrock-region",
+            "us-east-1",
+            "--bedrock-profile",
+            "security",
+            "--bedrock-model",
+            "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        ]
+    )
+    assert args.claude is True
+    assert args.bedrock is True
+    assert args.bedrock_region == "us-east-1"
+    assert args.bedrock_profile == "security"
+    assert args.bedrock_model == "anthropic.claude-3-5-sonnet-20241022-v2:0"

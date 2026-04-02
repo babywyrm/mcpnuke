@@ -4,8 +4,15 @@ import json
 import os
 import time
 from dataclasses import dataclass
+from typing import Any
 
 _client = None
+_bedrock_config: dict[str, Any] = {
+    "enabled": False,
+    "region": None,
+    "profile": None,
+    "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+}
 
 
 def _get_client():
@@ -19,6 +26,25 @@ def _get_client():
     return _client
 
 
+def configure_bedrock(
+    *,
+    enabled: bool,
+    region: str | None = None,
+    profile: str | None = None,
+    model: str | None = None,
+) -> None:
+    """Configure whether Claude calls should route through AWS Bedrock."""
+    _bedrock_config["enabled"] = bool(enabled)
+    _bedrock_config["region"] = region
+    _bedrock_config["profile"] = profile
+    if model:
+        _bedrock_config["model"] = model
+
+
+def is_bedrock_enabled() -> bool:
+    return bool(_bedrock_config.get("enabled"))
+
+
 @dataclass
 class LLMFinding:
     severity: str
@@ -30,6 +56,15 @@ class LLMFinding:
 def _call_claude(system: str, user_content: str, model: str, max_tokens: int, log=None):
     """Call Claude and return the response text, with optional debug logging."""
     _log = log or (lambda msg: None)
+
+    if is_bedrock_enabled():
+        return _call_bedrock_claude(
+            system=system,
+            user_content=user_content,
+            model=model,
+            max_tokens=max_tokens,
+            log=log,
+        )
 
     _log(f"  [dim]  ┌─ Claude request ({model}, max_tokens={max_tokens})[/dim]")
     _log(f"  [dim]  │ System prompt: {len(system)} chars[/dim]")
@@ -49,6 +84,71 @@ def _call_claude(system: str, user_content: str, model: str, max_tokens: int, lo
     _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
     _log(f"  [dim]  │ Tokens: input={usage.input_tokens} output={usage.output_tokens}[/dim]")
     _log(f"  [dim]  │ Stop reason: {resp.stop_reason}[/dim]")
+    _log(f"  [dim]  └─ Response body:[/dim]")
+    for line in text.strip().split("\n"):
+        _log(f"  [dim]    {line}[/dim]")
+
+    return text
+
+
+def _call_bedrock_claude(system: str, user_content: str, model: str, max_tokens: int, log=None) -> str:
+    """Call Claude via AWS Bedrock Runtime and return response text."""
+    _log = log or (lambda msg: None)
+
+    region = _bedrock_config.get("region") or os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION")
+    profile = _bedrock_config.get("profile")
+    model_id = _bedrock_config.get("model") or model
+
+    _log(f"  [dim]  ┌─ Bedrock Claude request ({model_id}, max_tokens={max_tokens})[/dim]")
+    _log(f"  [dim]  │ Region: {region or 'auto'}  Profile: {profile or 'default'}[/dim]")
+    _log(f"  [dim]  │ System prompt: {len(system)} chars[/dim]")
+    _log(f"  [dim]  │ User content: {len(user_content)} chars[/dim]")
+
+    import boto3
+
+    t0 = time.time()
+    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
+    client = session.client("bedrock-runtime", region_name=region)
+
+    payload = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": [{"type": "text", "text": user_content}]}],
+    }
+
+    resp = client.invoke_model(
+        modelId=model_id,
+        contentType="application/json",
+        accept="application/json",
+        body=json.dumps(payload),
+    )
+
+    raw_body = resp.get("body")
+    if hasattr(raw_body, "read"):
+        body_bytes = raw_body.read()
+    else:
+        body_bytes = raw_body or b"{}"
+
+    body_str = body_bytes.decode("utf-8") if isinstance(body_bytes, (bytes, bytearray)) else str(body_bytes)
+    parsed = json.loads(body_str or "{}")
+    elapsed = time.time() - t0
+
+    content = parsed.get("content", [])
+    text = ""
+    if isinstance(content, list) and content:
+        first = content[0]
+        if isinstance(first, dict):
+            text = first.get("text", "") or ""
+
+    usage = parsed.get("usage", {})
+    in_tokens = usage.get("input_tokens", 0)
+    out_tokens = usage.get("output_tokens", 0)
+    stop_reason = parsed.get("stop_reason", "unknown")
+
+    _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
+    _log(f"  [dim]  │ Tokens: input={in_tokens} output={out_tokens}[/dim]")
+    _log(f"  [dim]  │ Stop reason: {stop_reason}[/dim]")
     _log(f"  [dim]  └─ Response body:[/dim]")
     for line in text.strip().split("\n"):
         _log(f"  [dim]    {line}[/dim]")
