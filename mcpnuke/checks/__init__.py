@@ -146,9 +146,17 @@ def run_all_checks(
     no_invoke = opts.get("no_invoke", False)
     fast_mode = opts.get("fast", False)
     probe_workers = opts.get("probe_workers", 1)
+    deterministic_mode = opts.get("deterministic", False)
     _log = log or (lambda msg: None)
     if verbose:
         opts["_log"] = _log
+
+    if deterministic_mode:
+        probe_workers = 1
+        result.tools = sorted(
+            result.tools,
+            key=lambda tool: str(tool.get("name", "")),
+        )
 
     # In fast mode: cap tools to top 5 security-relevant, force probe_workers=2 max
     if fast_mode:
@@ -307,7 +315,10 @@ def run_all_checks(
 
 def _pick_security_relevant(tools: list[dict], n: int) -> list[dict]:
     """Select the top N most security-relevant tools for fast-mode scanning."""
-    ranked = sorted(tools, key=_tool_security_score, reverse=True)
+    ranked = sorted(
+        tools,
+        key=lambda tool: (-_tool_security_score(tool), str(tool.get("name", ""))),
+    )
     return ranked[:n]
 
 

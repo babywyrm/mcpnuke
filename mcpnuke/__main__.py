@@ -196,6 +196,13 @@ def _main_inner() -> None:
                 )
                 sys.exit(EXIT_ERROR)
 
+    deterministic_mode: bool = bool(getattr(args, "deterministic", False))
+    effective_probe_workers: int = args.probe_workers
+    effective_phase2_workers: int = args.claude_phase2_workers
+    if deterministic_mode:
+        effective_probe_workers = 1
+        effective_phase2_workers = 1
+
     # --stdio mode: scan a local server via stdin/stdout, then exit
     if args.stdio:
         probe_opts = {
@@ -210,9 +217,10 @@ def _main_inner() -> None:
             "bedrock_profile": args.bedrock_profile,
             "bedrock_model": args.bedrock_model,
             "claude_max_tools": args.claude_max_tools,
-            "claude_phase2_workers": args.claude_phase2_workers,
+            "claude_phase2_workers": effective_phase2_workers,
             "fast": args.fast,
-            "probe_workers": args.probe_workers,
+            "probe_workers": effective_probe_workers,
+            "deterministic": deterministic_mode,
         }
 
         panel_lines = [
@@ -220,9 +228,11 @@ def _main_inner() -> None:
             f"Mode    : stdio",
             f"Command : {args.stdio}",
             f"Fast    : {args.fast}",
-            f"Workers : {args.probe_workers} probe thread(s)",
+            f"Workers : {effective_probe_workers} probe thread(s)",
             f"Started : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         ]
+        if deterministic_mode:
+            panel_lines.append("Deterministic: True")
         console.print(Panel("\n".join(panel_lines), title="mcpnuke", border_style="cyan"))
 
         result = scan_stdio_target(
@@ -273,7 +283,7 @@ def _main_inner() -> None:
         f"Timeout : {args.timeout}s",
         f"Verbose : {args.verbose}  Debug: {args.debug}",
         f"Fast    : {args.fast}" if args.fast else "",
-        f"Probe⌿  : {args.probe_workers} thread(s)" if args.probe_workers > 1 else "",
+        f"Probe⌿  : {effective_probe_workers} thread(s)" if effective_probe_workers > 1 else "",
         f"Group   : {args.group_findings}" if args.group_findings else "",
         f"Started : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
     ]
@@ -296,8 +306,10 @@ def _main_inner() -> None:
                 panel_lines.append(f"Bedrock profile: {args.bedrock_profile}")
         else:
             panel_lines.append(f"AI: Claude ({args.claude_model})")
-        if args.claude_phase2_workers > 1:
-            panel_lines.append(f"AI Phase2 workers: {args.claude_phase2_workers}")
+        if effective_phase2_workers > 1:
+            panel_lines.append(f"AI Phase2 workers: {effective_phase2_workers}")
+    if deterministic_mode:
+        panel_lines.append("Deterministic: True")
 
     console.print(
         Panel(
@@ -319,9 +331,10 @@ def _main_inner() -> None:
         "bedrock_profile": args.bedrock_profile,
         "bedrock_model": args.bedrock_model,
         "claude_max_tools": args.claude_max_tools,
-        "claude_phase2_workers": args.claude_phase2_workers,
+        "claude_phase2_workers": effective_phase2_workers,
         "fast": args.fast,
-        "probe_workers": args.probe_workers,
+        "probe_workers": effective_probe_workers,
+        "deterministic": deterministic_mode,
     }
 
     if args.no_invoke:
@@ -330,6 +343,8 @@ def _main_inner() -> None:
         console.print("  [yellow]--safe-mode: skipping dangerous tool invocations[/yellow]")
     if args.fast:
         console.print("  [yellow]--fast: sampling top 5 tools, skipping heavy probes[/yellow]")
+    if deterministic_mode:
+        console.print("  [yellow]--deterministic: stable ordering, single-threaded probes/AI phase2[/yellow]")
 
     if not args.no_k8s:
         run_k8s_checks(args.k8s_namespace, console=console)

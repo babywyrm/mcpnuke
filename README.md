@@ -63,6 +63,8 @@ mcpnuke --doctor
 **New to mcpnuke?** Try the **[DVMCP Walkthrough](walkthrough/README.md)** --
 a hands-on guide that scans 10 vulnerable MCP servers and explains every finding.
 Or run `./walkthrough/demo.sh` for the fully automated version.
+For command recipes across camazotz, DVMCP, deterministic benchmarking, and
+Bedrock variations, see **[QUICKSTART.md](QUICKSTART.md)**.
 
 ```bash
 # Single target
@@ -289,6 +291,7 @@ Safety Controls:
 Performance:
   --fast                      Sample top 5 security-relevant tools, skip heavy probes
   --probe-workers N           Parallel deep behavioral probe threads (default: 1)
+  --deterministic             Stable ordering + single-thread probes/AI Phase 2 for repeatable benchmarking
   --claude-phase2-workers N   Parallel Claude workers for AI Phase 2 (default: 1)
   --bedrock                   Route Claude calls through AWS Bedrock runtime
   --bedrock-region REGION     Bedrock region (e.g. us-east-1)
@@ -384,6 +387,9 @@ with a clear error message instead of running the full scan first.
 # Faster Claude Phase 2 on medium/large toolsets
 ./scan --targets http://localhost:9090 --fast --claude --claude-max-tools 25 --claude-phase2-workers 3
 
+# Repeatable benchmarking mode (recommended for run-to-run comparisons)
+./scan --targets http://localhost:9090 --fast --claude --deterministic --verbose
+
 # Claude via Bedrock (no ANTHROPIC_API_KEY required)
 ./scan --targets http://localhost:9090 --fast --claude --bedrock --bedrock-region us-east-1
 ```
@@ -393,6 +399,11 @@ with a clear error message instead of running the full scan first.
 - Use `2-4` to reduce wall-clock time when Phase 2 dominates runtime.
 - Keep `1` if your key is rate-limited or target/network is unstable.
 - This flag is optional; scans run normally without it.
+
+**`--deterministic` guidance:**
+- Forces stable tool ordering and single-threaded deep probes/AI Phase 2.
+- Use this for benchmarking and CI drift checks when you need tighter run-to-run consistency.
+- This does not remove model/target nondeterminism entirely, but it reduces scanner-side variance.
 
 mcpnuke uses a three-layer analysis architecture. Each layer catches what
 the previous one can't:

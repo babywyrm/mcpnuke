@@ -6,6 +6,10 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **Deterministic scan mode** — New `--deterministic` flag enforces stable tool
+  ordering and single-threaded deep probes / AI Phase 2 to improve run-to-run
+  repeatability for benchmarking and CI drift checks.
+
 - **Parallel AI Phase 2 workers** — New `--claude-phase2-workers N` flag to run
   `llm_response_analysis` response reviews concurrently. Default remains `1`
   (serial) for safe, backward-compatible behavior.
@@ -28,6 +32,10 @@ All notable changes to this submodule are documented here.
 
 - **Doctor Bedrock visibility** — `--doctor` now reports boto3 presence and
   whether AWS credentials appear available for Bedrock scans.
+
+- **Quickstart documentation expanded** — Added `QUICKSTART.md` scenario
+  recipes for camazotz regular scans, deterministic benchmarking, Bedrock
+  variation, and DVMCP bring-up + scan workflows.
 
 ---
 

@@ -218,6 +218,12 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "Higher values speed up deep probes but increase server load.",
     )
     p.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Deterministic scan mode: enforce stable tool ordering and single-threaded "
+        "AI Phase 2/probe execution for more repeatable benchmarking.",
+    )
+    p.add_argument(
         "--claude-max-tools",
         type=int,
         default=10,

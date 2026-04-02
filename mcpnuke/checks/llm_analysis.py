@@ -55,6 +55,12 @@ class _Phase2Output:
     findings: list
 
 
+def _resolve_phase2_workers(opts: dict) -> int:
+    if opts.get("deterministic", False):
+        return 1
+    return max(1, min(int(opts.get("claude_phase2_workers", 1)), 8))
+
+
 def _build_phase2_payload(text: str, resp: dict | None, max_chars: int = 3000) -> str:
     """Build the payload sent to Claude for response analysis.
 
@@ -174,8 +180,14 @@ def run_llm_analysis(
             response_findings = 0
             try:
                 max_tools = opts.get("claude_max_tools", 10)
-                phase2_workers = max(1, min(int(opts.get("claude_phase2_workers", 1)), 8))
-                tool_subset = result.tools[:max_tools]
+                phase2_workers = _resolve_phase2_workers(opts)
+                tools = result.tools
+                if opts.get("deterministic", False):
+                    tools = sorted(
+                        tools,
+                        key=lambda tool: str(tool.get("name", "")),
+                    )
+                tool_subset = tools[:max_tools]
                 skipped = [t.get("name", "?") for t in tool_subset if not _should_invoke(t, opts)]
                 if skipped:
                     _log(f"  [yellow]  Skipping dangerous tools ({len(skipped)}): {', '.join(skipped)}[/yellow]")
