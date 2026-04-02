@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mcpnuke.checks.llm_analysis import run_llm_analysis
+from mcpnuke.checks.llm_analysis import run_llm_analysis, _resolve_phase2_workers
 from mcpnuke.core.models import TargetResult
 
 
@@ -143,3 +143,8 @@ def test_phase2_parallel_workers_analyze_all_candidates() -> None:
     )
 
     assert len(backend.response_payloads) == 2
+
+
+def test_resolve_phase2_workers_forces_single_in_deterministic_mode() -> None:
+    workers = _resolve_phase2_workers({"claude_phase2_workers": 4, "deterministic": True})
+    assert workers == 1

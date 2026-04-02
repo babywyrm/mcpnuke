@@ -235,3 +235,13 @@ class TestPickSecurityRelevant:
 
     def test_returns_empty_for_empty_list(self):
         assert _pick_security_relevant([], 5) == []
+
+    def test_tie_breaks_are_deterministic_by_name(self):
+        tied_tools = [
+            {"name": "zeta", "description": "benign", "inputSchema": {"type": "object", "properties": {}}},
+            {"name": "alpha", "description": "benign", "inputSchema": {"type": "object", "properties": {}}},
+            {"name": "mu", "description": "benign", "inputSchema": {"type": "object", "properties": {}}},
+        ]
+        top3 = _pick_security_relevant(tied_tools, 3)
+        names = [tool["name"] for tool in top3]
+        assert names == ["alpha", "mu", "zeta"]

@@ -157,3 +157,15 @@ def test_parse_args_bedrock_options():
     assert args.bedrock_region == "us-east-1"
     assert args.bedrock_profile == "security"
     assert args.bedrock_model == "anthropic.claude-3-5-sonnet-20241022-v2:0"
+
+
+def test_parse_args_deterministic():
+    """--deterministic should parse cleanly."""
+    args = parse_args(
+        [
+            "--targets",
+            "http://localhost:9001",
+            "--deterministic",
+        ]
+    )
+    assert args.deterministic is True
