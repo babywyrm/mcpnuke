@@ -87,7 +87,33 @@ Use for production endpoints where invoking tools is not acceptable.
 ./scan --targets "https://target.example/mcp" --no-invoke --verbose --json "static-only.json"
 ```
 
-## 6) Repeatability Loop (Manual)
+## 6) Agentic OAuth/JWT Validation
+
+Use this to validate scoped client-credentials and required flow headers.
+
+```bash
+./scan \
+  --targets "https://target.example/mcp" \
+  --oidc-url "https://auth.example/realms/agentic" \
+  --client-id scanner \
+  --client-secret SECRET \
+  --oidc-scope "mcp.read mcp.invoke" \
+  --header "X-Tenant: blue" \
+  --header "X-Agent-Flow: planner" \
+  --tls-verify \
+  --verbose \
+  --json "agentic-oauth-jwt.json"
+```
+
+JSON output includes `auth_context.jwt_claims_summary` when bearer tokens are JWT-like.
+
+Optional extensions (independent, default-off):
+
+- `--dpop-proof` adds a static `DPoP` header
+- `--token-introspect-url` (+ optional client credentials) captures active/scope summary
+- `--jwks-url` captures keyset metadata summary (kid/kty/alg counts)
+
+## 7) Repeatability Loop (Manual)
 
 For consistency checks, reset target state between runs and compare:
 

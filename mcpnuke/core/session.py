@@ -15,15 +15,17 @@ import httpx
 from mcpnuke.core.constants import MCP_INIT_PARAMS, SSE_PATHS, POST_PATHS, build_jsonrpc_request as _jrpc
 
 
-def _auth_headers(auth_token: str | None) -> dict:
+def _auth_headers(auth_token: str | None, extra_headers: dict | None = None) -> dict:
     """Build headers with optional Authorization Bearer."""
     h = {"Accept": "text/event-stream"}
     if auth_token:
         h["Authorization"] = f"Bearer {auth_token}"
+    if extra_headers:
+        h.update(extra_headers)
     return h
 
 
-def _mcp_headers(auth_token: str | None) -> dict:
+def _mcp_headers(auth_token: str | None, extra_headers: dict | None = None) -> dict:
     """Build MCP request headers with optional Authorization Bearer."""
     h = {
         "Content-Type": "application/json",
@@ -31,19 +33,28 @@ def _mcp_headers(auth_token: str | None) -> dict:
     }
     if auth_token:
         h["Authorization"] = f"Bearer {auth_token}"
+    if extra_headers:
+        h.update(extra_headers)
     return h
 
 
-def _probe_sse_path(base: str, path: str, timeout: float = 6.0, auth_token: str | None = None) -> bool:
+def _probe_sse_path(
+    base: str,
+    path: str,
+    timeout: float = 6.0,
+    auth_token: str | None = None,
+    verify_tls: bool = False,
+    extra_headers: dict | None = None,
+) -> bool:
     url = base + path
     result: list[bool] = [False]
     done = threading.Event()
-    headers = _auth_headers(auth_token)
+    headers = _auth_headers(auth_token, extra_headers)
 
     def _try():
         try:
             with httpx.Client(
-                verify=False, timeout=httpx.Timeout(timeout, connect=4.0)
+                verify=verify_tls, timeout=httpx.Timeout(timeout, connect=4.0)
             ) as c:
                 with c.stream(
                     "GET", url, headers=headers
@@ -68,18 +79,28 @@ def _probe_sse_path(base: str, path: str, timeout: float = 6.0, auth_token: str 
 class MCPSession:
     """SSE-based MCP session."""
 
-    def __init__(self, base: str, sse_path: str, timeout: float = 25.0, auth_token: str | None = None):
+    def __init__(
+        self,
+        base: str,
+        sse_path: str,
+        timeout: float = 25.0,
+        auth_token: str | None = None,
+        verify_tls: bool = False,
+        extra_headers: dict | None = None,
+    ):
         self.base = base
         self.sse_url = base + sse_path
         self.post_url: str = ""
         self.timeout = timeout
         self._auth_token = auth_token
+        self._verify_tls = verify_tls
+        self._extra_headers = extra_headers or {}
         self._req_id = 0
         self._q: queue.Queue[dict] = queue.Queue()
         self._stop = threading.Event()
         self._endpoint_ready = threading.Event()
         self._client = httpx.Client(
-            verify=False, timeout=timeout, follow_redirects=True
+            verify=verify_tls, timeout=timeout, follow_redirects=True
         )
         self._listener = threading.Thread(
             target=self._listen, daemon=True, name=f"sse-{base}"
@@ -87,7 +108,7 @@ class MCPSession:
         self._listener.start()
 
     def _listen(self):
-        headers = _auth_headers(self._auth_token)
+        headers = _auth_headers(self._auth_token, self._extra_headers)
         headers["Accept"] = "text/event-stream"
         try:
             with self._client.stream(
@@ -137,7 +158,7 @@ class MCPSession:
         for attempt in range(retries + 1):
             self._req_id += 1
             payload = _jrpc(method, params, self._req_id)
-            headers = _mcp_headers(self._auth_token)
+            headers = _mcp_headers(self._auth_token, self._extra_headers)
             try:
                 r = self._client.post(
                     self.post_url,
@@ -184,7 +205,7 @@ class MCPSession:
             self._client.post(
                 self.post_url,
                 json=payload,
-                headers=_mcp_headers(self._auth_token),
+                headers=_mcp_headers(self._auth_token, self._extra_headers),
                 timeout=5,
             )
         except Exception:
@@ -216,7 +237,14 @@ def _parse_sse_json(text: str, req_id: int | None = None) -> dict | None:
 class HTTPSession:
     """Plain HTTP POST fallback (no SSE). Handles both application/json and text/event-stream responses."""
 
-    def __init__(self, base: str, post_url: str, timeout: float = 25.0, headers: dict | None = None):
+    def __init__(
+        self,
+        base: str,
+        post_url: str,
+        timeout: float = 25.0,
+        headers: dict | None = None,
+        verify_tls: bool = False,
+    ):
         self.base = base
         self.sse_url = ""
         self.post_url = post_url
@@ -224,7 +252,7 @@ class HTTPSession:
         self._req_id = 0
         self._headers = headers or {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
         self._client = httpx.Client(
-            verify=False, timeout=timeout, follow_redirects=True
+            verify=verify_tls, timeout=timeout, follow_redirects=True
         )
 
     def wait_ready(self, timeout: float = 10.0) -> bool:
@@ -398,13 +426,14 @@ class ToolServerSession:
         headers: dict | None = None,
         tool_names_file: str | None = None,
         fingerprint: dict | None = None,
+        verify_tls: bool = False,
     ):
         self.base = base
         self.sse_url = ""
         self.post_url = post_url
         self.timeout = timeout
         self._headers = headers or {"Content-Type": "application/json"}
-        self._client = httpx.Client(verify=False, timeout=timeout, follow_redirects=True)
+        self._client = httpx.Client(verify=verify_tls, timeout=timeout, follow_redirects=True)
         self._discovered_tools: list[dict] = []
         self._tool_names_file = tool_names_file
         self.fingerprint: dict = fingerprint or {}
@@ -686,6 +715,8 @@ def _detect_tool_server(
     hint: str | None,
     timeout: float,
     auth_token: str | None,
+    verify_tls: bool,
+    extra_headers: dict | None,
     tool_names_file: str | None = None,
 ) -> ToolServerSession | None:
     """Try to detect a custom tool-execute API (non-MCP).
@@ -696,6 +727,8 @@ def _detect_tool_server(
     headers = {"Content-Type": "application/json"}
     if auth_token:
         headers["Authorization"] = f"Bearer {auth_token}"
+    if extra_headers:
+        headers.update(extra_headers)
 
     paths_to_try: list[str] = []
     if hint:
@@ -703,7 +736,7 @@ def _detect_tool_server(
     paths_to_try.extend(TOOL_EXECUTE_PATHS)
 
     seen: set[str] = set()
-    client = httpx.Client(verify=False, timeout=5, follow_redirects=True)
+    client = httpx.Client(verify=verify_tls, timeout=5, follow_redirects=True)
 
     try:
         for path in paths_to_try:
@@ -753,6 +786,7 @@ def _detect_tool_server(
                         return ToolServerSession(
                             base, url, timeout=timeout, headers=headers,
                             tool_names_file=tool_names_file, fingerprint=fp,
+                            verify_tls=verify_tls,
                         )
 
                 except Exception:
@@ -768,6 +802,8 @@ def detect_transport(
     connect_timeout: float = 25.0,
     verbose: bool = False,
     auth_token: str | None = None,
+    verify_tls: bool = False,
+    extra_headers: dict | None = None,
     log=None,
     **kwargs,
 ) -> MCPSession | HTTPSession | ToolServerSession | None:
@@ -794,12 +830,26 @@ def detect_transport(
     for sse_path in ordered_paths:
         if verbose:
             _log(f"  [dim]  SSE probe: {base}{sse_path}[/dim]")
-        if not _probe_sse_path(base, sse_path, timeout=6.0, auth_token=auth_token):
+        if not _probe_sse_path(
+            base,
+            sse_path,
+            timeout=6.0,
+            auth_token=auth_token,
+            verify_tls=verify_tls,
+            extra_headers=extra_headers,
+        ):
             continue
 
         if verbose:
             _log(f"  [dim]  SSE stream found at {sse_path}, waiting for endpoint...[/dim]")
-        session = MCPSession(base, sse_path, timeout=connect_timeout, auth_token=auth_token)
+        session = MCPSession(
+            base,
+            sse_path,
+            timeout=connect_timeout,
+            auth_token=auth_token,
+            verify_tls=verify_tls,
+            extra_headers=extra_headers,
+        )
 
         if session.wait_ready(timeout=12.0) and session.post_url:
             if verbose:
@@ -808,7 +858,7 @@ def detect_transport(
 
         session.close()
 
-    client = httpx.Client(verify=False, timeout=8, follow_redirects=True)
+    client = httpx.Client(verify=verify_tls, timeout=8, follow_redirects=True)
 
     seen_post: set[str] = set()
     ordered_post: list[str] = []
@@ -820,7 +870,7 @@ def detect_transport(
     if verbose:
         _log(f"  [dim]Probing {len(ordered_post)} HTTP POST path(s) on {base}[/dim]")
 
-    mcp_headers = _mcp_headers(auth_token)
+    mcp_headers = _mcp_headers(auth_token, extra_headers)
     for path in ordered_post:
         post_url = base + path
         try:
@@ -846,7 +896,13 @@ def detect_transport(
                     client.close()
                     if verbose:
                         _log(f"  [yellow]  MCP endpoint found at {path} but requires authentication[/yellow]")
-                    return HTTPSession(base, post_url, timeout=connect_timeout, headers=mcp_headers)
+                    return HTTPSession(
+                        base,
+                        post_url,
+                        timeout=connect_timeout,
+                        headers=mcp_headers,
+                        verify_tls=verify_tls,
+                    )
 
             is_jsonrpc_body = "jsonrpc" in r.text or "JSON-RPC" in r.text
             is_jsonrpc_error = r.status_code in (400, 422) and (
@@ -861,7 +917,13 @@ def detect_transport(
                 if verbose:
                     _log(f"  [dim]  HTTP MCP endpoint confirmed at {path}[/dim]")
                 client.close()
-                return HTTPSession(base, post_url, timeout=connect_timeout, headers=mcp_headers)
+                return HTTPSession(
+                    base,
+                    post_url,
+                    timeout=connect_timeout,
+                    headers=mcp_headers,
+                    verify_tls=verify_tls,
+                )
         except httpx.ConnectError:
             if verbose:
                 _log(f"  [dim]  → Connection refused[/dim]")
@@ -886,7 +948,12 @@ def detect_transport(
                 )
                 if r.status_code in (400, 404, 422):
                     session = MCPSession(
-                        base, sse_path, timeout=connect_timeout, auth_token=auth_token
+                        base,
+                        sse_path,
+                        timeout=connect_timeout,
+                        auth_token=auth_token,
+                        verify_tls=verify_tls,
+                        extra_headers=extra_headers,
                     )
                     if session.wait_ready(timeout=10.0) and session.post_url:
                         client.close()
@@ -901,7 +968,7 @@ def detect_transport(
         _log(f"  [dim]Trying ToolServer detection...[/dim]")
 
     tool_session = _detect_tool_server(
-        base, hint, connect_timeout, auth_token,
+        base, hint, connect_timeout, auth_token, verify_tls, extra_headers,
         tool_names_file=kwargs.get("tool_names_file"),
     )
     if tool_session:

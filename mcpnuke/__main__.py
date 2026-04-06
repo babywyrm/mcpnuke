@@ -15,7 +15,17 @@ from datetime import datetime
 
 from mcpnuke import __version__
 from mcpnuke.cli import parse_args, build_url_list
-from mcpnuke.core.auth import resolve_auth_token, detect_auth_requirements
+from mcpnuke.core.auth import (
+    decode_jwt_claims,
+    detect_auth_requirements,
+    fetch_jwks,
+    fetch_token_introspection,
+    parse_header_kv_pairs,
+    resolve_auth_token,
+    summarize_introspection,
+    summarize_jwks,
+    summarize_jwt_claims,
+)
 from mcpnuke.scanner import scan_target, scan_stdio_target, run_parallel, detect_cross_shadowing
 from mcpnuke.reporting import print_report, write_json
 from mcpnuke.k8s import run_k8s_checks, discover_services, fingerprint_services
@@ -154,6 +164,13 @@ def _main_inner() -> None:
     console = Console(no_color=args.no_color, force_terminal=not args.no_color)
     from mcpnuke.core.llm import configure_bedrock
     configure_bedrock(enabled=False)
+    try:
+        extra_headers = parse_header_kv_pairs(getattr(args, "header", None))
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(EXIT_ERROR)
+    if args.dpop_proof:
+        extra_headers["DPoP"] = args.dpop_proof
 
     if args.doctor:
         _run_doctor(console)
@@ -221,6 +238,8 @@ def _main_inner() -> None:
             "fast": args.fast,
             "probe_workers": effective_probe_workers,
             "deterministic": deterministic_mode,
+            "tls_verify": args.tls_verify,
+            "extra_headers": extra_headers,
         }
 
         panel_lines = [
@@ -263,12 +282,49 @@ def _main_inner() -> None:
             console.print(f"  [red]✗[/red] OIDC token fetch failed: {e}")
             sys.exit(EXIT_ERROR)
     elif not auth_token and urls and args.verbose:
-        info = detect_auth_requirements(urls[0])
+        info = detect_auth_requirements(
+            urls[0],
+            verify_tls=args.tls_verify,
+            extra_headers=extra_headers,
+        )
         if info.requires_auth:
             console.print(f"  [yellow]⚠[/yellow]  Target requires auth: {info.summary()}")
             if info.token_endpoint:
                 console.print(f"  [dim]  Token endpoint: {info.token_endpoint}[/dim]")
                 console.print(f"  [dim]  Use: --oidc-url {info.issuer or '...'} --client-id ID --client-secret SECRET[/dim]")
+    jwt_claims_summary: dict = {}
+    auth_context_summary: dict = {}
+    if auth_token:
+        claims = decode_jwt_claims(auth_token)
+        if claims:
+            jwt_claims_summary = summarize_jwt_claims(claims)
+            auth_context_summary["jwt_claims_summary"] = jwt_claims_summary
+    if args.token_introspect_url:
+        if not auth_token:
+            console.print("  [yellow]⚠[/yellow] token introspection configured but no auth token resolved")
+        else:
+            try:
+                raw_introspection = fetch_token_introspection(
+                    args.token_introspect_url,
+                    auth_token,
+                    client_id=args.token_introspect_client_id,
+                    client_secret=args.token_introspect_client_secret,
+                    verify_tls=args.tls_verify,
+                    extra_headers=extra_headers,
+                )
+                auth_context_summary["introspection_summary"] = summarize_introspection(raw_introspection)
+            except RuntimeError as e:
+                console.print(f"  [yellow]⚠[/yellow] token introspection failed: {e}")
+    if args.jwks_url:
+        try:
+            jwks = fetch_jwks(
+                args.jwks_url,
+                verify_tls=args.tls_verify,
+                extra_headers=extra_headers,
+            )
+            auth_context_summary["jwks_summary"] = summarize_jwks(jwks)
+        except RuntimeError as e:
+            console.print(f"  [yellow]⚠[/yellow] JWKS fetch failed: {e}")
 
     baseline = {}
     if args.baseline:
@@ -297,6 +353,25 @@ def _main_inner() -> None:
             panel_lines.append(f"Auth: OIDC client_credentials (client={args.client_id})")
         else:
             panel_lines.append("Auth: Bearer token")
+    if args.oidc_scope:
+        panel_lines.append(f"OIDC scope: {args.oidc_scope}")
+    if args.dpop_proof:
+        panel_lines.append("DPoP: provided")
+    if args.tls_verify:
+        panel_lines.append("TLS verify: True")
+    if extra_headers:
+        panel_lines.append(f"Extra headers: {len(extra_headers)}")
+    if jwt_claims_summary:
+        claims_short = ", ".join(
+            f"{k}={v}" for k, v in jwt_claims_summary.items() if k in {"iss", "sub", "aud", "scope", "scp"}
+        )
+        if claims_short:
+            panel_lines.append(f"JWT claims: {claims_short[:120]}")
+    if "introspection_summary" in auth_context_summary:
+        active = auth_context_summary["introspection_summary"].get("active")
+        panel_lines.append(f"Introspection active: {active}")
+    if "jwks_summary" in auth_context_summary:
+        panel_lines.append(f"JWKS keys: {auth_context_summary['jwks_summary'].get('key_count', 0)}")
     if args.claude:
         if args.bedrock:
             panel_lines.append(f"AI: Claude via Bedrock ({args.bedrock_model})")
@@ -335,6 +410,9 @@ def _main_inner() -> None:
         "fast": args.fast,
         "probe_workers": effective_probe_workers,
         "deterministic": deterministic_mode,
+        "tls_verify": args.tls_verify,
+        "extra_headers": extra_headers,
+        "auth_context_summary": auth_context_summary,
     }
 
     if args.no_invoke:
@@ -345,6 +423,8 @@ def _main_inner() -> None:
         console.print("  [yellow]--fast: sampling top 5 tools, skipping heavy probes[/yellow]")
     if deterministic_mode:
         console.print("  [yellow]--deterministic: stable ordering, single-threaded probes/AI phase2[/yellow]")
+    if args.tls_verify:
+        console.print("  [yellow]--tls-verify: TLS certificate verification enabled[/yellow]")
 
     if not args.no_k8s:
         run_k8s_checks(args.k8s_namespace, console=console)

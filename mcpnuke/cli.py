@@ -57,6 +57,25 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         f"Or set {AUTH_TOKEN_ENV} env var.",
     )
     p.add_argument(
+        "--dpop-proof",
+        metavar="JWT",
+        default=os.environ.get("MCP_DPOP_PROOF") or None,
+        help="Static DPoP proof JWT header value to send as DPoP. "
+        "Optional and independent from bearer auth.",
+    )
+    p.add_argument(
+        "--header",
+        action="append",
+        metavar="KEY:VALUE",
+        help="Extra HTTP header (repeatable). Example: --header 'X-Tenant: blue'",
+    )
+    p.add_argument(
+        "--tls-verify",
+        action="store_true",
+        help="Enable TLS certificate verification for outbound HTTP calls. "
+        "Default is disabled for lab/self-signed targets.",
+    )
+    p.add_argument(
         "--oidc-url",
         metavar="URL",
         default=os.environ.get("MCP_OIDC_URL") or None,
@@ -74,6 +93,36 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         metavar="SECRET",
         default=os.environ.get("MCP_CLIENT_SECRET") or None,
         help="OAuth2 client secret for client_credentials grant. Or set MCP_CLIENT_SECRET env var.",
+    )
+    p.add_argument(
+        "--oidc-scope",
+        metavar="SCOPE",
+        default=os.environ.get("MCP_OIDC_SCOPE") or None,
+        help="Optional OAuth2 scope for client_credentials token requests.",
+    )
+    p.add_argument(
+        "--token-introspect-url",
+        metavar="URL",
+        default=os.environ.get("MCP_INTROSPECT_URL") or None,
+        help="Optional OAuth2 token introspection endpoint URL.",
+    )
+    p.add_argument(
+        "--token-introspect-client-id",
+        metavar="ID",
+        default=os.environ.get("MCP_INTROSPECT_CLIENT_ID") or None,
+        help="Optional client ID for token introspection requests.",
+    )
+    p.add_argument(
+        "--token-introspect-client-secret",
+        metavar="SECRET",
+        default=os.environ.get("MCP_INTROSPECT_CLIENT_SECRET") or None,
+        help="Optional client secret for token introspection requests.",
+    )
+    p.add_argument(
+        "--jwks-url",
+        metavar="URL",
+        default=os.environ.get("MCP_JWKS_URL") or None,
+        help="Optional JWKS endpoint URL for keyset metadata checks.",
     )
     p.add_argument(
         "--timeout",

@@ -81,6 +81,26 @@ Bedrock variations, see **[QUICKSTART.md](QUICKSTART.md)**.
   --oidc-url http://keycloak:8080/realms/myapp \
   --client-id myapp --client-secret SECRET
 
+# OIDC with explicit scope, extra headers, and TLS verification
+./scan --targets https://target.example/mcp \
+  --oidc-url https://auth.example/realms/agentic \
+  --client-id scanner --client-secret SECRET \
+  --oidc-scope "mcp.read mcp.invoke" \
+  --header "X-Tenant: blue" \
+  --header "X-Agent-Flow: planner" \
+  --tls-verify
+
+# Optional: DPoP + token introspection + JWKS metadata checks
+./scan --targets https://target.example/mcp \
+  --auth-token "$ACCESS_TOKEN" \
+  --dpop-proof "$DPOP_PROOF_JWT" \
+  --token-introspect-url "https://auth.example/oauth2/introspect" \
+  --token-introspect-client-id scanner \
+  --token-introspect-client-secret SECRET \
+  --jwks-url "https://auth.example/.well-known/jwks.json" \
+  --tls-verify \
+  --json auth-flow-report.json
+
 # JSON report for CI
 ./scan --port-range localhost:9001-9010 --json report.json
 
@@ -113,6 +133,12 @@ uv run pytest tests/ -v
 
 All `./scan` commands also work as `uv run mcpnuke` (no activation needed),
 `mcpnuke` (with venv activated), or `.venv/bin/mcpnuke`.
+
+When `--auth-token` looks like a JWT, mcpnuke decodes it (without signature
+validation) and includes a safe claim summary in JSON output under
+`auth_context.jwt_claims_summary` to help validate agentic auth wiring.
+If configured, token introspection and JWKS fetch summaries are also included
+under `auth_context` without affecting scan behavior when disabled.
 
 **Exit codes:** `0` — no findings (clean); `1` — findings reported; `2` — scan
 error (connection failure, invalid args, etc.). Use `1` vs `2` in CI to
@@ -274,6 +300,14 @@ Target Selection:
 Authentication:
   --auth-token TOKEN          Bearer token for authenticated endpoints
                               (or set MCP_AUTH_TOKEN env var)
+  --dpop-proof JWT            Optional static DPoP header value
+  --header KEY:VALUE          Extra HTTP header (repeatable)
+  --tls-verify                Enable TLS certificate verification
+  --oidc-scope SCOPE          Optional OAuth2 scope for client_credentials
+  --token-introspect-url URL  Optional OAuth2 token introspection endpoint
+  --token-introspect-client-id ID
+  --token-introspect-client-secret SECRET
+  --jwks-url URL              Optional JWKS endpoint for keyset metadata
 
 Scan Options:
   --timeout SEC               Per-target connection timeout (default: 25)

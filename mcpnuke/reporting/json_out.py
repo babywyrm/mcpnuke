@@ -13,6 +13,7 @@ def _build_target_dict(r: TargetResult) -> dict:
         "url": r.url,
         "transport": r.transport,
         "risk_score": r.risk_score(),
+        "auth_context": r.auth_context,
         "tools": [t.get("name") for t in r.tools],
         "timings": r.timings,
         "findings": [

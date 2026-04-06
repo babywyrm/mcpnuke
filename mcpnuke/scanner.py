@@ -86,6 +86,8 @@ def scan_stdio_target(
             console.print(
                 f"  [dim]Server: {si.get('name', '?')} v{si.get('version', '?')}[/dim]"
             )
+    if opts.get("auth_context_summary"):
+        result.auth_context.update(opts["auth_context_summary"])
 
     console.print(
         f"  [dim]Tools={len(result.tools)} "
@@ -154,6 +156,8 @@ def scan_target(
     _log = console.print if verbose else lambda msg: None
     session = detect_transport(
         url, connect_timeout=timeout, verbose=verbose, auth_token=auth_token,
+        verify_tls=bool(opts.get("tls_verify", False)),
+        extra_headers=opts.get("extra_headers"),
         tool_names_file=opts.get("tool_names_file"),
         log=_log,
     )
@@ -207,6 +211,8 @@ def scan_target(
             console.print(
                 f"  [dim]Server: {si.get('name', '?')} v{si.get('version', '?')}[/dim]"
             )
+    if opts.get("jwt_claims_summary"):
+        result.auth_context["jwt_claims_summary"] = opts["jwt_claims_summary"]
 
     console.print(
         f"  [dim]Tools={len(result.tools)} "

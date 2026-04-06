@@ -23,6 +23,15 @@ All notable changes to this submodule are documented here.
   now supports typed backend injection via `LLMBackend`, enabling cleaner
   integration tests with explicit fake backends.
 
+- **Agentic auth flow controls** — Added repeatable `--header KEY:VALUE`,
+  `--tls-verify`, and `--oidc-scope` flags, plus JWT claim-summary reporting
+  in JSON output (`auth_context.jwt_claims_summary`) for bearer-token flows.
+
+- **Independent advanced auth helpers** — Added optional `--dpop-proof`,
+  `--token-introspect-url` (+ optional introspection client creds), and
+  `--jwks-url` support. Results are reported under `auth_context` and are
+  fully default-off to avoid behavior changes when not enabled.
+
 ### Changed
 
 - **AI Phase 2 payload handling** — `llm_response_analysis` no longer skips

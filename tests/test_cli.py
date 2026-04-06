@@ -169,3 +169,46 @@ def test_parse_args_deterministic():
         ]
     )
     assert args.deterministic is True
+
+
+def test_parse_args_headers_tls_and_scope():
+    args = parse_args(
+        [
+            "--targets",
+            "http://localhost:9001",
+            "--header",
+            "X-Tenant: blue",
+            "--header",
+            "X-Request-ID: abc123",
+            "--tls-verify",
+            "--oidc-scope",
+            "mcp.read mcp.invoke",
+        ]
+    )
+    assert args.header == ["X-Tenant: blue", "X-Request-ID: abc123"]
+    assert args.tls_verify is True
+    assert args.oidc_scope == "mcp.read mcp.invoke"
+
+
+def test_parse_args_dpop_introspect_and_jwks():
+    args = parse_args(
+        [
+            "--targets",
+            "http://localhost:9001",
+            "--dpop-proof",
+            "header.payload.signature",
+            "--token-introspect-url",
+            "https://auth.example/introspect",
+            "--token-introspect-client-id",
+            "scanner",
+            "--token-introspect-client-secret",
+            "secret",
+            "--jwks-url",
+            "https://auth.example/jwks.json",
+        ]
+    )
+    assert args.dpop_proof == "header.payload.signature"
+    assert args.token_introspect_url == "https://auth.example/introspect"
+    assert args.token_introspect_client_id == "scanner"
+    assert args.token_introspect_client_secret == "secret"
+    assert args.jwks_url == "https://auth.example/jwks.json"

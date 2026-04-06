@@ -1,7 +1,9 @@
 """OAuth2/OIDC authentication support for mcpnuke."""
 
+import base64
 import json
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -32,7 +34,177 @@ class AuthInfo:
         return ", ".join(parts) if parts else "unknown"
 
 
-def detect_auth_requirements(url: str, timeout: float = 5.0) -> AuthInfo:
+def parse_header_kv_pairs(values: list[str] | None) -> dict[str, str]:
+    """Parse repeated KEY:VALUE CLI header flags into a dict."""
+    headers: dict[str, str] = {}
+    for raw in values or []:
+        if ":" not in raw:
+            raise ValueError(f"Invalid header format {raw!r}; expected KEY:VALUE")
+        key, value = raw.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            raise ValueError(f"Invalid header format {raw!r}; key cannot be empty")
+        headers[key] = value
+    return headers
+
+
+def decode_jwt_claims(token: str) -> dict[str, Any] | None:
+    """Decode JWT payload claims without signature validation."""
+    parts = token.split(".")
+    if len(parts) < 2:
+        return None
+    payload = parts[1]
+    padding = "=" * ((4 - len(payload) % 4) % 4)
+    try:
+        decoded = base64.urlsafe_b64decode(payload + padding)
+        data = json.loads(decoded.decode("utf-8"))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def summarize_jwt_claims(claims: dict[str, Any]) -> dict[str, Any]:
+    """Return a minimal JWT claim summary useful for scan context."""
+    keep = (
+        "iss",
+        "sub",
+        "aud",
+        "exp",
+        "nbf",
+        "iat",
+        "jti",
+        "azp",
+        "scope",
+        "scp",
+        "client_id",
+    )
+    out: dict[str, Any] = {}
+    for key in keep:
+        if key in claims:
+            out[key] = claims[key]
+    return out
+
+
+def summarize_introspection(introspection: dict[str, Any]) -> dict[str, Any]:
+    """Return a minimal, stable summary from token introspection output."""
+    keep = (
+        "active",
+        "scope",
+        "client_id",
+        "sub",
+        "iss",
+        "aud",
+        "exp",
+        "iat",
+        "nbf",
+        "token_type",
+        "username",
+    )
+    out: dict[str, Any] = {}
+    for key in keep:
+        if key in introspection:
+            out[key] = introspection[key]
+    return out
+
+
+def fetch_token_introspection(
+    introspect_url: str,
+    token: str,
+    client_id: str | None = None,
+    client_secret: str | None = None,
+    timeout: float = 10.0,
+    verify_tls: bool = False,
+    extra_headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Call OAuth2 token introspection endpoint and return JSON body."""
+    headers: dict[str, str] = {"Content-Type": "application/x-www-form-urlencoded"}
+    if extra_headers:
+        headers.update(extra_headers)
+    data: dict[str, str] = {"token": token}
+    if client_id:
+        data["client_id"] = client_id
+    if client_secret:
+        data["client_secret"] = client_secret
+
+    client = httpx.Client(verify=verify_tls, timeout=timeout)
+    try:
+        r = client.post(introspect_url, data=data, headers=headers)
+        if r.status_code != 200:
+            raise RuntimeError(
+                f"Token introspection failed: HTTP {r.status_code} from {introspect_url}\n"
+                f"Response: {r.text[:500]}"
+            )
+        body = r.json()
+        if not isinstance(body, dict):
+            raise RuntimeError("Token introspection response was not a JSON object")
+        return body
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"Token introspection error: {e}") from e
+    finally:
+        client.close()
+
+
+def summarize_jwks(jwks: dict[str, Any]) -> dict[str, Any]:
+    """Summarize JWKS key metadata for operator visibility."""
+    keys = jwks.get("keys", [])
+    if not isinstance(keys, list):
+        keys = []
+    kids: list[str] = []
+    kty: set[str] = set()
+    alg: set[str] = set()
+    for key in keys:
+        if not isinstance(key, dict):
+            continue
+        kid = key.get("kid")
+        if isinstance(kid, str):
+            kids.append(kid)
+        if isinstance(key.get("kty"), str):
+            kty.add(key["kty"])
+        if isinstance(key.get("alg"), str):
+            alg.add(key["alg"])
+    return {
+        "key_count": len(keys),
+        "kids": sorted(kids)[:10],
+        "kty": sorted(kty),
+        "alg": sorted(alg),
+    }
+
+
+def fetch_jwks(
+    jwks_url: str,
+    timeout: float = 10.0,
+    verify_tls: bool = False,
+    extra_headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Fetch JWKS document and return parsed JSON."""
+    headers: dict[str, str] = {}
+    if extra_headers:
+        headers.update(extra_headers)
+    client = httpx.Client(verify=verify_tls, timeout=timeout)
+    try:
+        r = client.get(jwks_url, headers=headers)
+        if r.status_code != 200:
+            raise RuntimeError(
+                f"JWKS fetch failed: HTTP {r.status_code} from {jwks_url}\n"
+                f"Response: {r.text[:500]}"
+            )
+        body = r.json()
+        if not isinstance(body, dict):
+            raise RuntimeError("JWKS response was not a JSON object")
+        return body
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"JWKS fetch error: {e}") from e
+    finally:
+        client.close()
+
+
+def detect_auth_requirements(
+    url: str,
+    timeout: float = 5.0,
+    verify_tls: bool = False,
+    extra_headers: dict[str, str] | None = None,
+) -> AuthInfo:
     """Probe an MCP endpoint for authentication requirements.
     
     Sends an unauthenticated initialize and examines the response.
@@ -44,7 +216,11 @@ def detect_auth_requirements(url: str, timeout: float = 5.0) -> AuthInfo:
     path = parsed.path.rstrip("/") or "/mcp"
     post_url = base + path
 
-    client = httpx.Client(verify=False, timeout=timeout, follow_redirects=True)
+    base_headers: dict[str, str] = {"Content-Type": "application/json"}
+    if extra_headers:
+        base_headers.update(extra_headers)
+
+    client = httpx.Client(verify=verify_tls, timeout=timeout, follow_redirects=True)
     try:
         payload = {
             "jsonrpc": "2.0",
@@ -55,7 +231,7 @@ def detect_auth_requirements(url: str, timeout: float = 5.0) -> AuthInfo:
         r = client.post(
             post_url,
             json=payload,
-            headers={"Content-Type": "application/json"},
+            headers=base_headers,
         )
 
         if r.status_code in (401, 403):
@@ -103,7 +279,7 @@ def detect_auth_requirements(url: str, timeout: float = 5.0) -> AuthInfo:
                     tr = client.post(
                         post_url,
                         json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
-                        headers={"Content-Type": "application/json"},
+                        headers=base_headers,
                     )
                     if tr.status_code in (401, 403):
                         info.requires_auth = True
@@ -174,6 +350,9 @@ def fetch_client_credentials_token(
     client_id: str,
     client_secret: str,
     timeout: float = 10.0,
+    scope: str | None = None,
+    verify_tls: bool = False,
+    extra_headers: dict[str, str] | None = None,
 ) -> str:
     """Fetch an access token using OAuth2 client_credentials grant.
     
@@ -198,7 +377,7 @@ def fetch_client_credentials_token(
         token_endpoint = oidc_url
     else:
         # Try OIDC discovery
-        client = httpx.Client(verify=False, timeout=timeout)
+        client = httpx.Client(verify=verify_tls, timeout=timeout)
         try:
             well_known = f"{oidc_url}/.well-known/openid-configuration"
             r = client.get(well_known)
@@ -213,16 +392,24 @@ def fetch_client_credentials_token(
             # Fallback: assume standard path
             token_endpoint = f"{oidc_url}/protocol/openid-connect/token"
 
-    client = httpx.Client(verify=False, timeout=timeout)
+    data: dict[str, str] = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }
+    if scope:
+        data["scope"] = scope
+
+    headers: dict[str, str] = {"Content-Type": "application/x-www-form-urlencoded"}
+    if extra_headers:
+        headers.update(extra_headers)
+
+    client = httpx.Client(verify=verify_tls, timeout=timeout)
     try:
         r = client.post(
             token_endpoint,
-            data={
-                "grant_type": "client_credentials",
-                "client_id": client_id,
-                "client_secret": client_secret,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data=data,
+            headers=headers,
         )
         if r.status_code != 200:
             raise RuntimeError(
@@ -252,11 +439,18 @@ def resolve_auth_token(args) -> str | None:
         return None
 
     oidc_url = getattr(args, "oidc_url", None)
+    verify_tls = bool(getattr(args, "tls_verify", False))
+    scope = getattr(args, "oidc_scope", None)
+    extra_headers = parse_header_kv_pairs(getattr(args, "header", None))
     if not oidc_url:
         # Try to auto-detect from the first target
         targets = getattr(args, "targets", None)
         if targets:
-            info = detect_auth_requirements(targets[0])
+            info = detect_auth_requirements(
+                targets[0],
+                verify_tls=verify_tls,
+                extra_headers=extra_headers,
+            )
             if info.token_endpoint:
                 # Extract issuer from token endpoint
                 oidc_url = info.issuer or info.token_endpoint.rsplit("/protocol/", 1)[0]
@@ -267,4 +461,11 @@ def resolve_auth_token(args) -> str | None:
                 "server advertises auth requirements."
             )
 
-    return fetch_client_credentials_token(oidc_url, client_id, client_secret)
+    return fetch_client_credentials_token(
+        oidc_url,
+        client_id,
+        client_secret,
+        scope=scope,
+        verify_tls=verify_tls,
+        extra_headers=extra_headers,
+    )
