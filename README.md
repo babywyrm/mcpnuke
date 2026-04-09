@@ -195,6 +195,12 @@ The scanner runs checks in a deliberate order:
 | `credential_in_schema` | CRITICAL–HIGH | Hardcoded credentials (API keys, JWTs, connection strings) in tool schemas |
 | `config_tampering` | HIGH | Tools that can modify agent config, system prompt, or tool registry |
 | `exfil_flow` | CRITICAL | Data flow from sensitive source tools to communication/network sinks |
+| `jwt_algorithm` | CRITICAL–HIGH | JWT `alg:none` (signature bypass) or symmetric HMAC algorithms |
+| `jwt_issuer` | MEDIUM | JWT missing `iss` (issuer) claim |
+| `jwt_audience` | MEDIUM | JWT missing `aud` (audience) claim — enables cross-service replay |
+| `jwt_token_id` | LOW | JWT missing `jti` — replay detection not possible |
+| `jwt_ttl` | HIGH–MEDIUM | JWT with no `exp` or TTL exceeding threshold (default 4h) |
+| `jwt_weak_key` | CRITICAL | JWT signed with a known weak/default HMAC key |
 
 ### Behavioral Checks (active server interaction)
 

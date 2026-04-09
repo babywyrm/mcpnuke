@@ -48,11 +48,12 @@ class DiscoveredEndpoint:
     source: str = ""
 
 
-def _k8s_api(path: str, token: str) -> dict | None:
-    req = urllib.request.Request(
-        f"{K8S_API}{path}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+def _k8s_api(path: str, token: str, api_url: str | None = None) -> dict | None:
+    base = api_url or K8S_API
+    headers: dict[str, str] = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(f"{base}{path}", headers=headers)
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
@@ -157,6 +158,8 @@ def discover_services(
     discovery_workers: int = 10,
     max_endpoints: int | None = None,
     console=None,
+    api_url: str | None = None,
+    token: str | None = None,
 ) -> list[DiscoveredEndpoint]:
     """Discover MCP endpoints in the cluster.
 
@@ -167,12 +170,15 @@ def discover_services(
         discovery_workers: Max concurrent probes when probe=True (for many-MCP clusters).
         max_endpoints: Cap total discovered endpoints (None = no limit).
         console: Rich console for output (optional).
+        api_url: K8s API server URL for external access (None = in-cluster default).
+        token: K8s bearer token (None = auto-detect from SA file).
 
     Returns:
         List of discovered MCP endpoints (deduplicated by URL).
     """
-    token = _get_sa_token()
-    if not token:
+    if token is None:
+        token = _get_sa_token()
+    if not token and not api_url:
         if console:
             console.print("[dim]  No SA token -- skipping K8s discovery[/dim]")
         return []
@@ -195,7 +201,7 @@ def discover_services(
     probe_candidates: list[tuple[str, int, str, str, str]] = []
 
     for ns in namespaces:
-        svc_data = _k8s_api(f"/api/v1/namespaces/{ns}/services", token)
+        svc_data = _k8s_api(f"/api/v1/namespaces/{ns}/services", token, api_url=api_url)
         if not svc_data:
             if console:
                 console.print(f"  [red]✗[/red] Cannot list services in {ns}")

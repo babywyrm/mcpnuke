@@ -113,7 +113,36 @@ Optional extensions (independent, default-off):
 - `--token-introspect-url` (+ optional client credentials) captures active/scope summary
 - `--jwks-url` captures keyset metadata summary (kid/kty/alg counts)
 
-## 7) Repeatability Loop (Manual)
+## 7) External K8s Scanning (from laptop)
+
+Scan K8s-hosted MCP servers without running inside the cluster:
+
+```bash
+# Option A: kubectl proxy (no token needed)
+kubectl proxy --port=8001 &
+./scan \
+  --k8s-api-url http://localhost:8001 \
+  --k8s-discover \
+  --k8s-discover-namespaces mcp-prod mcp-staging \
+  --verbose
+
+# Option B: Direct API with token file (avoids ps exposure)
+./scan \
+  --k8s-api-url https://k8s-api.example.com:6443 \
+  --k8s-token-file ~/.kube/token \
+  --k8s-namespace mcp-prod \
+  --verbose \
+  --json k8s-scan.json
+
+# Option C: Token via env var
+export MCPNUKE_K8S_TOKEN=$(kubectl create token mcpnuke-sa -n mcp-prod)
+export MCPNUKE_K8S_API_URL=https://k8s-api.example.com:6443
+./scan --k8s-discover --verbose
+```
+
+Token precedence: `--k8s-token` > `--k8s-token-file` > `MCPNUKE_K8S_TOKEN` env > SA file auto-detection.
+
+## 8) Repeatability Loop (Manual)
 
 For consistency checks, reset target state between runs and compare:
 

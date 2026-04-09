@@ -2,6 +2,50 @@
 
 All notable changes to this submodule are documented here.
 
+## 6.6.0 (2026-04)
+
+### Added
+
+- **Mcp-Session-Id support** — Both `HTTPSession` (Streamable HTTP) and
+  `MCPSession` (SSE) now capture `Mcp-Session-Id` response headers and forward
+  them on all subsequent requests. Required by the MCP spec for session-aware
+  servers; fixes silent 0-tool enumeration on platforms like Kosmos.
+
+- **Paginated enumeration** — New `_paginated_list()` helper follows
+  `nextCursor` across pages (capped at `--max-pages`, default 20) for
+  `tools/list`, `resources/list`, and `prompts/list`. Servers with large tool
+  sets (e.g. 73-tool Atlassian MCP) now enumerate completely. Emits a LOW
+  finding when the page cap is reached.
+
+- **Transport-aware finding filter** — `TargetResult.add()` now accepts
+  `skip_transports` to declaratively suppress findings irrelevant to certain
+  transports. The "Unauthenticated MCP initialize accepted" finding is now
+  skipped for stdio transport, eliminating a common false positive.
+
+- **JWT hardening checks** — Six new security checks in
+  `mcpnuke/checks/jwt_validation.py`:
+  - `jwt_algorithm` — flags `alg:none` (CRITICAL) and symmetric HS256/384/512 (HIGH)
+  - `jwt_issuer` — flags missing `iss` claim (MEDIUM)
+  - `jwt_audience` — flags missing `aud` claim (MEDIUM)
+  - `jwt_token_id` — flags missing `jti` claim (LOW)
+  - `jwt_ttl` — flags tokens with TTL > threshold (MEDIUM); configurable via
+    `--jwt-max-ttl` or `MCPNUKE_JWT_MAX_TTL` env var (default: 4h)
+  - `jwt_weak_key` — attempts verification with known weak keys (CRITICAL)
+
+- **External K8s API access** — New `--k8s-api-url`, `--k8s-token`, and
+  `--k8s-token-file` flags allow scanning K8s clusters from a laptop via
+  `kubectl proxy` or direct API URL. Token precedence: `--k8s-token` >
+  `--k8s-token-file` > `MCPNUKE_K8S_TOKEN` env > SA file auto-detection.
+  Auto-detects in-cluster vs external mode.
+
+### Changed
+
+- **Scanner auth context** — Non-stdio targets now receive the full
+  `auth_context_summary` (including `_raw_token` for JWT header decoding),
+  not just `jwt_claims_summary`.
+
+---
+
 ## 6.5.0 (2026-03)
 
 ### Added

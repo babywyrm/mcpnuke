@@ -17,14 +17,15 @@ _DANGEROUS_CAPABILITIES = {"NET_RAW", "SYS_ADMIN", "SYS_PTRACE", "NET_ADMIN",
                            "SYS_MODULE", "DAC_OVERRIDE", "SETUID", "SETGID"}
 
 
-def _k8s_get(path: str, token: str) -> dict | None:
+def _k8s_get(path: str, token: str, api_url: str | None = None) -> dict | None:
     import ssl
     import urllib.request
 
-    req = urllib.request.Request(
-        f"https://kubernetes.default{path}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    base = api_url or "https://kubernetes.default"
+    headers: dict[str, str] = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(f"{base}{path}", headers=headers)
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
@@ -151,17 +152,17 @@ def _check_configmap_leaks(cm: dict, namespace: str):
             ))
 
 
-def _check_sa_blast_radius(namespace: str, token: str, console=None):
+def _check_sa_blast_radius(namespace: str, token: str, console=None, api_url: str | None = None):
     """Map effective permissions for each ServiceAccount in the namespace.
 
     Uses SelfSubjectRulesReview to enumerate what each SA can do, then
     flags overprivileged accounts (secret access, pod exec, wildcard verbs).
     """
-    sa_data = _k8s_get(f"/api/v1/namespaces/{namespace}/serviceaccounts", token)
+    sa_data = _k8s_get(f"/api/v1/namespaces/{namespace}/serviceaccounts", token, api_url=api_url)
     if not sa_data:
         return
 
-    pods_data = _k8s_get(f"/api/v1/namespaces/{namespace}/pods", token)
+    pods_data = _k8s_get(f"/api/v1/namespaces/{namespace}/pods", token, api_url=api_url)
     sa_to_pods: dict[str, list[str]] = {}
     if pods_data:
         for pod in pods_data.get("items", []):
@@ -187,14 +188,17 @@ def _check_sa_blast_radius(namespace: str, token: str, console=None):
         }
         import ssl
         import urllib.request
+        _base = api_url or "https://kubernetes.default"
+        _headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Impersonate-User": f"system:serviceaccount:{namespace}:{sa_name}",
+        }
+        if token:
+            _headers["Authorization"] = f"Bearer {token}"
         req = urllib.request.Request(
-            "https://kubernetes.default/apis/authorization.k8s.io/v1/selfsubjectrulesreviews",
+            f"{_base}/apis/authorization.k8s.io/v1/selfsubjectrulesreviews",
             data=json.dumps(review_body).encode(),
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-                "Impersonate-User": f"system:serviceaccount:{namespace}:{sa_name}",
-            },
+            headers=_headers,
             method="POST",
         )
         ctx = ssl.create_default_context()
@@ -252,14 +256,14 @@ def _check_sa_blast_radius(namespace: str, token: str, console=None):
                 console.print(f"  [dim]  {sa_name}{pod_label}: {perm_count} rules, no elevated risk[/dim]")
 
 
-def _check_helm_version_drift(namespace: str, token: str, console=None):
+def _check_helm_version_drift(namespace: str, token: str, console=None, api_url: str | None = None):
     """Compare Helm release versions to find credentials removed in newer releases.
 
     When operators rotate secrets and upgrade a Helm release, the old release
     objects (v1, v2, ...) remain in the cluster. Secrets removed from current
     values are still recoverable from prior versions.
     """
-    secrets_data = _k8s_get(f"/api/v1/namespaces/{namespace}/secrets", token)
+    secrets_data = _k8s_get(f"/api/v1/namespaces/{namespace}/secrets", token, api_url=api_url)
     if not secrets_data:
         return
 
@@ -359,11 +363,12 @@ def _flatten_values(obj: Any, prefix: str = "") -> dict[str, Any]:
     return flat
 
 
-def _check_network_policies(namespace: str, token: str):
+def _check_network_policies(namespace: str, token: str, api_url: str | None = None):
     """Check if network policies exist in the namespace."""
     data = _k8s_get(
         f"/apis/networking.k8s.io/v1/namespaces/{namespace}/networkpolicies",
         token,
+        api_url=api_url,
     )
     if data is None:
         return
@@ -381,27 +386,33 @@ def _check_network_policies(namespace: str, token: str):
         ))
 
 
-def run_k8s_checks(namespace: str, console=None):
-    """Run K8s internal checks (requires running inside a pod)."""
-    token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-    if not os.path.exists(token_path):
-        if console:
-            console.print("[dim]  No SA token — skipping K8s checks[/dim]")
-        return
+def run_k8s_checks(namespace: str, console=None, api_url: str | None = None, token: str | None = None):
+    """Run K8s security checks.
 
-    with open(token_path) as f:
-        token = f.read().strip()
+    Works both in-cluster (auto-detects SA token) and externally
+    when api_url/token are provided.
+    """
+    if token is None:
+        token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        if not os.path.exists(token_path):
+            if not api_url:
+                if console:
+                    console.print("[dim]  No SA token — skipping K8s checks[/dim]")
+                return
+        else:
+            with open(token_path) as f:
+                token = f.read().strip()
 
+    mode_label = "external" if api_url else "in-cluster"
     if console:
-        console.print(f"\n[bold]── K8s Internal Checks (ns={namespace}) ──[/bold]")
+        console.print(f"\n[bold]── K8s Checks ({mode_label}, ns={namespace}) ──[/bold]")
 
-    # RBAC enumeration
     for name, path in [
         ("secrets", f"/api/v1/namespaces/{namespace}/secrets"),
         ("configmaps", f"/api/v1/namespaces/{namespace}/configmaps"),
         ("pods", f"/api/v1/namespaces/{namespace}/pods"),
     ]:
-        data = _k8s_get(path, token)
+        data = _k8s_get(path, token or "", api_url=api_url)
         if data:
             count = len(data.get("items", []))
             sev = "HIGH" if name == "secrets" else "INFO"
@@ -417,9 +428,8 @@ def run_k8s_checks(namespace: str, console=None):
                 tag = "[red]!" if name == "secrets" else "[dim]*"
                 console.print(f"  {tag}[/] SA can list {name}: {count} items")
 
-    # Helm release secret scanning
     secrets_data = _k8s_get(
-        f"/api/v1/namespaces/{namespace}/secrets", token
+        f"/api/v1/namespaces/{namespace}/secrets", token or "", api_url=api_url
     )
     if secrets_data:
         for secret in secrets_data.get("items", []):
@@ -441,29 +451,22 @@ def run_k8s_checks(namespace: str, console=None):
             except Exception:
                 pass
 
-    # Pod security checks
-    pods_data = _k8s_get(f"/api/v1/namespaces/{namespace}/pods", token)
+    pods_data = _k8s_get(f"/api/v1/namespaces/{namespace}/pods", token or "", api_url=api_url)
     if pods_data:
         for pod in pods_data.get("items", []):
             _check_pod_security(pod, namespace)
 
-    # ConfigMap leak scanning
-    cm_data = _k8s_get(f"/api/v1/namespaces/{namespace}/configmaps", token)
+    cm_data = _k8s_get(f"/api/v1/namespaces/{namespace}/configmaps", token or "", api_url=api_url)
     if cm_data:
         for cm in cm_data.get("items", []):
             _check_configmap_leaks(cm, namespace)
 
-    # SA blast radius mapping
-    _check_sa_blast_radius(namespace, token, console=console)
-
-    # Helm release version drift
-    _check_helm_version_drift(namespace, token, console=console)
-
-    # Network policy checks
-    _check_network_policies(namespace, token)
+    _check_sa_blast_radius(namespace, token or "", console=console, api_url=api_url)
+    _check_helm_version_drift(namespace, token or "", console=console, api_url=api_url)
+    _check_network_policies(namespace, token or "", api_url=api_url)
 
     if console:
-        sev_counts = {}
+        sev_counts: dict[str, int] = {}
         for f in GLOBAL_K8S_FINDINGS:
             sev_counts[f.severity] = sev_counts.get(f.severity, 0) + 1
         console.print(f"  [bold]K8s findings: {len(GLOBAL_K8S_FINDINGS)}[/bold] "
