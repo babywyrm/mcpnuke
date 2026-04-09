@@ -184,10 +184,47 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Number of tool invocations per tool for deep rug pull detection (default: 10)",
     )
     p.add_argument(
+        "--max-pages",
+        type=int,
+        default=20,
+        metavar="N",
+        help="Maximum pages to follow when enumerating tools/resources/prompts "
+        "via nextCursor pagination (default: 20).",
+    )
+    p.add_argument(
+        "--jwt-max-ttl",
+        type=int,
+        default=int(os.environ.get("MCPNUKE_JWT_MAX_TTL", "14400")),
+        metavar="SEC",
+        help="Maximum acceptable JWT TTL in seconds before flagging (default: 14400 = 4h). "
+        "Or set MCPNUKE_JWT_MAX_TTL env var.",
+    )
+    p.add_argument(
         "--k8s-namespace",
         metavar="NS",
         default="default",
         help="Kubernetes namespace for internal checks (default: default)",
+    )
+    p.add_argument(
+        "--k8s-api-url",
+        metavar="URL",
+        default=os.environ.get("MCPNUKE_K8S_API_URL") or None,
+        help="Kubernetes API server URL for external scanning (e.g. http://localhost:8001 "
+        "for kubectl proxy). Or set MCPNUKE_K8S_API_URL env var.",
+    )
+    p.add_argument(
+        "--k8s-token",
+        metavar="TOKEN",
+        default=os.environ.get("MCPNUKE_K8S_TOKEN") or None,
+        help="K8s bearer token for external API access. "
+        "Or set MCPNUKE_K8S_TOKEN env var. "
+        "Prefer --k8s-token-file to avoid ps(1) exposure.",
+    )
+    p.add_argument(
+        "--k8s-token-file",
+        metavar="FILE",
+        default=None,
+        help="Read K8s bearer token from FILE (avoids ps aux exposure).",
     )
     p.add_argument(
         "--no-k8s",

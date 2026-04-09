@@ -44,7 +44,10 @@ class TargetResult:
         title: str,
         detail: str = "",
         evidence: str = "",
-    ) -> Finding:
+        skip_transports: list[str] | None = None,
+    ) -> Finding | None:
+        if skip_transports and self.transport in skip_transports:
+            return None
         f = Finding(self.url, check, severity, title, detail, evidence)
         self.findings.append(f)
         return f

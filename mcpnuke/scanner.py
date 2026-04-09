@@ -78,7 +78,7 @@ def scan_stdio_target(
     result.transport = "stdio"
     console.print(f"  [green]✓[/green] Transport=stdio  pid={session._proc.pid}")
 
-    enumerate_server(session, result, verbose=verbose, log=_log)
+    enumerate_server(session, result, verbose=verbose, log=_log, max_pages=opts.get("max_pages", 20))
 
     if result.server_info:
         si = result.server_info.get("serverInfo", {})
@@ -202,7 +202,7 @@ def scan_target(
         base = f"{parsed.scheme}://{parsed.netloc}"
         sse_path = urlparse(session.sse_url).path
 
-    enumerate_server(session, result, verbose=verbose, log=_log)
+    enumerate_server(session, result, verbose=verbose, log=_log, max_pages=opts.get("max_pages", 20))
 
     # Print server info if available
     if result.server_info:
@@ -211,8 +211,8 @@ def scan_target(
             console.print(
                 f"  [dim]Server: {si.get('name', '?')} v{si.get('version', '?')}[/dim]"
             )
-    if opts.get("jwt_claims_summary"):
-        result.auth_context["jwt_claims_summary"] = opts["jwt_claims_summary"]
+    if opts.get("auth_context_summary"):
+        result.auth_context.update(opts["auth_context_summary"])
 
     console.print(
         f"  [dim]Tools={len(result.tools)} "

@@ -96,6 +96,7 @@ class MCPSession:
         self._verify_tls = verify_tls
         self._extra_headers = extra_headers or {}
         self._req_id = 0
+        self._session_id: str | None = None
         self._q: queue.Queue[dict] = queue.Queue()
         self._stop = threading.Event()
         self._endpoint_ready = threading.Event()
@@ -116,6 +117,10 @@ class MCPSession:
                 self.sse_url,
                 headers=headers,
             ) as resp:
+                for k, v in resp.headers.items():
+                    if k.lower() == "mcp-session-id" and v:
+                        self._session_id = v
+                        break
                 event_type = "message"
                 for raw in resp.iter_lines():
                     if self._stop.is_set():
@@ -159,6 +164,8 @@ class MCPSession:
             self._req_id += 1
             payload = _jrpc(method, params, self._req_id)
             headers = _mcp_headers(self._auth_token, self._extra_headers)
+            if self._session_id:
+                headers["Mcp-Session-Id"] = self._session_id
             try:
                 r = self._client.post(
                     self.post_url,
@@ -201,11 +208,14 @@ class MCPSession:
             "method": method,
             "params": params or {},
         }
+        headers = _mcp_headers(self._auth_token, self._extra_headers)
+        if self._session_id:
+            headers["Mcp-Session-Id"] = self._session_id
         try:
             self._client.post(
                 self.post_url,
                 json=payload,
-                headers=_mcp_headers(self._auth_token, self._extra_headers),
+                headers=headers,
                 timeout=5,
             )
         except Exception:
@@ -250,6 +260,7 @@ class HTTPSession:
         self.post_url = post_url
         self.timeout = timeout
         self._req_id = 0
+        self._session_id: str | None = None
         self._headers = headers or {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
         self._client = httpx.Client(
             verify=verify_tls, timeout=timeout, follow_redirects=True
@@ -257,6 +268,18 @@ class HTTPSession:
 
     def wait_ready(self, timeout: float = 10.0) -> bool:
         return True
+
+    def _request_headers(self) -> dict:
+        h = dict(self._headers)
+        if self._session_id:
+            h["Mcp-Session-Id"] = self._session_id
+        return h
+
+    def _capture_session_id(self, resp_headers) -> None:
+        for k, v in resp_headers.items():
+            if k.lower() == "mcp-session-id" and v:
+                self._session_id = v
+                break
 
     def call(
         self,
@@ -271,19 +294,18 @@ class HTTPSession:
                 r = self._client.post(
                     self.post_url,
                     json=_jrpc(method, params, self._req_id),
-                    headers=self._headers,
+                    headers=self._request_headers(),
                     timeout=timeout or self.timeout,
                 )
+                self._capture_session_id(r.headers)
                 if r.status_code in (200, 202):
                     ct = r.headers.get("content-type", "")
                     if "application/json" in ct:
                         return r.json()
-                    # Streamable HTTP: response in SSE format (event: message / data: {...})
                     if "text/event-stream" in ct or "jsonrpc" in r.text:
                         parsed = _parse_sse_json(r.text, self._req_id)
                         if parsed:
                             return parsed
-                        # Fallback: try raw JSON
                         try:
                             return r.json()
                         except Exception:
@@ -302,7 +324,7 @@ class HTTPSession:
                     "method": method,
                     "params": params or {},
                 },
-                headers=self._headers,
+                headers=self._request_headers(),
                 timeout=5,
             )
         except Exception:
