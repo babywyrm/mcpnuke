@@ -226,6 +226,8 @@ def _main_inner() -> None:
             "no_invoke": args.no_invoke,
             "safe_mode": args.safe_mode,
             "probe_calls": args.probe_calls,
+            "max_pages": args.max_pages,
+            "jwt_max_ttl": args.jwt_max_ttl,
             "tool_names_file": getattr(args, "tool_names_file", None),
             "claude": args.claude,
             "claude_model": args.claude_model,
@@ -295,6 +297,7 @@ def _main_inner() -> None:
     jwt_claims_summary: dict = {}
     auth_context_summary: dict = {}
     if auth_token:
+        auth_context_summary["_raw_token"] = auth_token
         claims = decode_jwt_claims(auth_token)
         if claims:
             jwt_claims_summary = summarize_jwt_claims(claims)
@@ -385,6 +388,10 @@ def _main_inner() -> None:
             panel_lines.append(f"AI Phase2 workers: {effective_phase2_workers}")
     if deterministic_mode:
         panel_lines.append("Deterministic: True")
+    if args.k8s_api_url:
+        panel_lines.append(f"K8s API: {args.k8s_api_url} (external)")
+    elif not args.no_k8s:
+        panel_lines.append("K8s: in-cluster (auto-detect)")
 
     console.print(
         Panel(
@@ -398,6 +405,8 @@ def _main_inner() -> None:
         "no_invoke": args.no_invoke,
         "safe_mode": args.safe_mode,
         "probe_calls": args.probe_calls,
+        "max_pages": args.max_pages,
+        "jwt_max_ttl": args.jwt_max_ttl,
         "tool_names_file": getattr(args, "tool_names_file", None),
         "claude": args.claude,
         "claude_model": args.claude_model,
@@ -426,17 +435,31 @@ def _main_inner() -> None:
     if args.tls_verify:
         console.print("  [yellow]--tls-verify: TLS certificate verification enabled[/yellow]")
 
+    # Resolve K8s token: --k8s-token > --k8s-token-file > MCPNUKE_K8S_TOKEN env > SA file
+    k8s_token: str | None = args.k8s_token
+    if not k8s_token and args.k8s_token_file:
+        from pathlib import Path as _P
+        _tf = _P(args.k8s_token_file)
+        if _tf.is_file():
+            k8s_token = _tf.read_text().strip()
+        else:
+            console.print(f"[red]Error: --k8s-token-file not found: {args.k8s_token_file}[/red]")
+            sys.exit(EXIT_ERROR)
+    k8s_api_url: str | None = args.k8s_api_url
+
     if not args.no_k8s:
-        run_k8s_checks(args.k8s_namespace, console=console)
+        run_k8s_checks(args.k8s_namespace, console=console, api_url=k8s_api_url, token=k8s_token)
 
         import os
         sa_token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-        if os.path.exists(sa_token_path):
+        _fp_token = k8s_token
+        if not _fp_token and os.path.exists(sa_token_path):
             with open(sa_token_path) as _f:
-                _token = _f.read().strip()
+                _fp_token = _f.read().strip()
+        if _fp_token:
             fingerprint_services(
                 args.k8s_namespace,
-                _token,
+                _fp_token,
                 fingerprint_workers=args.k8s_discovery_workers,
                 console=console,
             )
@@ -448,6 +471,8 @@ def _main_inner() -> None:
             discovery_workers=args.k8s_discovery_workers,
             max_endpoints=args.k8s_max_endpoints,
             console=console,
+            api_url=k8s_api_url,
+            token=k8s_token,
         )
         if args.k8s_discover_only:
             from rich.table import Table

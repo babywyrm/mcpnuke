@@ -49,6 +49,21 @@ def parse_header_kv_pairs(values: list[str] | None) -> dict[str, str]:
     return headers
 
 
+def decode_jwt_header(token: str) -> dict[str, Any] | None:
+    """Decode the JWT header (JOSE header) without signature validation."""
+    parts = token.split(".")
+    if len(parts) < 2:
+        return None
+    header = parts[0]
+    padding = "=" * ((4 - len(header) % 4) % 4)
+    try:
+        decoded = base64.urlsafe_b64decode(header + padding)
+        data = json.loads(decoded.decode("utf-8"))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def decode_jwt_claims(token: str) -> dict[str, Any] | None:
     """Decode JWT payload claims without signature validation."""
     parts = token.split(".")

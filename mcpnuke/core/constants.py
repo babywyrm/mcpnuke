@@ -71,6 +71,9 @@ ATTACK_CHAIN_PATTERNS = [
     ("exfil_flow", "token_theft"),
     ("exfil_flow", "remote_access"),
     ("config_tampering", "webhook_persistence"),
+    ("jwt_algorithm", "token_theft"),
+    ("jwt_weak_key", "token_theft"),
+    ("jwt_ttl", "token_theft"),
 ]
 
 SHADOW_TARGETS = {

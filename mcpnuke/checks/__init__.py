@@ -58,6 +58,14 @@ from mcpnuke.checks.credential_in_schema import check_credential_in_schema
 from mcpnuke.checks.exfil_flow import check_exfil_flow
 from mcpnuke.checks.ssrf_probe import check_ssrf_probe
 from mcpnuke.checks.actuator_probe import check_actuator_probe
+from mcpnuke.checks.jwt_validation import (
+    check_jwt_algorithm,
+    check_jwt_issuer,
+    check_jwt_audience,
+    check_jwt_token_id,
+    check_jwt_ttl,
+    check_jwt_weak_key,
+)
 
 # Checks that --fast mode skips (heavy, LLM-backed, or slow)
 FAST_SKIP_CHECKS = {
@@ -198,8 +206,11 @@ def run_all_checks(
             _log(f"  [dim]    └─ {status}  ({elapsed:.2f}s)[/dim]")
 
     # Count total checks for progress display
+    has_jwt = bool(result.auth_context.get("_raw_token") or result.auth_context.get("jwt_claims_summary"))
     total_checks = 15  # static (exfil_flow counted separately below)
     total_checks += 1  # exfil_flow
+    if has_jwt:
+        total_checks += 6  # JWT hardening checks
     if not no_invoke:
         deep_count = 12 if not fast_mode else (12 - len(FAST_SKIP_CHECKS))
         total_checks += 3 + deep_count  # light behavioral + deep
@@ -227,6 +238,16 @@ def run_all_checks(
     _run("webhook_persistence", check_webhook_persistence, result)
     _run("credential_in_schema", check_credential_in_schema, result)
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
+
+    # JWT hardening checks (only when auth token is present)
+    if result.auth_context.get("_raw_token") or result.auth_context.get("jwt_claims_summary"):
+        _run("jwt_algorithm", check_jwt_algorithm, result)
+        _run("jwt_issuer", check_jwt_issuer, result)
+        _run("jwt_audience", check_jwt_audience, result)
+        _run("jwt_token_id", check_jwt_token_id, result)
+        _run("jwt_ttl", check_jwt_ttl, result, probe_opts=opts)
+        _run("jwt_weak_key", check_jwt_weak_key, result)
+
     static_count = len(result.findings)
     if verbose:
         _log(f"  [bold]  Static total: {static_count} finding(s)[/bold]")
