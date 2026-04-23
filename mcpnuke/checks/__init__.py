@@ -58,6 +58,13 @@ from mcpnuke.checks.credential_in_schema import check_credential_in_schema
 from mcpnuke.checks.exfil_flow import check_exfil_flow
 from mcpnuke.checks.ssrf_probe import check_ssrf_probe
 from mcpnuke.checks.actuator_probe import check_actuator_probe
+from mcpnuke.checks.teleport import (
+    check_teleport_proxy_discovery,
+    check_teleport_cert_validation,
+    check_teleport_app_enumeration,
+    check_tbot_credential_exposure,
+    check_teleport_bot_overprivilege,
+)
 from mcpnuke.checks.jwt_validation import (
     check_jwt_algorithm,
     check_jwt_issuer,
@@ -324,6 +331,16 @@ def run_all_checks(
     # ── Target surface checks (probe base URL, not tools) ─────────────
     if base:
         _run("actuator_probe", check_actuator_probe, base, result, auth_token=opts.get("auth_token"))
+
+    # ── Teleport infrastructure checks (opt-in, skip if not present) ──
+    if base:
+        if verbose:
+            _log("\n  [bold cyan]── Teleport Infrastructure ──[/bold cyan]")
+        _run("teleport_proxy_discovery", check_teleport_proxy_discovery, base, result)
+        _run("teleport_cert_validation", check_teleport_cert_validation, base, result)
+        _run("teleport_app_enumeration", check_teleport_app_enumeration, base, result)
+    _run("tbot_credential_exposure", check_tbot_credential_exposure, result)
+    _run("teleport_bot_overprivilege", check_teleport_bot_overprivilege, result)
 
     # ── Cross-cutting / aggregate (run last, they read other findings) ─
     if verbose:
