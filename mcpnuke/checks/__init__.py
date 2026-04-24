@@ -65,6 +65,11 @@ from mcpnuke.checks.teleport import (
     check_tbot_credential_exposure,
     check_teleport_bot_overprivilege,
 )
+from mcpnuke.checks.teleport_labs import (
+    check_teleport_lab_bot_theft,
+    check_teleport_lab_role_escalation,
+    check_teleport_lab_cert_replay,
+)
 from mcpnuke.checks.jwt_validation import (
     check_jwt_algorithm,
     check_jwt_issuer,
@@ -287,6 +292,9 @@ def run_all_checks(
             ("state_mutation", check_state_mutation, (session, result), {}),
             ("notification_abuse", check_notification_abuse, (session, result), {}),
             ("active_prompt_injection", check_active_prompt_injection, (session, result), {"probe_opts": opts}),
+            ("teleport_lab_bot_theft", check_teleport_lab_bot_theft, (session, result), {"probe_opts": opts}),
+            ("teleport_lab_role_escalation", check_teleport_lab_role_escalation, (session, result), {"probe_opts": opts}),
+            ("teleport_lab_cert_replay", check_teleport_lab_cert_replay, (session, result), {"probe_opts": opts}),
         ]
 
         if fast_mode:
