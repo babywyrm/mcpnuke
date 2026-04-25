@@ -165,6 +165,12 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Save current scan as baseline for future differential scans",
     )
     p.add_argument(
+        "--generate-policy",
+        metavar="FILE",
+        dest="policy_out",
+        help="Generate nullfield policy YAML from findings and write to FILE",
+    )
+    p.add_argument(
         "--no-invoke",
         action="store_true",
         help="Static-only mode: skip all behavioral probes that call tools. "
