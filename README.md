@@ -834,3 +834,8 @@ DVMCP_LIVE=1 .venv/bin/pytest tests/test_dvmcp.py -v
 | **0** | Clean — scan finished with no findings |
 | **1** | Findings — at least one finding was reported |
 | **2** | Error — scan did not complete successfully (e.g. unreachable target, bad flags) |
+
+## Documentation Hub
+
+For ecosystem architecture, walkthroughs, and cross-project guides:
+**[agentic-sec](https://github.com/babywyrm/agentic-sec)** — the central documentation for camazotz + nullfield + mcpnuke.
