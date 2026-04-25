@@ -586,10 +586,11 @@ def _main_inner() -> None:
         write_json(results, args.json_out, console=console)
 
     if getattr(args, "policy_out", None):
+        from pathlib import Path as _PolicyPath
         from mcpnuke.policy import generate_policy, serialize_policy
         rules = generate_policy(results)
         yaml_str = serialize_policy(rules)
-        Path(args.policy_out).write_text(yaml_str)
+        _PolicyPath(args.policy_out).write_text(yaml_str)
         console.print(f"\n[green]nullfield policy written to {args.policy_out} ({len(rules)} rules)[/green]")
 
     all_findings = [f for r in results for f in r.findings]
