@@ -1,0 +1,215 @@
+# mcpnuke MCP Security Scan — reusable GitHub Actions workflow
+#
+# Scans MCP servers on every PR, fails on CRITICAL/HIGH findings,
+# generates nullfield policy recommendations, and compares against baseline.
+#
+# Usage in your repo's workflow:
+#   jobs:
+#     security:
+#       uses: babywyrm/mcpnuke/.github/workflows/mcp-security-scan.yml@main
+#       with:
+#         target: http://mcp-staging.internal:8080/mcp
+#       secrets:
+#         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+name: MCP Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: 'MCP server URL to scan'
+        required: true
+        type: string
+      scan-mode:
+        description: 'Scan mode: static (fast), claude (AI-enhanced), full (behavioral)'
+        required: false
+        type: string
+        default: 'static'
+      fail-on:
+        description: 'Fail PR on: critical, high, medium, any'
+        required: false
+        type: string
+        default: 'critical'
+      baseline-artifact:
+        description: 'Name of baseline artifact to compare against'
+        required: false
+        type: string
+        default: 'mcpnuke-baseline'
+      generate-policy:
+        description: 'Generate nullfield policy from findings'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: false
+      MCP_AUTH_TOKEN:
+        required: false
+
+  # Also run directly on push/PR for this repo
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout mcpnuke
+        uses: actions/checkout@v4
+        with:
+          repository: babywyrm/mcpnuke
+          path: mcpnuke
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install mcpnuke
+        run: |
+          cd mcpnuke
+          pip install -e .
+          if [ "${{ inputs.scan-mode }}" = "claude" ]; then
+            pip install anthropic
+          fi
+
+      - name: Download baseline (if exists)
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.baseline-artifact || 'mcpnuke-baseline' }}
+          path: baseline/
+        continue-on-error: true
+
+      - name: Run scan
+        id: scan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MCP_AUTH_TOKEN: ${{ secrets.MCP_AUTH_TOKEN }}
+        run: |
+          TARGET="${{ inputs.target || 'http://localhost:8080/mcp' }}"
+          MODE="${{ inputs.scan-mode || 'static' }}"
+          FAIL_ON="${{ inputs.fail-on || 'critical' }}"
+
+          ARGS="--targets $TARGET --fast --verbose --json scan-report.json"
+
+          # Scan mode
+          if [ "$MODE" = "static" ]; then
+            ARGS="$ARGS --no-invoke"
+          elif [ "$MODE" = "claude" ]; then
+            ARGS="$ARGS --no-invoke --claude --claude-max-tools 10"
+          fi
+          # else: full mode (invoke + everything)
+
+          # Auth token
+          if [ -n "$MCP_AUTH_TOKEN" ]; then
+            ARGS="$ARGS --auth-token $MCP_AUTH_TOKEN"
+          fi
+
+          # Baseline comparison
+          if [ -f baseline/baseline.json ]; then
+            ARGS="$ARGS --baseline baseline/baseline.json"
+          fi
+
+          # Policy generation
+          if [ "${{ inputs.generate-policy }}" = "true" ]; then
+            ARGS="$ARGS --generate-policy nullfield-policy.yaml"
+          fi
+
+          echo "Running: mcpnuke $ARGS"
+          cd mcpnuke
+          python -m mcpnuke $ARGS 2>&1 | tee scan-output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          # Parse results
+          CRITICAL=$(python3 -c "import json; d=json.load(open('scan-report.json')); print(sum(1 for f in d['targets'][0]['findings'] if f['severity']=='CRITICAL'))" 2>/dev/null || echo 0)
+          HIGH=$(python3 -c "import json; d=json.load(open('scan-report.json')); print(sum(1 for f in d['targets'][0]['findings'] if f['severity']=='HIGH'))" 2>/dev/null || echo 0)
+          TOTAL=$(python3 -c "import json; d=json.load(open('scan-report.json')); print(len(d['targets'][0]['findings']))" 2>/dev/null || echo 0)
+
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+          # Determine pass/fail
+          SHOULD_FAIL=false
+          case "$FAIL_ON" in
+            critical) [ "$CRITICAL" -gt 0 ] && SHOULD_FAIL=true ;;
+            high)     [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] && SHOULD_FAIL=true ;;
+            medium)   [ "$TOTAL" -gt 0 ] && SHOULD_FAIL=true ;;
+            any)      [ "$TOTAL" -gt 0 ] && SHOULD_FAIL=true ;;
+          esac
+
+          echo "should_fail=$SHOULD_FAIL" >> $GITHUB_OUTPUT
+
+      - name: Save baseline
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd mcpnuke
+          cp scan-report.json baseline.json 2>/dev/null || true
+        continue-on-error: true
+
+      - name: Upload baseline artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.baseline-artifact || 'mcpnuke-baseline' }}
+          path: mcpnuke/baseline.json
+          retention-days: 90
+        continue-on-error: true
+
+      - name: Upload scan report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcpnuke-scan-report
+          path: |
+            mcpnuke/scan-report.json
+            mcpnuke/nullfield-policy.yaml
+            mcpnuke/scan-output.txt
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const critical = '${{ steps.scan.outputs.critical }}';
+            const high = '${{ steps.scan.outputs.high }}';
+            const total = '${{ steps.scan.outputs.total }}';
+            const shouldFail = '${{ steps.scan.outputs.should_fail }}';
+
+            const icon = shouldFail === 'true' ? '🔴' : '🟢';
+            const status = shouldFail === 'true' ? 'FAILED' : 'PASSED';
+
+            const body = `## ${icon} MCP Security Scan ${status}
+
+            | Severity | Count |
+            |----------|-------|
+            | CRITICAL | ${critical} |
+            | HIGH | ${high} |
+            | Total | ${total} |
+
+            **Scan mode:** ${{ inputs.scan-mode || 'static' }}
+            **Fail threshold:** ${{ inputs.fail-on || 'critical' }}
+
+            ${shouldFail === 'true' ? '⚠️ This PR introduces or contains security findings above the configured threshold.' : '✅ No findings above the configured threshold.'}
+
+            📎 Full report and nullfield policy attached as artifacts.`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail if findings exceed threshold
+        if: steps.scan.outputs.should_fail == 'true'
+        run: |
+          echo "FAIL: Found ${{ steps.scan.outputs.critical }} CRITICAL, ${{ steps.scan.outputs.high }} HIGH findings"
+          exit 1
