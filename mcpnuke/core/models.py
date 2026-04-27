@@ -14,6 +14,13 @@ class Finding:
     title: str
     detail: str = ""
     evidence: str = ""
+    # Agentic identity lane (1..5) and transport surface (A|B|C) this
+    # finding is scoped to. None = not lane-scoped (e.g. generic TLS hygiene).
+    # Vocabulary source: camazotz/frontend/lane_taxonomy.py::LANES (schema v1)
+    # via agentic-sec/docs/identity-flows.md. See also:
+    # mcpnuke/docs/specs/2026-04-26-by-lane-reporting.md
+    lane: int | None = None
+    transport: str | None = None
 
 
 @dataclass
@@ -45,10 +52,16 @@ class TargetResult:
         detail: str = "",
         evidence: str = "",
         skip_transports: list[str] | None = None,
+        *,
+        lane: int | None = None,
+        transport: str | None = None,
     ) -> Finding | None:
         if skip_transports and self.transport in skip_transports:
             return None
-        f = Finding(self.url, check, severity, title, detail, evidence)
+        f = Finding(
+            self.url, check, severity, title, detail, evidence,
+            lane=lane, transport=transport,
+        )
         self.findings.append(f)
         return f
 

@@ -19,6 +19,14 @@ def _has_tool(result: TargetResult, prefix: str) -> bool:
     return any(t.get("name", "").startswith(prefix) for t in result.tools)
 
 
+def _add(result: TargetResult, *args, **kwargs):
+    """Lane-tagged wrapper: every finding from this module is Lane 3 (Machine),
+    Transport A (MCP). Backfilled per the 2026-04-26 by-lane reporting spec."""
+    kwargs.setdefault("lane", 3)
+    kwargs.setdefault("transport", "A")
+    return result.add(*args, **kwargs)
+
+
 def check_teleport_lab_bot_theft(session, result: TargetResult, probe_opts: dict | None = None):
     """Chain: read tbot secret -> replay stolen identity -> check session binding.
 
@@ -48,7 +56,7 @@ def check_teleport_lab_bot_theft(session, result: TargetResult, probe_opts: dict
         cert_serial = data.get("cert_serial", "")
 
         if accessible and cert_serial:
-            result.add(
+            _add(result, 
                 "teleport_lab_bot_theft",
                 "HIGH",
                 "tbot secret readable — bot identity extractable",
@@ -66,7 +74,7 @@ def check_teleport_lab_bot_theft(session, result: TargetResult, probe_opts: dict
                 replay_data = {}
 
             if replay_data.get("valid") or replay_data.get("flag"):
-                result.add(
+                _add(result, 
                     "teleport_lab_bot_theft",
                     "CRITICAL",
                     "Bot identity replay succeeded — flag captured",
@@ -86,21 +94,21 @@ def check_teleport_lab_bot_theft(session, result: TargetResult, probe_opts: dict
                     binding = {}
 
                 if binding.get("session_binding_check") == "MISMATCH":
-                    result.add(
+                    _add(result, 
                         "teleport_lab_bot_theft",
                         "INFO",
                         "Defense: nullfield session binding detects identity mismatch",
                         f"Action: {binding.get('nullfield_action', 'DENY')}",
                     )
             elif replay_data.get("valid") is False:
-                result.add(
+                _add(result, 
                     "teleport_lab_bot_theft",
                     "INFO",
                     "Defense held: bot identity replay rejected",
                     f"Reason: {replay_data.get('reason', 'unknown')}",
                 )
         elif not accessible:
-            result.add(
+            _add(result, 
                 "teleport_lab_bot_theft",
                 "INFO",
                 "Defense held: tbot secret not accessible",
@@ -147,7 +155,7 @@ def check_teleport_lab_role_escalation(session, result: TargetResult, probe_opts
             esc_data = {}
 
         if esc_data.get("approved") and esc_data.get("flag"):
-            result.add(
+            _add(result, 
                 "teleport_lab_role_escalation",
                 "CRITICAL",
                 "Role self-escalation succeeded — bot gained agent-ops",
@@ -168,7 +176,7 @@ def check_teleport_lab_role_escalation(session, result: TargetResult, probe_opts
                 op_data = {}
 
             if op_data.get("status") == "executed":
-                result.add(
+                _add(result, 
                     "teleport_lab_role_escalation",
                     "CRITICAL",
                     "Privileged operation executed with self-escalated role",
@@ -177,14 +185,14 @@ def check_teleport_lab_role_escalation(session, result: TargetResult, probe_opts
                     evidence=text3[:300],
                 )
         elif esc_data.get("_held"):
-            result.add(
+            _add(result, 
                 "teleport_lab_role_escalation",
                 "INFO",
                 "Defense held: escalation requires human approval (HOLD)",
                 f"Action: {esc_data.get('_nullfield_action', 'HOLD')}",
             )
         else:
-            result.add(
+            _add(result, 
                 "teleport_lab_role_escalation",
                 "INFO",
                 "Defense held: role escalation denied",
@@ -232,7 +240,7 @@ def check_teleport_lab_cert_replay(session, result: TargetResult, probe_opts: di
             replay_data = {}
 
         if replay_data.get("access") == "granted" and replay_data.get("flag"):
-            result.add(
+            _add(result, 
                 "teleport_lab_cert_replay",
                 "CRITICAL",
                 "Expired certificate replay succeeded — flag captured",
@@ -241,7 +249,7 @@ def check_teleport_lab_cert_replay(session, result: TargetResult, probe_opts: di
                 evidence=text2[:300],
             )
         elif replay_data.get("access") == "denied":
-            result.add(
+            _add(result, 
                 "teleport_lab_cert_replay",
                 "INFO",
                 "Defense held: expired cert rejected",
@@ -257,14 +265,14 @@ def check_teleport_lab_cert_replay(session, result: TargetResult, probe_opts: di
             detect_data = {}
 
         if detect_data.get("previously_seen"):
-            result.add(
+            _add(result, 
                 "teleport_lab_cert_replay",
                 "INFO",
                 "Defense: replay detection caught reused cert ID",
                 f"Detection: {detect_data.get('replay_detection', 'BLOCKED')}",
             )
         elif detect_data.get("replay_detection") == "FIRST_USE":
-            result.add(
+            _add(result, 
                 "teleport_lab_cert_replay",
                 "MEDIUM",
                 "Replay detection did not flag reused cert ID",
