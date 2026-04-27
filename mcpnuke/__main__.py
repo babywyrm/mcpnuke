@@ -593,6 +593,30 @@ def _main_inner() -> None:
         _PolicyPath(args.policy_out).write_text(yaml_str)
         console.print(f"\n[green]nullfield policy written to {args.policy_out} ({len(rules)} rules)[/green]")
 
+    if getattr(args, "by_lane", False):
+        from mcpnuke.reporting import print_by_lane
+        print_by_lane(results, console=console)
+
+    if getattr(args, "coverage_report", None):
+        from mcpnuke.reporting import (
+            build_coverage_report,
+            fetch_lane_taxonomy,
+            print_coverage_report,
+            SchemaMismatchError,
+        )
+        import httpx as _httpx
+        try:
+            taxonomy = fetch_lane_taxonomy(args.coverage_report)
+            report = build_coverage_report(results, taxonomy)
+            print_coverage_report(report, console=console)
+        except SchemaMismatchError as exc:
+            console.print(f"\n[red]coverage-report: {exc}[/red]")
+        except _httpx.HTTPError as exc:
+            console.print(
+                f"\n[red]coverage-report: failed to fetch /api/lanes from "
+                f"{args.coverage_report}: {exc}[/red]"
+            )
+
     all_findings = [f for r in results for f in r.findings]
     if any(f.severity in ("CRITICAL", "HIGH") for f in all_findings):
         sys.exit(EXIT_FINDINGS)

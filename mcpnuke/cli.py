@@ -171,6 +171,19 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Generate nullfield policy YAML from findings and write to FILE",
     )
     p.add_argument(
+        "--by-lane",
+        action="store_true",
+        help="Group scan findings by agentic-identity lane (1..5) and print "
+        "a per-lane severity tally. Also emitted to --json when both are set.",
+    )
+    p.add_argument(
+        "--coverage-report",
+        metavar="CAMAZOTZ_URL",
+        help="Fetch camazotz /api/lanes (schema v1) from CAMAZOTZ_URL, "
+        "intersect with this scan's findings, and print a cross-project "
+        "coverage report. Example: --coverage-report http://localhost:3000",
+    )
+    p.add_argument(
         "--no-invoke",
         action="store_true",
         help="Static-only mode: skip all behavioral probes that call tools. "

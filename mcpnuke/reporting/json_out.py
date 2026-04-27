@@ -23,6 +23,8 @@ def _build_target_dict(r: TargetResult) -> dict:
                 "title": f.title,
                 "detail": f.detail,
                 "evidence": f.evidence,
+                "lane": f.lane,
+                "transport": f.transport,
             }
             for f in r.findings
         ],
