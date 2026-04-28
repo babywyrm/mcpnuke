@@ -6,6 +6,12 @@ from mcpnuke.core.models import TargetResult, AttackChain
 from mcpnuke.core.constants import SHADOW_TARGETS, ATTACK_CHAIN_PATTERNS
 from mcpnuke.checks.base import time_check
 
+from mcpnuke.checks._lane_helpers import lane_tagged
+
+# All findings in this module are scoped to Lane 4 / Transport "A"
+# (2026-04-26 by-lane reporting spec).
+_add = lane_tagged(lane=4, transport="A")
+
 _TOOL_NAME_RE = re.compile(r"'([\w.]+)'|tool\s+'?([\w.]+)'?", re.IGNORECASE)
 
 
@@ -17,7 +23,7 @@ def check_tool_shadowing(
 
         shadows = my_names & SHADOW_TARGETS
         if shadows:
-            result.add(
+            _add(result, 
                 "tool_shadowing",
                 "HIGH",
                 f"Tool shadowing: redefines common name(s): {sorted(shadows)}",
@@ -28,7 +34,7 @@ def check_tool_shadowing(
                 continue
             dupes = my_names & {t["name"].lower() for t in other.tools}
             if dupes:
-                result.add(
+                _add(result, 
                     "tool_shadowing",
                     "MEDIUM",
                     f"Name collision with {other.url}: {sorted(dupes)}",
@@ -54,7 +60,7 @@ def check_multi_vector(result: TargetResult):
         }
         hit = checks_hit & dangerous
         if len(hit) >= 2:
-            result.add(
+            _add(result, 
                 "multi_vector",
                 "CRITICAL",
                 f"Multi-vector attack: {len(hit)} categories active",
@@ -67,7 +73,7 @@ def check_multi_vector(result: TargetResult):
             and {"token_theft", "remote_access", "exfil_flow",
                  "response_credentials"} & checks_hit
         ):
-            result.add(
+            _add(result, 
                 "multi_vector",
                 "CRITICAL",
                 "Attack chain: injection + exfiltration vector present",
@@ -120,7 +126,7 @@ def check_attack_chains(result: TargetResult):
                     detail = f"{a} → {b} ({', '.join(evidence_tools[:5])})"
                 else:
                     detail = f"{a} → {b}"
-                result.add(
+                _add(result, 
                     "attack_chain",
                     "CRITICAL",
                     f"Attack chain: {detail}",
