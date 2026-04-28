@@ -105,6 +105,10 @@ def enumerate_server(
         f"accepted initialize with no credentials",
         evidence=json.dumps(r, indent=2)[:500],
         skip_transports=["stdio"],
+        # The "anybody can initialize" failure is a Lane 5 (anonymous)
+        # finding: it describes what a pre-auth caller can do.
+        lane=5,
+        transport="A",
     )
 
     session.notify("notifications/initialized")

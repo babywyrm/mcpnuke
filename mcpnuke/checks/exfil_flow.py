@@ -12,6 +12,12 @@ import re
 from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
 
+from mcpnuke.checks._lane_helpers import lane_tagged
+
+# All findings in this module are scoped to Lane 2 / Transport "B"
+# (2026-04-26 by-lane reporting spec).
+_add = lane_tagged(lane=2, transport="B")
+
 SOURCE_KEYWORDS = {
     "read", "get", "list", "fetch", "query", "search", "find",
     "export", "dump", "extract", "retrieve", "download", "select",
@@ -127,7 +133,7 @@ def check_exfil_flow(result: TargetResult, session=None, probe_opts: dict | None
                 real_sensitive = [s for s in sensitive_sources if s.get("name", "") != sink_name]
                 if real_sensitive:
                     source_names = [s.get("name", "") for s in real_sensitive]
-                    result.add(
+                    _add(result, 
                         "exfil_flow",
                         "CRITICAL",
                         f"Exfiltration path: sensitive data → '{sink_name}'",
@@ -138,7 +144,7 @@ def check_exfil_flow(result: TargetResult, session=None, probe_opts: dict | None
                 real_sources = [s for s in sources if s.get("name", "") != sink_name]
                 if real_sources:
                     source_names = [s.get("name", "") for s in real_sources[:5]]
-                    result.add(
+                    _add(result, 
                         "exfil_flow",
                         "HIGH",
                         f"Data exfiltration path: {len(real_sources)} source(s) → '{sink_name}'",
@@ -162,7 +168,7 @@ def check_exfil_flow(result: TargetResult, session=None, probe_opts: dict | None
                     _log(f"    [dim]      {source_name} → {sink_name}[/dim]")
                     sent, resp_text = _try_sink_send(session, sink, canary)
                     if sent:
-                        result.add(
+                        _add(result, 
                             "exfil_flow",
                             "CRITICAL",
                             f"Live exfil confirmed: '{source_name}' → '{sink_name}'",

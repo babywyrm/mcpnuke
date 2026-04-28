@@ -17,6 +17,12 @@ from mcpnuke.patterns.probes import (
     INDIRECT_INJECTION_PROBES,
 )
 
+from mcpnuke.checks._lane_helpers import lane_tagged
+
+# All findings in this module are scoped to Lane 2 / Transport "A"
+# (2026-04-26 by-lane reporting spec).
+_add = lane_tagged(lane=2, transport="A")
+
 
 def check_prompt_injection(result: TargetResult):
     with time_check("prompt_injection", result):
@@ -24,7 +30,7 @@ def check_prompt_injection(result: TargetResult):
         def _scan(text: str, location: str):
             for pat in INJECTION_PATTERNS:
                 if re.search(pat, text, re.IGNORECASE):
-                    result.add(
+                    _add(result, 
                         "prompt_injection",
                         "CRITICAL",
                         "Prompt injection payload detected",
@@ -70,7 +76,7 @@ def check_tool_poisoning(result: TargetResult):
 
             for pat in POISON_PATTERNS:
                 if re.search(pat, full, re.IGNORECASE | re.DOTALL):
-                    result.add(
+                    _add(result, 
                         "tool_poisoning",
                         "CRITICAL",
                         f"Tool poisoning indicator in '{name}'",
@@ -81,7 +87,7 @@ def check_tool_poisoning(result: TargetResult):
 
             for ch in tool.get("description", ""):
                 if ord(ch) in range(0x200B, 0x2010) or ord(ch) == 0xFEFF:
-                    result.add(
+                    _add(result, 
                         "tool_poisoning",
                         "CRITICAL",
                         f"Invisible Unicode in tool '{name}'",
@@ -108,7 +114,7 @@ def check_indirect_injection(session, result: TargetResult, probe_opts: dict | N
                         continue
                     for pat in INJECTION_PATTERNS + POISON_PATTERNS:
                         if re.search(pat, text, re.IGNORECASE | re.DOTALL):
-                            result.add(
+                            _add(result, 
                                 "indirect_injection",
                                 "CRITICAL",
                                 f"Indirect prompt injection in resource '{uri}'",
@@ -129,7 +135,7 @@ def check_indirect_injection(session, result: TargetResult, probe_opts: dict | N
                                 "interactsh",
                             ]
                         ):
-                            result.add(
+                            _add(result, 
                                 "indirect_injection",
                                 "HIGH",
                                 f"Exfiltration URL in resource '{uri}'",
@@ -168,7 +174,7 @@ def check_indirect_injection(session, result: TargetResult, probe_opts: dict | N
 
                     for pat in INJECTION_PATTERNS + POISON_PATTERNS:
                         if re.search(pat, text, re.IGNORECASE | re.DOTALL):
-                            result.add(
+                            _add(result, 
                                 "indirect_injection",
                                 "CRITICAL",
                                 f"Indirect injection via content tool '{tool['name']}'",
@@ -178,7 +184,7 @@ def check_indirect_injection(session, result: TargetResult, probe_opts: dict | N
                             break
 
                     if "INDIRECT_CONFIRMED" in text:
-                        result.add(
+                        _add(result, 
                             "indirect_injection",
                             "CRITICAL",
                             f"Indirect injection: tool '{tool['name']}' follows embedded instructions",
@@ -224,7 +230,7 @@ def check_active_prompt_injection(session, result: TargetResult, probe_opts: dic
 
                 indicator = payload_info.get("indicator")
                 if indicator and indicator in text:
-                    result.add(
+                    _add(result, 
                         "active_prompt_injection",
                         "CRITICAL",
                         f"Active injection: server follows injected instructions via '{name}'",
@@ -237,7 +243,7 @@ def check_active_prompt_injection(session, result: TargetResult, probe_opts: dic
                 if payload_info["category"] in ("system_prompt_leak", "constraint_bypass"):
                     for pat in SYSTEM_PROMPT_INDICATORS:
                         if re.search(pat, text, re.IGNORECASE):
-                            result.add(
+                            _add(result, 
                                 "active_prompt_injection",
                                 "CRITICAL",
                                 f"System prompt leak via active injection in '{name}'",

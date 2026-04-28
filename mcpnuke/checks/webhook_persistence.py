@@ -9,6 +9,12 @@ import re
 from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
 
+from mcpnuke.checks._lane_helpers import lane_tagged
+
+# All findings in this module are scoped to Lane 5 / Transport "A"
+# (2026-04-26 by-lane reporting spec).
+_add = lane_tagged(lane=5, transport="A")
+
 WEBHOOK_PARAM_PATTERNS = [
     r"^(callback_url|webhook_url|webhook|notify_url|callback|hook_url|event_url|notification_url|subscriber_url|listener_url)$",
     r"^(on_complete|on_finish|on_error|on_success|status_callback|result_url)$",
@@ -41,7 +47,7 @@ def check_webhook_persistence(result: TargetResult):
 
             for pat in WEBHOOK_NAME_PATTERNS:
                 if re.search(pat, name, re.IGNORECASE) and has_url_param:
-                    result.add(
+                    _add(result, 
                         "webhook_persistence",
                         "HIGH",
                         f"Webhook/callback tool '{name}' accepts URL",
@@ -53,7 +59,7 @@ def check_webhook_persistence(result: TargetResult):
             for pname, pdef in props.items():
                 for pat in WEBHOOK_PARAM_PATTERNS:
                     if re.search(pat, pname, re.IGNORECASE):
-                        result.add(
+                        _add(result, 
                             "webhook_persistence",
                             "HIGH",
                             f"Webhook/callback param '{pname}' in tool '{name}'",
@@ -63,7 +69,7 @@ def check_webhook_persistence(result: TargetResult):
 
             for pat in WEBHOOK_DESC_PATTERNS:
                 if re.search(pat, desc, re.IGNORECASE):
-                    result.add(
+                    _add(result, 
                         "webhook_persistence",
                         "HIGH",
                         f"Webhook registration capability in '{name}'",
