@@ -17,8 +17,35 @@ Usage:
 The wrapper preserves all positional + keyword args of TargetResult.add(),
 so existing call sites just substitute ``result.add(`` → ``_add(result, ``.
 
-Vocabulary: see camazotz/frontend/lane_taxonomy.py::LANES (schema v1) +
-agentic-sec/docs/identity-flows.md.
+Lane vocabulary
+---------------
+
+Lane is one of 1–5 (Human Direct, Delegated, Machine, Agent-Chain,
+Anonymous). See ``camazotz/frontend/lane_taxonomy.py::LANES`` (schema v1)
+and ``agentic-sec/docs/identity-flows.md`` for the canonical definitions.
+
+Transport vocabulary
+--------------------
+
+Transport is one of five string codes, defined in
+``camazotz/frontend/lane_taxonomy.py::TRANSPORT_DEFINITIONS``:
+
+    A   MCP JSON-RPC                            (the common case)
+    B   Direct wire API (REST / gRPC / GraphQL) (non-MCP wire)
+    C   In-process SDK / library                (no process boundary)
+    D   Subprocess / native binary              (added 2026-04-28)
+    E   Native LLM function-calling (non-MCP)   (added 2026-04-28)
+
+Default ``transport="A"`` is correct for the majority of mcpnuke checks
+that probe the MCP wire directly. Override per-call when a check
+specifically targets one of the other transports (e.g. a check that
+inspects an upstream Direct API would use ``transport="B"``).
+
+Codes D and E were ratified in
+`camazotz ADR 0001 <https://github.com/babywyrm/camazotz/blob/main/docs/adr/0001-five-transport-taxonomy.md>`_.
+The wrapper accepts any string for ``transport`` — there is no runtime
+validation here; reporting modules treat unknown codes as their own
+bucket in ``--by-lane`` output.
 """
 
 from __future__ import annotations
