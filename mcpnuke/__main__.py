@@ -589,9 +589,42 @@ def _main_inner() -> None:
         from pathlib import Path as _PolicyPath
         from mcpnuke.policy import generate_policy, serialize_policy
         rules = generate_policy(results)
-        yaml_str = serialize_policy(rules)
+
+        def _kv_pairs(items: list[str], flag: str) -> dict[str, str]:
+            out: dict[str, str] = {}
+            for item in items:
+                if "=" not in item:
+                    raise SystemExit(
+                        f"{flag} expects KEY=VALUE, got {item!r}"
+                    )
+                key, _, value = item.partition("=")
+                key, value = key.strip(), value.strip()
+                if not key:
+                    raise SystemExit(f"{flag} key may not be empty: {item!r}")
+                out[key] = value
+            return out
+
+        selector = _kv_pairs(
+            getattr(args, "policy_selector", []) or [], "--policy-selector"
+        )
+        meta_labels = _kv_pairs(
+            getattr(args, "policy_labels", []) or [], "--policy-labels"
+        )
+        yaml_str = serialize_policy(
+            rules,
+            name=getattr(args, "policy_name", "mcpnuke-recommended"),
+            namespace=getattr(args, "policy_namespace", "") or "",
+            selector_labels=selector,
+            metadata_labels=meta_labels,
+        )
         _PolicyPath(args.policy_out).write_text(yaml_str)
-        console.print(f"\n[green]nullfield policy written to {args.policy_out} ({len(rules)} rules)[/green]")
+        scope = (
+            f"selector={selector}" if selector else "selector=ALL pods (broad)"
+        )
+        console.print(
+            f"\n[green]nullfield policy written to {args.policy_out} "
+            f"({len(rules)} rules, {scope})[/green]"
+        )
 
     if getattr(args, "by_lane", False):
         from mcpnuke.reporting import print_by_lane

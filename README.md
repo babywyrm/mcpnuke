@@ -410,6 +410,18 @@ Lane Reporting & Cross-Project Coverage:
                               webhook_persistence → DENY, response_credentials
                               → SCOPE redact, etc. Pairs naturally with
                               --no-invoke for safe production audits.
+  --policy-name NAME          metadata.name for the generated policy
+                              (default: mcpnuke-recommended).
+  --policy-namespace NS       metadata.namespace for the generated policy.
+                              Empty means cluster-scoped or set at apply time.
+  --policy-selector K=V       spec.selector.matchLabels entry, repeatable.
+                              Without it the selector is empty and matches
+                              every pod — typically too broad for a real
+                              cluster. For the camazotz reference deployment:
+                              --policy-selector app=brain-gateway
+  --policy-labels K=V         metadata.labels entry, repeatable. Useful for
+                              tagging by lane/transport so dashboards group it.
+                              Example: --policy-labels nullfield.io/lane=machine
 
 Differential:
   --baseline FILE             Compare against baseline

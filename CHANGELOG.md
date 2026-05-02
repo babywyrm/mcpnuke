@@ -2,6 +2,26 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.8.0] - 2026-05-02
+
+### Added
+
+- **`--policy-name` / `--policy-namespace` / `--policy-selector` /
+  `--policy-labels`** — Targeting controls for `--generate-policy`. The
+  default selector (`matchLabels: {}`) matches every pod in every namespace
+  in a real cluster, which is almost never what an operator wants. The new
+  flags let scans emit policies that target a specific deployment
+  (`--policy-selector app=brain-gateway`) and carry lane/transport labels
+  for dashboards (`--policy-labels nullfield.io/lane=machine`). Required
+  for the cross-repo feedback loop: scan → generate → kubectl apply →
+  CRD-bridge → re-scan.
+
+  The serializer now also renders `metadata.labels` and a populated
+  `spec.selector.matchLabels` block. A new round-trip test confirms PyYAML
+  loads the emitted YAML into the exact shape nullfield's controller
+  expects (`apiVersion: nullfield.io/v1alpha1`, `kind: NullfieldPolicy`,
+  identity/scope/budget rules preserved).
+
 ## [6.7.0] - 2026-05-01
 
 ### Added

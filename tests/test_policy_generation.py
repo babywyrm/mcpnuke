@@ -151,6 +151,74 @@ class TestPolicySerialization:
         assert "a.tool" in yaml_str
         assert "b.tool" in yaml_str
 
+    def test_default_selector_is_empty_match_labels(self):
+        """Without selector_labels, output preserves the legacy empty selector."""
+        rules = [PolicyRule(action="DENY", tool_names=["*"], reason="default")]
+        yaml_str = serialize_policy(rules)
+        assert "matchLabels: {}" in yaml_str
+
+    def test_selector_labels_render_under_match_labels(self):
+        rules = [PolicyRule(action="DENY", tool_names=["*"], reason="default")]
+        yaml_str = serialize_policy(
+            rules,
+            selector_labels={"app": "brain-gateway", "tier": "data"},
+        )
+        assert "matchLabels: {}" not in yaml_str
+        assert "matchLabels:" in yaml_str
+        assert '"app": "brain-gateway"' in yaml_str
+        assert '"tier": "data"' in yaml_str
+
+    def test_metadata_labels_render_under_metadata(self):
+        rules = [PolicyRule(action="DENY", tool_names=["*"], reason="default")]
+        yaml_str = serialize_policy(
+            rules,
+            metadata_labels={"nullfield.io/lane": "machine"},
+        )
+        assert "  labels:" in yaml_str
+        assert '"nullfield.io/lane": "machine"' in yaml_str
+
+    def test_full_round_trip_yaml_parses(self):
+        """The fallback emitter must produce YAML that real parsers can load."""
+        import yaml
+
+        rules = [
+            PolicyRule(
+                action="HOLD",
+                tool_names=["risky.tool"],
+                reason="test",
+                hold={"timeout": "5m", "onTimeout": "DENY"},
+            ),
+            PolicyRule(
+                action="SCOPE",
+                tool_names=["leaky.tool"],
+                reason="test",
+                scope={"response": {"redactPatterns": ["password"]}},
+            ),
+            PolicyRule(action="DENY", tool_names=["*"], reason="default"),
+        ]
+        yaml_str = serialize_policy(
+            rules,
+            name="round-trip",
+            namespace="camazotz",
+            selector_labels={"app": "brain-gateway"},
+            metadata_labels={"nullfield.io/lane": "machine"},
+        )
+        loaded = yaml.safe_load(yaml_str)
+        assert loaded["apiVersion"] == "nullfield.io/v1alpha1"
+        assert loaded["kind"] == "NullfieldPolicy"
+        assert loaded["metadata"]["name"] == "round-trip"
+        assert loaded["metadata"]["namespace"] == "camazotz"
+        assert loaded["metadata"]["labels"] == {"nullfield.io/lane": "machine"}
+        assert loaded["spec"]["selector"]["matchLabels"] == {
+            "app": "brain-gateway"
+        }
+        actions = [r["action"] for r in loaded["spec"]["rules"]]
+        assert actions == ["HOLD", "SCOPE", "DENY"]
+        assert loaded["spec"]["rules"][0]["hold"] == {
+            "timeout": "5m",
+            "onTimeout": "DENY",
+        }
+
 
 class TestActionPriority:
     def test_deny_highest(self):

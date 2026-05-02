@@ -171,6 +171,35 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Generate nullfield policy YAML from findings and write to FILE",
     )
     p.add_argument(
+        "--policy-name",
+        metavar="NAME",
+        default="mcpnuke-recommended",
+        help="metadata.name for the generated NullfieldPolicy",
+    )
+    p.add_argument(
+        "--policy-namespace",
+        metavar="NAMESPACE",
+        default="",
+        help="metadata.namespace for the generated NullfieldPolicy",
+    )
+    p.add_argument(
+        "--policy-selector",
+        metavar="KEY=VALUE",
+        action="append",
+        default=[],
+        help="spec.selector.matchLabels entry, repeatable. Without it, "
+        "the selector matches every pod, which is typically too broad. "
+        "Example: --policy-selector app=brain-gateway",
+    )
+    p.add_argument(
+        "--policy-labels",
+        metavar="KEY=VALUE",
+        action="append",
+        default=[],
+        help="metadata.labels entry, repeatable. "
+        "Example: --policy-labels nullfield.io/lane=machine",
+    )
+    p.add_argument(
         "--by-lane",
         action="store_true",
         help="Group scan findings by agentic-identity lane (1..5) and print "
