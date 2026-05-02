@@ -78,6 +78,10 @@ from mcpnuke.checks.jwt_validation import (
     check_jwt_ttl,
     check_jwt_weak_key,
 )
+from mcpnuke.checks.jwt_boundary import (
+    check_jwt_audience_target_match,
+    check_jwt_cross_role_replay,
+)
 
 # Checks that --fast mode skips (heavy, LLM-backed, or slow)
 FAST_SKIP_CHECKS = {
@@ -222,7 +226,7 @@ def run_all_checks(
     total_checks = 15  # static (exfil_flow counted separately below)
     total_checks += 1  # exfil_flow
     if has_jwt:
-        total_checks += 6  # JWT hardening checks
+        total_checks += 8  # JWT hardening checks (6 baseline + 2 boundary)
     if not no_invoke:
         deep_count = 12 if not fast_mode else (12 - len(FAST_SKIP_CHECKS))
         total_checks += 3 + deep_count  # light behavioral + deep
@@ -259,6 +263,8 @@ def run_all_checks(
         _run("jwt_token_id", check_jwt_token_id, result)
         _run("jwt_ttl", check_jwt_ttl, result, probe_opts=opts)
         _run("jwt_weak_key", check_jwt_weak_key, result)
+        _run("jwt_audience_target_match", check_jwt_audience_target_match, result)
+        _run("jwt_cross_role_replay", check_jwt_cross_role_replay, result)
 
     static_count = len(result.findings)
     if verbose:

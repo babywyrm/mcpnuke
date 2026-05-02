@@ -532,8 +532,8 @@ _Roadmap aligned with [MCP Red Team Playbook](https://github.com/babywyrm/sysadm
 
 _Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadmin/tree/master/mcp/redteam) and testing against internal MCP targets with Keycloak, K8s, and LLM integration._
 
-- **JWT audience validation** (MCP-T04) — Decode JWT tokens, verify `aud` claim matches the target MCP endpoint, detect cross-tool token replay. Flag servers with `verify_aud: False`.
-- **Cross-role token replay** (MCP-T04) — If a token is provided, attempt `tools/list` and `tools/call` for tools outside the token's role to detect role-only isolation gaps (e.g. same OIDC realm for users and agents).
+- ~~**JWT audience validation**~~ (MCP-T04) — ✓ Done. `check_jwt_audience_target_match` decodes the bearer token, derives expected audiences from the target URL (full URL, scheme://netloc, host, host:port), and flags HIGH when the token's `aud` claim does not intersect any expected form. Tagged Lane 1 / Transport A.
+- ~~**Cross-role token replay**~~ (MCP-T04) — ✓ Done. `check_jwt_cross_role_replay` reads `scope` / `role` / `roles` claims, classifies the token as read-only when all claim values are read-class, and flags HIGH when the server still exposes write/admin/delete tools to it. Tagged Lane 1 / Transport A; behavioural confirmation deferred to operator-driven `--probe-calls`.
 - ~~**Response credential scanning**~~ (MCP-T07) — ✓ Done. `response_credentials` check with cached response reuse.
 - **LLM-mediated response detection** — Detect when tool responses are LLM-generated (hallucination risk, context bleed). Flag tools whose output shows LLM patterns (Ollama/OpenAI formatting, system prompt leakage through tool output).
 - **AI prompt injection via tool parameters** — Detect when user-controlled tool parameters are passed into LLM prompts, creating an injection surface through tool args rather than tool descriptions.
