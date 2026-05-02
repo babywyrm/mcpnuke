@@ -198,6 +198,8 @@ The scanner runs checks in a deliberate order:
 | `jwt_algorithm` | CRITICAL–HIGH | JWT `alg:none` (signature bypass) or symmetric HMAC algorithms |
 | `jwt_issuer` | MEDIUM | JWT missing `iss` (issuer) claim |
 | `jwt_audience` | MEDIUM | JWT missing `aud` (audience) claim — enables cross-service replay |
+| `jwt_audience_target_match` | HIGH | Lane 1 / MCP-T04. Decodes the bearer token, derives expected audiences from the target URL (full URL, scheme://netloc, host, host:port), and flags when `aud` does not intersect any expected form. Catches cross-tool token replay where a token issued for service A is silently accepted by service B (audience validation disabled or trusted-aud overlap). |
+| `jwt_cross_role_replay` | HIGH | Lane 1 / MCP-T04. Reads `scope` / `role` / `roles` claims; when all values are read-class (read, viewer, list, get, ...) but the server still exposes write/admin/delete tools to the token via `tools/list`, flags broken role isolation in the same OIDC realm. Static check — does not invoke the write tools. |
 | `jwt_token_id` | LOW | JWT missing `jti` — replay detection not possible |
 | `jwt_ttl` | HIGH–MEDIUM | JWT with no `exp` or TTL exceeding threshold (default 4h) |
 | `jwt_weak_key` | CRITICAL | JWT signed with a known weak/default HMAC key |
