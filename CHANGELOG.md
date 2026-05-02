@@ -2,6 +2,64 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.7.0] - 2026-05-01
+
+### Added
+
+- **MCP-T04 JWT boundary checks** — Two new HIGH-severity, Lane 1 / Transport A
+  checks in `mcpnuke/checks/jwt_boundary.py`:
+  - `jwt_audience_target_match` — decodes the bearer token, derives expected
+    audiences from the target URL (full URL, scheme://netloc, host,
+    host:port), and flags when the `aud` claim does not intersect any
+    expected form. Catches cross-tool token replay where a token issued for
+    service A is silently accepted by service B (audience validation
+    disabled or trusted-aud overlap).
+  - `jwt_cross_role_replay` — reads `scope` / `role` / `roles` claims;
+    when all values are read-class but the server still exposes
+    write/admin/delete tools to the token via `tools/list`, flags broken
+    role isolation in the same OIDC realm. Static check; does not invoke
+    the write tools.
+
+  Live verification on the NUC reference deployment with a forged read-only
+  token: Lane 1 went from 0 findings to 2 HIGH findings; total scan
+  produced 168 findings, score 1380, 5/5 lanes covered.
+
+- **`--by-lane`** — Group findings by agentic-identity lane (1..5), print a
+  per-lane severity tally, and emit the same structure into the JSON
+  report when `--json` is also set. Findings without a lane scope land in
+  an "Uncategorized" bucket. Implemented per
+  `docs/specs/2026-04-26-by-lane-reporting.md`.
+
+- **`--coverage-report URL`** — Fetch `GET <URL>/api/lanes` (schema v1)
+  from a running camazotz instance, intersect with the current scan's
+  findings, and print a cross-project coverage report naming every lane
+  camazotz declares. Schema mismatch (`SchemaMismatchError`) and HTTP
+  failures are printed in red without aborting the scan; exit code stays
+  driven by finding severity.
+
+- **`--generate-policy FILE`** — Generate a nullfield NullfieldPolicy YAML
+  from this scan's findings. Maps `code_execution` / `remote_access` →
+  `DENY`, `webhook_persistence` → `DENY`, `response_credentials` →
+  `SCOPE` redact, and so on. Pairs naturally with `--no-invoke` for safe
+  production audits.
+
+- **Lane / transport vocabulary on every Finding** — `Finding.lane:
+  int | None` and `Finding.transport: str | None` are populated by
+  lane-tagged checks per ADR 0001 (transports A–E). Unlabelled findings
+  remain `None` and surface under "Uncategorized" in `--by-lane`.
+
+### Notes
+
+- Aligns the transport axis with
+  [camazotz ADR 0001 — Five-Transport Taxonomy](https://github.com/babywyrm/camazotz/blob/main/docs/adr/0001-five-transport-taxonomy.md)
+  (A = MCP JSON-RPC, B = Direct wire API, C = SDK / library,
+  D = subprocess, E = native LLM function-calling). mcpnuke's own check
+  emissions today are predominantly Transport A; D / E coverage shows up
+  via `--coverage-report` against camazotz targets that exercise those
+  surfaces.
+
+---
+
 ## 6.6.0 (2026-04)
 
 ### Added
@@ -532,8 +590,6 @@ _Roadmap aligned with [MCP Red Team Playbook](https://github.com/babywyrm/sysadm
 
 _Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadmin/tree/master/mcp/redteam) and testing against internal MCP targets with Keycloak, K8s, and LLM integration._
 
-- ~~**JWT audience validation**~~ (MCP-T04) — ✓ Done. `check_jwt_audience_target_match` decodes the bearer token, derives expected audiences from the target URL (full URL, scheme://netloc, host, host:port), and flags HIGH when the token's `aud` claim does not intersect any expected form. Tagged Lane 1 / Transport A.
-- ~~**Cross-role token replay**~~ (MCP-T04) — ✓ Done. `check_jwt_cross_role_replay` reads `scope` / `role` / `roles` claims, classifies the token as read-only when all claim values are read-class, and flags HIGH when the server still exposes write/admin/delete tools to it. Tagged Lane 1 / Transport A; behavioural confirmation deferred to operator-driven `--probe-calls`.
 - ~~**Response credential scanning**~~ (MCP-T07) — ✓ Done. `response_credentials` check with cached response reuse.
 - **LLM-mediated response detection** — Detect when tool responses are LLM-generated (hallucination risk, context bleed). Flag tools whose output shows LLM patterns (Ollama/OpenAI formatting, system prompt leakage through tool output).
 - **AI prompt injection via tool parameters** — Detect when user-controlled tool parameters are passed into LLM prompts, creating an injection surface through tool args rather than tool descriptions.
@@ -580,3 +636,7 @@ _Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadm
 - ~~**Webhook/callback persistence**~~ — ✓ `webhook_persistence` with name-based detection
 - ~~**Exfiltration flow analysis**~~ — ✓ `exfil_flow` with live source→sink canary verification
 - ~~**AI-powered description analysis**~~ — ✓ `--claude` three-phase AI analysis (tool defs, responses, chain reasoning)
+- ~~**JWT audience validation (MCP-T04)**~~ — ✓ 6.7.0. `jwt_audience_target_match`, Lane 1 / Transport A
+- ~~**Cross-role token replay (MCP-T04)**~~ — ✓ 6.7.0. `jwt_cross_role_replay`, Lane 1 / Transport A
+- ~~**Per-lane reporting**~~ — ✓ 6.7.0. `--by-lane` and `--coverage-report` against camazotz `/api/lanes` schema v1
+- ~~**Nullfield policy generation**~~ — ✓ 6.7.0. `--generate-policy FILE` emits NullfieldPolicy YAML from findings
