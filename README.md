@@ -294,6 +294,48 @@ Every tool response is scanned for:
 
 ---
 
+## Identity Lanes & Transports
+
+mcpnuke labels every lane-scoped finding with two ecosystem-shared dimensions
+sourced from the agentic-identity Identity Flow Framework and frozen by
+[ADR 0001 — Five-Transport Taxonomy](https://github.com/babywyrm/camazotz/blob/main/docs/adr/0001-five-transport-taxonomy.md):
+
+**Identity lanes** (the *who* — request initiator):
+
+| Lane | Slug | Description |
+|------|------|-------------|
+| 1 | `human-direct` | Human authenticates directly to the MCP server |
+| 2 | `delegated` | Human → agent token exchange (OAuth on-behalf-of) |
+| 3 | `machine` | Workload identity (SPIFFE, SA tokens, bot certs) |
+| 4 | `chain` | Agent → agent / chained delegation |
+| 5 | `anonymous` | Pre-auth or unauthenticated surface |
+
+**Transports** (the *how* — wire / process surface, codes A through E per
+ADR 0001):
+
+| Code | Name | Notes |
+|------|------|-------|
+| A | MCP JSON-RPC | The protocol most of this scanner exercises directly |
+| B | Direct wire API | REST / gRPC / GraphQL the agent calls outside MCP |
+| C | In-process SDK / library | Python imports, in-process function calls |
+| D | Subprocess / native binary | Agent spawns `kubectl`, `terraform`, etc.; credentials cross the fork boundary |
+| E | Native LLM function-calling | OpenAI tools, Anthropic `tool_use`, Gemini function-calling — no MCP wire involved |
+
+The Finding dataclass carries `lane: int | None` and `transport: str | None`;
+`--by-lane` groups by lane, `--coverage-report` intersects with camazotz's
+schema-v1 lane corpus. Findings that are not lane-scoped (rate limit, TLS
+hygiene, generic HTTP surface) keep `lane=None` and report under
+"Uncategorized."
+
+> Transports D and E currently appear in the taxonomy and `--by-lane`
+> output for camazotz-side coverage tracking; in mcpnuke's own check
+> emissions, lane-tagged findings are predominantly Transport A (MCP
+> JSON-RPC) since that is the wire mcpnuke speaks. D / E coverage shows
+> up via `--coverage-report` against a camazotz target that exercises
+> those surfaces.
+
+---
+
 ## CLI Reference
 
 ```
@@ -431,8 +473,15 @@ export ANTHROPIC_API_KEY=sk-ant-...
 For Bedrock mode, the same `ai` extra includes `boto3`; configure AWS credentials
 and pass `--bedrock` (plus optional region/profile/model flags).
 
-If `--claude` is used without the package or API key, mcpnuke exits immediately
-with a clear error message instead of running the full scan first.
+**`--claude` fails loud — no key, no run.** If `--claude` is set but the
+`anthropic` package is missing or `ANTHROPIC_API_KEY` is unset, mcpnuke
+exits immediately (exit code `2`) with a clear error message *before* any
+scanning begins. There is no silent fallback to a stub responder. This is
+deliberate: a missing key would otherwise downgrade an "AI scan" to a
+deterministic-only scan with the same flag set, masking the regression.
+(Camazotz's brain takes the opposite trade-off and degrades to a
+`[cloud-stub]` responder when its key is missing — useful for live demos,
+but unsafe for security tooling.)
 
 **Usage:**
 ```bash
