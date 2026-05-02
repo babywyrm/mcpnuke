@@ -305,7 +305,7 @@ Example output snippet:
 
 ```
 ── Cross-project coverage report (vs camazotz) ──
-  camazotz: 32 labs across 5 lanes
+  camazotz: 35 labs across 5 lanes
   mcpnuke covered 5/5 lanes on this scan
 
 Lane 1 — Human Direct

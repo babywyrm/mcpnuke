@@ -173,7 +173,7 @@ $ mcpnuke --targets http://example/mcp --fast --no-invoke \
     --coverage-report http://camazotz.example:3000
 
 Fetching lane taxonomy from http://camazotz.example:3000/api/lanes ...
-schema=v1, 5 lanes, 32 labs indexed
+schema=v1, 5 lanes, 35 labs indexed
 
 === Cross-project coverage ===
 
