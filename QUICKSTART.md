@@ -262,7 +262,76 @@ mcpnuke --k8s-api-url https://<cluster-node>:6443 \
   --k8s-discover --verbose
 ```
 
-## 12) Baseline and Regression
+## 12) Per-Lane Reporting and Coverage
+
+Group findings by agentic-identity lane (1–5) and intersect with a running
+camazotz instance's lane corpus. Vocabulary follows
+[ADR 0001](https://github.com/babywyrm/camazotz/blob/main/docs/adr/0001-five-transport-taxonomy.md)
+(transports A–E).
+
+```bash
+# Group this scan's findings by lane and print per-lane severity tally
+mcpnuke --targets http://<cluster-node>:30080/mcp \
+  --auth-token "$FORGED_RO_TOKEN" \
+  --fast --no-invoke \
+  --by-lane
+```
+
+Example output snippet (live NUC scan with a forged read-only token —
+Lane 1 jumped from 0 to 2 findings once the new MCP-T04 JWT checks
+landed):
+
+```
+── Findings grouped by identity lane (168 total) ──
+
+Lane 1 — Human Direct (slug=human-direct, transport=A)
+  2 finding(s): HIGH=2
+    HIGH     jwt_audience_target_match JWT aud claim does not match the MCP endpoint
+    HIGH     jwt_cross_role_replay     Read-only token sees write/admin tools in tools/list
+
+Lane 2 — Delegated (slug=delegated, transport=A)
+  ...
+```
+
+Cross-project coverage report against a live camazotz instance:
+
+```bash
+mcpnuke --targets http://<cluster-node>:30080/mcp \
+  --fast --no-invoke \
+  --coverage-report http://<cluster-node>:3000
+```
+
+Example output snippet:
+
+```
+── Cross-project coverage report (vs camazotz) ──
+  camazotz: 32 labs across 5 lanes
+  mcpnuke covered 5/5 lanes on this scan
+
+Lane 1 — Human Direct
+  camazotz: 6 primary lab(s), transports [A, B]
+  mcpnuke:  2 finding(s) fired (HIGH=2), transports [A]
+  6 lab(s) covered, 2 finding(s) fired — aligned
+...
+```
+
+`--coverage-report` is purely diagnostic — it does **not** alter the
+scanner's exit code. The scan still exits `0` / `1` / `2` based on
+findings (see README "Exit Code"). Schema mismatches and HTTP errors are
+printed in red but do not abort the scan.
+
+You can also generate a single-line nullfield policy from any scan, lane
+report or not:
+
+```bash
+mcpnuke --targets http://localhost:8080/mcp --fast --no-invoke --generate-policy fix.yaml
+```
+
+(See section 4 above for the full feedback-loop walkthrough.)
+
+---
+
+## 13) Baseline and Regression
 
 Save a scan as a baseline, then compare future scans:
 
