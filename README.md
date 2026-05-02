@@ -348,6 +348,25 @@ Output:
   --verbose, -v               Verbose output
   --debug                     Debug output (very noisy)
 
+Lane Reporting & Cross-Project Coverage:
+  --by-lane                   Group findings by agentic-identity lane (1..5),
+                              print per-lane severity tally, and emit the
+                              same structure into --json when both are set.
+  --coverage-report URL       Fetch GET <URL>/api/lanes (schema v1) from a
+                              running camazotz instance and print a
+                              cross-project coverage report intersecting this
+                              scan's findings with camazotz's lane corpus.
+                              Diagnostic only — does NOT change the scanner's
+                              exit code; failures (HTTP/schema mismatch) are
+                              printed in red and the scan still exits based
+                              on findings (see Exit Codes table).
+  --generate-policy FILE      Generate a nullfield NullfieldPolicy YAML from
+                              this scan's findings and write to FILE. Maps
+                              code_execution / remote_access → DENY,
+                              webhook_persistence → DENY, response_credentials
+                              → SCOPE redact, etc. Pairs naturally with
+                              --no-invoke for safe production audits.
+
 Differential:
   --baseline FILE             Compare against baseline
   --save-baseline FILE        Save scan as baseline
