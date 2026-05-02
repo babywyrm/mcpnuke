@@ -196,3 +196,41 @@ cp suggested-policy.yaml deploy/nullfield/policy.yaml
 git add deploy/nullfield/policy.yaml
 git commit -m "security: apply mcpnuke-recommended policy"
 ```
+
+---
+
+## Cross-Project Coverage Reports
+
+Use `--coverage-report` in CI to publish a per-lane coverage diff against
+a running camazotz instance (typically a staging deployment exposing
+`/api/lanes` schema v1). Vocabulary follows
+[ADR 0001](https://github.com/babywyrm/camazotz/blob/main/docs/adr/0001-five-transport-taxonomy.md)
+(transports A–E).
+
+```bash
+mcpnuke --targets "$MCP_TARGET" \
+  --fast --no-invoke \
+  --coverage-report "$CAMAZOTZ_URL" \
+  --json report.json
+```
+
+**Exit code semantics for `--coverage-report`:** the flag is
+**diagnostic-only** and does **not** influence mcpnuke's exit code.
+Uncovered lanes, schema mismatches, and even HTTP failures fetching
+`<CAMAZOTZ_URL>/api/lanes` are printed in red but the scan still exits
+based purely on finding severity:
+
+| Code | Meaning |
+|------|---------|
+| `0` | Clean scan, no CRITICAL/HIGH findings (regardless of lane coverage) |
+| `1` | At least one CRITICAL or HIGH finding |
+| `2` | Scanner error (target unreachable, invalid args, unhandled exception) |
+
+If you want a CI gate that fails when camazotz declares lanes mcpnuke
+isn't covering yet, post-process the `--json` report or the printed
+"widest gap" line — don't rely on the exit code to encode that signal.
+
+**`--claude` in coverage workflows:** `--claude` still **fails loud**
+when `ANTHROPIC_API_KEY` is unset (exit `2` *before* any scan runs). If
+your CI matrix lacks the key, drop `--claude` rather than expecting
+silent degradation; mcpnuke will not run a `[cloud-stub]`-style fallback.
