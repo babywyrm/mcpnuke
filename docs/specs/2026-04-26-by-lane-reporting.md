@@ -1,9 +1,12 @@
 # `--by-lane` and `--coverage-report` — Design
 
 **Date:** 2026-04-26
-**Status:** Design pending review, implementation pending
+**Status:** Implemented (2026-05-01) — shipped in mcpnuke 6.7.0 alongside the
+MCP-T04 JWT boundary checks. See "Implementation notes" appendix at the
+bottom for any deltas between this spec and what landed.
 **Related:**
 - [Identity Flow Framework](https://github.com/babywyrm/agentic-sec/blob/main/docs/identity-flows.md) (agentic-sec hub)
+- [ADR 0001 — Five-Transport Taxonomy](https://github.com/babywyrm/camazotz/blob/main/docs/adr/0001-five-transport-taxonomy.md) (transports A–E)
 - Camazotz `/api/lanes` schema v1 ([babywyrm/camazotz PR shipping 2026-04-26](https://github.com/babywyrm/camazotz))
 - Companion spec: `nullfield/docs/specs/2026-04-26-per-lane-policy-templates.md`
 
@@ -42,7 +45,9 @@ Three concrete deliverables:
 - **Lane IDs and transport codes must match camazotz.** Source of truth is
   `camazotz/frontend/lane_taxonomy.py::LANES` and the schema v1 endpoint
   at `GET /api/lanes`. Valid lane IDs: `1..5`. Valid transports: `A`, `B`,
-  `C`. Do not invent new ones in this repo.
+  `C`, `D`, `E` per [ADR 0001 — Five-Transport Taxonomy](https://github.com/babywyrm/camazotz/blob/main/docs/adr/0001-five-transport-taxonomy.md)
+  (D = subprocess / native binary, E = native LLM function-calling).
+  Do not invent new ones in this repo.
 - **Backwards compatibility.** Existing consumers of the JSON report must
   not break when `lane` and `transport` fields appear as nullable additions
   to each finding.
@@ -288,3 +293,41 @@ Three repos, one vocabulary, one feedback loop.
 - Auto-submitting coverage reports to a central agentic-sec registry.
 - Historical trend reporting (scan N vs scan N-1 per lane).
 - Per-lane baseline storage (baselines today are scan-wide, not lane-scoped).
+
+---
+
+## Implementation notes (2026-05-01)
+
+Captured after the work shipped in mcpnuke 6.7.0. Listing only deltas
+from the spec body; everything not mentioned here landed as written.
+
+- **Transport vocabulary widened to A–E.** Spec was authored against the
+  three-code A/B/C taxonomy. While `--by-lane` was in flight, ADR 0001
+  extended the transport axis to A–E (adding D = subprocess and
+  E = native LLM function-calling). The Constraints section above has
+  been updated. mcpnuke's check emissions today predominantly tag
+  Transport A (MCP JSON-RPC) since that is the wire mcpnuke speaks;
+  D / E surface mainly through `--coverage-report` against camazotz
+  targets that exercise those transports.
+- **JWT boundary checks landed in the same release.** Two MCP-T04 checks
+  (`check_jwt_audience_target_match`, `check_jwt_cross_role_replay`) were
+  not part of this spec but shipped together with `--by-lane` because
+  they were the first concrete, lane-tagged Lane 1 / Transport A checks
+  available to validate the per-lane reporting against. Lane 1 went from
+  zero findings to two on the live NUC scan with a forged read-only
+  token.
+- **`--coverage-report` exit code semantics.** Confirmed diagnostic-only
+  per the README "Exit Code" table: `0` clean, `1` findings, `2` scanner
+  error. Schema mismatch (`SchemaMismatchError`) and HTTP failures from
+  camazotz are printed in red but do not change the exit code or abort
+  the scan. This matches the spec's "fail loudly with guidance" intent
+  while staying composable with CI gates that key off finding severity.
+- **Live verification.** Against the NUC reference deployment with a
+  forged read-only JWT, `--coverage-report` reported 5/5 lanes covered,
+  168 findings, score 1380. Lane 1 was the lane the new JWT checks
+  promoted from "uncovered" to "covered with HIGH findings."
+- **`--generate-policy` is independent of this spec.** It already
+  existed before the by-lane work and is documented in the README CLI
+  Reference; calling it out here only because it sometimes ships in the
+  same release notes as `--by-lane` and could be confused for new
+  surface introduced by this spec.
