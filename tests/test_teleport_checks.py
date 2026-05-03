@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+from unittest.mock import patch
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.teleport import (
@@ -68,8 +69,9 @@ class TestTeleportProxyDiscovery:
             server.shutdown()
 
     def test_no_findings_on_unreachable(self):
-        result = TargetResult(url="http://127.0.0.1:1")
-        check_teleport_proxy_discovery("http://127.0.0.1:1", result)
+        with patch("mcpnuke.checks.teleport._probe_url", return_value=None):
+            result = TargetResult(url="http://127.0.0.1:1")
+            check_teleport_proxy_discovery("http://127.0.0.1:1", result)
         assert len(result.findings) == 0
 
     def test_no_crash_on_empty_base(self):
