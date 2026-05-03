@@ -11,7 +11,7 @@ from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 def _build_target_dict(r: TargetResult) -> dict:
     tools_total = r.tools_total if r.tools_total > 0 else len(r.tools)
     tools_scanned = len(r.tools)
-    return {
+    d = {
         "url": r.url,
         "transport": r.transport,
         "risk_score": r.risk_score(),
@@ -44,6 +44,21 @@ def _build_target_dict(r: TargetResult) -> dict:
             for c in r.attack_chains
         ],
     }
+    if r.scan_diff is not None:
+        diff = r.scan_diff
+        d["diff"] = {
+            "new": [
+                {"check": f.check, "severity": f.severity, "title": f.title}
+                for f in diff.new_findings
+            ],
+            "resolved": [
+                {"check": f.check, "severity": f.severity, "title": f.title}
+                for f in diff.resolved_findings
+            ],
+            "severity_changes": diff.severity_changes,
+            "unchanged_count": diff.unchanged_count,
+        }
+    return d
 
 
 def write_json(results: list[TargetResult], path: str, console=None):

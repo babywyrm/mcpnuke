@@ -361,6 +361,14 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "with affected-tool lists and counts.",
     )
     p.add_argument(
+        "--diff-baseline",
+        metavar="FILE",
+        default=None,
+        help="Path to a previous mcpnuke JSON output to diff against. "
+             "The scan result will include a 'diff' block showing new, "
+             "resolved, and severity-changed findings.",
+    )
+    p.add_argument(
         "--probe-workers",
         type=int,
         default=1,

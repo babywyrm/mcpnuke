@@ -638,6 +638,24 @@ def _main_inner() -> None:
     if args.json_out:
         write_json(results, args.json_out, console=console)
 
+    if getattr(args, "diff_baseline", None):
+        from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal
+        if args.json_out:
+            try:
+                diff = compare_json_files(args.diff_baseline, args.json_out)
+                for result in results:
+                    result.scan_diff = diff
+                console.print("\n[bold cyan]── Diff vs baseline ──[/bold cyan]")
+                console.print(format_diff_terminal(diff))
+                # Re-write JSON with diff block attached
+                write_json(results, args.json_out, console=None)
+            except FileNotFoundError as exc:
+                console.print(f"[yellow]--diff-baseline: {exc}[/yellow]")
+        else:
+            console.print(
+                "[yellow]--diff-baseline requires --json to write current scan results first.[/yellow]"
+            )
+
     if getattr(args, "policy_out", None):
         from pathlib import Path as _PolicyPath
         from mcpnuke.policy import generate_policy, serialize_policy
