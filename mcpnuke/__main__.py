@@ -159,7 +159,56 @@ def _run_doctor(console: Console) -> None:
         console.print("  [dim]Fix warnings above for full functionality.[/dim]\n")
 
 
+def _run_diff_subcommand(argv: list[str]) -> None:
+    """Handle: mcpnuke diff <before.json> <after.json>"""
+    import argparse as _argparse
+    from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal
+
+    p = _argparse.ArgumentParser(
+        prog="mcpnuke diff",
+        description="Compare two mcpnuke JSON scan outputs and show what changed.",
+    )
+    p.add_argument("before", help="Path to the baseline (older) scan JSON")
+    p.add_argument("after", help="Path to the new scan JSON")
+    p.add_argument("--json", metavar="FILE", help="Write diff summary as JSON to FILE")
+    args = p.parse_args(argv)
+
+    try:
+        diff = compare_json_files(args.before, args.after)
+    except FileNotFoundError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    print(format_diff_terminal(diff))
+
+    if args.json:
+        import json as _json
+        from pathlib import Path as _Path
+        summary = {
+            "new": [
+                {"check": f.check, "severity": f.severity, "title": f.title}
+                for f in diff.new_findings
+            ],
+            "resolved": [
+                {"check": f.check, "severity": f.severity, "title": f.title}
+                for f in diff.resolved_findings
+            ],
+            "severity_changes": diff.severity_changes,
+            "unchanged_count": diff.unchanged_count,
+        }
+        _Path(args.json).write_text(_json.dumps(summary, indent=2))
+        print(f"\nDiff JSON written to {args.json}")
+
+    if diff.new_findings:
+        sys.exit(1)
+
+
 def _main_inner() -> None:
+    # Handle `mcpnuke diff a.json b.json` before full arg parse
+    if len(sys.argv) >= 2 and sys.argv[1] == "diff":
+        _run_diff_subcommand(sys.argv[2:])
+        return
+
     args = parse_args()
     console = Console(no_color=args.no_color, force_terminal=not args.no_color)
     from mcpnuke.core.llm import configure_bedrock

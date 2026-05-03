@@ -1,158 +1,142 @@
-"""Tests for differential scanning."""
+"""Tests for the scan diff engine."""
 
 import json
-import tempfile
-from pathlib import Path
-
 import pytest
-
-from mcpnuke.core.models import TargetResult
-from mcpnuke.diff import (
-    diff_against_baseline,
-    load_baseline,
-    save_baseline,
-    DiffResult,
+from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.reporting.diff import (
+    ScanDiffResult,
+    compare_scans,
+    compare_json_files,
+    format_diff_terminal,
 )
 
 
-def test_diff_no_changes():
-    """Identical baseline and current should yield no changes."""
-    tools = [{"name": "read_file", "description": "Read a file", "inputSchema": {}}]
-    resources = [{"uri": "file:///a", "name": "a"}]
-    prompts = [{"name": "greet", "description": "Say hello"}]
-
-    diff = diff_against_baseline(
-        tools, resources, prompts,
-        tools, resources, prompts,
-        url="http://localhost:9001",
-    )
-    assert not diff.has_changes()
-    assert len(diff.added_tools) == 0
-    assert len(diff.removed_tools) == 0
-    assert len(diff.modified_tools) == 0
+def _finding(title: str, check: str = "auth", severity: str = "HIGH") -> Finding:
+    return Finding(target="http://t", check=check, severity=severity, title=title)
 
 
-def test_diff_added_tool():
-    """New tool in current should be in added_tools."""
-    base_tools = [{"name": "a", "description": "A", "inputSchema": {}}]
-    curr_tools = [
-        {"name": "a", "description": "A", "inputSchema": {}},
-        {"name": "run_shell", "description": "Execute shell", "inputSchema": {}},
-    ]
-
-    diff = diff_against_baseline(
-        curr_tools, [], [],
-        base_tools, [], [],
-        url="http://localhost:9001",
-    )
-    assert diff.has_changes()
-    assert len(diff.added_tools) == 1
-    assert diff.added_tools[0]["name"] == "run_shell"
+def _result(findings: list[Finding], url: str = "http://localhost:8080/mcp") -> TargetResult:
+    r = TargetResult(url=url)
+    r.findings = findings
+    return r
 
 
-def test_diff_removed_tool():
-    """Removed tool in current should be in removed_tools."""
-    base_tools = [
-        {"name": "a", "description": "A", "inputSchema": {}},
-        {"name": "b", "description": "B", "inputSchema": {}},
-    ]
-    curr_tools = [{"name": "a", "description": "A", "inputSchema": {}}]
+class TestCompareScansDiff:
+    def test_empty_vs_empty_is_clean(self):
+        diff = compare_scans(_result([]), _result([]))
+        assert diff.new_findings == []
+        assert diff.resolved_findings == []
+        assert diff.unchanged_count == 0
 
-    diff = diff_against_baseline(
-        curr_tools, [], [],
-        base_tools, [], [],
-        url="http://localhost:9001",
-    )
-    assert diff.has_changes()
-    assert len(diff.removed_tools) == 1
-    assert diff.removed_tools[0]["name"] == "b"
+    def test_new_finding_detected(self):
+        before = _result([])
+        after = _result([_finding("SQLi in param")])
+        diff = compare_scans(before, after)
+        assert len(diff.new_findings) == 1
+        assert diff.new_findings[0].title == "SQLi in param"
+        assert diff.resolved_findings == []
 
+    def test_resolved_finding_detected(self):
+        before = _result([_finding("SQLi in param")])
+        after = _result([])
+        diff = compare_scans(before, after)
+        assert diff.new_findings == []
+        assert len(diff.resolved_findings) == 1
+        assert diff.resolved_findings[0].title == "SQLi in param"
 
-def test_diff_modified_tool():
-    """Changed tool description should be in modified_tools."""
-    base_tools = [{"name": "x", "description": "Old", "inputSchema": {}}]
-    curr_tools = [{"name": "x", "description": "New", "inputSchema": {}}]
+    def test_unchanged_count_tracked(self):
+        f = _finding("SSRF risk")
+        before = _result([f, _finding("Other")])
+        after = _result([f])
+        diff = compare_scans(before, after)
+        assert diff.unchanged_count == 1
 
-    diff = diff_against_baseline(
-        curr_tools, [], [],
-        base_tools, [], [],
-        url="http://localhost:9001",
-    )
-    assert diff.has_changes()
-    assert len(diff.modified_tools) == 1
-    assert diff.modified_tools[0][0]["description"] == "Old"
-    assert diff.modified_tools[0][1]["description"] == "New"
+    def test_matching_uses_check_and_title(self):
+        f1 = _finding("A", check="auth")
+        f2 = _finding("A", check="injection")
+        before = _result([f1])
+        after = _result([f2])
+        diff = compare_scans(before, after)
+        assert len(diff.new_findings) == 1
+        assert len(diff.resolved_findings) == 1
 
-
-def test_diff_added_resource():
-    """New resource in current should be in added_resources."""
-    base_res = [{"uri": "file:///a"}]
-    curr_res = [{"uri": "file:///a"}, {"uri": "file:///etc/passwd"}]
-
-    diff = diff_against_baseline(
-        [], curr_res, [],
-        [], base_res, [],
-        url="http://localhost:9001",
-    )
-    assert diff.has_changes()
-    assert len(diff.added_resources) == 1
-    assert diff.added_resources[0]["uri"] == "file:///etc/passwd"
-
-
-def test_diff_removed_prompt():
-    """Removed prompt should be in removed_prompts."""
-    base_prompts = [{"name": "p1"}, {"name": "p2"}]
-    curr_prompts = [{"name": "p1"}]
-
-    diff = diff_against_baseline(
-        [], [], curr_prompts,
-        [], [], base_prompts,
-        url="http://localhost:9001",
-    )
-    assert diff.has_changes()
-    assert len(diff.removed_prompts) == 1
-    assert diff.removed_prompts[0]["name"] == "p2"
+    def test_severity_change_reported_as_changed(self):
+        before = _result([_finding("Sec", severity="HIGH")])
+        after = _result([_finding("Sec", severity="CRITICAL")])
+        diff = compare_scans(before, after)
+        assert len(diff.severity_changes) == 1
+        change = diff.severity_changes[0]
+        assert change["before"] == "HIGH"
+        assert change["after"] == "CRITICAL"
 
 
-def test_save_and_load_baseline():
-    """Save baseline and load it back."""
-    r = TargetResult(url="http://localhost:9001/sse")
-    r.tools = [{"name": "t1", "description": "D", "inputSchema": {}}]
-    r.resources = [{"uri": "file:///x"}]
-    r.prompts = [{"name": "p1"}]
+class TestCompareJsonFiles:
+    def _write_scan(self, tmp_path, findings: list[dict], fname: str = "scan.json") -> str:
+        data = {
+            "targets": [
+                {
+                    "url": "http://localhost:8080/mcp",
+                    "transport": "http",
+                    "risk_score": 10,
+                    "auth_context": {},
+                    "tools_total": 0,
+                    "tools_scanned": 0,
+                    "tools_scanned_names": [],
+                    "tools_unscanned_count": 0,
+                    "timings": {},
+                    "findings": findings,
+                    "attack_chains": [],
+                }
+            ]
+        }
+        path = tmp_path / fname
+        path.write_text(json.dumps(data))
+        return str(path)
 
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
-        path = Path(f.name)
-    try:
-        save_baseline([r], path)
-        data = json.loads(path.read_text())
-        assert data.get("baseline") is True
-        assert "targets" in data
-        assert r.url in data["targets"]
-        t = data["targets"][r.url]
-        assert len(t["tools"]) == 1
-        assert t["tools"][0]["name"] == "t1"
-        assert len(t["resources"]) == 1
-        assert len(t["prompts"]) == 1
+    def test_compare_two_json_files(self, tmp_path):
+        before_path = self._write_scan(tmp_path, [], "before.json")
+        after_path = self._write_scan(tmp_path, [
+            {"check": "auth", "severity": "HIGH", "title": "New finding",
+             "detail": "", "evidence": "", "lane": None, "transport": None,
+             "taxonomy_id": "", "mitre_id": ""}
+        ], "after.json")
+        diff = compare_json_files(before_path, after_path)
+        assert len(diff.new_findings) == 1
 
-        loaded = load_baseline(path)
-        assert r.url in loaded
-        assert loaded[r.url]["tools"][0]["name"] == "t1"
-    finally:
-        path.unlink()
+    def test_missing_file_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            compare_json_files("/nonexistent/a.json", "/nonexistent/b.json")
 
 
-def test_load_baseline_nonexistent():
-    """Nonexistent baseline returns empty dict."""
-    loaded = load_baseline(Path("/nonexistent/baseline.json"))
-    assert loaded == {}
+class TestFormatDiffTerminal:
+    def test_format_no_changes(self):
+        diff = ScanDiffResult(
+            new_findings=[],
+            resolved_findings=[],
+            severity_changes=[],
+            unchanged_count=5,
+        )
+        text = format_diff_terminal(diff)
+        assert "5" in text
+        assert "unchanged" in text.lower() or "no new" in text.lower()
 
+    def test_format_new_findings_listed(self):
+        diff = ScanDiffResult(
+            new_findings=[_finding("SSRF via webhook", severity="CRITICAL")],
+            resolved_findings=[],
+            severity_changes=[],
+            unchanged_count=0,
+        )
+        text = format_diff_terminal(diff)
+        assert "SSRF via webhook" in text
+        assert "CRITICAL" in text
 
-def test_print_diff_report_no_crash():
-    """print_diff_report should not crash."""
-    from mcpnuke.diff import print_diff_report
-    from rich.console import Console
-
-    diff = DiffResult(url="http://localhost:9001")
-    diff.added_tools = [{"name": "new_tool"}]
-    print_diff_report([diff], "baseline.json", console=Console())
+    def test_format_resolved_findings_listed(self):
+        diff = ScanDiffResult(
+            new_findings=[],
+            resolved_findings=[_finding("Old vuln")],
+            severity_changes=[],
+            unchanged_count=1,
+        )
+        text = format_diff_terminal(diff)
+        assert "Old vuln" in text
