@@ -169,6 +169,7 @@ def run_all_checks(
     opts = probe_opts or {}
     no_invoke = opts.get("no_invoke", False)
     fast_mode = opts.get("fast", False)
+    coverage_n: int = opts.get("coverage_n", 0)
     probe_workers = opts.get("probe_workers", 1)
     deterministic_mode = opts.get("deterministic", False)
     _log = log or (lambda msg: None)
@@ -182,13 +183,19 @@ def run_all_checks(
             key=lambda tool: str(tool.get("name", "")),
         )
 
-    # In fast mode: cap tools to top 5 security-relevant, force probe_workers=2 max
-    if fast_mode:
+    # Coverage sampling: --fast is alias for --coverage 5; --coverage N overrides.
+    effective_coverage = 5 if fast_mode else coverage_n
+    if effective_coverage:
         _original_tools = result.tools
-        result.tools = _pick_security_relevant(result.tools, 5)
+        result.tools_total = len(_original_tools)
+        result.tools = _pick_security_relevant(result.tools, effective_coverage)
         if verbose:
-            _log(f"  [yellow]--fast: sampled {len(result.tools)}/{len(_original_tools)} security-relevant tools[/yellow]")
-        probe_workers = min(probe_workers or 2, 2)
+            label = "--fast" if fast_mode else f"--coverage {effective_coverage}"
+            _log(f"  [yellow]{label}: sampled {len(result.tools)}/{len(_original_tools)} security-relevant tools[/yellow]")
+        if fast_mode:
+            probe_workers = min(probe_workers or 2, 2)
+    else:
+        result.tools_total = len(result.tools)
 
     if verbose:
         _emit_duration_estimate(
@@ -366,11 +373,17 @@ def run_all_checks(
 
 
 def _pick_security_relevant(tools: list[dict], n: int) -> list[dict]:
-    """Select the top N most security-relevant tools for fast-mode scanning."""
+    """Select the top N most security-relevant tools for coverage-limited scanning.
+
+    n=0 means return all tools (full coverage, sorted by security relevance).
+    n>len(tools) returns all tools sorted by security relevance.
+    """
     ranked = sorted(
         tools,
         key=lambda tool: (-_tool_security_score(tool), str(tool.get("name", ""))),
     )
+    if n == 0 or n >= len(tools):
+        return ranked
     return ranked[:n]
 
 

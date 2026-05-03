@@ -13,6 +13,14 @@ AUTH_TOKEN_ENV = "MCP_AUTH_TOKEN"
 PUBLIC_TARGETS_FILE = Path(__file__).parent / "data" / "public_targets.txt"
 
 
+def _positive_int_or_zero(v: str) -> int:
+    """argparse type: accept non-negative int, reject negatives."""
+    val = int(v)
+    if val < 0:
+        raise argparse.ArgumentTypeError(f"--coverage must be >= 0, got {val}")
+    return val
+
+
 def expand_port_range(spec: str) -> list[str]:
     m = re.match(r"^(.+):(\d+)-(\d+)$", spec)
     if not m:
@@ -335,7 +343,16 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Fast scan: sample top 5 security-relevant tools, skip heavy "
         "probes (input_sanitization, error_leakage, temporal_consistency, "
         "ssrf_probe), cap probe workers at 2. Cuts LLM-backed scan time "
-        "from ~30min to ~2min.",
+        "from ~30min to ~2min. Alias for --coverage 5.",
+    )
+    p.add_argument(
+        "--coverage",
+        type=lambda v: _positive_int_or_zero(v),
+        default=None,
+        metavar="N",
+        help="Sample the top N most security-relevant tools (by keyword risk "
+             "score). 0 = scan all tools. --fast is an alias for --coverage 5. "
+             "Example: --coverage 20 scans ~20%% of a 100-tool server in fast-mode time.",
     )
     p.add_argument(
         "--group-findings",

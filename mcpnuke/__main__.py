@@ -238,6 +238,7 @@ def _main_inner() -> None:
             "claude_max_tools": args.claude_max_tools,
             "claude_phase2_workers": effective_phase2_workers,
             "fast": args.fast,
+            "coverage_n": getattr(args, "coverage", None) or 0,
             "probe_workers": effective_probe_workers,
             "deterministic": deterministic_mode,
             "tls_verify": args.tls_verify,
@@ -417,6 +418,7 @@ def _main_inner() -> None:
         "claude_max_tools": args.claude_max_tools,
         "claude_phase2_workers": effective_phase2_workers,
         "fast": args.fast,
+        "coverage_n": getattr(args, "coverage", None) or 0,
         "probe_workers": effective_probe_workers,
         "deterministic": deterministic_mode,
         "tls_verify": args.tls_verify,
@@ -430,6 +432,8 @@ def _main_inner() -> None:
         console.print("  [yellow]--safe-mode: skipping dangerous tool invocations[/yellow]")
     if args.fast:
         console.print("  [yellow]--fast: sampling top 5 tools, skipping heavy probes[/yellow]")
+    elif getattr(args, "coverage", None):
+        console.print(f"  [yellow]--coverage {args.coverage}: sampling top {args.coverage} security-relevant tools[/yellow]")
     if deterministic_mode:
         console.print("  [yellow]--deterministic: stable ordering, single-threaded probes/AI phase2[/yellow]")
     if args.tls_verify:
