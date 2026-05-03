@@ -21,6 +21,8 @@ class Finding:
     # mcpnuke/docs/specs/2026-04-26-by-lane-reporting.md
     lane: int | None = None
     transport: str | None = None
+    taxonomy_id: str = ""
+    mitre_id: str = ""
 
 
 @dataclass
@@ -43,6 +45,8 @@ class TargetResult:
     attack_chains: list[AttackChain] = field(default_factory=list)
     timings: dict[str, float] = field(default_factory=dict)
     error: str = ""
+    tools_total: int = 0
+    scan_diff: object | None = None
 
     def add(
         self,

@@ -9,12 +9,17 @@ from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 
 
 def _build_target_dict(r: TargetResult) -> dict:
+    tools_total = r.tools_total if r.tools_total > 0 else len(r.tools)
+    tools_scanned = len(r.tools)
     return {
         "url": r.url,
         "transport": r.transport,
         "risk_score": r.risk_score(),
         "auth_context": r.auth_context,
-        "tools": [t.get("name") for t in r.tools],
+        "tools_total": tools_total,
+        "tools_scanned": tools_scanned,
+        "tools_scanned_names": [t.get("name") for t in r.tools],
+        "tools_unscanned_count": max(0, tools_total - tools_scanned),
         "timings": r.timings,
         "findings": [
             {
@@ -25,6 +30,8 @@ def _build_target_dict(r: TargetResult) -> dict:
                 "evidence": f.evidence,
                 "lane": f.lane,
                 "transport": f.transport,
+                "taxonomy_id": getattr(f, "taxonomy_id", ""),
+                "mitre_id": getattr(f, "mitre_id", ""),
             }
             for f in r.findings
         ],

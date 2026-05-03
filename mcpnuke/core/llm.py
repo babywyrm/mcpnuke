@@ -2,6 +2,7 @@
 
 import json
 import os
+import re as _re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -13,6 +14,32 @@ _bedrock_config: dict[str, Any] = {
     "profile": None,
     "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
 }
+
+_MCP_TAXONOMY_RE = _re.compile(r'\[MCP-T(\d+)\]')
+_MITRE_RE = _re.compile(r'\[T(\d{4})\]')
+
+
+def _extract_taxonomy(title: str, raw_taxonomy: str, raw_mitre: str = "") -> tuple[str, str]:
+    """Return (taxonomy_id, mitre_id).
+
+    Prefers structured field values; falls back to parsing [MCP-Txx]/[Txxx]
+    from title text when the field is absent, empty, or the literal 'None'.
+    """
+    def _clean(v: str) -> str:
+        return "" if (not v or v == "None") else v
+
+    mcp_id = _clean(raw_taxonomy)
+    mitre_id = _clean(raw_mitre)
+
+    if not mcp_id:
+        m = _MCP_TAXONOMY_RE.search(title)
+        if m:
+            mcp_id = f"MCP-T{m.group(1)}"
+    if not mitre_id:
+        m = _MITRE_RE.search(title)
+        if m:
+            mitre_id = f"T{m.group(1)}"
+    return mcp_id, mitre_id
 
 
 def _get_client():
@@ -51,6 +78,7 @@ class LLMFinding:
     title: str
     detail: str
     taxonomy_id: str = ""
+    mitre_id: str = ""
 
 
 def _call_claude(system: str, user_content: str, model: str, max_tokens: int, log=None):
@@ -312,15 +340,23 @@ def _parse_findings(text: str) -> list[LLMFinding]:
         items = json.loads(text)
         if not isinstance(items, list):
             return []
-        return [
-            LLMFinding(
-                severity=item.get("severity", "MEDIUM"),
-                title=item.get("title", "LLM finding"),
-                detail=item.get("detail", ""),
-                taxonomy_id=item.get("taxonomy_id") or "",
+        results = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            title = item.get("title", "LLM finding")
+            tax_id, mitre_id = _extract_taxonomy(
+                title,
+                item.get("taxonomy_id") or "",
+                item.get("mitre_id") or "",
             )
-            for item in items
-            if isinstance(item, dict)
-        ]
+            results.append(LLMFinding(
+                severity=item.get("severity", "MEDIUM"),
+                title=title,
+                detail=item.get("detail", ""),
+                taxonomy_id=tax_id,
+                mitre_id=mitre_id,
+            ))
+        return results
     except json.JSONDecodeError:
         return []

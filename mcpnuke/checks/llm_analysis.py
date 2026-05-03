@@ -160,12 +160,15 @@ def run_llm_analysis(
             llm_findings = backend.analyze_tools(result.tools, model=model, log=_log)
             for f in llm_findings:
                 tax = f" [{f.taxonomy_id}]" if f.taxonomy_id else ""
-                result.add(
+                finding = result.add(
                     "llm_tool_analysis",
                     f.severity,
                     f"[AI]{tax} {f.title}",
                     f.detail,
                 )
+                if finding:
+                    finding.taxonomy_id = f.taxonomy_id
+                    finding.mitre_id = getattr(f, "mitre_id", "")
             _log(f"  [green]  Phase 1 complete: {len(llm_findings)} finding(s)[/green]")
         except KeyboardInterrupt:
             _log(f"  [yellow]  Phase 1 interrupted[/yellow]")
@@ -238,12 +241,15 @@ def run_llm_analysis(
                 for output in outputs:
                     for f in output.findings:
                         tax = f" [{f.taxonomy_id}]" if f.taxonomy_id else ""
-                        result.add(
+                        finding = result.add(
                             "llm_response_analysis",
                             f.severity,
                             f"[AI]{tax} {f.title} (tool '{output.tool_name}')",
                             f.detail,
                         )
+                        if finding:
+                            finding.taxonomy_id = f.taxonomy_id
+                            finding.mitre_id = getattr(f, "mitre_id", "")
                         response_findings += 1
                 _log(f"  [green]  Phase 2 complete: {response_findings} finding(s) in tool responses[/green]")
             except KeyboardInterrupt:
@@ -266,12 +272,15 @@ def run_llm_analysis(
             chain_findings = backend.analyze_findings(result.tools, existing, model=model, log=_log)
             for f in chain_findings:
                 tax = f" [{f.taxonomy_id}]" if f.taxonomy_id else ""
-                result.add(
+                finding = result.add(
                     "llm_chain_reasoning",
                     f.severity,
                     f"[AI]{tax} {f.title}",
                     f.detail,
                 )
+                if finding:
+                    finding.taxonomy_id = f.taxonomy_id
+                    finding.mitre_id = getattr(f, "mitre_id", "")
             _log(f"  [green]  Phase 3 complete: {len(chain_findings)} chain(s)/insight(s)[/green]")
         except KeyboardInterrupt:
             _log(f"  [yellow]  Phase 3 interrupted[/yellow]")
