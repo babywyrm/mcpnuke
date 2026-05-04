@@ -17,6 +17,7 @@ import time
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
+from mcpnuke.core.llm import _call_claude
 from mcpnuke.patterns.probes import (
     CANARY,
     SAFE_DEFAULTS,
@@ -258,6 +259,70 @@ def _is_stdio(session) -> bool:
     return hasattr(session, "_proc")
 
 
+def _call_claude_for_args(tool: dict, model: str = "claude-3-5-sonnet-20241022") -> dict | None:
+    """Ask Claude to generate semantically interesting args for a tool.
+
+    Returns a dict of parameter name → value, or None on failure.  The caller
+    should fall back to _build_extended_args() on None.
+    """
+    import json as _json
+
+    schema = tool.get("inputSchema", {})
+    props = schema.get("properties", {})
+    if not props:
+        return None
+
+    system = (
+        "You are a security researcher generating test inputs for MCP tool fuzzing. "
+        "Return ONLY a valid JSON object mapping parameter names to values. "
+        "Choose values that are likely to trigger security issues: "
+        "path traversal for file paths, SSRF for URLs, SQL injection for queries, "
+        "prompt injection for text fields, privilege escalation for identity fields. "
+        "Values should be realistic but clearly adversarial test inputs, not harmful production data."
+    )
+    user = (
+        f"Tool name: {tool.get('name', 'unknown')}\n"
+        f"Description: {tool.get('description', 'no description')}\n"
+        f"Parameters: {_json.dumps(props, indent=2)}\n"
+        f"Required: {schema.get('required', [])}\n\n"
+        "Return a single JSON object with all parameter names as keys and adversarial test values."
+    )
+
+    try:
+        response = _call_claude(system, user, model=model, max_tokens=512)
+        if not response:
+            return None
+        # Strip markdown fences
+        text = response.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1].rsplit("```", 1)[0]
+        parsed = _json.loads(text)
+        if not isinstance(parsed, dict):
+            return None
+        return parsed
+    except Exception:
+        return None
+
+
+def _generate_claude_args(tool: dict, session, model: str = "claude-3-5-sonnet-20241022") -> dict:
+    """Tier 2 argument generation: Claude-assisted, with _build_extended_args fallback.
+
+    Calls _call_claude_for_args and merges result with extended_args baseline so
+    required params are always populated even if Claude omits them.
+    """
+    base = _build_extended_args(tool)
+    try:
+        claude_result = _call_claude_for_args(tool, model=model)
+    except Exception:
+        return base
+    if not claude_result:
+        return base
+    # Merge: Claude values override base, but base ensures required fields present
+    merged = dict(base)
+    merged.update(claude_result)
+    return merged
+
+
 def _call_tool(session, name: str, args: dict, timeout: float = 10.0, retries: int = 2) -> dict | None:
     """Call a tool via tools/call with adaptive backoff and jitter.
 
@@ -411,10 +476,15 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
                 continue
             name = tool.get("name", "")
             _log(f"    [dim]    [{idx+1}/{len(invokable)}] {name}[/dim]")
-            # Tier 1: use extended args (fills optional params with probe values)
-            # unless safe_mode is active, in which case minimal required-only args.
+            # Arg generation tiers:
+            # safe_mode → Tier 0: required-only (minimal footprint)
+            # --claude  → Tier 2: Claude generates semantically adversarial args
+            # default   → Tier 1: heuristic extended args
             if opts.get("safe_mode"):
                 args = _build_safe_args(tool)
+            elif opts.get("claude"):
+                claude_model = opts.get("claude_model", "claude-3-5-sonnet-20241022")
+                args = _generate_claude_args(tool, session, model=claude_model)
             else:
                 args = _build_extended_args(tool)
 
