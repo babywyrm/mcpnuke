@@ -369,6 +369,14 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
              "resolved, and severity-changed findings.",
     )
     p.add_argument(
+        "--profile",
+        metavar="FILE",
+        default=None,
+        help="Path to a target profile JSON (maps tool names to lane, transport, "
+             "threat ID, and notes). Enriches AI prompts and finding attribution. "
+             "Bundled profiles: profiles/camazotz.json, profiles/dvmcp.json.",
+    )
+    p.add_argument(
         "--probe-workers",
         type=int,
         default=1,
