@@ -259,7 +259,7 @@ def _is_stdio(session) -> bool:
     return hasattr(session, "_proc")
 
 
-def _call_claude_for_args(tool: dict, model: str = "claude-3-5-sonnet-20241022") -> dict | None:
+def _call_claude_for_args(tool: dict, model: str = "claude-sonnet-4-20250514") -> dict | None:
     """Ask Claude to generate semantically interesting args for a tool.
 
     Returns a dict of parameter name → value, or None on failure.  The caller
@@ -304,7 +304,7 @@ def _call_claude_for_args(tool: dict, model: str = "claude-3-5-sonnet-20241022")
         return None
 
 
-def _generate_claude_args(tool: dict, session, model: str = "claude-3-5-sonnet-20241022") -> dict:
+def _generate_claude_args(tool: dict, session, model: str = "claude-sonnet-4-20250514") -> dict:
     """Tier 2 argument generation: Claude-assisted, with _build_extended_args fallback.
 
     Calls _call_claude_for_args and merges result with extended_args baseline so
@@ -483,7 +483,7 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
             if opts.get("safe_mode"):
                 args = _build_safe_args(tool)
             elif opts.get("claude"):
-                claude_model = opts.get("claude_model", "claude-3-5-sonnet-20241022")
+                claude_model = opts.get("claude_model", "claude-sonnet-4-20250514")
                 args = _generate_claude_args(tool, session, model=claude_model)
             else:
                 args = _build_extended_args(tool)
