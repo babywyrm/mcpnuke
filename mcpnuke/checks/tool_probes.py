@@ -161,6 +161,96 @@ def _build_safe_args(tool: dict) -> dict:
     return args
 
 
+def _build_extended_args(tool: dict) -> dict:
+    """Generate arguments including optional params filled with heuristic probe values.
+
+    Tier 1 of Phase 2 smart invocation: extends _build_safe_args to also fill in
+    optional parameters, using context-aware probe values.  Optional path params
+    get a traversal probe; optional URL params get a loopback SSRF probe.  All
+    other optional params get the same name-aware heuristics used for required ones.
+
+    This gives Phase 2 real coverage over optional attack surfaces that the minimal
+    _build_safe_args leaves untouched.
+    """
+    schema = tool.get("inputSchema", {})
+    props = schema.get("properties", {})
+    if not props:
+        return {}
+
+    required = set(schema.get("required", []))
+
+    # Start with required-param values from _build_safe_args
+    args = _build_safe_args(tool)
+
+    for pname, pdef in props.items():
+        if pname in required:
+            continue  # already handled
+
+        if "enum" in pdef:
+            args[pname] = pdef["enum"][0]
+            continue
+
+        ptype = pdef.get("type", "string")
+
+        if ptype in ("number", "integer"):
+            lo = pdef.get("minimum", pdef.get("exclusiveMinimum"))
+            hi = pdef.get("maximum", pdef.get("exclusiveMaximum"))
+            if lo is not None and hi is not None:
+                args[pname] = (int(lo) + int(hi)) // 2
+            elif lo is not None:
+                args[pname] = int(lo) + 1
+            elif hi is not None:
+                args[pname] = int(hi) - 1
+            else:
+                args[pname] = pdef.get("default", SAFE_DEFAULTS.get(ptype, 1))
+            continue
+
+        if ptype == "boolean":
+            args[pname] = pdef.get("default", False)
+            continue
+
+        if ptype == "array":
+            args[pname] = pdef.get("default", [])
+            continue
+
+        if ptype == "object":
+            args[pname] = pdef.get("default", {})
+            continue
+
+        # String: use security-interesting values for optional params
+        # path/file params: path traversal probe
+        if re.search(r"(path|file|dir|folder)", pname, re.IGNORECASE):
+            args[pname] = f"../../{CANARY}"
+            continue
+        # url/endpoint params: SSRF probe (internal loopback)
+        if re.search(r"(url|uri|endpoint|href|callback|webhook)", pname, re.IGNORECASE):
+            args[pname] = "http://169.254.169.254/latest/meta-data/"
+            continue
+        # command/exec params: benign echo
+        if re.search(r"(command|cmd|exec)", pname, re.IGNORECASE):
+            args[pname] = "echo probe"
+            continue
+
+        # General: name-aware safe value or pattern
+        matched = False
+        for pattern, value in PARAM_SAFE_VALUES:
+            if re.search(pattern, pname, re.IGNORECASE):
+                args[pname] = value
+                matched = True
+                break
+        if not matched:
+            desc = pdef.get("description", "")
+            for pattern, value in PARAM_SAFE_VALUES:
+                if re.search(pattern, desc, re.IGNORECASE):
+                    args[pname] = value
+                    matched = True
+                    break
+        if not matched:
+            args[pname] = pdef.get("default", SAFE_DEFAULTS.get(ptype, "test"))
+
+    return args
+
+
 _latency_tracker: dict[str, list[float]] = {}
 
 
@@ -321,7 +411,12 @@ def check_tool_response_injection(session, result: TargetResult, probe_opts: dic
                 continue
             name = tool.get("name", "")
             _log(f"    [dim]    [{idx+1}/{len(invokable)}] {name}[/dim]")
-            args = _build_safe_args(tool)
+            # Tier 1: use extended args (fills optional params with probe values)
+            # unless safe_mode is active, in which case minimal required-only args.
+            if opts.get("safe_mode"):
+                args = _build_safe_args(tool)
+            else:
+                args = _build_extended_args(tool)
 
             resp = _call_tool(session, name, args)
             text = _response_text(resp)
