@@ -24,6 +24,7 @@ htmlcov/
 
 *.json
 !mcpnuke/data/*.json
+!profiles/*.json
 
 .mypy_cache/
 .ruff_cache/

@@ -1,0 +1,25 @@
+{
+  "name": "dvmcp",
+  "version": "1",
+  "description": "DVMCP (Damn Vulnerable MCP) — intentionally-vulnerable MCP server for security research. Maps known DVMCP tool names to OWASP MCP threat taxonomy.",
+  "tools": [
+    {"name": "execute_command",        "lane": 3, "transport": "B", "threat_id": "MCP-T02", "notes": "Executes OS commands — primary RCE surface"},
+    {"name": "read_file",              "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Reads arbitrary files — path traversal / secret leakage"},
+    {"name": "write_file",             "lane": 3, "transport": "B", "threat_id": "MCP-T02", "notes": "Writes arbitrary files — persistence / config tamper"},
+    {"name": "list_directory",         "lane": 2, "transport": "A", "threat_id": "MCP-T06"},
+    {"name": "get_environment",        "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Returns environment variables — credential exposure"},
+    {"name": "http_request",           "lane": 3, "transport": "A", "threat_id": "MCP-T04", "notes": "Makes HTTP requests — SSRF / data exfiltration"},
+    {"name": "sql_query",              "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Executes SQL — injection and data exposure"},
+    {"name": "eval_code",              "lane": 3, "transport": "B", "threat_id": "MCP-T02", "notes": "Evaluates code strings — code injection"},
+    {"name": "get_secret",             "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Returns a named secret"},
+    {"name": "set_secret",             "lane": 2, "transport": "A", "threat_id": "MCP-T06"},
+    {"name": "impersonate_user",       "lane": 1, "transport": "A", "threat_id": "MCP-T01", "notes": "Impersonates another user — confused deputy"},
+    {"name": "delegate_to_agent",      "lane": 5, "transport": "A", "threat_id": "MCP-T05", "notes": "Delegates to another agent — unconstrained delegation"},
+    {"name": "inject_prompt",          "lane": 4, "transport": "C", "threat_id": "MCP-T03", "notes": "Injects content into LLM context — direct prompt injection"},
+    {"name": "register_webhook",       "lane": 3, "transport": "A", "threat_id": "MCP-T08", "notes": "Registers persistent outbound webhook"},
+    {"name": "audit_log",              "lane": 2, "transport": "A", "threat_id": "MCP-T09", "notes": "Audit log — inspect or clear events"},
+    {"name": "get_user_data",          "lane": 2, "transport": "A", "threat_id": "MCP-T11", "notes": "Returns user data — cross-tenant leak risk"},
+    {"name": "install_package",        "lane": 3, "transport": "B", "threat_id": "MCP-T07", "notes": "Installs packages — supply chain attack surface"},
+    {"name": "invoke_llm",             "lane": 3, "transport": "A", "threat_id": "MCP-T14", "notes": "Invokes LLM — amplification / cost exhaustion"}
+  ]
+}

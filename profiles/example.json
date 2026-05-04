@@ -1,0 +1,49 @@
+{
+  "name": "example",
+  "version": "1",
+  "description": "Annotated example profile — copy and adapt for your own MCP target. Delete or fill in each field as needed.",
+  "tools": [
+    {
+      "name": "create_ticket",
+      "lane": 2,
+      "transport": "A",
+      "threat_id": "MCP-T02",
+      "notes": "Creates support tickets. Potential confused deputy: acts on behalf of requesting user without re-auth."
+    },
+    {
+      "name": "read_customer_data",
+      "lane": 2,
+      "transport": "A",
+      "threat_id": "MCP-T11",
+      "notes": "Returns raw customer records. Cross-tenant isolation concern: verify tenant_id scoping."
+    },
+    {
+      "name": "send_email",
+      "lane": 3,
+      "transport": "A",
+      "threat_id": "MCP-T04",
+      "notes": "Sends email to arbitrary recipients — exfiltration channel."
+    },
+    {
+      "name": "run_report",
+      "lane": 3,
+      "transport": "B",
+      "threat_id": "MCP-T02",
+      "notes": "Executes reporting query. Check for SQL/command injection via report parameters."
+    },
+    {
+      "name": "summarize_documents",
+      "lane": 4,
+      "transport": "C",
+      "threat_id": "MCP-T03",
+      "notes": "LLM summary over fetched documents — indirect prompt injection via document content."
+    },
+    {
+      "name": "invoke_agent",
+      "lane": 5,
+      "transport": "A",
+      "threat_id": "MCP-T05",
+      "notes": "Delegates to a downstream agent. Check for unbounded delegation depth and scope expansion."
+    }
+  ]
+}

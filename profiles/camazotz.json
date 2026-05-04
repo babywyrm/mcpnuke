@@ -1,0 +1,114 @@
+{
+  "name": "camazotz",
+  "version": "1",
+  "description": "Camazotz intentionally-vulnerable MCP lab server. Maps all shipped lab tools to their identity lane and OWASP MCP threat taxonomy.",
+  "tools": [
+    {"name": "auth.issue_token",              "lane": 1, "transport": "A", "threat_id": "MCP-T01", "notes": "Issues JWT/bearer tokens — confused deputy pivot point"},
+    {"name": "auth.access_protected",         "lane": 1, "transport": "A", "threat_id": "MCP-T01", "notes": "Protected resource gated on bearer token"},
+    {"name": "auth.access_service_b",         "lane": 1, "transport": "A", "threat_id": "MCP-T01", "notes": "Cross-service call without re-auth"},
+
+    {"name": "relay.execute_with_context",    "lane": 2, "transport": "A", "threat_id": "MCP-T02", "notes": "Executes action with stored user context — confused deputy"},
+    {"name": "relay.store_context",           "lane": 2, "transport": "A", "threat_id": "MCP-T02", "notes": "Stores arbitrary context for later relay execution"},
+
+    {"name": "secrets.leak_config",           "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Returns raw env vars including secrets"},
+    {"name": "sdk.get_cached_token",          "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Returns cached credential from SDK layer"},
+    {"name": "sdk.write_cache",               "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Writes arbitrary data into credential cache"},
+    {"name": "sdk.invoke_as_cached",          "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Invokes downstream with cached (potentially stale) credential"},
+
+    {"name": "shadow.register_webhook",       "lane": 3, "transport": "A", "threat_id": "MCP-T08", "notes": "Registers persistent outbound webhook — shadow server / persistence"},
+    {"name": "shadow.list_webhooks",          "lane": 3, "transport": "A", "threat_id": "MCP-T08"},
+
+    {"name": "rag.add_document",              "lane": 4, "transport": "C", "threat_id": "MCP-T03", "notes": "Adds documents to RAG corpus — indirect injection entry point"},
+    {"name": "rag.query",                     "lane": 4, "transport": "C", "threat_id": "MCP-T03", "notes": "Queries RAG — returns potentially injected content"},
+    {"name": "rag.synthesize",                "lane": 4, "transport": "C", "threat_id": "MCP-T03", "notes": "LLM synthesis over retrieved docs — prompt injection risk"},
+    {"name": "rag.get_synthesis_log",         "lane": 4, "transport": "C", "threat_id": "MCP-T03"},
+
+    {"name": "context.injectable_summary",    "lane": 4, "transport": "C", "threat_id": "MCP-T03", "notes": "Returns a summary injectable into LLM context"},
+
+    {"name": "supply.install_package",        "lane": 3, "transport": "B", "threat_id": "MCP-T07", "notes": "Installs packages — supply chain manipulation"},
+
+    {"name": "delegation_chain_lab",          "lane": 5, "transport": "A", "threat_id": "MCP-T05", "notes": "Multi-hop delegation chain"},
+    {"name": "rbac.check_membership",         "lane": 5, "transport": "A", "threat_id": "MCP-T05"},
+    {"name": "rbac.list_agents",              "lane": 5, "transport": "A", "threat_id": "MCP-T05"},
+    {"name": "rbac.trigger_agent",            "lane": 5, "transport": "A", "threat_id": "MCP-T05", "notes": "Triggers another agent — horizontal privilege escalation"},
+
+    {"name": "oauth.exchange_token",          "lane": 1, "transport": "A", "threat_id": "MCP-T01", "notes": "OAuth token exchange — downstream scope escalation"},
+    {"name": "oauth.call_downstream",         "lane": 1, "transport": "A", "threat_id": "MCP-T01"},
+    {"name": "oauth.list_connections",        "lane": 1, "transport": "A", "threat_id": "MCP-T01"},
+
+    {"name": "revocation.issue_token",        "lane": 1, "transport": "A", "threat_id": "MCP-T01"},
+    {"name": "revocation.revoke_principal",   "lane": 1, "transport": "A", "threat_id": "MCP-T01"},
+    {"name": "revocation.use_token",          "lane": 1, "transport": "A", "threat_id": "MCP-T01", "notes": "Uses token after revocation — revocation bypass"},
+
+    {"name": "attribution.submit_action",     "lane": 2, "transport": "A", "threat_id": "MCP-T02"},
+    {"name": "attribution.verify_context",    "lane": 2, "transport": "A", "threat_id": "MCP-T02"},
+    {"name": "attribution.read_audit",        "lane": 2, "transport": "A", "threat_id": "MCP-T02"},
+
+    {"name": "audit.perform_action",          "lane": 2, "transport": "A", "threat_id": "MCP-T09", "notes": "Performs action that should be audited"},
+    {"name": "audit.list_actions",            "lane": 2, "transport": "A", "threat_id": "MCP-T09"},
+
+    {"name": "egress_lab",                    "lane": 3, "transport": "A", "threat_id": "MCP-T04", "notes": "Uncontrolled outbound HTTP — SSRF / data exfiltration"},
+
+    {"name": "bot_identity_theft.read_tbot_secret",  "lane": 1, "transport": "D", "threat_id": "MCP-T06", "notes": "Reads Teleport bot secret — Teleport-specific identity theft"},
+    {"name": "bot_identity_theft.replay_identity",   "lane": 1, "transport": "D", "threat_id": "MCP-T01", "notes": "Replays stolen bot identity"},
+    {"name": "bot_identity_theft.check_session_binding", "lane": 1, "transport": "D", "threat_id": "MCP-T01"},
+
+    {"name": "cert_replay.get_expired_cert",  "lane": 1, "transport": "D", "threat_id": "MCP-T01", "notes": "Retrieves expired cert for replay attack"},
+    {"name": "cert_replay.replay_cert",       "lane": 1, "transport": "D", "threat_id": "MCP-T01"},
+    {"name": "cert_replay.check_replay_detection", "lane": 1, "transport": "D", "threat_id": "MCP-T01"},
+
+    {"name": "teleport_role_escalation.request_role",       "lane": 5, "transport": "D", "threat_id": "MCP-T05"},
+    {"name": "teleport_role_escalation.privileged_operation","lane": 5, "transport": "D", "threat_id": "MCP-T05", "notes": "Executes operation requiring escalated Teleport role"},
+    {"name": "teleport_role_escalation.get_current_roles",  "lane": 5, "transport": "D", "threat_id": "MCP-T05"},
+
+    {"name": "config.read_system_prompt",     "lane": 4, "transport": "A", "threat_id": "MCP-T03", "notes": "Exposes system prompt — jailbreak / injection surface"},
+    {"name": "config.update_system_prompt",   "lane": 4, "transport": "A", "threat_id": "MCP-T03", "notes": "Mutates system prompt — persistent injection"},
+    {"name": "config.ask_agent",              "lane": 4, "transport": "A", "threat_id": "MCP-T03"},
+
+    {"name": "subprocess.invoke_worker",      "lane": 3, "transport": "B", "threat_id": "MCP-T02", "notes": "Spawns subprocess — OS command injection risk"},
+    {"name": "subprocess.list_allowlist",     "lane": 3, "transport": "B", "threat_id": "MCP-T02"},
+
+    {"name": "indirect_lab",                  "lane": 4, "transport": "C", "threat_id": "MCP-T03", "notes": "Indirect prompt injection via external data source"},
+
+    {"name": "comms.send_message",            "lane": 3, "transport": "A", "threat_id": "MCP-T04", "notes": "Sends messages to external endpoints — exfil channel"},
+    {"name": "comms.list_sent",               "lane": 3, "transport": "A", "threat_id": "MCP-T04"},
+
+    {"name": "notification.trigger_event",    "lane": 3, "transport": "A", "threat_id": "MCP-T08", "notes": "Triggers outbound notification — webhook/exfil"},
+
+    {"name": "tenant.store_memory",           "lane": 2, "transport": "A", "threat_id": "MCP-T11", "notes": "Stores data in tenant memory — cross-tenant isolation risk"},
+    {"name": "tenant.recall_memory",          "lane": 2, "transport": "A", "threat_id": "MCP-T11", "notes": "Recalls memory — may leak cross-tenant data"},
+    {"name": "tenant.list_tenants",           "lane": 2, "transport": "A", "threat_id": "MCP-T11"},
+
+    {"name": "temporal.get_config",           "lane": 1, "transport": "A", "threat_id": "MCP-T10", "notes": "Returns config at time T — temporal TOCTOU"},
+    {"name": "temporal.get_status",           "lane": 1, "transport": "A", "threat_id": "MCP-T10"},
+    {"name": "temporal.check_permission",     "lane": 1, "transport": "A", "threat_id": "MCP-T10"},
+
+    {"name": "response_inspection.call_leaky_tool",   "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Returns raw tool responses including secrets"},
+    {"name": "response_inspection.submit_redaction",  "lane": 2, "transport": "A", "threat_id": "MCP-T06"},
+
+    {"name": "cost.invoke_llm",               "lane": 3, "transport": "A", "threat_id": "MCP-T14", "notes": "Invokes LLM — resource exhaustion / cost amplification"},
+    {"name": "cost.check_usage",              "lane": 3, "transport": "A", "threat_id": "MCP-T14"},
+
+    {"name": "langchain_tool_lab",            "lane": 4, "transport": "B", "threat_id": "MCP-T03", "notes": "LangChain @tool registration — untrusted description injection"},
+
+    {"name": "agent_http_bypass.call_direct", "lane": 3, "transport": "B", "threat_id": "MCP-T04", "notes": "Direct HTTP call bypassing auth middleware — SSRF"},
+    {"name": "agent_http_bypass.get_access_log",  "lane": 3, "transport": "B", "threat_id": "MCP-T04"},
+    {"name": "agent_http_bypass.get_rejected_log","lane": 3, "transport": "B", "threat_id": "MCP-T04"},
+
+    {"name": "code_review.run_checks",        "lane": 3, "transport": "B", "threat_id": "MCP-T02", "notes": "Runs shell checks on submitted PR — command injection via filename/content"},
+    {"name": "code_review.submit_pr",         "lane": 3, "transport": "B", "threat_id": "MCP-T02"},
+    {"name": "code_review.get_report",        "lane": 3, "transport": "B", "threat_id": "MCP-T02"},
+    {"name": "code_review.get_shell_log",     "lane": 3, "transport": "B", "threat_id": "MCP-T02"},
+
+    {"name": "policy_authoring.get_hint",     "lane": 4, "transport": "A", "threat_id": "MCP-T03"},
+    {"name": "policy_authoring.submit_policy","lane": 4, "transport": "A", "threat_id": "MCP-T03", "notes": "Submits policy — policy injection / override"},
+    {"name": "policy_authoring.get_attack_chain","lane": 4, "transport": "A", "threat_id": "MCP-T03"},
+
+    {"name": "tool.mutate_behavior",          "lane": 4, "transport": "A", "threat_id": "MCP-T03", "notes": "Mutates tool behavior at runtime — semantic shadowing"},
+
+    {"name": "pattern_downgrade_lab",         "lane": 1, "transport": "A", "threat_id": "MCP-T10", "notes": "Forces downgrade of security pattern"},
+    {"name": "budget_tuning.simulate",        "lane": 3, "transport": "A", "threat_id": "MCP-T14"},
+    {"name": "budget_tuning.submit_budget",   "lane": 3, "transport": "A", "threat_id": "MCP-T14"},
+    {"name": "budget_tuning.get_traffic_pattern","lane": 3, "transport": "A", "threat_id": "MCP-T14"}
+  ]
+}
