@@ -109,6 +109,23 @@
     {"name": "pattern_downgrade_lab",         "lane": 1, "transport": "A", "threat_id": "MCP-T10", "notes": "Forces downgrade of security pattern"},
     {"name": "budget_tuning.simulate",        "lane": 3, "transport": "A", "threat_id": "MCP-T14"},
     {"name": "budget_tuning.submit_budget",   "lane": 3, "transport": "A", "threat_id": "MCP-T14"},
-    {"name": "budget_tuning.get_traffic_pattern","lane": 3, "transport": "A", "threat_id": "MCP-T14"}
+    {"name": "budget_tuning.get_traffic_pattern","lane": 3, "transport": "A", "threat_id": "MCP-T14"},
+
+    {"name": "gateway.list_resources",        "lane": 2, "transport": "A", "threat_id": "MCP-T41", "notes": "Discovery — reveals CDN proxy and redirect registration endpoint"},
+    {"name": "gateway.register_asset",        "lane": 2, "transport": "A", "threat_id": "MCP-T41", "notes": "Open redirect registration — no AI gate, accepts any URL"},
+    {"name": "gateway.fetch_content",         "lane": 2, "transport": "A", "threat_id": "MCP-T41", "notes": "AI-gated fetch — validates hostname but resolves token post-approval"},
+
+    {"name": "platform.get_service_config",   "lane": 2, "transport": "A", "threat_id": "MCP-T42", "notes": "Returns service topology including shared IdP realm — key leak on hard"},
+    {"name": "platform.ask_assistant",        "lane": 2, "transport": "A", "threat_id": "MCP-T42", "notes": "AI assistant with agent secret in context — soft guardrails on easy/medium"},
+    {"name": "platform.mint_token",           "lane": 2, "transport": "A", "threat_id": "MCP-T42", "notes": "Simulated client_credentials grant — same issuer for user and agent"},
+    {"name": "platform.execute_privileged_op","lane": 2, "transport": "A", "threat_id": "MCP-T42", "notes": "Agent-role only — returns flag when cross-pollution succeeds"},
+
+    {"name": "dpop.get_service_info",         "lane": 3, "transport": "A", "threat_id": "MCP-T43", "notes": "Config endpoint — leaks DPoP private key on easy/medium, nested on hard"},
+    {"name": "dpop.request_access",           "lane": 3, "transport": "A", "threat_id": "MCP-T43", "notes": "Probe endpoint — returns structured 401 errors describing missing claims"},
+    {"name": "dpop.sign_proof",               "lane": 3, "transport": "A", "threat_id": "MCP-T43", "notes": "Forges a DPoP JWT with given key material, htm, htu"},
+    {"name": "dpop.access_resource",          "lane": 3, "transport": "A", "threat_id": "MCP-T43", "notes": "Protected resource — validates htm/htu binding, returns flag on valid proof"},
+
+    {"name": "exec.list_approved",            "lane": 2, "transport": "A", "threat_id": "MCP-T44", "notes": "Lists approved query patterns — reveals what the blocklist does and does not block"},
+    {"name": "exec.run_query",                "lane": 2, "transport": "A", "threat_id": "MCP-T44", "notes": "Filtered exec — blocklist misses perl (easy/medium) and awk (hard)"}
   ]
 }
