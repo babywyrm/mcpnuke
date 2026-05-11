@@ -134,6 +134,14 @@
 
     {"name": "chain.load_agent",              "lane": 4, "transport": "C", "threat_id": "MCP-T47", "notes": "Loads sub-agent in-process SDK registry; stores caller_token for forwarding — no fresh issuance"},
     {"name": "chain.delegate_task",           "lane": 4, "transport": "C", "threat_id": "MCP-T47", "notes": "Dispatches task to sub-agent with forwarded credential; hard blocks escalate_privilege via manifest"},
-    {"name": "chain.read_audit_log",          "lane": 4, "transport": "C", "threat_id": "MCP-T47", "notes": "Audit log — all entries attributed to Agent A; sub-agent identity never recorded"}
+    {"name": "chain.read_audit_log",          "lane": 4, "transport": "C", "threat_id": "MCP-T47", "notes": "Audit log — all entries attributed to Agent A; sub-agent identity never recorded"},
+
+    {"name": "subchain.spawn_agent",          "lane": 4, "transport": "D", "threat_id": "MCP-T48", "notes": "Spawns subprocess with AGENT_TOKEN in env — no new identity issued; hard DENY if caller_token present"},
+    {"name": "subchain.run_task",             "lane": 4, "transport": "D", "threat_id": "MCP-T48", "notes": "Task executes using inherited env token; read_secrets returns flag on easy/medium; hard blocks it"},
+    {"name": "subchain.read_env_inheritance", "lane": 4, "transport": "D", "threat_id": "MCP-T48", "notes": "Diagnostic: shows subprocess env vars including AGENT_TOKEN; hard masks value as ****"},
+
+    {"name": "llmchain.register_function",    "lane": 4, "transport": "E", "threat_id": "MCP-T49", "notes": "Registers Agent B as LLM callable function with system_context (credential embedded); hard: redact patterns apply"},
+    {"name": "llmchain.call_with_context",    "lane": 4, "transport": "E", "threat_id": "MCP-T49", "notes": "Dispatches call; full context passed to function; easy: raw credential + flag; hard: no echo, inspect_context still reveals"},
+    {"name": "llmchain.inspect_context",      "lane": 4, "transport": "E", "threat_id": "MCP-T49", "notes": "Returns raw system_context from last call — credential visible at all difficulty levels"}
   ]
 }
