@@ -126,6 +126,14 @@
     {"name": "dpop.access_resource",          "lane": 3, "transport": "A", "threat_id": "MCP-T43", "notes": "Protected resource — validates htm/htu binding, returns flag on valid proof"},
 
     {"name": "exec.list_approved",            "lane": 2, "transport": "A", "threat_id": "MCP-T44", "notes": "Lists approved query patterns — reveals what the blocklist does and does not block"},
-    {"name": "exec.run_query",                "lane": 2, "transport": "A", "threat_id": "MCP-T44", "notes": "Filtered exec — blocklist misses perl (easy/medium) and awk (hard)"}
+    {"name": "exec.run_query",                "lane": 2, "transport": "A", "threat_id": "MCP-T44", "notes": "Filtered exec — blocklist misses perl (easy/medium) and awk (hard)"},
+
+    {"name": "sdk.initialize_session",        "lane": 2, "transport": "C", "threat_id": "MCP-T46", "notes": "Stores delegated user token in in-process SDK cache — shared process memory"},
+    {"name": "sdk.invoke_action",             "lane": 2, "transport": "C", "threat_id": "MCP-T46", "notes": "Action dispatcher — accepts action=dump_cache on easy/medium; hard blocks via allowlist"},
+    {"name": "sdk.inspect_cache",             "lane": 2, "transport": "C", "threat_id": "MCP-T46", "notes": "Exposes current SDK cache state — credential_present and raw cached_credential"},
+
+    {"name": "chain.load_agent",              "lane": 4, "transport": "C", "threat_id": "MCP-T47", "notes": "Loads sub-agent in-process SDK registry; stores caller_token for forwarding — no fresh issuance"},
+    {"name": "chain.delegate_task",           "lane": 4, "transport": "C", "threat_id": "MCP-T47", "notes": "Dispatches task to sub-agent with forwarded credential; hard blocks escalate_privilege via manifest"},
+    {"name": "chain.read_audit_log",          "lane": 4, "transport": "C", "threat_id": "MCP-T47", "notes": "Audit log — all entries attributed to Agent A; sub-agent identity never recorded"}
   ]
 }
