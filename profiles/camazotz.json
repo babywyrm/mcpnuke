@@ -142,6 +142,18 @@
 
     {"name": "llmchain.register_function",    "lane": 4, "transport": "E", "threat_id": "MCP-T49", "notes": "Registers Agent B as LLM callable function with system_context (credential embedded); hard: redact patterns apply"},
     {"name": "llmchain.call_with_context",    "lane": 4, "transport": "E", "threat_id": "MCP-T49", "notes": "Dispatches call; full context passed to function; easy: raw credential + flag; hard: no echo, inspect_context still reveals"},
-    {"name": "llmchain.inspect_context",      "lane": 4, "transport": "E", "threat_id": "MCP-T49", "notes": "Returns raw system_context from last call — credential visible at all difficulty levels"}
+    {"name": "llmchain.inspect_context",      "lane": 4, "transport": "E", "threat_id": "MCP-T49", "notes": "Returns raw system_context from last call — credential visible at all difficulty levels"},
+
+    {"name": "schema.list_surface",           "lane": 5, "transport": "A", "threat_id": "MCP-T50", "notes": "Returns over-disclosed tool catalog with credential patterns and internal paths; hard: sanitized"},
+    {"name": "schema.extract_credentials",    "lane": 5, "transport": "A", "threat_id": "MCP-T50", "notes": "Scans description string for cztz-/CZTZ_ patterns; returns flag when credential found"},
+    {"name": "schema.probe_error",            "lane": 5, "transport": "A", "threat_id": "MCP-T50", "notes": "Triggers error and returns internal_path/config_key on easy/medium; sanitized on hard"},
+
+    {"name": "ratelimit.check_budget",        "lane": 5, "transport": "A", "threat_id": "MCP-T51", "notes": "Returns global budget state; per_caller_accounting False on easy/medium (key vulnerability)"},
+    {"name": "ratelimit.flood_calls",         "lane": 5, "transport": "A", "threat_id": "MCP-T51", "notes": "Exhausts global budget as anonymous caller; hard uses separate anon bucket"},
+    {"name": "ratelimit.authenticated_call",  "lane": 5, "transport": "A", "threat_id": "MCP-T51", "notes": "Returns denied+flag when budget exhausted by anon flood; always succeeds on hard"},
+
+    {"name": "preauth.start_session",         "lane": 5, "transport": "A", "threat_id": "MCP-T52", "notes": "Stores metadata raw before auth (injection point); hard sanitizes at storage time"},
+    {"name": "preauth.complete_auth",         "lane": 5, "transport": "A", "threat_id": "MCP-T52", "notes": "Completes session; detects injection in stored metadata; returns flag on easy/medium"},
+    {"name": "preauth.inspect_session",       "lane": 5, "transport": "A", "threat_id": "MCP-T52", "notes": "Returns raw stored metadata (already sanitized on hard)"}
   ]
 }
