@@ -55,6 +55,7 @@ from mcpnuke.checks.config_dump import check_config_dump
 from mcpnuke.checks.config_tampering import check_config_tampering
 from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 from mcpnuke.checks.credential_in_schema import check_credential_in_schema
+from mcpnuke.checks.schema_overdisclosure import check_schema_overdisclosure
 from mcpnuke.checks.exfil_flow import check_exfil_flow
 from mcpnuke.checks.ssrf_probe import check_ssrf_probe
 from mcpnuke.checks.actuator_probe import check_actuator_probe
@@ -231,7 +232,7 @@ def run_all_checks(
 
     # Count total checks for progress display
     has_jwt = bool(result.auth_context.get("_raw_token") or result.auth_context.get("jwt_claims_summary"))
-    total_checks = 15  # static (exfil_flow counted separately below)
+    total_checks = 16  # static (exfil_flow counted separately below)
     total_checks += 1  # exfil_flow
     if has_jwt:
         total_checks += 8  # JWT hardening checks (6 baseline + 2 boundary)
@@ -261,6 +262,7 @@ def run_all_checks(
     _run("config_tampering", check_config_tampering, result)
     _run("webhook_persistence", check_webhook_persistence, result)
     _run("credential_in_schema", check_credential_in_schema, result)
+    _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
 
     # JWT hardening checks (only when auth token is present)

@@ -59,12 +59,15 @@ class TargetResult:
         *,
         lane: int | None = None,
         transport: str | None = None,
+        taxonomy_id: str = "",
+        mitre_id: str = "",
     ) -> Finding | None:
         if skip_transports and self.transport in skip_transports:
             return None
         f = Finding(
             self.url, check, severity, title, detail, evidence,
             lane=lane, transport=transport,
+            taxonomy_id=taxonomy_id, mitre_id=mitre_id,
         )
         self.findings.append(f)
         return f
