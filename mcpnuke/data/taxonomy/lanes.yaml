@@ -1,0 +1,544 @@
+# agentic-sec threat taxonomy — machine-readable index
+#
+# schema_version: 1.0.0
+# Consumed by: mcpnuke --coverage-report <camazotz-url>
+#              nullfield policy generators
+#              any tooling that needs a stable lane/transport/threat map
+#
+# Update policy: this file is generated from camazotz scenario.yaml files.
+# When a new lab is added to camazotz, add the corresponding entry here.
+# The threat_id, lane, transport, and owasp_mcp fields must match the
+# scenario.yaml exactly — these are the cross-repo vocabulary contract.
+#
+# Source of truth for lane slugs and transport codes: docs/identity-flows.md
+# Source of truth for lab implementations: github.com/babywyrm/camazotz
+
+schema_version: "1.0.0"
+generated: "2026-05-12"
+camazotz_lab_count: 51
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Identity Lanes
+# ─────────────────────────────────────────────────────────────────────────────
+lanes:
+  - id: 1
+    slug: "human-direct"
+    name: "Human Direct"
+    description: >
+      Human authenticates directly — browser, CLI, desktop app. Token issued
+      to the user personally. The human is present and intentional.
+    default_nullfield_action: "ALLOW"
+    key_risks:
+      - Confused deputy (token stolen and replayed)
+      - RBAC bypass (role boundaries not enforced at tool layer)
+      - Secrets in tool output (credential leakage to the human's session)
+
+  - id: 2
+    slug: "delegated"
+    name: "Delegated"
+    description: >
+      Human delegates to an agent. The agent acts on the human's behalf with
+      a scoped token derived from the human's authorization grant.
+    default_nullfield_action: "HOLD"
+    key_risks:
+      - Prompt injection (human's intent hijacked by injected content)
+      - SSRF via tool (agent calls attacker-controlled URLs)
+      - OAuth token theft (delegated token stolen or replayed)
+      - AI governance bypass (AI gate bypassed via redirect)
+      - Shared IdP pollution (agent mints out-of-scope token)
+
+  - id: 3
+    slug: "machine"
+    name: "Machine Identity"
+    description: >
+      Automated service or scheduled job. No human in the loop. Token issued
+      to the service principal. Runs unattended.
+    default_nullfield_action: "SCOPE"
+    key_risks:
+      - Supply chain via content (poisoned dependency/document)
+      - Bot identity theft (service credential stolen, impersonated)
+      - DPoP forgery (key leaked, proof forged)
+      - Subprocess credential inheritance (child process inherits service token)
+
+  - id: 4
+    slug: "chain"
+    name: "Agent Chain"
+    description: >
+      One agent calls another. Multi-hop orchestration. Each hop introduces
+      an identity boundary that most deployments do not enforce.
+    default_nullfield_action: "DENY"
+    key_risks:
+      - Delegation depth escalation (depth N has full human authority)
+      - Identity dilution (sub-agent invisible in audit logs)
+      - Credential forwarding across transports B/C/D/E
+
+  - id: 5
+    slug: "anonymous"
+    name: "Anonymous"
+    description: >
+      Pre-authentication. No identity established. MCP protocol requires
+      tools/list to be unauthenticated. Onboarding and guest flows.
+    default_nullfield_action: "BUDGET"
+    key_risks:
+      - Tool schema over-disclosure (credential patterns in descriptions)
+      - Rate-limit exhaustion (no per-caller accounting)
+      - Pre-auth injection (input stored raw, inherited by session)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Transport Codes
+# ─────────────────────────────────────────────────────────────────────────────
+transports:
+  - code: "A"
+    name: "MCP Protocol"
+    description: >
+      Standard JSON-RPC over SSE/HTTP. tools/call, tools/list, resources/list.
+      The default transport — all MCP clients and servers support it.
+    identity_boundary: true
+    token_reissuance: "depends on gateway config"
+
+  - code: "B"
+    name: "Direct API"
+    description: >
+      Agent-to-agent via direct HTTP REST call. No MCP layer. Bearer token
+      forwarded in Authorization header — no fresh issuance by default.
+    identity_boundary: false
+    token_reissuance: "rarely"
+
+  - code: "C"
+    name: "In-Process SDK"
+    description: >
+      Library function call within the same process. Shared memory.
+      No network boundary. Credential cached in process memory.
+    identity_boundary: false
+    token_reissuance: "never"
+
+  - code: "D"
+    name: "Subprocess"
+    description: >
+      Parent spawns child process. Credential injected via environment
+      variable or stdin. Child inherits parent env automatically.
+    identity_boundary: true
+    token_reissuance: "never"
+    note: "Process boundary exists but credential crosses it via env var injection."
+
+  - code: "E"
+    name: "Native LLM Function-Calling"
+    description: >
+      LLM dispatches registered functions. Full conversation context —
+      including system prompt credentials — is passed to each function call.
+    identity_boundary: false
+    token_reissuance: "never"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Threat Entries
+# Each entry maps one camazotz lab to the shared vocabulary.
+# ─────────────────────────────────────────────────────────────────────────────
+threats:
+  - threat_id: "MCP-T01"
+    title: "Direct Prompt Injection"
+    category: "injection"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP01"
+    camazotz_lab: "context_lab"
+
+  - threat_id: "MCP-T02"
+    title: "Indirect Prompt Injection"
+    category: "injection"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP02"
+    camazotz_lab: "indirect_lab"
+
+  - threat_id: "MCP-T03"
+    title: "Tool Behavior Mutation (Rug Pull)"
+    category: "mutation"
+    lane: 5
+    transport: "A"
+    owasp_mcp: "MCP03"
+    camazotz_lab: "tool_lab"
+
+  - threat_id: "MCP-T04"
+    title: "Confused Deputy / Token Theft"
+    category: "auth"
+    lane: 1
+    transport: "A"
+    owasp_mcp: "MCP04"
+    camazotz_lab: "auth_lab"
+
+  - threat_id: "MCP-T05"
+    title: "Cross-Tool Context Poisoning"
+    category: "injection"
+    lane: 4
+    transport: "A"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "relay_lab"
+
+  - threat_id: "MCP-T06"
+    title: "SSRF via Tool"
+    category: "ssrf"
+    lane: 2
+    transport: "B"
+    owasp_mcp: "MCP06"
+    camazotz_lab: "egress_lab"
+
+  - threat_id: "MCP-T07"
+    title: "Secrets in Tool Output"
+    category: "secrets"
+    lane: 1
+    transport: "B"
+    owasp_mcp: "MCP07"
+    camazotz_lab: "secrets_lab"
+
+  - threat_id: "MCP-T08"
+    title: "Supply Chain via Content"
+    category: "supply-chain"
+    lane: 3
+    transport: "C"
+    owasp_mcp: "MCP08"
+    camazotz_lab: "supply_lab"
+
+  - threat_id: "MCP-T09"
+    title: "Agent Config Tampering"
+    category: "config"
+    lane: 3
+    transport: "A"
+    owasp_mcp: "MCP09"
+    camazotz_lab: "config_lab"
+
+  - threat_id: "MCP-T10"
+    title: "Hallucination-Driven Destruction"
+    category: "hallucination"
+    lane: 4
+    transport: "A"
+    owasp_mcp: "MCP10"
+    camazotz_lab: "hallucination_lab"
+
+  - threat_id: "MCP-T11"
+    title: "Cross-Tenant Memory Leak"
+    category: "isolation"
+    lane: 1
+    transport: "A"
+    owasp_mcp: "MCP11"
+    camazotz_lab: "tenant_lab"
+
+  - threat_id: "MCP-T12"
+    title: "Exfiltration via Chaining"
+    category: "exfiltration"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP12"
+    camazotz_lab: "comms_lab"
+
+  - threat_id: "MCP-T13"
+    title: "Audit Log Evasion"
+    category: "audit"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP13"
+    camazotz_lab: "audit_lab"
+
+  - threat_id: "MCP-T14"
+    title: "Persistence via Webhook"
+    category: "persistence"
+    lane: 5
+    transport: "A"
+    owasp_mcp: "MCP14"
+    camazotz_lab: "shadow_lab"
+
+  - threat_id: "MCP-T15"
+    title: "Error Information Disclosure"
+    category: "information_disclosure"
+    lane: 5
+    transport: "A"
+    owasp_mcp: "MCP07"
+    camazotz_lab: "error_lab"
+
+  - threat_id: "MCP-T16"
+    title: "Temporal Consistency Drift"
+    category: "injection"
+    lane: 1
+    transport: "A"
+    owasp_mcp: "MCP03"
+    camazotz_lab: "temporal_lab"
+
+  - threat_id: "MCP-T17"
+    title: "Notification / Sampling Abuse"
+    category: "notification"
+    lane: 1
+    transport: "A"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "notification_lab"
+
+  - threat_id: "MCP-T18"
+    title: "Bot Identity Theft via tbot Credential Exposure"
+    category: "identity"
+    lane: 3
+    transport: "A"
+    owasp_mcp: "MCP18"
+    camazotz_lab: "bot_identity_theft_lab"
+
+  - threat_id: "MCP-T19"
+    title: "Short-Lived Certificate Replay Attack"
+    category: "identity"
+    lane: 3
+    transport: "A"
+    owasp_mcp: "MCP19"
+    camazotz_lab: "cert_replay_lab"
+
+  - threat_id: "MCP-T20"
+    title: "RBAC & Isolation Boundary Bypass"
+    category: "authorization"
+    lane: 1
+    transport: "A"
+    owasp_mcp: "MCP20"
+    camazotz_lab: "rbac_lab"
+
+  - threat_id: "MCP-T21"
+    title: "OAuth Token Theft & Replay"
+    category: "credential_theft"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP21"
+    camazotz_lab: "oauth_delegation_lab"
+
+  - threat_id: "MCP-T22"
+    title: "Execution Context Forgery"
+    category: "attribution"
+    lane: 4
+    transport: "A"
+    owasp_mcp: "MCP22"
+    camazotz_lab: "attribution_lab"
+
+  - threat_id: "MCP-T23"
+    title: "Credential Isolation & Sidecar Tampering"
+    category: "isolation"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP23"
+    camazotz_lab: "credential_broker_lab"
+
+  - threat_id: "MCP-T24"
+    title: "Authentication Pattern Downgrade"
+    category: "authentication"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP24"
+    camazotz_lab: "pattern_downgrade_lab"
+
+  - threat_id: "MCP-T25"
+    title: "Agent Delegation Chain Abuse"
+    category: "authorization"
+    lane: 4
+    transport: "A"
+    owasp_mcp: "MCP25"
+    camazotz_lab: "delegation_chain_lab"
+
+  - threat_id: "MCP-T26"
+    title: "Token Lifecycle & Revocation Gaps"
+    category: "lifecycle"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP26"
+    camazotz_lab: "revocation_lab"
+
+  - threat_id: "MCP-T27"
+    title: "LLM Cost Exhaustion & Misattribution"
+    category: "availability"
+    lane: 4
+    transport: "A"
+    owasp_mcp: "MCP27"
+    camazotz_lab: "cost_exhaustion_lab"
+
+  - threat_id: "MCP-T28"
+    title: "Teleport Role Escalation via MCP Tool"
+    category: "rbac"
+    lane: 3
+    transport: "A"
+    owasp_mcp: "MCP28"
+    camazotz_lab: "teleport_role_escalation_lab"
+
+  - threat_id: "MCP-T29"
+    title: "Policy Authoring — Write Rules That Block Attack Chains"
+    category: "defense"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP29"
+    camazotz_lab: "policy_authoring_lab"
+
+  - threat_id: "MCP-T30"
+    title: "Response Inspection — Craft Redaction Rules That Catch Leaks"
+    category: "defense"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP30"
+    camazotz_lab: "response_inspection_lab"
+
+  - threat_id: "MCP-T31"
+    title: "Budget Tuning — Rate Limits That Stop Attackers Without Blocking Users"
+    category: "defense"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP31"
+    camazotz_lab: "budget_tuning_lab"
+
+  - threat_id: "MCP-T32"
+    title: "Delegation Depth — Multi-Agent Identity Dilution"
+    category: "delegation"
+    lane: 4
+    transport: "A"
+    owasp_mcp: "MCP32"
+    camazotz_lab: "delegation_depth_lab"
+
+  - threat_id: "MCP-T33"
+    title: "SDK Token Cache Poisoning"
+    category: "auth"
+    lane: 1
+    transport: "C"
+    owasp_mcp: "MCP04"
+    camazotz_lab: "sdk_tamper_lab"
+
+  - threat_id: "MCP-T34"
+    title: "Subprocess Credential Inheritance"
+    category: "machine-identity"
+    lane: 3
+    transport: "D"
+    owasp_mcp: "MCP04"
+    camazotz_lab: "subprocess_lab"
+
+  - threat_id: "MCP-T35"
+    title: "Native Function-Calling Identity Erasure"
+    category: "delegation"
+    lane: 2
+    transport: "E"
+    owasp_mcp: "MCP02"
+    camazotz_lab: "function_calling_lab"
+
+  - threat_id: "MCP-T36"
+    title: "LangChain Tool Description Injection"
+    category: "injection"
+    lane: 2
+    transport: "C"
+    owasp_mcp: "MCP02"
+    camazotz_lab: "langchain_tool_lab"
+
+  - threat_id: "MCP-T37"
+    title: "Agent HTTP Bypass — Direct Transport B Access"
+    category: "authz"
+    lane: 3
+    transport: "B"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "agent_http_bypass_lab"
+
+  - threat_id: "MCP-T38"
+    title: "Code Review Agent — Subprocess Injection via PR Content"
+    category: "injection"
+    lane: 2
+    transport: "D"
+    owasp_mcp: "MCP04"
+    camazotz_lab: "code_review_agent_lab"
+
+  - threat_id: "MCP-T39"
+    title: "RAG Pipeline Injection — Poisoned Document Hijacks Synthesizer"
+    category: "injection"
+    lane: 4
+    transport: "C"
+    owasp_mcp: "MCP03"
+    camazotz_lab: "rag_injection_lab"
+
+  - threat_id: "MCP-T41"
+    title: "AI Governance Gate Bypass via Trusted Redirect"
+    category: "ai_governance"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP07"
+    camazotz_lab: "ai_governance_bypass_lab"
+    note: "MCP-T40 reserved"
+
+  - threat_id: "MCP-T42"
+    title: "Shared IdP Cross-Pollution (User → Agent Token Escalation)"
+    category: "identity"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "shared_idp_pollution_lab"
+
+  - threat_id: "MCP-T43"
+    title: "DPoP Key Exposure and JWT Forgery"
+    category: "identity"
+    lane: 3
+    transport: "A"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "dpop_forgery_lab"
+
+  - threat_id: "MCP-T44"
+    title: "Blocklist Bypass via Incomplete Input Filter"
+    category: "injection"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP04"
+    camazotz_lab: "blocklist_bypass_lab"
+
+  - threat_id: "MCP-T45"
+    title: "Agent-to-Agent Identity Dilution via Direct API Credential Forwarding"
+    category: "identity"
+    lane: 4
+    transport: "B"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "agent_chain_direct_api_lab"
+
+  - threat_id: "MCP-T46"
+    title: "In-Process SDK Credential Cache Exposure"
+    category: "identity"
+    lane: 2
+    transport: "C"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "delegated_sdk_lab"
+
+  - threat_id: "MCP-T47"
+    title: "Agent Chain In-Process SDK Identity Dilution"
+    category: "identity"
+    lane: 4
+    transport: "C"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "agent_sdk_chain_lab"
+
+  - threat_id: "MCP-T48"
+    title: "Agent Chain Subprocess Credential Injection"
+    category: "identity"
+    lane: 4
+    transport: "D"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "agent_subprocess_chain_lab"
+
+  - threat_id: "MCP-T49"
+    title: "Agent Chain LLM Function-Calling Context Leak"
+    category: "identity"
+    lane: 4
+    transport: "E"
+    owasp_mcp: "MCP05"
+    camazotz_lab: "agent_llm_chain_lab"
+
+  - threat_id: "MCP-T50"
+    title: "Anonymous Tool Schema Over-Disclosure"
+    category: "information_disclosure"
+    lane: 5
+    transport: "A"
+    owasp_mcp: "MCP09"
+    camazotz_lab: "anon_schema_harvest_lab"
+
+  - threat_id: "MCP-T51"
+    title: "Anonymous Rate-Limit Exhaustion"
+    category: "availability"
+    lane: 5
+    transport: "A"
+    owasp_mcp: "MCP10"
+    camazotz_lab: "anon_rate_exhaust_lab"
+
+  - threat_id: "MCP-T52"
+    title: "Pre-Authentication Injection"
+    category: "injection"
+    lane: 5
+    transport: "A"
+    owasp_mcp: "MCP01"
+    camazotz_lab: "preauth_injection_lab"
