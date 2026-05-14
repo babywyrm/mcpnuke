@@ -56,6 +56,7 @@ from mcpnuke.checks.config_tampering import check_config_tampering
 from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 from mcpnuke.checks.credential_in_schema import check_credential_in_schema
 from mcpnuke.checks.schema_overdisclosure import check_schema_overdisclosure
+from mcpnuke.checks.anon_budget_exhaust import check_anon_budget_exhaust
 from mcpnuke.checks.exfil_flow import check_exfil_flow
 from mcpnuke.checks.ssrf_probe import check_ssrf_probe
 from mcpnuke.checks.actuator_probe import check_actuator_probe
@@ -237,7 +238,7 @@ def run_all_checks(
     if has_jwt:
         total_checks += 8  # JWT hardening checks (6 baseline + 2 boundary)
     if not no_invoke:
-        deep_count = 12 if not fast_mode else (12 - len(FAST_SKIP_CHECKS))
+        deep_count = 13 if not fast_mode else (13 - len(FAST_SKIP_CHECKS))
         total_checks += 3 + deep_count  # light behavioral + deep
     if base and sse_path:
         total_checks += 1
@@ -307,6 +308,7 @@ def run_all_checks(
             ("ssrf_probe", check_ssrf_probe, (session, result), {"probe_opts": opts}),
             ("config_dump", check_config_dump, (session, result), {"probe_opts": opts}),
             ("behavioral_rate_limit", check_behavioral_rate_limit, (session, result), {"probe_opts": opts}),
+            ("anon_budget_exhaust", check_anon_budget_exhaust, (session, result), {"probe_opts": opts}),
             ("state_mutation", check_state_mutation, (session, result), {}),
             ("notification_abuse", check_notification_abuse, (session, result), {}),
             ("active_prompt_injection", check_active_prompt_injection, (session, result), {"probe_opts": opts}),
