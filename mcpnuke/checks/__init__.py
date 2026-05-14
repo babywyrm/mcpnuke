@@ -57,6 +57,7 @@ from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 from mcpnuke.checks.credential_in_schema import check_credential_in_schema
 from mcpnuke.checks.schema_overdisclosure import check_schema_overdisclosure
 from mcpnuke.checks.anon_budget_exhaust import check_anon_budget_exhaust
+from mcpnuke.checks.scope_pollution import check_scope_pollution
 from mcpnuke.checks.exfil_flow import check_exfil_flow
 from mcpnuke.checks.ssrf_probe import check_ssrf_probe
 from mcpnuke.checks.actuator_probe import check_actuator_probe
@@ -264,6 +265,7 @@ def run_all_checks(
     _run("webhook_persistence", check_webhook_persistence, result)
     _run("credential_in_schema", check_credential_in_schema, result)
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
+    _run("scope_pollution", check_scope_pollution, result)
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
 
     # JWT hardening checks (only when auth token is present)
