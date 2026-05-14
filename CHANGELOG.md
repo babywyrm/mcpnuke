@@ -597,43 +597,62 @@ All notable changes to this submodule are documented here.
 
 ## Planned
 
-_Roadmap aligned with [MCP Red Team Playbook](https://github.com/babywyrm/sysadmin/tree/master/mcp/redteam) threat taxonomy (MCP-T01–T14)._
+_Roadmap aligned with the [agentic-sec threat taxonomy](https://github.com/babywyrm/agentic-sec/blob/main/docs/taxonomy/lanes.yaml) (MCP-T01–T52, schema v1.0.0). The taxonomy is the cross-repo vocabulary contract between camazotz, nullfield, mcpnuke, and the agentic-sec docs hub._
 
-### Quick wins
+### Near-term — ecosystem alignment
 
-- ~~**DVMCP scoreboard**~~ — ✓ Done. `tests/test_dvmcp.py` with offline + live tests
-- **DVMCP scoreboard CLI** — `./scan --dvmcp-scoreboard` to auto-run all 10 challenges, report pass/fail per challenge, optional JSON
-- **SARIF export** — Export findings as SARIF for IDE/CI (VS Code, GitHub Code Scanning)
-- ~~**Encoding bypass probes**~~ — ✓ Done. 9 techniques (base64, hex, double-URL, homoglyph, null byte, CRLF, fullwidth, concatenation, variable expansion)
+_The current focus: make mcpnuke a first-class consumer of the shared taxonomy so the three-tool loop (camazotz → mcpnuke → nullfield) stays in lockstep as labs and threats grow._
 
-### Medium effort — new checks from playbook taxonomy + internal testing
+- **Taxonomy consumption** — `--taxonomy PATH_OR_URL` flag to load `agentic-sec/docs/taxonomy/lanes.yaml`. Validate that every finding's `taxonomy_id` is a known threat in the taxonomy. Surface lane/transport metadata from the taxonomy instead of hard-coding it per check. Default falls back to a vendored copy bundled with mcpnuke.
+- **Profile drift guard** — New test `test_camazotz_profile_in_sync` that loads `profiles/camazotz.json` and asserts every entry has a matching `camazotz_modules/*/scenario.yaml`. Fails loudly when a lab is added to camazotz without a corresponding profile entry (or vice versa). Mirrors the `test_agentic_sec_taxonomy_in_sync` guard that camazotz already has against the taxonomy.
+- **Threat ID validation test** — Ensure every `taxonomy_id` emitted by any check exists in the loaded taxonomy. Prevents silent vocabulary drift between mcpnuke checks and the shared canonical list.
 
-_Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadmin/tree/master/mcp/redteam) and testing against internal MCP targets with Keycloak, K8s, and LLM integration._
+### Near-term — dedicated checks for ecosystem patterns
 
-- ~~**Response credential scanning**~~ (MCP-T07) — ✓ Done. `response_credentials` check with cached response reuse.
+_camazotz now ships labs for MCP-T41–T52. mcpnuke catches some of these via static patterns today, but lacks dedicated checks. Prioritized by ROI:_
+
+- **`schema_overdisclosure`** (MCP-T50, Lane 5 / Transport A) — Static scan of `tools/list` for credential patterns, internal hostnames, and `CZTZ_`-style env var references in tool descriptions. Pre-auth visible surface — runs without any token. Pairs with `anon_schema_harvest_lab`.
+- **`anon_budget_exhaust`** (MCP-T51, Lane 5 / Transport A) — Behavioral probe that fires N anonymous calls and measures whether per-caller accounting exists. Detects when global rate limits can be exhausted by an unauthenticated caller, starving authenticated traffic.
+- **`scope_pollution`** (MCP-T42, Lane 2 / Transport A) — JWT scope-narrowing check. Sibling to `jwt_audience_target_match` and `jwt_cross_role_replay`. Verifies that downstream-issued tokens have *narrower* scope than the calling token; flags when a low-privilege caller can mint a token containing higher-privilege scopes (shared-IdP cross-pollution).
+
+### Medium effort — newer ecosystem checks
+
+- **Audit log evasion** (MCP-T13, MCP-T47) — Verify that downstream audit logs attribute actions to the originating user, not just the agent service account. Combined with `agent_sdk_chain_lab` (MCP-T47) which proves sub-agent identities are routinely lost in audit trails.
+- **Hallucination-driven destruction** (MCP-T10) — Send ambiguous instructions to tool-calling endpoints, verify confirmation gates and dry-run behavior before destructive ops.
+- **Cross-tenant memory leak** (MCP-T11) — Plant canary strings via one session, probe retrieval from another; test vector DB tenant isolation.
 - **LLM-mediated response detection** — Detect when tool responses are LLM-generated (hallucination risk, context bleed). Flag tools whose output shows LLM patterns (Ollama/OpenAI formatting, system prompt leakage through tool output).
-- **AI prompt injection via tool parameters** — Detect when user-controlled tool parameters are passed into LLM prompts, creating an injection surface through tool args rather than tool descriptions.
+- **AI prompt injection via tool parameters** — Detect when user-controlled tool parameters are passed into LLM prompts, creating an injection surface through tool args rather than tool descriptions. Pairs with `ai_governance_bypass_lab` (MCP-T41).
 - **Active SSRF probing** (MCP-T06) — Beyond pattern matching: probe tools with IMDS URLs (169.254.169.254), internal K8s API, RFC1918 ranges, DNS rebinding detection, IP encoding bypasses (decimal, hex, octal, IPv6-mapped).
-- **Interpreter blocklist bypass** — Input sanitization probes should try multiple interpreters beyond bash/python: `perl`, `lua`, `awk`, `ruby`, `php`, `node`. Real-world blocklists often miss less common shells.
-- **Actuator/debug endpoint probing** — Probe scan targets for exposed Spring Boot actuator (`/actuator/env`, `/actuator/beans`), Flask debug, pprof, Swagger, and GraphiQL. Actuator endpoints commonly leak signing keys and credentials.
-- **DPoP token support** (RFC 9449) — `--dpop-key FILE` flag to sign DPoP proofs with `htm`/`htu` claims for RFC 9449-protected MCP gateways.
-- **Confused deputy detection** (MCP-T03) — Check if tool calls propagate user identity vs agent SA; detect privilege gaps between caller and tool permissions.
-- ~~**Exfiltration flow analysis**~~ (MCP-T12) — ✓ Done. `exfil_flow` check with live source→sink canary verification.
-- **Audit log evasion** (MCP-T13) — Verify that downstream audit logs attribute actions to the originating user, not just the agent service account.
-- ~~**AI-powered description analysis**~~ — ✓ Done. `--claude` with three-phase analysis (tool definitions, tool responses, chain reasoning).
+- **Interpreter blocklist bypass** (MCP-T44) — Input sanitization probes should try multiple interpreters beyond bash/python: `perl`, `lua`, `awk`, `ruby`, `php`, `node`. Pairs with `blocklist_bypass_lab`.
+
+### Quick wins — practitioner-facing surfaces
+
+- **SARIF export** — Export findings as SARIF for IDE/CI (VS Code, GitHub Code Scanning).
+- **DVMCP scoreboard CLI** — `./scan --dvmcp-scoreboard` to auto-run all 10 challenges, report pass/fail per challenge, optional JSON.
+- **Prometheus metrics endpoint** — `/metrics` for scan counts, finding rates, tool coverage.
+- **`--watch` mode** — Continuous lane-coverage deltas against a long-running target. Listed in the agentic-sec ecosystem roadmap; lives here in mcpnuke.
+
+### Horizon — CLI-agent / Transport D pattern
+
+_The next wave: agents that call CLI tools directly via subprocess, with no MCP layer in the path (gh, kubectl, helm, jira, terraform). See `agentic-sec/docs/walkthroughs/beyond-mcp.md` § "The Emerging Pattern: Direct CLI Agents" for the threat model._
+
+- **Transport D behavioral probe** — Dedicated check that detects subprocess-wrapping tools by schema signals (`exec`, `run`, `shell`, `command` in name/description; `cmd`, `argv`, `query` as param names) and sends targeted shell injection probes: `` `id` ``, `$(whoami)`, `; sleep 3` (timing-based), `&&echo INJECTED`. Findings tagged `transport: D` with elevated severity when timing or output confirms real execution.
+- **`--probe-transport D`** — Scope a scan to subprocess-wrapping tools only. Useful when reviewing platform-engineering agents that call CLI tools.
+- **Real subprocess lab pairing** — When camazotz ships `shell_exec_wrap_lab` (MCP-T53, a Transport D lab that actually calls `subprocess.run`, not simulated), the behavioral probe gets a real target to validate against.
 
 ### Larger investments — campaign framework
 
-- **Multi-stage campaign runner** (playbook Section 5) — Chain individual checks into named attack scenarios (CONTENT-TO-INFRA, COMMS-TO-CLUSTER, CODE-TO-PROD, etc.) with stage-gating and blast radius tracking
-- **Purple team mode** — `--purple-team`: timestamp every attack, measure MTTD/MTTR, generate detection scorecard, SIEM alert correlation
+- **Multi-stage campaign runner** — Chain individual checks into named attack scenarios (CONTENT-TO-INFRA, COMMS-TO-CLUSTER, CODE-TO-PROD, the agentic-sec campaign personas) with stage-gating and blast radius tracking. The shape that complements `make campaign SCENARIO=...` in camazotz.
+- **Purple team mode** — `--purple-team`: timestamp every attack, measure MTTD/MTTR, generate detection scorecard, SIEM alert correlation.
 - **LLM-as-proxy detection** — Detect when an LLM sits between the user and dangerous tools (e.g. chat endpoint → LLM → shell exec tool). Map the indirect execution path and flag the amplified blast radius.
-- ~~**Agent config tampering**~~ (MCP-T09) — ✓ Done. `config_tampering` check detects tools that modify agent config, system prompt, or tool registry.
-- **Hallucination-driven destruction** (MCP-T10) — Send ambiguous instructions to tool-calling endpoints, verify confirmation gates and dry-run behavior before destructive ops
-- **Cross-tenant memory leak** (MCP-T11) — Plant canary strings via one session, probe retrieval from another; test vector DB tenant isolation
-- ~~**Webhook/callback persistence**~~ (MCP-T14) — ✓ Done. `webhook_persistence` with name-based + parameter-based detection.
-- **Metrics endpoint** — Prometheus `/metrics` for scan counts, finding rates, tool coverage
-- **Active exploitation mode** — Controlled, opt-in exploit verification (beyond safe probing)
-- **MCP registry** — Curated list of public MCP servers for periodic scanning
+- **Active exploitation mode** — Controlled, opt-in exploit verification (beyond safe probing).
+- **MCP registry** — Curated list of public MCP servers for periodic scanning.
+
+### Done (recent — last shipped in this train)
+
+- ~~**Spring Actuator Phase 2 exploitation probes**~~ — ✓ 2026-05-10. Passive GET discovery gates active POST probes: heapdump download, env write, logger override, refresh, restart, gated shutdown. `actuator_exploitation` finding category.
+- ~~**DPoP enforcement check (RFC 9449)**~~ — ✓ 2026-05-10. `dpop_enforcement` check with three RFC 9449 probes (no DPoP header accepted, malformed DPoP accepted, htm/htu binding not verified). Lane 3 / Transport A. Pairs with `dpop_forgery_lab` (MCP-T43).
+- ~~**camazotz profile coverage for MCP-T41–T52**~~ — ✓ 2026-05-10/12. `profiles/camazotz.json` expanded 70 → 111 tools to cover AI governance bypass, shared IdP pollution, DPoP forgery, blocklist bypass, SDK exposure, agent chain dilution, and the Lane 5 anonymous patterns.
 
 ### Done (previously planned)
 
@@ -660,3 +679,5 @@ _Gaps identified from [MCP Red Team Playbook](https://github.com/babywyrm/sysadm
 - ~~**Cross-role token replay (MCP-T04)**~~ — ✓ 6.7.0. `jwt_cross_role_replay`, Lane 1 / Transport A
 - ~~**Per-lane reporting**~~ — ✓ 6.7.0. `--by-lane` and `--coverage-report` against camazotz `/api/lanes` schema v1
 - ~~**Nullfield policy generation**~~ — ✓ 6.7.0. `--generate-policy FILE` emits NullfieldPolicy YAML from findings
+- ~~**Agent config tampering**~~ — ✓ `config_tampering` detects tools that modify agent config, system prompt, or tool registry
+- ~~**Webhook/callback persistence (MCP-T14)**~~ — ✓ `webhook_persistence` with name-based + parameter-based detection
