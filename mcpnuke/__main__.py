@@ -721,6 +721,36 @@ def _main_inner() -> None:
                 f"{args.coverage_report}: {exc}[/red]"
             )
 
+    # Taxonomy validation — checks that every finding's taxonomy_id is known
+    # to the agentic-sec threat taxonomy (default: vendored lanes.yaml).
+    # Surfaces silent vocabulary drift between checks and the canonical list.
+    if getattr(args, "taxonomy", None) is not None or any(
+        f.taxonomy_id for r in results for f in r.findings
+    ):
+        from mcpnuke.core.taxonomy import load_taxonomy, threat_ids as _tids
+        try:
+            tax = load_taxonomy(args.taxonomy)
+            valid = _tids(tax)
+            unknowns: dict[str, int] = {}
+            for r in results:
+                for f in r.findings:
+                    if f.taxonomy_id and f.taxonomy_id not in valid:
+                        unknowns[f.taxonomy_id] = unknowns.get(f.taxonomy_id, 0) + 1
+            source = args.taxonomy if args.taxonomy else "vendored lanes.yaml"
+            console.print(
+                f"\n[dim]Taxonomy: {len(valid)} threat IDs loaded from {source}[/dim]"
+            )
+            if unknowns:
+                console.print(
+                    "[yellow]Findings reference threat IDs not in the taxonomy:[/yellow]"
+                )
+                for tid, count in sorted(unknowns.items()):
+                    console.print(f"  [yellow]{tid}[/yellow]  ({count} finding(s))")
+        except FileNotFoundError as exc:
+            console.print(f"\n[red]--taxonomy: {exc}[/red]")
+        except Exception as exc:  # noqa: BLE001 - surface any taxonomy load issue clearly
+            console.print(f"\n[red]--taxonomy: failed to load: {exc}[/red]")
+
     all_findings = [f for r in results for f in r.findings]
     if any(f.severity in ("CRITICAL", "HIGH") for f in all_findings):
         sys.exit(EXIT_FINDINGS)

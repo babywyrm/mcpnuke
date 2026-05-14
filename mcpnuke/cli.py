@@ -221,6 +221,15 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "coverage report. Example: --coverage-report http://localhost:3000",
     )
     p.add_argument(
+        "--taxonomy",
+        metavar="PATH_OR_URL",
+        default=None,
+        help="Override the vendored agentic-sec threat taxonomy "
+        "(mcpnuke/data/taxonomy/lanes.yaml). Accepts a filesystem path or "
+        "http(s) URL. Used to validate finding threat_ids and to surface "
+        "lane/transport metadata. The vendored copy is used when not set.",
+    )
+    p.add_argument(
         "--no-invoke",
         action="store_true",
         help="Static-only mode: skip all behavioral probes that call tools. "
