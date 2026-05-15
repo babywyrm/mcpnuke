@@ -863,6 +863,20 @@
       "transport": "A",
       "threat_id": "MCP-T10",
       "notes": "Filesystem listing \u2014 destination of hallucinated destructive ops"
+    },
+    {
+      "name": "shellwrap.exec",
+      "lane": 3,
+      "transport": "D",
+      "threat_id": "MCP-T53",
+      "notes": "Shell wrapper around subprocess.run(shell=True) with user-controlled args"
+    },
+    {
+      "name": "shellwrap.list_commands",
+      "lane": 3,
+      "transport": "D",
+      "threat_id": "MCP-T53",
+      "notes": "Returns allowed commands and safety config for the shell wrapper"
     }
   ]
 }

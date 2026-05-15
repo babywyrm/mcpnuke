@@ -86,6 +86,7 @@ from mcpnuke.checks.jwt_boundary import (
     check_jwt_cross_role_replay,
 )
 from mcpnuke.checks.dpop_enforcement import run_dpop_enforcement_checks
+from mcpnuke.checks.shell_injection import check_shell_injection
 
 # Checks that --fast mode skips (heavy, LLM-backed, or slow)
 FAST_SKIP_CHECKS = {
@@ -317,6 +318,7 @@ def run_all_checks(
             ("teleport_lab_bot_theft", check_teleport_lab_bot_theft, (session, result), {"probe_opts": opts}),
             ("teleport_lab_role_escalation", check_teleport_lab_role_escalation, (session, result), {"probe_opts": opts}),
             ("teleport_lab_cert_replay", check_teleport_lab_cert_replay, (session, result), {"probe_opts": opts}),
+            ("shell_injection", check_shell_injection, (session, result), {"probe_opts": opts}),
         ]
 
         if fast_mode:

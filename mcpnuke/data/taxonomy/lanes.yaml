@@ -542,3 +542,11 @@ threats:
     transport: "A"
     owasp_mcp: "MCP01"
     camazotz_lab: "preauth_injection_lab"
+
+  - threat_id: "MCP-T53"
+    title: "Shell Command Wrapping Injection"
+    category: "injection"
+    lane: 3
+    transport: "D"
+    owasp_mcp: "MCP01"
+    camazotz_lab: "shell_exec_wrap_lab"

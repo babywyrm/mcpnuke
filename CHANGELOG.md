@@ -2,6 +2,22 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.9.0] - 2026-05-15
+
+### Added
+
+- **`shell_injection` check** (`mcpnuke/checks/shell_injection.py`): Transport D behavioral probe that detects subprocess-wrapping MCP tools by schema signals (`shell`, `exec`, `subprocess`, `command`, `cmd`, `invoke`, `spawn`, `run`, `bash`, `sh`, `wrap` in tool name/description; `command`, `cmd`, `args`, `extra_args`, `base_cmd`, `shell`, `exec`, `script`, `operation` as parameter names) and sends targeted shell injection payloads:
+  - Semicolon chain: `; echo MCPNUKE_SHELL_INJECTED`
+  - Subshell expansion: `$(echo MCPNUKE_SUBSHELL_INJECTED)`
+  - Backtick expansion: `` `echo MCPNUKE_BACKTICK_INJECTED` ``
+  - Pipe chain: `| echo MCPNUKE_PIPE_INJECTED`
+  - And-chain: `&& echo MCPNUKE_AND_INJECTED`
+  - Dangerous base command probes: `bash -c id`, `sh -c 'echo ...'`
+
+  Findings tagged `lane: 3, transport: D`. CRITICAL when injected command output is echoed back in the response. HIGH when a dangerous base command (`bash`, `sh`) executes successfully without an allowlist block. Pairs with camazotz `shell_exec_wrap_lab` (MCP-T53, Lane 3 / Transport D).
+
+- **18 new tests** (`tests/test_shell_exec_wrap_lab.py`): coverage for injection payload detection across all five metacharacter categories, dangerous base command acceptance, clean tool negative cases, and timing recording.
+
 ## [6.8.0] - 2026-05-02
 
 ### Added
@@ -597,7 +613,7 @@ All notable changes to this submodule are documented here.
 
 ## Planned
 
-_Roadmap aligned with the [agentic-sec threat taxonomy](https://github.com/babywyrm/agentic-sec/blob/main/docs/taxonomy/lanes.yaml) (MCP-T01–T52, schema v1.0.0). The taxonomy is the cross-repo vocabulary contract between camazotz, nullfield, mcpnuke, and the agentic-sec docs hub._
+_Roadmap aligned with the [agentic-sec threat taxonomy](https://github.com/babywyrm/agentic-sec/blob/main/docs/taxonomy/lanes.yaml) (MCP-T01–T53, schema v1.0.0). The taxonomy is the cross-repo vocabulary contract between camazotz, nullfield, mcpnuke, and the agentic-sec docs hub._
 
 ### Near-term — ecosystem alignment
 
@@ -636,9 +652,9 @@ _camazotz now ships labs for MCP-T41–T52. mcpnuke catches some of these via st
 
 _The next wave: agents that call CLI tools directly via subprocess, with no MCP layer in the path (gh, kubectl, helm, jira, terraform). See `agentic-sec/docs/walkthroughs/beyond-mcp.md` § "The Emerging Pattern: Direct CLI Agents" for the threat model._
 
-- **Transport D behavioral probe** — Dedicated check that detects subprocess-wrapping tools by schema signals (`exec`, `run`, `shell`, `command` in name/description; `cmd`, `argv`, `query` as param names) and sends targeted shell injection probes: `` `id` ``, `$(whoami)`, `; sleep 3` (timing-based), `&&echo INJECTED`. Findings tagged `transport: D` with elevated severity when timing or output confirms real execution.
+- ~~**Transport D behavioral probe**~~ — ✓ 2026-05-15. `shell_injection` check detects subprocess-wrapping tools by schema signals and sends targeted shell injection probes. Findings tagged `transport: D` with elevated severity when timing or output confirms real execution.
 - **`--probe-transport D`** — Scope a scan to subprocess-wrapping tools only. Useful when reviewing platform-engineering agents that call CLI tools.
-- **Real subprocess lab pairing** — When camazotz ships `shell_exec_wrap_lab` (MCP-T53, a Transport D lab that actually calls `subprocess.run`, not simulated), the behavioral probe gets a real target to validate against.
+- ~~**Real subprocess lab pairing**~~ — ✓ 2026-05-15. camazotz `shell_exec_wrap_lab` (MCP-T53, Transport D) actually calls `subprocess.run`, not simulated. The behavioral probe has a real target to validate against.
 
 ### Larger investments — campaign framework
 
@@ -650,6 +666,7 @@ _The next wave: agents that call CLI tools directly via subprocess, with no MCP 
 
 ### Done (recent — last shipped in this train)
 
+- ~~**Transport D `shell_injection` behavioral probe**~~ — ✓ 2026-05-15. `shell_injection` check with 5 metacharacter injection categories (semicolon, subshell, backtick, pipe, and-chain) and dangerous base command probes (bash, sh). Lane 3 / Transport D. Pairs with `shell_exec_wrap_lab` (MCP-T53). 18 tests.
 - ~~**Spring Actuator Phase 2 exploitation probes**~~ — ✓ 2026-05-10. Passive GET discovery gates active POST probes: heapdump download, env write, logger override, refresh, restart, gated shutdown. `actuator_exploitation` finding category.
 - ~~**DPoP enforcement check (RFC 9449)**~~ — ✓ 2026-05-10. `dpop_enforcement` check with three RFC 9449 probes (no DPoP header accepted, malformed DPoP accepted, htm/htu binding not verified). Lane 3 / Transport A. Pairs with `dpop_forgery_lab` (MCP-T43).
 - ~~**camazotz profile coverage for MCP-T41–T52**~~ — ✓ 2026-05-10/12. `profiles/camazotz.json` expanded 70 → 111 tools to cover AI governance bypass, shared IdP pollution, DPoP forgery, blocklist bypass, SDK exposure, agent chain dilution, and the Lane 5 anonymous patterns.
