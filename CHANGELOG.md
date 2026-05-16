@@ -2,6 +2,22 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.10.0] - 2026-05-16
+
+### Added
+
+- **Inference Backend Probe** (`mcpnuke/checks/inference_backend.py`, MCP-T54): Opt-in infrastructure check that discovers and audits unauthenticated LLM inference backends behind or alongside MCP servers. Fingerprints Ollama, vLLM/LocalAI (OpenAI-compatible), HuggingFace TGI, and llama.cpp via characteristic API endpoints. Runs four checks:
+  - **Model enumeration** (`inference_model_enum`) — lists available models without auth
+  - **Unauthenticated generation** (`inference_no_auth`) — confirms open compute access
+  - **Management endpoint exposure** (`inference_mgmt_exposed`) — probes for destructive APIs (pull/delete/create/push)
+  - **Network bind scope** (`inference_network_exposed`) — flags backends reachable over the network
+
+- **CLI flags**: `--inference` (auto-detect backends from MCP server tool descriptions and metadata) and `--inference-host URL` (explicit target, e.g. `--inference-host http://gpu-box:11434`). Both feed into `probe_opts` and gate the inference check in `run_all_checks`.
+
+- **MCP-T54**: New taxonomy entry "Unauthenticated Inference Backend Exposure" added to both `mcpnuke/data/taxonomy/lanes.yaml` and `agentic-sec/docs/taxonomy/lanes.yaml`.
+
+- **20 new tests** (`tests/test_inference_backend.py`): Fingerprint detection for all four backend types, auto-inference from MCP tool descriptions, finding generation, management endpoint probing, CLI flag parsing, timing recording, and negative cases.
+
 ## [6.9.0] - 2026-05-15
 
 ### Added

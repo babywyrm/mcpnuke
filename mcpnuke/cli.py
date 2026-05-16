@@ -292,6 +292,20 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Read K8s bearer token from FILE (avoids ps aux exposure).",
     )
     p.add_argument(
+        "--inference",
+        action="store_true",
+        help="Enable inference backend scanning — auto-detect LLM backends "
+        "(Ollama, vLLM, LocalAI, llama.cpp, TGI) from MCP server context "
+        "and probe for unauthenticated access. Off by default.",
+    )
+    p.add_argument(
+        "--inference-host",
+        metavar="URL",
+        default=None,
+        help="Explicit inference backend URL to probe (e.g. http://gpu-box:11434). "
+        "Implies --inference. Supports Ollama, vLLM, LocalAI, llama.cpp, and TGI.",
+    )
+    p.add_argument(
         "--no-k8s",
         action="store_true",
         help="Skip Kubernetes internal checks",

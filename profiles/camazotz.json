@@ -2,6 +2,7 @@
   "name": "camazotz",
   "version": "1",
   "description": "Camazotz intentionally-vulnerable MCP lab server. Maps all shipped lab tools to their identity lane and OWASP MCP threat taxonomy.",
+  "inference_scan": false,
   "tools": [
     {
       "name": "auth.issue_token",

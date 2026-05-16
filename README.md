@@ -222,6 +222,17 @@ The scanner runs checks in a deliberate order:
 | `active_prompt_injection` | CRITICAL | Sends injection payloads as tool inputs — detects instruction following, system prompt leaks, and role overrides |
 | `response_credentials` | CRITICAL–HIGH | Credentials (API keys, passwords, private keys, connection strings) in tool responses |
 
+### Infrastructure Checks (opt-in)
+
+| Check | Severity | What It Detects |
+|-------|----------|----------------|
+| `inference_model_enum` | HIGH | Unauthenticated model enumeration on LLM backends (Ollama, vLLM, LocalAI, TGI, llama.cpp) — MCP-T54 |
+| `inference_no_auth` | CRITICAL | Unauthenticated text generation possible on exposed inference backend |
+| `inference_mgmt_exposed` | HIGH | Management/destructive endpoints (model pull/delete/create) exposed without auth |
+| `inference_network_exposed` | HIGH | Inference backend reachable over the network, bypassing MCP-layer controls |
+
+Enable with `--inference` (auto-detect from MCP context) or `--inference-host URL` (explicit target).
+
 ### Transport & Aggregate Checks
 
 | Check | Severity | What It Detects |
@@ -426,6 +437,10 @@ Lane Reporting & Cross-Project Coverage:
 Differential:
   --baseline FILE             Compare against baseline
   --save-baseline FILE        Save scan as baseline
+
+Inference Backend:
+  --inference                 Auto-detect LLM backends from MCP server context
+  --inference-host URL        Explicit inference backend URL (implies --inference)
 
 Kubernetes:
   --k8s-namespace NS          Namespace for internal checks (default: default)

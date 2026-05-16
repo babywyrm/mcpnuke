@@ -550,3 +550,15 @@ threats:
     transport: "D"
     owasp_mcp: "MCP01"
     camazotz_lab: "shell_exec_wrap_lab"
+
+  - threat_id: "MCP-T54"
+    title: "Unauthenticated Inference Backend Exposure"
+    category: "infrastructure"
+    lane: 3
+    transport: "A"
+    owasp_mcp: "MCP09"
+    description: >
+      The MCP server's LLM inference backend (Ollama, vLLM, LocalAI,
+      llama.cpp, TGI) is accessible without authentication, allowing
+      direct model enumeration, unauthorized generation, and potentially
+      model management (pull/delete/poison).

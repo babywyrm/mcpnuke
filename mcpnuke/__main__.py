@@ -292,6 +292,8 @@ def _main_inner() -> None:
             "deterministic": deterministic_mode,
             "tls_verify": args.tls_verify,
             "extra_headers": extra_headers,
+            "inference_host": getattr(args, "inference_host", None),
+            "inference_scan": getattr(args, "inference", False) or bool(getattr(args, "inference_host", None)),
         }
 
         panel_lines = [
@@ -473,6 +475,8 @@ def _main_inner() -> None:
         "tls_verify": args.tls_verify,
         "extra_headers": extra_headers,
         "auth_context_summary": auth_context_summary,
+        "inference_host": getattr(args, "inference_host", None),
+        "inference_scan": getattr(args, "inference", False) or bool(getattr(args, "inference_host", None)),
     }
 
     if args.no_invoke:
@@ -487,6 +491,10 @@ def _main_inner() -> None:
         console.print("  [yellow]--deterministic: stable ordering, single-threaded probes/AI phase2[/yellow]")
     if args.tls_verify:
         console.print("  [yellow]--tls-verify: TLS certificate verification enabled[/yellow]")
+    if getattr(args, "inference_host", None):
+        console.print(f"  [yellow]--inference-host: probing {args.inference_host}[/yellow]")
+    elif getattr(args, "inference", False):
+        console.print("  [yellow]--inference: auto-detecting inference backends from MCP context[/yellow]")
 
     # Resolve K8s token: --k8s-token > --k8s-token-file > MCPNUKE_K8S_TOKEN env > SA file
     k8s_token: str | None = args.k8s_token

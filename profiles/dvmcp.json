@@ -2,6 +2,7 @@
   "name": "dvmcp",
   "version": "1",
   "description": "DVMCP (Damn Vulnerable MCP) — intentionally-vulnerable MCP server for security research. Maps known DVMCP tool names to OWASP MCP threat taxonomy.",
+  "inference_scan": false,
   "tools": [
     {"name": "execute_command",        "lane": 3, "transport": "B", "threat_id": "MCP-T02", "notes": "Executes OS commands — primary RCE surface"},
     {"name": "read_file",              "lane": 2, "transport": "A", "threat_id": "MCP-T06", "notes": "Reads arbitrary files — path traversal / secret leakage"},
