@@ -306,6 +306,21 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "Implies --inference. Supports Ollama, vLLM, LocalAI, llama.cpp, and TGI.",
     )
     p.add_argument(
+        "--inference-baseline",
+        metavar="FILE",
+        default=None,
+        help="Path to a model integrity manifest (JSON). Compares current model "
+        "digests against this baseline to detect tampering, removal, or injection. "
+        "Generate with --save-inference-baseline.",
+    )
+    p.add_argument(
+        "--save-inference-baseline",
+        metavar="FILE",
+        default=None,
+        help="Snapshot current model state to FILE as a known-good baseline. "
+        "Use with --inference-host to capture digests for later integrity checks.",
+    )
+    p.add_argument(
         "--no-k8s",
         action="store_true",
         help="Skip Kubernetes internal checks",

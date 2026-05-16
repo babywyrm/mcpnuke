@@ -230,8 +230,14 @@ The scanner runs checks in a deliberate order:
 | `inference_no_auth` | CRITICAL | Unauthenticated text generation possible on exposed inference backend |
 | `inference_mgmt_exposed` | HIGH | Management/destructive endpoints (model pull/delete/create) exposed without auth |
 | `inference_network_exposed` | HIGH | Inference backend reachable over the network, bypassing MCP-layer controls |
+| `model_tampered` | CRITICAL | Model digest changed since baseline — possible backdoor replacement (MCP-T55) |
+| `model_removed` | HIGH | Model present in baseline is missing — unauthorized deletion |
+| `model_injected` | MEDIUM | New model appeared that wasn't in the baseline — unauthorized pull |
+| `model_size_drift` | HIGH | Digest matches but file size changed — partial corruption or metadata tampering |
 
 Enable with `--inference` (auto-detect from MCP context) or `--inference-host URL` (explicit target).
+
+**Model Integrity Verification** (MCP-T55): Snapshot known-good model digests with `--save-inference-baseline FILE`, then detect tampering on later scans with `--inference-baseline FILE`.
 
 ### Transport & Aggregate Checks
 
@@ -441,6 +447,8 @@ Differential:
 Inference Backend:
   --inference                 Auto-detect LLM backends from MCP server context
   --inference-host URL        Explicit inference backend URL (implies --inference)
+  --inference-baseline FILE   Compare model digests against a known-good baseline (MCP-T55)
+  --save-inference-baseline FILE  Snapshot current model state to FILE for later comparison
 
 Kubernetes:
   --k8s-namespace NS          Namespace for internal checks (default: default)

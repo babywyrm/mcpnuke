@@ -1,27 +1,38 @@
-"""Inference backend discovery and audit (MCP-T54).
+"""Inference backend discovery, audit, and integrity verification.
 
-Probes for unauthenticated LLM inference backends (Ollama, vLLM,
-LocalAI, llama.cpp, TGI) that are network-accessible behind or
-alongside MCP servers. Checks model enumeration, unauthenticated
-generation, and management endpoint exposure.
+MCP-T54: Probes for unauthenticated LLM inference backends (Ollama, vLLM,
+LocalAI, llama.cpp, TGI) that are network-accessible behind or alongside
+MCP servers. Checks model enumeration, unauthenticated generation, and
+management endpoint exposure.
+
+MCP-T55: Model integrity verification — compares model digests against a
+known-good baseline to detect tampering, removal, injection, or corruption.
 
 Activated via --inference or --inference-host; never runs by default.
 """
 
 from __future__ import annotations
 
+import json
+import logging
 import re
+from datetime import datetime, timezone
 from enum import StrEnum
+from pathlib import Path
 
 import httpx
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
 
+logger = logging.getLogger(__name__)
+
 _TIMEOUT = 3.0
 _GEN_TIMEOUT = 15.0
 
 _TAXONOMY_ID = "MCP-T54"
+_INTEGRITY_TAXONOMY_ID = "MCP-T55"
+_MANIFEST_VERSION = 1
 
 _INFERENCE_HINT_PATTERNS = [
     re.compile(r"ollama", re.IGNORECASE),
@@ -70,9 +81,21 @@ def fingerprint_backend(
                 data = r.json()
                 if "models" in data:
                     models = [m.get("name", "") for m in data["models"]]
+                    model_details = {
+                        m.get("name", ""): {
+                            "digest": m.get("digest", ""),
+                            "size": m.get("size", 0),
+                            "modified_at": m.get("modified_at", ""),
+                            "parameter_size": m.get("details", {}).get("parameter_size", ""),
+                            "quantization_level": m.get("details", {}).get("quantization_level", ""),
+                            "family": m.get("details", {}).get("family", ""),
+                        }
+                        for m in data["models"]
+                    }
                     return InferenceBackend.OLLAMA, {
                         "models": models,
                         "model_count": len(models),
+                        "model_details": model_details,
                     }
         except Exception:
             pass
@@ -377,3 +400,174 @@ def check_inference_backend(
 
             _check_unauthenticated_generation(host, backend, result, verify=verify)
             _check_management_endpoints(host, backend, result, verify=verify)
+
+
+# ── Model Integrity Verification (MCP-T55) ───────────────────────────
+
+
+def _load_manifest(path: str) -> dict:
+    """Load a model integrity manifest from JSON file."""
+    p = Path(path)
+    if not p.is_file():
+        logger.warning("Inference baseline file not found: %s", path)
+        return {}
+    try:
+        return json.loads(p.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("Failed to load inference baseline %s: %s", path, e)
+        return {}
+
+
+def save_inference_baseline(
+    hosts_data: dict[str, tuple[InferenceBackend, dict]],
+    path: str,
+) -> None:
+    """Save current model state as a known-good baseline manifest."""
+    hosts_block: dict = {}
+    for host, (backend, meta) in hosts_data.items():
+        if backend != InferenceBackend.OLLAMA:
+            continue
+        hosts_block[host] = {
+            "backend": backend.value,
+            "models": meta.get("model_details", {}),
+        }
+
+    manifest = {
+        "version": _MANIFEST_VERSION,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "hosts": hosts_block,
+    }
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(manifest, indent=2) + "\n")
+    logger.info("Saved inference baseline to %s (%d host(s))", path, len(hosts_block))
+
+
+def check_model_integrity(
+    result: TargetResult,
+    probe_opts: dict | None = None,
+) -> None:
+    """Compare current model digests against a known-good baseline (MCP-T55).
+
+    Also handles --save-inference-baseline to snapshot current state.
+    """
+    opts = probe_opts or {}
+    baseline_path = opts.get("inference_baseline")
+    save_path = opts.get("save_inference_baseline")
+    verify = opts.get("tls_verify", False)
+
+    explicit_host = opts.get("inference_host")
+    auto_scan = opts.get("inference_scan", False)
+
+    hosts_to_probe: list[str] = []
+    if explicit_host:
+        hosts_to_probe.append(explicit_host.rstrip("/"))
+    if auto_scan:
+        inferred = _infer_hosts_from_result(result)
+        for h in inferred:
+            if h not in hosts_to_probe:
+                hosts_to_probe.append(h)
+
+    if not hosts_to_probe:
+        return
+
+    with time_check("model_integrity", result):
+        current_state: dict[str, tuple[InferenceBackend, dict]] = {}
+        for host in hosts_to_probe:
+            backend, meta = fingerprint_backend(host, verify=verify)
+            if backend == InferenceBackend.OLLAMA and meta.get("model_details"):
+                current_state[host] = (backend, meta)
+
+        if save_path and current_state:
+            save_inference_baseline(current_state, save_path)
+
+        if not baseline_path:
+            return
+
+        manifest = _load_manifest(baseline_path)
+        if not manifest or "hosts" not in manifest:
+            return
+
+        baseline_hosts = manifest["hosts"]
+
+        for host, (backend, meta) in current_state.items():
+            if host not in baseline_hosts:
+                continue
+
+            baseline_models = baseline_hosts[host].get("models", {})
+            current_models = meta.get("model_details", {})
+
+            # Detect tampered models (same name, different digest)
+            for name, baseline_info in baseline_models.items():
+                if name in current_models:
+                    current_info = current_models[name]
+                    if (
+                        baseline_info.get("digest")
+                        and current_info.get("digest")
+                        and baseline_info["digest"] != current_info["digest"]
+                    ):
+                        result.add(
+                            "model_tampered", "CRITICAL",
+                            f"Model tampered: {name} digest changed on {host}",
+                            f"Expected digest {baseline_info['digest'][:16]}... "
+                            f"but found {current_info['digest'][:16]}... "
+                            f"Model may have been replaced with a backdoored version.",
+                            evidence=(
+                                f"model={name} host={host} "
+                                f"expected={baseline_info['digest'][:32]} "
+                                f"actual={current_info['digest'][:32]}"
+                            ),
+                            taxonomy_id=_INTEGRITY_TAXONOMY_ID,
+                        )
+                    elif (
+                        baseline_info.get("digest")
+                        and current_info.get("digest")
+                        and baseline_info["digest"] == current_info["digest"]
+                        and baseline_info.get("size")
+                        and current_info.get("size")
+                        and baseline_info["size"] != current_info["size"]
+                    ):
+                        result.add(
+                            "model_size_drift", "HIGH",
+                            f"Model size drift: {name} on {host}",
+                            f"Digest matches but size changed from "
+                            f"{baseline_info['size']} to {current_info['size']} bytes. "
+                            f"Possible partial corruption or metadata tampering.",
+                            evidence=(
+                                f"model={name} host={host} "
+                                f"expected_size={baseline_info['size']} "
+                                f"actual_size={current_info['size']}"
+                            ),
+                            taxonomy_id=_INTEGRITY_TAXONOMY_ID,
+                        )
+
+            # Detect removed models
+            for name in baseline_models:
+                if name not in current_models:
+                    result.add(
+                        "model_removed", "HIGH",
+                        f"Model removed: {name} missing from {host}",
+                        f"Model '{name}' was present in the baseline but is no "
+                        f"longer on the inference backend. May indicate unauthorized "
+                        f"deletion or denial of service.",
+                        evidence=f"model={name} host={host} digest={baseline_models[name].get('digest', '?')[:32]}",
+                        taxonomy_id=_INTEGRITY_TAXONOMY_ID,
+                    )
+
+            # Detect injected models
+            for name in current_models:
+                if name not in baseline_models:
+                    info = current_models[name]
+                    result.add(
+                        "model_injected", "MEDIUM",
+                        f"New model injected: {name} on {host}",
+                        f"Model '{name}' ({info.get('parameter_size', '?')}, "
+                        f"{info.get('family', '?')}) was not in the baseline. "
+                        f"May have been pulled by an unauthorized party.",
+                        evidence=(
+                            f"model={name} host={host} "
+                            f"digest={info.get('digest', '?')[:32]} "
+                            f"family={info.get('family', '?')}"
+                        ),
+                        taxonomy_id=_INTEGRITY_TAXONOMY_ID,
+                    )

@@ -173,8 +173,10 @@ def scan_target(
         )
         # Inference backend probe runs independently of MCP transport
         if opts.get("inference_host") or opts.get("inference_scan"):
-            from mcpnuke.checks.inference_backend import check_inference_backend
+            from mcpnuke.checks.inference_backend import check_inference_backend, check_model_integrity
             check_inference_backend(result, probe_opts=opts)
+            if opts.get("inference_baseline") or opts.get("save_inference_baseline"):
+                check_model_integrity(result, probe_opts=opts)
         result.timings["total"] = time.time() - t_start
         return result
 

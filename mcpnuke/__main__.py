@@ -296,6 +296,8 @@ def _main_inner() -> None:
             "extra_headers": extra_headers,
             "inference_host": getattr(args, "inference_host", None),
             "inference_scan": getattr(args, "inference", False) or bool(getattr(args, "inference_host", None)),
+            "inference_baseline": getattr(args, "inference_baseline", None),
+            "save_inference_baseline": getattr(args, "save_inference_baseline", None),
         }
 
         panel_lines = [
@@ -486,6 +488,8 @@ def _main_inner() -> None:
         "auth_context_summary": auth_context_summary,
         "inference_host": getattr(args, "inference_host", None),
         "inference_scan": getattr(args, "inference", False) or bool(getattr(args, "inference_host", None)),
+        "inference_baseline": getattr(args, "inference_baseline", None),
+        "save_inference_baseline": getattr(args, "save_inference_baseline", None),
     }
 
     if args.no_invoke:
@@ -504,6 +508,10 @@ def _main_inner() -> None:
         console.print(f"  [yellow]--inference-host: probing {args.inference_host}[/yellow]")
     elif getattr(args, "inference", False):
         console.print("  [yellow]--inference: auto-detecting inference backends from MCP context[/yellow]")
+    if getattr(args, "inference_baseline", None):
+        console.print(f"  [yellow]--inference-baseline: comparing against {args.inference_baseline}[/yellow]")
+    if getattr(args, "save_inference_baseline", None):
+        console.print(f"  [yellow]--save-inference-baseline: will snapshot to {args.save_inference_baseline}[/yellow]")
 
     # Resolve K8s token: --k8s-token > --k8s-token-file > MCPNUKE_K8S_TOKEN env > SA file
     k8s_token: str | None = args.k8s_token
@@ -574,14 +582,18 @@ def _main_inner() -> None:
                 console.print(f"  [green]+[/green] Added discovered target: {ep.url}")
 
     if not urls and inference_only:
-        from mcpnuke.checks.inference_backend import check_inference_backend
+        from mcpnuke.checks.inference_backend import check_inference_backend, check_model_integrity
         t0 = time.time()
         result = TargetResult(url=probe_opts["inference_host"])
         result.transport = "inference-only"
         check_inference_backend(result, probe_opts=probe_opts)
+        if probe_opts.get("inference_baseline") or probe_opts.get("save_inference_baseline"):
+            check_model_integrity(result, probe_opts=probe_opts)
         result.timings["total"] = time.time() - t0
         results = [result]
         print_report(results, group_findings=args.group_findings, console=console)
+        if probe_opts.get("save_inference_baseline"):
+            console.print(f"\n  [green]✓[/green] Inference baseline saved to {probe_opts['save_inference_baseline']}")
         if args.json_out:
             write_json(results, args.json_out, console=console)
         if any(f.severity in ("CRITICAL", "HIGH") for f in result.findings):

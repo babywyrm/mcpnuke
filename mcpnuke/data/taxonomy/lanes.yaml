@@ -562,3 +562,14 @@ threats:
       llama.cpp, TGI) is accessible without authentication, allowing
       direct model enumeration, unauthorized generation, and potentially
       model management (pull/delete/poison).
+
+  - threat_id: "MCP-T55"
+    title: "Inference Model Integrity Drift"
+    category: "infrastructure"
+    lane: 3
+    transport: "A"
+    owasp_mcp: "MCP09"
+    description: >
+      Model digests on the inference backend have changed since the
+      last known-good baseline — indicates model tampering, replacement,
+      deletion, or unauthorized injection.

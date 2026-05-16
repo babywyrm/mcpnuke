@@ -2,6 +2,26 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.11.0] - 2026-05-16
+
+### Added
+
+- **Model Integrity Verification** (`mcpnuke/checks/inference_backend.py`, MCP-T55): Baseline-driven integrity checking for Ollama model digests. Snapshots the known-good state of model digests, sizes, and metadata on first scan, then detects drift on subsequent scans. Four finding types:
+  - **Model tampered** (`model_tampered`, CRITICAL) — digest changed for an existing model, indicating replacement with a backdoored version
+  - **Model removed** (`model_removed`, HIGH) — model present in baseline is missing, indicating unauthorized deletion
+  - **Model injected** (`model_injected`, MEDIUM) — new model appeared that wasn't in the baseline
+  - **Model size drift** (`model_size_drift`, HIGH) — digest matches but file size changed, indicating partial corruption
+
+- **CLI flags**: `--inference-baseline FILE` (compare against a known-good manifest) and `--save-inference-baseline FILE` (snapshot current model state). Both work with `--inference-host` for standalone scans and with `--targets` for full MCP+inference scans.
+
+- **Baseline manifest format** (`model-manifest.json`): Versioned JSON manifest storing per-host model digests, sizes, families, parameter sizes, quantization levels, and timestamps. Generated via `--save-inference-baseline`.
+
+- **Extended fingerprint metadata**: `fingerprint_backend()` now captures full model records from Ollama's `/api/tags` (digest, size, modified_at, family, parameter_size, quantization_level) in a `model_details` key. Non-breaking for existing callers.
+
+- **MCP-T55**: New taxonomy entry "Inference Model Integrity Drift" added to both `mcpnuke/data/taxonomy/lanes.yaml` and `agentic-sec/docs/taxonomy/lanes.yaml`.
+
+- **20 new tests** (`tests/test_model_integrity.py`): Digest mismatch detection, model removal, injection, size drift, baseline save/load round-trip, no findings when matching, graceful handling of missing/invalid baselines, timing recording, combined findings, and CLI flag parsing.
+
 ## [6.10.0] - 2026-05-16
 
 ### Added

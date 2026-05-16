@@ -61,7 +61,7 @@ from mcpnuke.checks.scope_pollution import check_scope_pollution
 from mcpnuke.checks.exfil_flow import check_exfil_flow
 from mcpnuke.checks.ssrf_probe import check_ssrf_probe
 from mcpnuke.checks.actuator_probe import check_actuator_probe
-from mcpnuke.checks.inference_backend import check_inference_backend
+from mcpnuke.checks.inference_backend import check_inference_backend, check_model_integrity
 from mcpnuke.checks.teleport import (
     check_teleport_proxy_discovery,
     check_teleport_cert_validation,
@@ -370,6 +370,8 @@ def run_all_checks(
         if verbose:
             _log("\n  [bold cyan]── Inference Backend Probe ──[/bold cyan]")
         _run("inference_backend", check_inference_backend, result, probe_opts=opts)
+        if opts.get("inference_baseline") or opts.get("save_inference_baseline"):
+            _run("model_integrity", check_model_integrity, result, probe_opts=opts)
 
     # ── Teleport infrastructure checks (opt-in, skip if not present) ──
     if base:
