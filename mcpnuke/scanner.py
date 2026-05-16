@@ -171,6 +171,10 @@ def scan_target(
             "No MCP endpoint found",
             "Tried SSE + HTTP POST + ToolServer on common paths",
         )
+        # Inference backend probe runs independently of MCP transport
+        if opts.get("inference_host") or opts.get("inference_scan"):
+            from mcpnuke.checks.inference_backend import check_inference_backend
+            check_inference_backend(result, probe_opts=opts)
         result.timings["total"] = time.time() - t_start
         return result
 
