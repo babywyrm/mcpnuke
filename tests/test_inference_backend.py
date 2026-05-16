@@ -194,6 +194,9 @@ class TestCheckInferenceBackend:
         assert "inference_network_exposed" in checks_found
         assert all(f.taxonomy_id == "MCP-T54" for f in result.findings)
 
+        model_finding = next(f for f in result.findings if f.check == "inference_model_enum")
+        assert "qwen2.5:7b" in model_finding.title
+
     def test_unknown_backend_no_findings(self):
         client = MagicMock()
         client.get.side_effect = httpx.ConnectError("unreachable")

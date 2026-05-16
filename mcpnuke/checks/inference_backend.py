@@ -358,9 +358,9 @@ def check_inference_backend(
 
             result.add(
                 "inference_model_enum", "HIGH",
-                f"Unauthenticated model enumeration on {backend.value} backend",
-                f"Discovered {meta.get('model_count', 0)} model(s) at {host} "
-                f"without authentication: {model_list}",
+                f"{meta.get('model_count', 0)} model(s) enumerated on {backend.value} at {host}: {model_list}",
+                f"Unauthenticated model enumeration — anyone on the network can list "
+                f"available models without credentials.",
                 evidence=f"backend={backend.value} host={host} models={model_list}",
                 taxonomy_id=_TAXONOMY_ID,
             )

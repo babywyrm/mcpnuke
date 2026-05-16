@@ -11,6 +11,7 @@ Usage:
 """
 
 import sys
+import time
 from datetime import datetime
 
 from mcpnuke import __version__
@@ -26,6 +27,7 @@ from mcpnuke.core.auth import (
     summarize_jwks,
     summarize_jwt_claims,
 )
+from mcpnuke.core.models import TargetResult
 from mcpnuke.scanner import scan_target, scan_stdio_target, run_parallel, detect_cross_shadowing
 from mcpnuke.reporting import print_report, write_json
 from mcpnuke.k8s import run_k8s_checks, discover_services, fingerprint_services
@@ -321,7 +323,14 @@ def _main_inner() -> None:
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
 
-    if args.k8s_discover and not args.targets and not args.targets_file and not args.public_targets and not args.port_range:
+    inference_only = (
+        getattr(args, "inference_host", None)
+        and not args.targets
+        and not args.targets_file
+        and not getattr(args, "public_targets", False)
+        and not args.port_range
+    )
+    if inference_only or (args.k8s_discover and not args.targets and not args.targets_file and not getattr(args, "public_targets", False) and not args.port_range):
         urls = []
     else:
         urls = build_url_list(args)
@@ -563,6 +572,21 @@ def _main_inner() -> None:
             if ep.url not in urls:
                 urls.append(ep.url)
                 console.print(f"  [green]+[/green] Added discovered target: {ep.url}")
+
+    if not urls and inference_only:
+        from mcpnuke.checks.inference_backend import check_inference_backend
+        t0 = time.time()
+        result = TargetResult(url=probe_opts["inference_host"])
+        result.transport = "inference-only"
+        check_inference_backend(result, probe_opts=probe_opts)
+        result.timings["total"] = time.time() - t0
+        results = [result]
+        print_report(results, group_findings=args.group_findings, console=console)
+        if args.json_out:
+            write_json(results, args.json_out, console=console)
+        if any(f.severity in ("CRITICAL", "HIGH") for f in result.findings):
+            sys.exit(EXIT_FINDINGS)
+        sys.exit(EXIT_CLEAN)
 
     if not urls:
         from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
