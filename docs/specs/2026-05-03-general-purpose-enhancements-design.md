@@ -1,7 +1,7 @@
 # mcpnuke General-Purpose Enhancements — Design Spec
 
 **Date:** 2026-05-03  
-**Status:** Approved — ready for implementation planning  
+**Status:** Implemented — shipped across mcpnuke 6.7.0–6.11.0 (see CHANGELOG)  
 **Scope:** mcpnuke open-source scanner  
 **Motivation:** mcpnuke currently has hardcoded camazotz-specific assumptions (5-tool fast
 sampling, coverage_report tied to `/api/lanes`, no structured diff, taxonomy IDs missing from
