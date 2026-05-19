@@ -721,30 +721,51 @@ class TestDVMCPFullPipeline:
 
 DVMCP_PORTS = list(range(9001, 9011))
 
+# When DVMCP is deployed in K3s (e.g. on the NUC at <cluster-node>), set:
+#   DVMCP_HOST=<cluster-node>   — host to connect to   (default: localhost)
+#   DVMCP_PORT_OFFSET=29900   — added to challenge number (default: 0, giving 9001-9010)
+#                               For K3s NodePorts 30901-30910: DVMCP_PORT_OFFSET=21900
+#
+# Quick NUC invocation:
+#   DVMCP_LIVE=1 DVMCP_HOST=<cluster-node> DVMCP_PORT_OFFSET=21900 \
+#     pytest tests/test_dvmcp.py::TestDVMCPLive -v
+_DVMCP_HOST = os.environ.get("DVMCP_HOST", "localhost")
+_DVMCP_PORT_OFFSET = int(os.environ.get("DVMCP_PORT_OFFSET", "0"))
+
+
+def _dvmcp_url(port: int) -> str:
+    """Build the SSE URL for a DVMCP challenge port, respecting env overrides."""
+    effective_port = port + _DVMCP_PORT_OFFSET
+    return f"http://{_DVMCP_HOST}:{effective_port}/sse"
+
 
 @skip_live
 class TestDVMCPLive:
-    """Live tests against running DVMCP challenge servers."""
+    """Live tests against running DVMCP challenge servers.
+
+    Targets localhost:9001-9010 by default. Override with env vars:
+      DVMCP_HOST=<cluster-node> DVMCP_PORT_OFFSET=21900   (K3s NodePorts 30901-30910)
+    """
 
     @pytest.mark.parametrize("port", DVMCP_PORTS)
     def test_transport_detected(self, port):
         from mcpnuke.core.session import detect_transport
-        url = f"http://localhost:{port}/sse"
+        url = _dvmcp_url(port)
         session = detect_transport(url, connect_timeout=10.0)
-        assert session is not None, f"No transport at port {port}"
+        assert session is not None, f"No transport at {url}"
         session.close()
 
     @pytest.mark.parametrize("port", DVMCP_PORTS)
     def test_has_tools(self, port):
         from mcpnuke.core.session import detect_transport
         from mcpnuke.core.enumerator import enumerate_server
-        url = f"http://localhost:{port}/sse"
+        url = _dvmcp_url(port)
         session = detect_transport(url, connect_timeout=10.0)
         assert session is not None
         result = TargetResult(url=url)
         enumerate_server(session, result)
         session.close()
-        assert len(result.tools) > 0, f"Port {port}: no tools found"
+        assert len(result.tools) > 0, f"{url}: no tools found"
 
     @pytest.mark.parametrize("port", DVMCP_PORTS)
     def test_findings_detected(self, port):
@@ -753,11 +774,11 @@ class TestDVMCPLive:
         from mcpnuke.core.enumerator import enumerate_server
         from mcpnuke.checks import run_all_checks
 
-        url = f"http://localhost:{port}/sse"
+        url = _dvmcp_url(port)
         session = detect_transport(url, connect_timeout=10.0)
         assert session is not None
         result = TargetResult(url=url)
         enumerate_server(session, result)
         run_all_checks(session, result, [result], probe_opts={"safe_mode": True})
         session.close()
-        assert len(result.findings) > 0, f"Port {port}: no findings — expected vuln detection"
+        assert len(result.findings) > 0, f"{url}: no findings — expected vuln detection"
