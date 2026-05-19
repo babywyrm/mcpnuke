@@ -93,12 +93,20 @@ from mcpnuke.checks.sdk_cache_tamper import (
     check_sdk_cache_poisoning,
 )
 
-# Checks that --fast mode skips (heavy, LLM-backed, or slow)
+# Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
+# State-mutating checks are inappropriate for internet targets without explicit
+# opt-in: they write data to the target server (e.g. token cache injection)
+# which may disrupt production sessions.  Run them with --no-fast on controlled
+# lab targets, or against camazotz / DVMCP where mutation is expected.
 FAST_SKIP_CHECKS = {
     "input_sanitization",
     "error_leakage",
     "temporal_consistency",
     "ssrf_probe",
+    # MCP-T33 behavioral: writes a forged JWT to the target's token cache.
+    # Safe on lab targets (camazotz sdk_tamper_lab, DVMCP) but disruptive on
+    # production internet servers where the cache may hold real user sessions.
+    "sdk_cache_poisoning",
 }
 
 _FAST_RETAIN_PARAM_NAMES = frozenset({
@@ -432,10 +440,14 @@ _KEYWORD_TIERS: list[tuple[frozenset[str], int]] = [
     (frozenset({
         "exec", "execute", "eval", "shell", "bash", "spawn", "system",
     }), 10),
-    # Tier 2 — sensitive data exposure
+    # Tier 2 — sensitive data exposure (including SDK/cache token material)
     (frozenset({
         "secret", "credential", "password", "token", "key", "config",
         "leak", "dump", "env", "private",
+        # SDK cache-tamper surface (MCP-T33): tools that read/write cached
+        # JWTs are as dangerous as raw secret exposure — an unsigned token
+        # written to the cache grants admin-level access on misconfigured SDKs.
+        "cache", "cached",
     }), 8),
     # Tier 3 — outbound / persistence channels
     (frozenset({
@@ -464,6 +476,9 @@ _DANGEROUS_PARAM_NAMES: frozenset[str] = frozenset({
     "url", "uri", "path", "file", "filename",
     "command", "cmd", "code", "query", "script",
     "host", "address", "endpoint", "callback",
+    # SDK / auth token material — a tool that accepts a raw JWT or a
+    # role override is a cache-tamper candidate even if its name is benign.
+    "jwt", "bearer", "cached_role", "cached_token",
 })
 
 # Minimum score floor for tools whose names strongly indicate secrets or
@@ -472,6 +487,9 @@ _DANGEROUS_PARAM_NAMES: frozenset[str] = frozenset({
 _HIGH_VALUE_NAME_KEYWORDS: frozenset[str] = frozenset({
     "secret", "credential", "password", "token", "config",
     "leak", "dump", "env", "private", "key",
+    # Writable cache tools: sdk.write_cache, set_token_cache, etc. are
+    # high-value regardless of param count — they're the write half of MCP-T33.
+    "cache", "cached",
 })
 _HIGH_VALUE_FLOOR: int = 15
 

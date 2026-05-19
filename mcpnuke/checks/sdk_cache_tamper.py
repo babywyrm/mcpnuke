@@ -248,6 +248,13 @@ def check_sdk_cache_poisoning(
     _log = opts.get("_log", lambda msg: None)
 
     with time_check("sdk_cache_poisoning", result):
+        # This probe writes a forged JWT to the target's token cache.
+        # Skip in safe_mode (default for internet / production targets) and
+        # whenever invocation is disabled — mutation on real servers may
+        # corrupt active user sessions.
+        if opts.get("safe_mode") or opts.get("no_invoke"):
+            return
+
         write_tool = _find_cache_write_tool(result.tools)
         invoke_tool = _find_cache_invoke_tool(result.tools)
 
