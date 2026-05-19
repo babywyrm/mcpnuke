@@ -2,6 +2,22 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.12.0] - 2026-05-19
+
+### Added
+
+- **SDK token cache tamper detection** (`mcpnuke/checks/sdk_cache_tamper.py`, MCP-T33): New Lane 1 / Transport C check closing the last SDK-path coverage gap. Two check functions:
+  - **`check_sdk_cache_tamper`** (static) — detects tools whose schema exposes a writable SDK token cache. Emits `HIGH` when a cache-write tool is present and upgrades to `CRITICAL` when the matching cache-invoke tool is also found (full two-step attack chain available purely from schema inspection, no network calls required).
+  - **`check_sdk_cache_poisoning`** (behavioral) — executes the proof-of-concept: writes a forged admin JWT (unsigned, far-future `exp`) via the write tool, then invokes a privileged operation via the invoke tool. Flags `CRITICAL` when the response contains sensitive data (`db_password`, `api_key`, `reset_token`, etc.), confirming the SDK accepted the forged credential without signature validation. Flags `HIGH` when the write was accepted but the invoke response is ambiguous.
+  - All findings tagged `lane=1`, `transport="C"`, `taxonomy_id="MCP-T33"` — properly classified as Human Direct / In-process SDK in the `--by-lane` and `--coverage-report` outputs.
+  - Forged JWT targets easy difficulty (blind `cached_role` trust) and medium difficulty (expiry-only check, no signature verification). Hard-mode targets (full HS256 validation) correctly produce no findings.
+
+- **30 new tests** (`tests/test_sdk_cache_tamper.py`): Pattern-matching correctness (write/invoke tool detection), JWT forge structure, `_pick_invoke_args` privilege ordering, static check severity tiers, behavioral CRITICAL/HIGH/clean scenarios, lane+transport tagging, and taxonomy ID assertions.
+
+### Changed
+
+- `mcpnuke/checks/__init__.py`: `check_sdk_cache_tamper` added to the static analysis phase; `check_sdk_cache_poisoning` added to the deep behavioral probe phase. Static check count bumped from 16 → 17.
+
 ## [6.11.0] - 2026-05-16
 
 ### Added

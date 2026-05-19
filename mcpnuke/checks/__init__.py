@@ -88,6 +88,10 @@ from mcpnuke.checks.jwt_boundary import (
 )
 from mcpnuke.checks.dpop_enforcement import run_dpop_enforcement_checks
 from mcpnuke.checks.shell_injection import check_shell_injection
+from mcpnuke.checks.sdk_cache_tamper import (
+    check_sdk_cache_tamper,
+    check_sdk_cache_poisoning,
+)
 
 # Checks that --fast mode skips (heavy, LLM-backed, or slow)
 FAST_SKIP_CHECKS = {
@@ -236,7 +240,7 @@ def run_all_checks(
 
     # Count total checks for progress display
     has_jwt = bool(result.auth_context.get("_raw_token") or result.auth_context.get("jwt_claims_summary"))
-    total_checks = 16  # static (exfil_flow counted separately below)
+    total_checks = 17  # static (exfil_flow counted separately below)
     total_checks += 1  # exfil_flow
     if has_jwt:
         total_checks += 8  # JWT hardening checks (6 baseline + 2 boundary)
@@ -268,6 +272,7 @@ def run_all_checks(
     _run("credential_in_schema", check_credential_in_schema, result)
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
+    _run("sdk_cache_tamper", check_sdk_cache_tamper, result)
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
 
     # JWT hardening checks (only when auth token is present)
@@ -320,6 +325,7 @@ def run_all_checks(
             ("teleport_lab_role_escalation", check_teleport_lab_role_escalation, (session, result), {"probe_opts": opts}),
             ("teleport_lab_cert_replay", check_teleport_lab_cert_replay, (session, result), {"probe_opts": opts}),
             ("shell_injection", check_shell_injection, (session, result), {"probe_opts": opts}),
+            ("sdk_cache_poisoning", check_sdk_cache_poisoning, (session, result), {"probe_opts": opts}),
         ]
 
         if fast_mode:
