@@ -127,6 +127,10 @@ Bedrock variations, see **[QUICKSTART.md](QUICKSTART.md)**.
 # AI-powered analysis via AWS Bedrock Claude (optional)
 ./scan --targets http://localhost:9002/sse --claude --bedrock --bedrock-region us-east-1
 
+# AI-powered analysis via local Ollama (no API key required)
+./scan --targets http://localhost:9002/sse --ollama-analysis http://<ollama-host>:11434
+./scan --targets http://localhost:9002/sse --ollama-analysis http://<ollama-host>:11434 --ollama-ensemble qwen2.5:14b,qwen2.5:7b
+
 # Run tests
 uv run pytest tests/ -v
 ```
@@ -398,6 +402,14 @@ Performance:
   --bedrock-region REGION     Bedrock region (e.g. us-east-1)
   --bedrock-profile PROFILE   AWS profile for Bedrock credentials
   --bedrock-model MODEL_ID    Bedrock model ID (default: anthropic.claude-3-5-sonnet-20241022-v2:0)
+  --ollama-analysis URL       Use a local/networked Ollama instance as the AI
+                              analysis backend instead of Claude. No API key
+                              required. Example: --ollama-analysis http://<ollama-host>:11434
+  --ollama-model MODEL        Ollama model to use (default: qwen2.5:14b). Larger
+                              models produce more thorough analysis.
+  --ollama-ensemble MODELS    Run analysis with multiple Ollama models and surface
+                              consensus findings. Comma-separated.
+                              Example: --ollama-ensemble qwen2.5:14b,qwen2.5:7b,qwen3:4b
 
 Tool Server:
   --tool-names-file FILE      Custom wordlist for ToolServer enumeration (supplements built-in)

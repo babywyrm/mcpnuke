@@ -120,13 +120,13 @@ def threat_ids(taxonomy: dict[str, Any] | None = None) -> set[str]:
 def lab_to_threat_id(taxonomy: dict[str, Any] | None = None) -> dict[str, str]:
     """Map camazotz lab name (``camazotz_lab``) → threat ID."""
     tax = taxonomy if taxonomy is not None else get_taxonomy()
-    return {t["camazotz_lab"]: t["threat_id"] for t in tax.get("threats", [])}
+    return {t["camazotz_lab"]: t["threat_id"] for t in tax.get("threats", []) if "camazotz_lab" in t}
 
 
 def threat_id_to_lab(taxonomy: dict[str, Any] | None = None) -> dict[str, str]:
     """Map threat ID → camazotz lab name."""
     tax = taxonomy if taxonomy is not None else get_taxonomy()
-    return {t["threat_id"]: t["camazotz_lab"] for t in tax.get("threats", [])}
+    return {t["threat_id"]: t["camazotz_lab"] for t in tax.get("threats", []) if "camazotz_lab" in t}
 
 
 def threat_metadata(threat_id: str, taxonomy: dict[str, Any] | None = None) -> dict[str, Any] | None:

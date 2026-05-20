@@ -484,6 +484,32 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "Use claude-opus-4-20250514 for deepest analysis.",
     )
     p.add_argument(
+        "--ollama-analysis",
+        metavar="URL",
+        default=None,
+        help="Use a local/networked Ollama instance as the AI analysis backend instead of "
+        "Claude. No API key required. Example: --ollama-analysis http://<ollama-host>:11434. "
+        "Enables the same 3-phase analysis (tool schemas, responses, chain reasoning) "
+        "at zero cloud cost. Compare results with --claude to benchmark local vs cloud quality.",
+    )
+    p.add_argument(
+        "--ollama-model",
+        metavar="MODEL",
+        default="qwen2.5:14b",
+        help="Ollama model to use when --ollama-analysis is set (default: qwen2.5:14b). "
+        "Larger models produce more thorough analysis; smaller models are faster.",
+    )
+    p.add_argument(
+        "--ollama-ensemble",
+        metavar="MODELS",
+        default=None,
+        help="Run AI analysis with multiple Ollama models and surface consensus findings. "
+        "Comma-separated model list, e.g. --ollama-ensemble qwen2.5:14b,qwen2.5:7b,qwen3:4b. "
+        "Requires --ollama-analysis. Findings where 2+ models independently flag the same "
+        "taxonomy ID are tagged [CONSENSUS Nx] (high confidence); single-model findings "
+        "are tagged [CANDIDATE]. Use this to validate AI findings without relying on one model.",
+    )
+    p.add_argument(
         "--no-color",
         action="store_true",
         default=bool(os.environ.get("NO_COLOR")),

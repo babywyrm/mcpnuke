@@ -112,6 +112,31 @@ def scan_stdio_target(
             model=opts.get("claude_model", "claude-sonnet-4-20250514"),
             console=console,
         )
+    elif opts.get("ollama_analysis"):
+        from mcpnuke.core.llm_ollama import OllamaBackend, run_ensemble_analysis
+        ollama_host = opts["ollama_analysis"]
+        ensemble_spec = opts.get("ollama_ensemble")
+        if ensemble_spec:
+            models = [m.strip() for m in ensemble_spec.replace(",", " ").split() if m.strip()]
+            _log(f"  [cyan]AI backend: Ollama ensemble ({ollama_host}, {len(models)} models)[/cyan]")
+            run_ensemble_analysis(
+                session, result,
+                host=ollama_host,
+                models=models,
+                probe_opts=opts,
+                console=console,
+            )
+        else:
+            from mcpnuke.checks.llm_analysis import run_llm_analysis
+            ollama_model = opts.get("ollama_model", "qwen2.5:14b")
+            _log(f"  [cyan]AI backend: Ollama ({ollama_host}, model={ollama_model})[/cyan]")
+            run_llm_analysis(
+                session, result,
+                probe_opts=opts,
+                model=ollama_model,
+                console=console,
+                llm_backend=OllamaBackend(host=ollama_host, model=ollama_model),
+            )
 
     session.close()
     result.timings["total"] = time.time() - t_start
@@ -247,6 +272,31 @@ def scan_target(
             model=claude_model,
             console=console,
         )
+    elif opts.get("ollama_analysis"):
+        from mcpnuke.core.llm_ollama import OllamaBackend, run_ensemble_analysis
+        ollama_host = opts["ollama_analysis"]
+        ensemble_spec = opts.get("ollama_ensemble")
+        if ensemble_spec:
+            models = [m.strip() for m in ensemble_spec.replace(",", " ").split() if m.strip()]
+            _log(f"  [cyan]AI backend: Ollama ensemble ({ollama_host}, {len(models)} models)[/cyan]")
+            run_ensemble_analysis(
+                session, result,
+                host=ollama_host,
+                models=models,
+                probe_opts=probe_opts or {},
+                console=console,
+            )
+        else:
+            from mcpnuke.checks.llm_analysis import run_llm_analysis
+            ollama_model = opts.get("ollama_model", "qwen2.5:14b")
+            _log(f"  [cyan]AI backend: Ollama ({ollama_host}, model={ollama_model})[/cyan]")
+            run_llm_analysis(
+                session, result,
+                probe_opts=probe_opts or {},
+                model=ollama_model,
+                console=console,
+                llm_backend=OllamaBackend(host=ollama_host, model=ollama_model),
+            )
 
     session.close()
     result.timings["total"] = time.time() - t_start

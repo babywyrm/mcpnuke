@@ -2,6 +2,52 @@
 
 All notable changes to this submodule are documented here.
 
+## [6.13.0] - 2026-05-19
+
+### Added
+
+- **Ollama AI analysis backend + ensemble mode** (`mcpnuke/core/llm_ollama.py`): New `OllamaBackend` class implementing the `LLMBackend` protocol for zero-cost AI-augmented scanning. Two modes:
+
+  **Single-model** (`--ollama-analysis URL --ollama-model MODEL`):
+  - Drop-in replacement for `--claude`, same 3-phase analysis routed to a local or networked Ollama instance.
+  - `qwen2.5:14b` on BRAINBOX produced 12 AI findings vs Claude's 11 in 16s vs 27s at $0 cost.
+  - Startup pre-flight validates reachability and warns if the model is not pulled.
+  - Mutually exclusive with `--claude` (enforced at startup).
+
+  **Ensemble** (`--ollama-analysis URL --ollama-ensemble model1,model2,model3`):
+  - Runs AI analysis independently with each model, then clusters findings by `taxonomy_id`.
+  - Findings where 2+ models independently flag the same taxonomy ID → `[CONSENSUS Nx]` (high confidence, validated signal).
+  - Findings unique to one model → `[CANDIDATE]` (worth reviewing but single-source).
+  - `cluster_findings()` helper deduplicates by taxonomy, picks the most severe representative, preserves model attribution.
+  - Answers "should I trust a finding the LLM mentioned once?" — if two independent models agree on a taxonomy class, you should.
+  - Baselines saved: `profiles/camazotz-ollama-brainbox-scan.json` (single) and `profiles/camazotz-ensemble-scan.json` (3-model ensemble).
+
+### Benchmark: BRAINBOX Ollama vs Claude Sonnet on camazotz
+
+| Metric | Claude Sonnet | Ollama qwen2.5:14b |
+|---|---|---|
+| Total findings | 293 | 294 |
+| Static findings | 282 | 282 |
+| AI findings | 11 | 12 |
+| AI analysis time | 27s | 16s |
+| CRITICAL | 145 | 150 |
+| HIGH | 97 | 93 |
+| Risk score | 2333 | 2355 |
+| API cost | ~$0.04 | **$0.00** |
+
+Both models found roughly the same number of AI-layer findings (11 vs 12) with zero *title* overlap — but **both independently found MCP-T03** (credential forwarding). Title overlap is the wrong metric; taxonomy-ID overlap is the right one. Claude focused on cross-cutting narrative chains (MCP-AUTH-001, MCP-AUDIT-001); Qwen systematically enumerated per-tool credential-forwarding instances (MCP-T03 × 7). Qwen was also 40% faster (16s vs 27s).
+
+### Ensemble run: `qwen2.5:14b` + `qwen2.5:7b` + `qwen3:4b` on camazotz
+
+| Metric | Value |
+|---|---|
+| Models run | 3 (14b, 7b, 4b) |
+| CONSENSUS findings (2+ agree) | **2** — MCP-T03 (CRITICAL), MCP-T02 (HIGH) |
+| CANDIDATE findings (1 model only) | 4 |
+| Note | qwen3:4b returned 0 findings — context window too small for 138 tools |
+
+The 4b model is too small for a 138-tool server. Practical sweet spot: `qwen2.5:14b` + `qwen2.5:7b` as your ensemble pair. The two CONSENSUS findings (MCP-T03, MCP-T02) are the highest-confidence signal: two independently parameterised models both said "this is real."
+
 ## [6.12.0] - 2026-05-19
 
 ### Added

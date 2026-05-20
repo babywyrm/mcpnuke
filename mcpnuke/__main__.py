@@ -227,7 +227,32 @@ def _main_inner() -> None:
         _run_doctor(console)
         sys.exit(EXIT_CLEAN)
 
+    if args.ollama_analysis:
+        # Validate Ollama is reachable before starting any scans.
+        import httpx as _httpx
+        try:
+            _r = _httpx.get(f"{args.ollama_analysis.rstrip('/')}/api/tags", timeout=5.0)
+            _r.raise_for_status()
+            _models = [m["name"] for m in _r.json().get("models", [])]
+            if args.ollama_model not in _models:
+                print(
+                    f"Warning: model '{args.ollama_model}' not found on "
+                    f"{args.ollama_analysis}.\n"
+                    f"  Available: {', '.join(_models[:8]) or '(none)'}",
+                    file=sys.stderr,
+                )
+        except Exception as _exc:
+            print(
+                f"Error: cannot reach Ollama at {args.ollama_analysis}: {_exc}\n"
+                "  Check the host/port and that Ollama is running.",
+                file=sys.stderr,
+            )
+            sys.exit(EXIT_ERROR)
+
     if args.claude:
+        if args.ollama_analysis:
+            print("Error: --claude and --ollama-analysis are mutually exclusive.", file=sys.stderr)
+            sys.exit(EXIT_ERROR)
         if args.bedrock:
             try:
                 import boto3  # noqa: F401
@@ -288,6 +313,9 @@ def _main_inner() -> None:
             "bedrock_model": args.bedrock_model,
             "claude_max_tools": args.claude_max_tools,
             "claude_phase2_workers": effective_phase2_workers,
+            "ollama_analysis": getattr(args, "ollama_analysis", None),
+            "ollama_model": getattr(args, "ollama_model", "qwen2.5:14b"),
+            "ollama_ensemble": getattr(args, "ollama_ensemble", None),
             "fast": args.fast,
             "coverage_n": getattr(args, "coverage", None) or 0,
             "probe_workers": effective_probe_workers,
@@ -449,6 +477,17 @@ def _main_inner() -> None:
             panel_lines.append(f"AI: Claude ({args.claude_model})")
         if effective_phase2_workers > 1:
             panel_lines.append(f"AI Phase2 workers: {effective_phase2_workers}")
+    elif args.ollama_analysis:
+        if args.ollama_ensemble:
+            models_str = args.ollama_ensemble
+            panel_lines.append(f"AI: Ollama ensemble ({args.ollama_analysis})")
+            panel_lines.append(f"    models: {models_str}")
+        else:
+            panel_lines.append(f"AI: Ollama ({args.ollama_analysis}, model={args.ollama_model})")
+
+    if args.ollama_analysis and args.ollama_ensemble and not args.ollama_analysis:
+        print("Error: --ollama-ensemble requires --ollama-analysis.", file=sys.stderr)
+        sys.exit(EXIT_ERROR)
     if deterministic_mode:
         panel_lines.append("Deterministic: True")
     if args.k8s_api_url:
@@ -479,6 +518,9 @@ def _main_inner() -> None:
         "bedrock_model": args.bedrock_model,
         "claude_max_tools": args.claude_max_tools,
         "claude_phase2_workers": effective_phase2_workers,
+        "ollama_analysis": getattr(args, "ollama_analysis", None),
+        "ollama_model": getattr(args, "ollama_model", "qwen2.5:14b"),
+        "ollama_ensemble": getattr(args, "ollama_ensemble", None),
         "fast": args.fast,
         "coverage_n": getattr(args, "coverage", None) or 0,
         "probe_workers": effective_probe_workers,

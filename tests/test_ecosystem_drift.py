@@ -219,7 +219,7 @@ def test_vendored_taxonomy_matches_camazotz_scenarios() -> None:
     from mcpnuke.core.taxonomy import load_taxonomy
 
     tax = load_taxonomy()
-    tax_by_lab = {t["camazotz_lab"]: t for t in tax.get("threats", [])}
+    tax_by_lab = {t["camazotz_lab"]: t for t in tax.get("threats", []) if "camazotz_lab" in t}
     scenarios = _all_scenario_files()
 
     errors = []
