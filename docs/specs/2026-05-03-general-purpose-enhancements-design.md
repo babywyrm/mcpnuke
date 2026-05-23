@@ -51,7 +51,7 @@ mcpnuke/
                               add diff block when diff data present
   reporting/diff.py         ← NEW: compare_scans(), format_diff_terminal(), DiffResult
 profiles/
-  camazotz.json             ← full taxonomy for all 39 labs
+  camazotz.json             ← full taxonomy for all 52 labs
   dvmcp.json                ← Damn Vulnerable MCP community reference
   example.json              ← annotated template for custom targets
 ```
@@ -343,7 +343,7 @@ value. Produces either a PASS log line or a MEDIUM finding
 
 | File | Coverage |
 |---|---|
-| `profiles/camazotz.json` | All 39 labs with lane/transport/threat_id |
+| `profiles/camazotz.json` | All 52 labs with lane/transport/threat_id |
 | `profiles/dvmcp.json` | Damn Vulnerable MCP known tools |
 | `profiles/example.json` | Annotated template — every optional field shown with comment |
 
