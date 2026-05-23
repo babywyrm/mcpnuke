@@ -369,7 +369,7 @@ threat taxonomy:
 | MCP-T01 | Direct Prompt Injection | `prompt_injection` |
 | MCP-T02 | Indirect Prompt Injection | `indirect_injection`, `tool_poisoning`, `resource_poisoning` |
 | MCP-T03 | Confused Deputy | `excessive_permissions` |
-| MCP-T04 | Token Audience Bypass | Planned (requires JWT analysis) |
+| MCP-T04 | Token Audience Bypass | `jwt_boundary` |
 | MCP-T05 | Cross-Tool Context Poisoning | `tool_shadowing`, `deep_rug_pull`, `cross_tool_manipulation` |
 | MCP-T06 | SSRF via Tool | `ssrf_probe`, `remote_access`, `code_execution` |
 | MCP-T07 | Secrets in Tool Output | `response_credentials`, `credential_in_schema`, `error_leakage`, `actuator_probe` |
