@@ -119,7 +119,7 @@ The mapping logic:
 - `remote_access` → **DENY**
 - `webhook_persistence` / `exfil_flow` → **DENY**
 - `credential_in_schema` / `response_credentials` → **SCOPE** (redact)
-- `rate_limit` → **BUDGET** (per-identity call limits)
+- `rate_limit` → **ALLOW + budget** (per-identity call limits)
 
 ---
 

@@ -56,7 +56,7 @@ class TestPolicyGeneration:
             ("rate_limit", "MEDIUM", "No rate limiting on 'cost.check_usage'"),
         ])
         rules = generate_policy([result])
-        budget_rules = [r for r in rules if r.action == "BUDGET"]
+        budget_rules = [r for r in rules if r.action == "ALLOW" and r.budget is not None]
         assert len(budget_rules) >= 1
         assert budget_rules[0].budget is not None
 
@@ -224,5 +224,4 @@ class TestActionPriority:
     def test_deny_highest(self):
         assert ACTION_PRIORITY["DENY"] > ACTION_PRIORITY["HOLD"]
         assert ACTION_PRIORITY["HOLD"] > ACTION_PRIORITY["SCOPE"]
-        assert ACTION_PRIORITY["SCOPE"] > ACTION_PRIORITY["BUDGET"]
-        assert ACTION_PRIORITY["BUDGET"] > ACTION_PRIORITY["ALLOW"]
+        assert ACTION_PRIORITY["SCOPE"] > ACTION_PRIORITY["ALLOW"]

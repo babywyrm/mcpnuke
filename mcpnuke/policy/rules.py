@@ -2,7 +2,10 @@
 
 Each entry maps a finding check name to a nullfield action and config.
 When multiple findings affect the same tool, the strictest action wins
-(DENY > HOLD > SCOPE > BUDGET > ALLOW).
+(DENY > HOLD > SCOPE > ALLOW+budget > ALLOW).
+
+Budget rules emit ``action: ALLOW`` with a ``budget:`` block — nullfield
+does not have a standalone BUDGET action.
 """
 
 from __future__ import annotations
@@ -21,7 +24,7 @@ class PolicyRule:
     budget: dict[str, Any] | None = None
 
 
-ACTION_PRIORITY = {"DENY": 4, "HOLD": 3, "SCOPE": 2, "BUDGET": 1, "ALLOW": 0}
+ACTION_PRIORITY = {"DENY": 4, "HOLD": 3, "SCOPE": 2, "ALLOW": 0}
 
 FINDING_TO_ACTION: dict[str, dict[str, Any]] = {
     # DENY — block outright
@@ -106,9 +109,9 @@ FINDING_TO_ACTION: dict[str, dict[str, Any]] = {
         },
     },
 
-    # BUDGET — rate limit
+    # BUDGET — rate limit (nullfield uses action: ALLOW + budget: block)
     "rate_limit": {
-        "action": "BUDGET",
+        "action": "ALLOW",
         "reason": "no rate limiting detected",
         "budget": {
             "perIdentity": {"maxCallsPerHour": 100},
@@ -117,7 +120,7 @@ FINDING_TO_ACTION: dict[str, dict[str, Any]] = {
         },
     },
     "behavioral_rate_limit": {
-        "action": "BUDGET",
+        "action": "ALLOW",
         "reason": "behavioral rate limit bypass",
         "budget": {
             "perIdentity": {"maxCallsPerHour": 50},

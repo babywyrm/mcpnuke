@@ -78,7 +78,7 @@ lanes:
     description: >
       Pre-authentication. No identity established. MCP protocol requires
       tools/list to be unauthenticated. Onboarding and guest flows.
-    default_nullfield_action: "BUDGET"
+    default_nullfield_action: "ALLOW+budget"
     key_risks:
       - Tool schema over-disclosure (credential patterns in descriptions)
       - Rate-limit exhaustion (no per-caller accounting)
