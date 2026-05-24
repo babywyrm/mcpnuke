@@ -51,6 +51,6 @@ uv run pytest tests/ -v -x           # Stop on first failure
 ## Verification (superpowers: verification-before-completion)
 
 Before claiming work is done, run and confirm:
-- `uv run pytest tests/ -v` — 163+ passed, 36 skipped, 0 failed
+- `uv run pytest tests/ -v` — 618+ passed, 36 skipped, 0 failed
 - No import errors or deprecation warnings
 - New tests cover positive, negative, and timing

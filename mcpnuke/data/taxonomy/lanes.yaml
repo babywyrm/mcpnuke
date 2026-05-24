@@ -14,8 +14,8 @@
 # Source of truth for lab implementations: github.com/babywyrm/camazotz
 
 schema_version: "1.0.0"
-generated: "2026-05-12"
-camazotz_lab_count: 51
+generated: "2026-05-24"
+camazotz_lab_count: 52
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Identity Lanes

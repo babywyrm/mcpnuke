@@ -62,7 +62,13 @@ def generate_policy(
 
 
 def _extract_tool_name(finding: Finding) -> str:
-    """Extract the tool name from a finding's title or detail."""
+    """Extract the tool name from a finding's title or detail.
+
+    Handles formats like:
+      Tool 'module.tool_name': ...
+      Remote access [shell_exec]: 'remote_access'
+      "module.tool_name"
+    """
     import re
     for field in (finding.title, finding.detail, finding.evidence):
         matches = re.findall(r"'([a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_]*)'", field)
@@ -72,6 +78,9 @@ def _extract_tool_name(finding: Finding) -> str:
         if matches:
             return matches[0]
         matches = re.findall(r"tool '([^']+)'", field)
+        if matches:
+            return matches[0]
+        matches = re.findall(r"\[([a-zA-Z_][a-zA-Z0-9_.]*)\]", field)
         if matches:
             return matches[0]
         matches = re.findall(r"\"([a-zA-Z_][a-zA-Z0-9_.]+\.[a-zA-Z_][a-zA-Z0-9_]+)\"", field)

@@ -485,7 +485,7 @@ def _main_inner() -> None:
         else:
             panel_lines.append(f"AI: Ollama ({args.ollama_analysis}, model={args.ollama_model})")
 
-    if args.ollama_analysis and args.ollama_ensemble and not args.ollama_analysis:
+    if args.ollama_ensemble and not args.ollama_analysis:
         print("Error: --ollama-ensemble requires --ollama-analysis.", file=sys.stderr)
         sys.exit(EXIT_ERROR)
     if deterministic_mode:
@@ -502,6 +502,15 @@ def _main_inner() -> None:
             border_style="cyan",
         )
     )
+
+    profile_data = None
+    if getattr(args, "profile", None):
+        from mcpnuke.profile import load_profile
+        try:
+            profile_data = load_profile(args.profile)
+            console.print(f"  [green]Profile loaded:[/green] {profile_data.name} ({len(profile_data.tools)} tools)")
+        except (FileNotFoundError, ValueError) as exc:
+            console.print(f"  [red]Profile error:[/red] {exc}")
 
     probe_opts = {
         "no_invoke": args.no_invoke,
@@ -532,6 +541,7 @@ def _main_inner() -> None:
         "inference_scan": getattr(args, "inference", False) or bool(getattr(args, "inference_host", None)),
         "inference_baseline": getattr(args, "inference_baseline", None),
         "save_inference_baseline": getattr(args, "save_inference_baseline", None),
+        "profile": profile_data,
     }
 
     if args.no_invoke:

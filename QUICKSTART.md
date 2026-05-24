@@ -115,7 +115,8 @@ mcpnuke --targets http://localhost:8080/mcp --fast --no-invoke --verbose
 ```
 
 The mapping logic:
-- `code_execution` / `remote_access` → **HOLD** or **DENY**
+- `code_execution` → **HOLD** (timeout 5m, onTimeout DENY)
+- `remote_access` → **DENY**
 - `webhook_persistence` / `exfil_flow` → **DENY**
 - `credential_in_schema` / `response_credentials` → **SCOPE** (redact)
 - `rate_limit` → **BUDGET** (per-identity call limits)

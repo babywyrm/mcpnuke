@@ -220,7 +220,7 @@ class OllamaBackend:
             '  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"\n'
             "  title: short finding title\n"
             "  detail: explanation of the risk and attack scenario\n"
-            "  taxonomy_id: MCP threat taxonomy ID (MCP-T01 through MCP-T14) if applicable\n\n"
+            "  taxonomy_id: MCP threat taxonomy ID (MCP-T01 through MCP-T55) if applicable\n\n"
             "Only report genuine security concerns. No false positives. "
             "Respond with ONLY the JSON array, no markdown, no explanation."
         )
