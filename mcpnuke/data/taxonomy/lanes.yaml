@@ -573,3 +573,46 @@ threats:
       Model digests on the inference backend have changed since the
       last known-good baseline — indicates model tampering, replacement,
       deletion, or unauthorized injection.
+
+  - threat_id: "MCP-T56"
+    title: "AI Guardrail Bypass via Social Engineering"
+    category: "ai_governance"
+    lane: 2
+    transport: "A"
+    owasp_mcp: "MCP01"
+    description: >
+      An MCP tool wraps LLM-mediated decisions (deployment gates, content
+      filters, scale reviews) using soft system-prompt guardrails such as
+      "try to protect sensitive values." The raw sensitive data is present
+      in the LLM context, and casual social-engineering-style requests
+      bypass the guardrail reliably while aggressive authority overrides
+      are refused. Model selection dramatically affects resistance —
+      identical prompts succeed 0–100% of the time across models.
+
+  - threat_id: "MCP-T57"
+    title: "Cached Session Token Exposure"
+    category: "secrets"
+    lane: 1
+    transport: "A"
+    owasp_mcp: "MCP07"
+    description: >
+      OAuth/OIDC session tokens (access tokens, refresh tokens) are
+      cached as plaintext files on pod or container filesystems — commonly
+      in /tmp, session directories, or application state stores. Post-RCE
+      access to the filesystem enables lateral movement to MCP endpoints
+      using stolen tokens, bypassing AI guardrails entirely.
+
+  - threat_id: "MCP-T58"
+    title: "hostNetwork Loopback Bridge"
+    category: "infrastructure"
+    lane: 3
+    transport: "B"
+    owasp_mcp: "MCP09"
+    description: >
+      A Kubernetes pod running an MCP tool server or AI governance gate
+      uses hostNetwork, sharing the host's network namespace. The pod's
+      127.0.0.1 is the host's loopback, enabling access to host-bound
+      services (databases, application servers, management interfaces)
+      that are otherwise unreachable from the pod network. If an AI gate
+      includes loopback in its hostname allowlist, payloads served from
+      the host bypass the gate.

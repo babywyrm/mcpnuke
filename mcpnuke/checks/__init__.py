@@ -92,6 +92,7 @@ from mcpnuke.checks.sdk_cache_tamper import (
     check_sdk_cache_tamper,
     check_sdk_cache_poisoning,
 )
+from mcpnuke.checks.ai_guardrail_probe import check_ai_guardrail
 
 # Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
 # State-mutating checks are inappropriate for internet targets without explicit
@@ -334,6 +335,7 @@ def run_all_checks(
             ("teleport_lab_cert_replay", check_teleport_lab_cert_replay, (session, result), {"probe_opts": opts}),
             ("shell_injection", check_shell_injection, (session, result), {"probe_opts": opts}),
             ("sdk_cache_poisoning", check_sdk_cache_poisoning, (session, result), {"probe_opts": opts}),
+            ("ai_guardrail_probe", check_ai_guardrail, (session, result), {"probe_opts": opts}),
         ]
 
         if fast_mode:

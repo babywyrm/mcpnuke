@@ -386,6 +386,110 @@ def _check_network_policies(namespace: str, token: str, api_url: str | None = No
         ))
 
 
+_SESSION_TOKEN_PATHS = [
+    "/tmp", "/tmp/.sessions", "/tmp/.tokens",
+    "/var/tmp", "/app/tmp",
+]
+
+_TOKEN_FILE_INDICATORS = ["access_token", "refresh_token", "Bearer", "eyJ"]
+
+
+def _check_hostnetwork_loopback(pods_data: dict | None, namespace: str):
+    """Flag pods with hostNetwork that can bridge to host-bound services (MCP-T58)."""
+    if not pods_data:
+        return
+    for pod in pods_data.get("items", []):
+        spec = pod.get("spec", {})
+        if not spec.get("hostNetwork"):
+            continue
+        pod_name = pod.get("metadata", {}).get("name", "?")
+        ports: list[int] = []
+        for c in spec.get("containers", []):
+            for p in c.get("ports", []):
+                port = p.get("containerPort")
+                if port:
+                    ports.append(port)
+        GLOBAL_K8S_FINDINGS.append(Finding(
+            target="k8s",
+            check="hostnetwork_loopback",
+            severity="MEDIUM",
+            title=f"Pod '{pod_name}' uses hostNetwork in {namespace}",
+            detail=(
+                f"Pod shares the host network namespace — 127.0.0.1 reaches "
+                f"host-bound services. Container ports: {ports or 'none declared'}. "
+                f"If this pod runs an AI governance gate with a loopback allowlist, "
+                f"attackers on the host can serve payloads from loopback that bypass the gate."
+            ),
+            taxonomy_id="MCP-T58",
+        ))
+
+
+def _check_session_token_exposure(
+    pods_data: dict | None, namespace: str,
+    token: str = "", api_url: str | None = None,
+):
+    """Detect plaintext session/token files in pod temp directories (MCP-T57).
+
+    Requires exec permissions on pods — will silently skip if forbidden.
+    """
+    if not pods_data:
+        return
+
+    import re
+    import ssl
+    import urllib.request
+
+    jwt_re = re.compile(r"eyJ[a-zA-Z0-9_\-]{10,}\.eyJ[a-zA-Z0-9_\-]{10,}")
+    base_url = api_url or "https://kubernetes.default"
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    for pod in pods_data.get("items", []):
+        pod_name = pod.get("metadata", {}).get("name", "?")
+        containers = pod.get("spec", {}).get("containers", [])
+        if not containers:
+            continue
+        container_name = containers[0].get("name", "")
+
+        for search_dir in _SESSION_TOKEN_PATHS[:3]:
+            exec_cmd = f"find {search_dir} -name '*.json' -size +50c -maxdepth 2 2>/dev/null | head -5"
+            exec_url = (
+                f"{base_url}/api/v1/namespaces/{namespace}/pods/{pod_name}"
+                f"/exec?container={container_name}"
+                f"&command=sh&command=-c&command={urllib.request.quote(exec_cmd)}"
+                f"&stdout=true&stderr=false"
+            )
+            headers = {}
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+            try:
+                req = urllib.request.Request(exec_url, headers=headers)
+                with urllib.request.urlopen(req, timeout=5, context=ctx) as r:
+                    output = r.read().decode(errors="replace")
+                    if not output.strip():
+                        continue
+                    for fpath in output.strip().split("\n"):
+                        fpath = fpath.strip()
+                        if not fpath:
+                            continue
+                        if any(ind.lower() in fpath.lower() for ind in ["session", "token", "auth"]):
+                            GLOBAL_K8S_FINDINGS.append(Finding(
+                                target="k8s",
+                                check="session_token_exposure",
+                                severity="HIGH",
+                                title=f"Potential session token file in {pod_name}:{fpath}",
+                                detail=(
+                                    f"JSON file in temp directory may contain cached "
+                                    f"OAuth/OIDC tokens. Post-RCE access enables lateral "
+                                    f"movement to MCP endpoints using stolen tokens."
+                                ),
+                                taxonomy_id="MCP-T57",
+                            ))
+            except Exception:
+                break
+
+
 def run_k8s_checks(namespace: str, console=None, api_url: str | None = None, token: str | None = None):
     """Run K8s security checks.
 
@@ -464,6 +568,8 @@ def run_k8s_checks(namespace: str, console=None, api_url: str | None = None, tok
     _check_sa_blast_radius(namespace, token or "", console=console, api_url=api_url)
     _check_helm_version_drift(namespace, token or "", console=console, api_url=api_url)
     _check_network_policies(namespace, token or "", api_url=api_url)
+    _check_hostnetwork_loopback(pods_data, namespace)
+    _check_session_token_exposure(pods_data, namespace, token or "", api_url=api_url)
 
     if console:
         sev_counts: dict[str, int] = {}
