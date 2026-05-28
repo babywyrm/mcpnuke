@@ -8,10 +8,11 @@ COPY mcpnuke ./mcpnuke
 RUN pip install --no-cache-dir --prefix=/install ".[server]"
 
 FROM python:3.13-slim
-RUN groupadd -r mcpnuke && useradd -r -g mcpnuke -d /app mcpnuke
+# Numeric UID so Kubernetes runAsNonRoot can verify the user without a lookup.
+RUN groupadd -r -g 1001 mcpnuke && useradd -r -u 1001 -g mcpnuke -d /app mcpnuke
 COPY --from=builder /install /usr/local
 WORKDIR /app
-USER mcpnuke
+USER 1001
 
 ENV MCPNUKE_RUNNER_HOST=0.0.0.0 \
     MCPNUKE_RUNNER_PORT=8090 \
