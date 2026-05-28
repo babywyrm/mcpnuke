@@ -1,21 +1,37 @@
 """In-memory job manager that drives mcpnuke scans for the runner service.
 
-mcpnuke's scan path is synchronous (and prints progress to a module-level
-Rich console → container stdout). To keep the FastAPI event loop responsive,
-jobs run on a small thread pool; HTTP handlers only submit work and read
-status. Results live in memory — adequate for the MVP single-replica
-deployment; swap the ``_jobs`` dict for Redis/SQLite when persistence or
-horizontal scale is needed.
+mcpnuke's scan path is synchronous and makes blocking network calls whose
+individual timeouts don't add up to a bounded whole — a single probe that
+provokes a hung upstream fetch can stall a scan indefinitely. Because Python
+threads can't be force-killed, each scan runs in its own **subprocess** that
+is hard-terminated if it blows past a wall-clock cap. A small thread pool
+supervises those subprocesses so the FastAPI event loop stays responsive and
+HTTP handlers only submit/read status.
+
+Results live in memory — adequate for the MVP single-replica deployment; swap
+the ``_jobs`` dict for Redis/SQLite when persistence or horizontal scale is
+needed.
 """
 
 from __future__ import annotations
 
+import multiprocessing as mp
+import os
+import queue as _queue
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from mcpnuke.server.models import ScanDepth, ScanJob, ScanRequest, ScanStatus
+
+# Default hard cap for a whole scan job. Overridable per-request via
+# ScanRequest.max_seconds, or globally via the env var.
+DEFAULT_JOB_TIMEOUT = float(os.getenv("MCPNUKE_RUNNER_JOB_TIMEOUT", "180"))
+
+# spawn keeps behavior identical on Linux (container) and macOS (dev), and
+# avoids inheriting the parent's threads/uvicorn state into the child.
+_MP_CTX = mp.get_context("spawn")
 
 
 def _now() -> str:
@@ -45,13 +61,65 @@ def _probe_opts_for(req: ScanRequest) -> dict:
     return opts
 
 
-class JobManager:
-    """Tracks scan jobs and runs them on a bounded worker pool."""
+def _coverage(results: list, coverage_url: str) -> dict:
+    """Best-effort cross-project coverage; failures degrade to a note."""
+    from mcpnuke.reporting.coverage_report import (
+        SchemaMismatchError,
+        build_coverage_report,
+        fetch_lane_taxonomy,
+    )
 
-    def __init__(self, max_workers: int = 2) -> None:
+    try:
+        taxonomy = fetch_lane_taxonomy(coverage_url)
+        return build_coverage_report(results, taxonomy)
+    except SchemaMismatchError as exc:
+        return {"error": "schema_mismatch", "detail": str(exc)}
+    except Exception as exc:  # noqa: BLE001
+        return {"error": "unreachable", "detail": f"{type(exc).__name__}: {exc}"}
+
+
+def _scan_worker(req_dict: dict, q) -> None:
+    """Run a single scan in a child process and put the result on the queue.
+
+    Must be a top-level function so it's picklable under the spawn start
+    method. Imports are kept inside so spawning the child stays cheap and the
+    parent never pays for scanner/rich import at module load.
+    """
+    try:
+        from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
+        from mcpnuke.reporting.by_lane import build_by_lane
+        from mcpnuke.reporting.json_out import build_report
+        from mcpnuke.scanner import run_parallel
+
+        req = ScanRequest(**req_dict)
+        GLOBAL_K8S_FINDINGS.clear()
+
+        results = run_parallel(
+            [req.target],
+            timeout=req.timeout,
+            workers=1,
+            verbose=False,
+            auth_token=req.auth_token,
+            probe_opts=_probe_opts_for(req),
+        )
+        payload = {
+            "report": build_report(results, include_k8s=False),
+            "by_lane": build_by_lane(results),
+            "coverage": _coverage(results, req.coverage_url) if req.coverage_url else None,
+        }
+        q.put((True, payload))
+    except Exception as exc:  # noqa: BLE001 — surface any failure to the parent
+        q.put((False, f"{type(exc).__name__}: {exc}"))
+
+
+class JobManager:
+    """Tracks scan jobs and runs each one in a killable subprocess."""
+
+    def __init__(self, max_workers: int = 2, job_timeout: float | None = None) -> None:
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="mcpnuke-scan")
         self._jobs: dict[str, ScanJob] = {}
         self._lock = threading.Lock()
+        self._default_timeout = job_timeout if job_timeout is not None else DEFAULT_JOB_TIMEOUT
 
     @property
     def active_jobs(self) -> int:
@@ -90,60 +158,34 @@ class JobManager:
         if job is None:
             return
         req = job.request
+        timeout = req.max_seconds or self._default_timeout
         self._set(job_id, status=ScanStatus.running, started_at=_now())
 
+        q: "mp.Queue" = _MP_CTX.Queue()
+        proc = _MP_CTX.Process(target=_scan_worker, args=(req.model_dump(), q), daemon=True)
+        proc.start()
+
+        # get(timeout) drains the pipe (avoiding the large-result join deadlock)
+        # and bounds the wall clock in one shot.
         try:
-            # Imported lazily so importing the service module stays cheap and
-            # never drags scanner/rich into contexts that only need models.
-            from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
-            from mcpnuke.reporting.by_lane import build_by_lane
-            from mcpnuke.reporting.json_out import build_report
-            from mcpnuke.scanner import run_parallel
-
-            # Reset module-level k8s accumulator so jobs don't bleed into each
-            # other (the library was built for one-shot CLI runs).
-            GLOBAL_K8S_FINDINGS.clear()
-
-            results = run_parallel(
-                [req.target],
-                timeout=req.timeout,
-                workers=1,
-                verbose=False,
-                auth_token=req.auth_token,
-                probe_opts=_probe_opts_for(req),
-            )
-
-            report = build_report(results, include_k8s=False)
-            by_lane = build_by_lane(results)
-
-            coverage = None
-            if req.coverage_url:
-                coverage = self._coverage(results, req.coverage_url)
-
+            ok, payload = q.get(timeout=timeout)
+        except _queue.Empty:
+            proc.terminate()
+            proc.join(5)
             self._set(
                 job_id,
-                status=ScanStatus.done,
+                status=ScanStatus.error,
                 finished_at=_now(),
-                report=report,
-                by_lane=by_lane,
-                coverage=coverage,
+                error=f"scan exceeded {timeout:.0f}s wall-clock cap and was terminated",
             )
-        except Exception as exc:  # noqa: BLE001 — surface any scan failure to the caller
-            self._set(job_id, status=ScanStatus.error, finished_at=_now(), error=f"{type(exc).__name__}: {exc}")
+            return
+        finally:
+            if proc.is_alive():
+                proc.join(5)
+                if proc.is_alive():
+                    proc.terminate()
 
-    @staticmethod
-    def _coverage(results: list, coverage_url: str) -> dict:
-        """Best-effort cross-project coverage; failures degrade to a note."""
-        from mcpnuke.reporting.coverage_report import (
-            SchemaMismatchError,
-            build_coverage_report,
-            fetch_lane_taxonomy,
-        )
-
-        try:
-            taxonomy = fetch_lane_taxonomy(coverage_url)
-            return build_coverage_report(results, taxonomy)
-        except SchemaMismatchError as exc:
-            return {"error": "schema_mismatch", "detail": str(exc)}
-        except Exception as exc:  # noqa: BLE001
-            return {"error": "unreachable", "detail": f"{type(exc).__name__}: {exc}"}
+        if ok:
+            self._set(job_id, status=ScanStatus.done, finished_at=_now(), **payload)
+        else:
+            self._set(job_id, status=ScanStatus.error, finished_at=_now(), error=payload)

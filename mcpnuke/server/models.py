@@ -37,6 +37,16 @@ class ScanRequest(BaseModel):
         ),
     )
     timeout: float = Field(25.0, ge=1.0, le=120.0, description="Per-target connect/probe timeout (seconds).")
+    max_seconds: float | None = Field(
+        None,
+        ge=5.0,
+        le=1800.0,
+        description=(
+            "Hard wall-clock cap for the whole job. The scan subprocess is "
+            "killed if it exceeds this. None uses the server default "
+            "(MCPNUKE_RUNNER_JOB_TIMEOUT)."
+        ),
+    )
     coverage_url: str | None = Field(
         None,
         description=(

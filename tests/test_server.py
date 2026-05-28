@@ -51,6 +51,48 @@ def test_get_unknown_job_404():
     assert resp.status_code == 404
 
 
+def test_scan_job_hard_timeout():
+    """A scan that would otherwise hang must be killed at the wall-clock cap.
+
+    A listening socket that accepts the connection but never replies makes the
+    scanner's per-request read block; the job-level max_seconds must terminate
+    the subprocess and surface an error rather than running forever.
+    """
+    import socket
+
+    sink = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sink.bind(("127.0.0.1", 0))
+    sink.listen(1)  # accept into the backlog, never read/respond
+    port = sink.getsockname()[1]
+    try:
+        resp = client.post(
+            "/scans",
+            json={
+                "target": f"http://127.0.0.1:{port}/mcp",
+                "depth": "fast",
+                "timeout": 60.0,      # per-request timeout far longer than the cap
+                "max_seconds": 5.0,   # the hard wall-clock cap under test
+            },
+        )
+        assert resp.status_code == 202
+        job_id = resp.json()["id"]
+
+        deadline = time.time() + 25
+        status = None
+        while time.time() < deadline:
+            poll = client.get(f"/scans/{job_id}")
+            status = poll.json()["status"]
+            if status in ("done", "error"):
+                break
+            time.sleep(0.5)
+
+        assert status == "error"
+        body = client.get(f"/scans/{job_id}").json()
+        assert "wall-clock cap" in (body["error"] or "")
+    finally:
+        sink.close()
+
+
 def test_scan_lifecycle_unreachable_target():
     """A scan against an unreachable target should still complete (no MCP
     transport found) rather than erroring the job out."""
