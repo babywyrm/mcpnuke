@@ -61,7 +61,13 @@ def _build_target_dict(r: TargetResult) -> dict:
     return d
 
 
-def write_json(results: list[TargetResult], path: str, console=None):
+def build_report(results: list[TargetResult], *, include_k8s: bool = True) -> dict:
+    """Assemble the full JSON report as a plain dict.
+
+    This is the in-memory counterpart to :func:`write_json` — same schema,
+    no file I/O — so embedders (e.g. the mcpnuke-runner service) can return
+    structured results over an API without touching disk.
+    """
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -74,7 +80,9 @@ def write_json(results: list[TargetResult], path: str, console=None):
             ),
         },
         "targets": [_build_target_dict(r) for r in results],
-        "k8s_findings": [
+    }
+    if include_k8s:
+        report["k8s_findings"] = [
             {
                 "check": f.check,
                 "severity": f.severity,
@@ -83,8 +91,12 @@ def write_json(results: list[TargetResult], path: str, console=None):
                 "evidence": f.evidence,
             }
             for f in GLOBAL_K8S_FINDINGS
-        ],
-    }
+        ]
+    return report
+
+
+def write_json(results: list[TargetResult], path: str, console=None):
+    report = build_report(results)
     with open(path, "w") as fh:
         json.dump(report, fh, indent=2)
     if console:

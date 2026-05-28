@@ -43,12 +43,18 @@ ai = [
     "anthropic>=0.40",
     "boto3>=1.35",
 ]
+server = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+]
 all = [
-    "mcpnuke[ai,k8s]",
+    "mcpnuke[ai,k8s,server]",
 ]
 
 [project.scripts]
 mcpnuke = "mcpnuke.__main__:main"
+mcpnuke-runner = "mcpnuke.server.app:run"
 
 [project.urls]
 Repository = "https://github.com/babywyrm/mcpnuke"
