@@ -63,8 +63,16 @@ jobs:
         run: |
           mcpnuke --targets ${{ vars.MCP_TARGET }} \
             --fast --no-invoke \
+            --fail-on high \
             --generate-policy policy.yaml \
-            --json report.json
+            --json report.json \
+            --sarif results.sarif
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -72,6 +80,7 @@ jobs:
           name: security-scan
           path: |
             report.json
+            results.sarif
             policy.yaml
 ```
 
@@ -88,14 +97,17 @@ mcp-security-scan:
     - pip install mcpnuke
     - mcpnuke --targets $MCP_TARGET
         --fast --no-invoke
+        --fail-on high
         --generate-policy policy.yaml
         --json report.json
+        --sarif results.sarif
   artifacts:
     paths:
       - report.json
+      - results.sarif
       - policy.yaml
     reports:
-      codequality: report.json
+      sast: results.sarif
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 ```
@@ -112,27 +124,16 @@ set -e
 
 pip install mcpnuke
 
-# Scan (static, fast)
+# Scan with --fail-on controlling exit code (no shell parsing needed)
 mcpnuke --targets "$MCP_TARGET" \
   --fast --no-invoke \
+  --fail-on high \
   --generate-policy policy.yaml \
-  --json report.json
+  --json report.json \
+  --sarif results.sarif
 
-# Check for CRITICAL findings
-CRITICAL=$(python3 -c "
-import json
-d = json.load(open('report.json'))
-print(sum(1 for f in d['targets'][0]['findings'] if f['severity']=='CRITICAL'))
-")
-
-echo "Critical findings: $CRITICAL"
-
-if [ "$CRITICAL" -gt 0 ]; then
-  echo "FAIL: $CRITICAL critical findings detected"
-  exit 1
-fi
-
-echo "PASS: No critical findings"
+# Exit 0 = clean, 1 = findings >= HIGH, 2 = scanner error
+echo "Scan complete. See report.json and results.sarif."
 ```
 
 ---
@@ -222,8 +223,8 @@ based purely on finding severity:
 
 | Code | Meaning |
 |------|---------|
-| `0` | Clean scan, no CRITICAL/HIGH findings (regardless of lane coverage) |
-| `1` | At least one CRITICAL or HIGH finding |
+| `0` | Clean scan — no findings at or above `--fail-on` threshold (default: HIGH) |
+| `1` | At least one finding at or above threshold |
 | `2` | Scanner error (target unreachable, invalid args, unhandled exception) |
 
 If you want a CI gate that fails when camazotz declares lanes mcpnuke
@@ -234,3 +235,79 @@ isn't covering yet, post-process the `--json` report or the printed
 when `ANTHROPIC_API_KEY` is unset (exit `2` *before* any scan runs). If
 your CI matrix lacks the key, drop `--claude` rather than expecting
 silent degradation; mcpnuke will not run a `[cloud-stub]`-style fallback.
+
+---
+
+## mcpnuke-runner (Kubernetes / Camazotz)
+
+`mcpnuke-runner` is a lightweight sidecar that runs scheduled or on-demand
+scans within Kubernetes, integrating with the camazotz scan queue.
+
+### Architecture
+
+```
+camazotz API → mcpnuke-runner Pod → mcpnuke scan → POST results back
+```
+
+The runner polls `camazotz /api/scan-queue` every N seconds, picks up
+pending scan jobs (target URL + profile + options), executes mcpnuke,
+and posts structured JSON results back.
+
+### Deployment (Helm)
+
+```yaml
+# values.yaml snippet
+mcpnukeRunner:
+  enabled: true
+  image: ghcr.io/babywyrm/mcpnuke:latest
+  pollIntervalSeconds: 30
+  defaultScanMode: static          # static | ai | full
+  failOn: high                     # --fail-on threshold for result tagging
+  sarifUpload: true                # attach SARIF to results payload
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+```
+
+```bash
+# Deploy or upgrade
+helm upgrade --install camazotz ./deploy/helm/camazotz \
+  --set mcpnukeRunner.enabled=true \
+  --set mcpnukeRunner.failOn=high
+```
+
+### Environment Variables (runner pod)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CAMAZOTZ_URL` | required | camazotz API base URL |
+| `CAMAZOTZ_API_KEY` | required | API key for posting results |
+| `MCPNUKE_FAIL_ON` | `high` | Severity threshold for tagging a job as failed |
+| `MCPNUKE_SARIF` | `false` | Attach SARIF 2.1.0 to results payload |
+| `ANTHROPIC_API_KEY` | optional | Enable `--claude` AI-enhanced scans |
+| `POLL_INTERVAL` | `30` | Seconds between queue polls |
+
+### Running a manual scan via runner API
+
+```bash
+# Trigger an on-demand scan through camazotz
+curl -X POST https://camazotz.example.com/api/scan-queue \
+  -H "Authorization: Bearer $CAMAZOTZ_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target": "http://mcp-server:8080/mcp",
+    "profile": "profiles/camazotz.json",
+    "scan_mode": "static",
+    "fail_on": "high"
+  }'
+```
+
+### Reading runner logs
+
+```bash
+kubectl logs -n camazotz deploy/mcpnuke-runner -f
+```
+
+Structured log lines include `scan_id`, `target`, `findings_count`,
+`severity_counts`, `exit_code`, and `duration_ms`.
+

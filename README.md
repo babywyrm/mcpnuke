@@ -144,9 +144,17 @@ validation) and includes a safe claim summary in JSON output under
 If configured, token introspection and JWKS fetch summaries are also included
 under `auth_context` without affecting scan behavior when disabled.
 
-**Exit codes:** `0` — no findings (clean); `1` — findings reported; `2` — scan
-error (connection failure, invalid args, etc.). Use `1` vs `2` in CI to
-distinguish “vulns found” from “scanner failed.”
+**Exit codes:** `0` — no findings (clean); `1` — findings at or above the
+`--fail-on` threshold (default: `high`); `2` — scan error (connection failure,
+invalid args, etc.). Use `1` vs `2` in CI to distinguish “vulns found” from
+“scanner failed.” Use `--fail-on none` to always exit 0 (informational scans).
+
+**SARIF output:** Use `--sarif results.sarif` to emit a SARIF 2.1.0 report
+for GitHub Code Scanning, VS Code, and IDE integration. Findings map as:
+CRITICAL/HIGH — `error`, MEDIUM — `warning`, LOW — `note`.
+
+See [CI/CD Integration Guide](docs/ci-cd-guide.md) for GitHub Actions, GitLab CI,
+and mcpnuke-runner setup.
 
 ---
 
