@@ -44,6 +44,25 @@ EXIT_CLEAN = 0
 EXIT_FINDINGS = 1
 EXIT_ERROR = 2
 
+_SEVERITY_ORDER: list[str] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+
+
+def _should_fail(findings: list, fail_on: str) -> bool:
+    """Return True if any finding meets or exceeds the --fail-on threshold."""
+    if fail_on == "none":
+        return False
+    if fail_on == "any":
+        return bool(findings)
+    threshold = fail_on.upper()
+    if threshold not in _SEVERITY_ORDER:
+        return False
+    min_idx = _SEVERITY_ORDER.index(threshold)
+    return any(
+        f.severity.upper() in _SEVERITY_ORDER
+        and _SEVERITY_ORDER.index(f.severity.upper()) >= min_idx
+        for f in findings
+    )
+
 
 def _run_doctor(console: Console) -> None:
     """Check installation health and report missing deps / config."""
@@ -349,7 +368,7 @@ def _main_inner() -> None:
         print_report([result], group_findings=args.group_findings, console=console)
         if args.json_out:
             write_json([result], args.json_out, console=console)
-        if any(f.severity in ("CRITICAL", "HIGH") for f in result.findings):
+        if _should_fail(result.findings, getattr(args, "fail_on", "high")):
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
 
@@ -648,7 +667,7 @@ def _main_inner() -> None:
             console.print(f"\n  [green]✓[/green] Inference baseline saved to {probe_opts['save_inference_baseline']}")
         if args.json_out:
             write_json(results, args.json_out, console=console)
-        if any(f.severity in ("CRITICAL", "HIGH") for f in result.findings):
+        if _should_fail(result.findings, getattr(args, "fail_on", "high")):
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
 
@@ -671,7 +690,7 @@ def _main_inner() -> None:
                 from pathlib import Path
                 Path(args.json_out).write_text(json.dumps(report, indent=2))
                 console.print(f"\n[green]JSON report written to {args.json_out}[/green]")
-            if any(f.severity in ("CRITICAL", "HIGH") for f in GLOBAL_K8S_FINDINGS):
+            if _should_fail(GLOBAL_K8S_FINDINGS, getattr(args, "fail_on", "high")):
                 sys.exit(EXIT_FINDINGS)
             sys.exit(EXIT_CLEAN)
         console.print("[red]No targets specified and K8s discovery found nothing.[/red]")
@@ -848,7 +867,7 @@ def _main_inner() -> None:
             console.print(f"\n[red]--taxonomy: failed to load: {exc}[/red]")
 
     all_findings = [f for r in results for f in r.findings]
-    if any(f.severity in ("CRITICAL", "HIGH") for f in all_findings):
+    if _should_fail(all_findings, getattr(args, "fail_on", "high")):
         sys.exit(EXIT_FINDINGS)
 
 

@@ -399,6 +399,15 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "with affected-tool lists and counts.",
     )
     p.add_argument(
+        "--fail-on",
+        metavar="SEVERITY",
+        default="high",
+        choices=["critical", "high", "medium", "low", "any", "none"],
+        help="Exit 1 when findings at or above this severity are found. "
+             "Choices: critical, high (default), medium, low, any, none. "
+             "'none' always exits 0 (useful in CI for informational scans).",
+    )
+    p.add_argument(
         "--diff-baseline",
         metavar="FILE",
         default=None,
