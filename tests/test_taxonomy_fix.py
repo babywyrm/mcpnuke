@@ -116,3 +116,26 @@ class TestJsonSerialization:
         assert target["tools_scanned"] == 2
         assert "tools_unscanned_count" in target
         assert target["tools_unscanned_count"] == 8
+
+    def test_raw_token_redacted_from_json_output(self, tmp_path):
+        from mcpnuke.reporting.json_out import write_json
+        result = TargetResult(url="http://localhost:8080/mcp")
+        result.auth_context = {
+            "_raw_token": "supersecret.jwt.token",
+            "jwt_claims_summary": {"sub": "user123"},
+        }
+        out = tmp_path / "out.json"
+        write_json([result], str(out))
+        data = json.loads(out.read_text())
+        auth = data["targets"][0]["auth_context"]
+        assert "_raw_token" not in auth
+        assert auth.get("jwt_claims_summary") == {"sub": "user123"}
+
+    def test_build_report_raw_token_redacted(self):
+        from mcpnuke.reporting.json_out import build_report
+        result = TargetResult(url="http://localhost:8080/mcp")
+        result.auth_context = {"_raw_token": "tok", "other": "kept"}
+        report = build_report([result], include_k8s=False)
+        auth = report["targets"][0]["auth_context"]
+        assert "_raw_token" not in auth
+        assert auth.get("other") == "kept"

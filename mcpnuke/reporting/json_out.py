@@ -8,6 +8,14 @@ from mcpnuke.core.models import TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 
 
+_REDACTED_KEYS: frozenset[str] = frozenset({"_raw_token"})
+
+
+def _safe_auth_context(auth_context: dict) -> dict:
+    """Return auth_context with sensitive keys stripped for JSON output."""
+    return {k: v for k, v in auth_context.items() if k not in _REDACTED_KEYS}
+
+
 def _build_target_dict(r: TargetResult) -> dict:
     tools_total = r.tools_total if r.tools_total > 0 else len(r.tools)
     tools_scanned = len(r.tools)
@@ -15,7 +23,7 @@ def _build_target_dict(r: TargetResult) -> dict:
         "url": r.url,
         "transport": r.transport,
         "risk_score": r.risk_score(),
-        "auth_context": r.auth_context,
+        "auth_context": _safe_auth_context(r.auth_context),
         "tools_total": tools_total,
         "tools_scanned": tools_scanned,
         "tools_scanned_names": [t.get("name") for t in r.tools],
