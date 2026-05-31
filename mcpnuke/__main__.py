@@ -29,7 +29,7 @@ from mcpnuke.core.auth import (
 )
 from mcpnuke.core.models import TargetResult
 from mcpnuke.scanner import scan_target, scan_stdio_target, run_parallel, detect_cross_shadowing
-from mcpnuke.reporting import print_report, write_json
+from mcpnuke.reporting import print_report, write_json, write_sarif
 from mcpnuke.k8s import run_k8s_checks, discover_services, fingerprint_services
 from mcpnuke.diff import (
     load_baseline,
@@ -368,6 +368,8 @@ def _main_inner() -> None:
         print_report([result], group_findings=args.group_findings, console=console)
         if args.json_out:
             write_json([result], args.json_out, console=console)
+        if getattr(args, "sarif_out", None):
+            write_sarif([result], args.sarif_out, console=console)
         if _should_fail(result.findings, getattr(args, "fail_on", "high")):
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
@@ -667,6 +669,8 @@ def _main_inner() -> None:
             console.print(f"\n  [green]✓[/green] Inference baseline saved to {probe_opts['save_inference_baseline']}")
         if args.json_out:
             write_json(results, args.json_out, console=console)
+        if getattr(args, "sarif_out", None):
+            write_sarif(results, args.sarif_out, console=console)
         if _should_fail(result.findings, getattr(args, "fail_on", "high")):
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
@@ -752,6 +756,9 @@ def _main_inner() -> None:
 
     if args.json_out:
         write_json(results, args.json_out, console=console)
+
+    if getattr(args, "sarif_out", None):
+        write_sarif(results, args.sarif_out, console=console)
 
     if getattr(args, "diff_baseline", None):
         from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal

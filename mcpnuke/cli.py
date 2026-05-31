@@ -163,6 +163,12 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Write JSON report to FILE",
     )
     p.add_argument(
+        "--sarif",
+        metavar="FILE",
+        dest="sarif_out",
+        help="Write SARIF 2.1.0 report to FILE (for GitHub Code Scanning, VS Code, and CI integration)",
+    )
+    p.add_argument(
         "--baseline",
         metavar="FILE",
         help="Compare against baseline (differential scan)",

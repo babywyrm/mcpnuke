@@ -1,7 +1,8 @@
-"""Reporting: console and JSON output."""
+"""Reporting: console, JSON, and SARIF output."""
 
 from mcpnuke.reporting.console import print_report  # noqa: F401
 from mcpnuke.reporting.json_out import write_json  # noqa: F401
+from mcpnuke.reporting.sarif import build_sarif, write_sarif  # noqa: F401
 from mcpnuke.reporting.by_lane import (  # noqa: F401
     build_by_lane,
     print_by_lane,
@@ -18,6 +19,8 @@ from mcpnuke.reporting.coverage_report import (  # noqa: F401
 __all__ = [
     "print_report",
     "write_json",
+    "build_sarif",
+    "write_sarif",
     "build_by_lane",
     "print_by_lane",
     "LANE_NAMES",
