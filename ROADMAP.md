@@ -62,6 +62,37 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | ✅ **MCP-T13** | Insecure inter-agent communication | Static: detect unsigned message-passing tools, check for agent-to-agent trust without verification |
 | ✅ **MCP-T15** | Model routing manipulation | Behavioral: probe if model selection can be influenced via tool parameters or headers |
 
+
+
+### Tier 2 audit results (T16–T32 mapping, 2026-06-28)
+
+| ID | Threat | Existing check | Action |
+|----|--------|---------------|--------|
+| T16 | Temporal Consistency Drift | `behavioral.py` (state_mutation) | Tag |
+| T17 | Notification / Sampling Abuse | `behavioral.py` (notification_abuse) | Tag |
+| T18 | Bot Identity Theft | `theft.py` | Tag |
+| T19 | Short-Lived Certificate Replay | `teleport.py` (cert_replay) | Tag |
+| T20 | RBAC & Isolation Boundary Bypass | `permissions.py` | Tag |
+| T21 | OAuth Token Theft & Replay | `theft.py` + `jwt_validation.py` | Tag |
+| T22 | Execution Context Forgery | **gap** | Write new |
+| T23 | Credential Isolation & Sidecar Tampering | `credential_in_schema.py` partial | Tag + extend |
+| T24 | Authentication Pattern Downgrade | `dpop_enforcement.py` | Tag |
+| T25 | Agent Delegation Chain Abuse | `chaining.py` | Tag |
+| T26 | Token Lifecycle & Revocation Gaps | `jwt_validation.py` | Tag |
+| T27 | LLM Cost Exhaustion & Misattribution | `rate_limit.py` + `anon_budget_exhaust.py` | Tag |
+| T28 | Teleport Role Escalation via MCP | `teleport_labs.py` | Tag |
+| T29 | Policy Authoring (defense) | *out of scope* — defensive | Skip |
+| T30 | Response Inspection (defense) | *out of scope* — defensive | Skip |
+| T31 | Budget Tuning (defense) | *out of scope* — defensive | Skip |
+| T32 | Delegation Depth / Identity Dilution | `chaining.py` partial | Tag + extend |
+
+**Conclusion:** 11 can be tagged to existing checks (no new logic), 3 are defensive
+(skip), 3 need new/extended logic (T22, T23, T32). Tagging would jump coverage
+from 22 → ~33 IDs (59%) with zero new check code.
+
+**Next action:** carefully tag each file with `taxonomy_id=` on the correct
+`result.add()` calls (per-file surgical edits, not batch).
+
 ### Tier 2 — Medium-term
 
 | ID | Threat | Notes |
