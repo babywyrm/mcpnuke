@@ -294,6 +294,7 @@ def check_state_mutation(session, result: TargetResult):
                             "state_mutation", "HIGH",
                             f"New resource(s) appeared after tool invocations",
                             f"New URIs: {sorted(new_uris)}",
+                            taxonomy_id="MCP-T16",
                         )
 
                     gone_uris = set(res_before) - after_uris
