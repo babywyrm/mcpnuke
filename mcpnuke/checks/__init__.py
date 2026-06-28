@@ -93,6 +93,8 @@ from mcpnuke.checks.sdk_cache_tamper import (
     check_sdk_cache_poisoning,
 )
 from mcpnuke.checks.ai_guardrail_probe import check_ai_guardrail
+from mcpnuke.checks.prompt_injection_t01 import check_prompt_injection as check_prompt_injection_t01
+from mcpnuke.checks.tool_output_poisoning import check_tool_output_poisoning, check_credential_forwarding
 
 # Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
 # State-mutating checks are inappropriate for internet targets without explicit
@@ -279,6 +281,7 @@ def run_all_checks(
     _run("config_tampering", check_config_tampering, result)
     _run("webhook_persistence", check_webhook_persistence, result)
     _run("credential_in_schema", check_credential_in_schema, result)
+    _run("credential_forwarding", check_credential_forwarding, result)
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)
@@ -336,6 +339,8 @@ def run_all_checks(
             ("shell_injection", check_shell_injection, (session, result), {"probe_opts": opts}),
             ("sdk_cache_poisoning", check_sdk_cache_poisoning, (session, result), {"probe_opts": opts}),
             ("ai_guardrail_probe", check_ai_guardrail, (session, result), {"probe_opts": opts}),
+            ("prompt_injection_t01", check_prompt_injection_t01, (session, result), {"probe_opts": opts}),
+            ("tool_output_poisoning_t02", check_tool_output_poisoning, (session, result), {"probe_opts": opts}),
         ]
 
         if fast_mode:
