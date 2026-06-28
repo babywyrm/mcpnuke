@@ -66,6 +66,7 @@ def check_jwt_algorithm(result: TargetResult) -> None:
                 "JWT uses alg:none — signature bypass",
                 "Tokens signed with 'none' can be forged by any party",
                 evidence=f"alg={alg}",
+                taxonomy_id="MCP-T26",
             )
         elif alg_upper in _SYMMETRIC_ALGORITHMS:
             result.add(

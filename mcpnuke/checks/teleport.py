@@ -103,6 +103,7 @@ def check_teleport_cert_validation(base: str, result: TargetResult):
                         "The proxy's TLS certificate is not trusted by system CAs. "
                         "Clients must use --insecure to connect, disabling MITM protection. "
                         "Use cert-manager or a trusted CA for production deployments.",
+                        taxonomy_id="MCP-T19",
                     )
                     return
             except Exception:
