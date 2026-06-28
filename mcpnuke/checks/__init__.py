@@ -99,6 +99,7 @@ from mcpnuke.checks.command_injection_broad import check_command_injection_broad
 from mcpnuke.checks.remote_package_exec import check_remote_package_execution
 from mcpnuke.checks.agentic_loop import check_agentic_loop, check_agentic_loop_behavioral
 from mcpnuke.checks.insecure_agent_comms import check_insecure_agent_comms
+from mcpnuke.checks.model_routing import check_model_routing
 
 # Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
 # State-mutating checks are inappropriate for internet targets without explicit
@@ -289,6 +290,7 @@ def run_all_checks(
     _run("remote_package_execution", check_remote_package_execution, result)
     _run("agentic_loop", check_agentic_loop, result)
     _run("insecure_agent_comms", check_insecure_agent_comms, result)
+    _run("model_routing", check_model_routing, result)
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)
