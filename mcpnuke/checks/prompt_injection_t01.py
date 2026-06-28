@@ -140,20 +140,13 @@ def check_prompt_injection(
                 text = _response_text(resp)
 
                 if probe["indicator"].lower() in text.lower():
-                    result.findings.append(_add({
-                        "title": (
-                            f"Prompt injection via tool '{name}' param '{target_param}' "
-                            f"({probe['category']})"
-                        ),
-                        "severity": probe["severity"],
-                        "taxonomy_id": "MCP-T01",
-                        "detail": (
-                            f"The tool '{name}' passes parameter '{target_param}' into an "
-                            f"LLM context without sanitization. Injection payload "
-                            f"'{probe['category']}' produced the expected canary marker "
-                            f"in the response, confirming the model's behavior was "
-                            f"overridden by attacker-controlled input."
-                        ),
-                        "evidence": text[:500],
-                    }))
+                    _add(
+                        result,
+                        "prompt_injection_t01",
+                        probe["severity"],
+                        f"Prompt injection via tool '{name}' param '{target_param}' ({probe['category']})",
+                        f"The tool '{name}' passes parameter '{target_param}' into an LLM context without sanitization. Injection payload '{probe['category']}' produced the expected canary marker.",
+                        evidence=text[:500],
+                        taxonomy_id="MCP-T01",
+                    )
                     break  # One confirmed injection per tool is enough

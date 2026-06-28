@@ -85,22 +85,15 @@ def check_tool_output_poisoning(
             for pattern in _INJECTION_PATTERNS:
                 match = pattern.search(text)
                 if match:
-                    result.findings.append(_add({
-                        "title": (
-                            f"Tool output contains injection pattern: '{name}' "
-                            f"({pattern.pattern[:40]})"
-                        ),
-                        "severity": "HIGH",
-                        "taxonomy_id": "MCP-T02",
-                        "detail": (
-                            f"Tool '{name}' returned output containing an instruction-"
-                            f"injection pattern (matched: '{match.group()}'). If a "
-                            f"downstream agent reads this tool's output as context, the "
-                            f"embedded instruction could override its behavior. This is "
-                            f"indirect prompt injection via tool output poisoning."
-                        ),
-                        "evidence": text[:500],
-                    }))
+                    _add(
+                        result,
+                        "tool_output_poisoning",
+                        "HIGH",
+                        f"Tool output contains injection pattern: '{name}' ({pattern.pattern[:40]})",
+                        f"Tool '{name}' returned output containing an instruction-injection pattern (matched: '{match.group()}'). Indirect prompt injection via tool output poisoning.",
+                        evidence=text[:500],
+                        taxonomy_id="MCP-T02",
+                    )
                     break  # One finding per tool
 
 
@@ -118,9 +111,7 @@ _ENDPOINT_PARAM_KEYWORDS = frozenset({
 
 
 def check_credential_forwarding(
-    session,
     result: TargetResult,
-    probe_opts: dict | None = None,
 ) -> None:
     """Detect tools that accept both credentials and endpoints (MCP-T03).
 
@@ -128,8 +119,6 @@ def check_credential_forwarding(
     endpoint parameter (url, host, webhook) can be abused to forward
     credentials to an attacker-controlled server.
     """
-    opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
 
     with time_check("credential_forwarding", result):
         for tool in result.tools:
@@ -148,41 +137,24 @@ def check_credential_forwarding(
 
             if cred_params and endpoint_params:
                 severity = "CRITICAL"
-                result.findings.append(_add({
-                    "title": (
-                        f"Credential forwarding risk: '{name}' accepts "
-                        f"credentials ({', '.join(cred_params)}) AND endpoints "
-                        f"({', '.join(endpoint_params)})"
-                    ),
-                    "severity": severity,
-                    "taxonomy_id": "MCP-T03",
-                    "detail": (
-                        f"Tool '{name}' accepts both credential parameters "
-                        f"({', '.join(cred_params)}) and endpoint parameters "
-                        f"({', '.join(endpoint_params)}). An attacker can supply "
-                        f"their own endpoint URL and the tool will forward the "
-                        f"credential to it. This enables credential theft without "
-                        f"requiring any vulnerability in the tool's logic — the "
-                        f"design itself is the vulnerability."
-                    ),
-                }))
+                _add(
+                    result,
+                    "credential_forwarding",
+                    severity,
+                    f"Credential forwarding risk: '{name}' accepts credentials ({', '.join(cred_params)}) AND endpoints ({', '.join(endpoint_params)})",
+                    f"Tool '{name}' accepts both credential and endpoint parameters, enabling credential theft by design.",
+                    taxonomy_id="MCP-T03",
+                )
             elif cred_params and not endpoint_params:
                 # Tool takes credentials but has no attacker-controlled endpoint.
                 # Still worth noting if the tool's description mentions external calls.
                 desc = tool.get("description", "").lower()
                 if any(w in desc for w in ("fetch", "send", "post", "forward", "webhook", "http")):
-                    result.findings.append(_add({
-                        "title": (
-                            f"Credential parameter in externally-calling tool: '{name}' "
-                            f"({', '.join(cred_params)})"
-                        ),
-                        "severity": "HIGH",
-                        "taxonomy_id": "MCP-T03",
-                        "detail": (
-                            f"Tool '{name}' accepts credential parameters "
-                            f"({', '.join(cred_params)}) and its description suggests "
-                            f"it makes external calls. While the endpoint may not be "
-                            f"attacker-controlled via parameters, the credential could "
-                            f"still be exposed in transit or logged."
-                        ),
-                    }))
+                    _add(
+                        result,
+                        "credential_forwarding",
+                        "HIGH",
+                        f"Credential parameter in externally-calling tool: '{name}' ({', '.join(cred_params)})",
+                        f"Tool '{name}' accepts credential parameters and makes external calls — credential exposure risk.",
+                        taxonomy_id="MCP-T03",
+                    )

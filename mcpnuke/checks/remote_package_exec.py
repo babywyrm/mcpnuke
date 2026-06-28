@@ -84,9 +84,7 @@ _DYNAMIC_LOAD_KEYWORDS = frozenset({
 
 
 def check_remote_package_execution(
-    session,
     result: TargetResult,
-    probe_opts: dict | None = None,
 ) -> None:
     """Detect tools that fetch and execute remote code (MCP-T08).
 
@@ -94,7 +92,7 @@ def check_remote_package_execution(
     the tool downloads and runs code from external sources — a supply-chain
     vector where controlling the source means code execution on the server.
     """
-    opts = probe_opts or {}
+
 
     with time_check("remote_package_execution", result):
         for tool in result.tools:
