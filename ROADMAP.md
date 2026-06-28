@@ -133,3 +133,25 @@ Requirements:
 
 Every check should be safe to run against production (no destructive operations)
 unless explicitly gated behind `--deep` or `--destructive` flags.
+
+---
+
+## Live test targets
+
+| Target | Location | Auth | Tools | Use for |
+|--------|----------|------|-------|---------|
+| **DVMCP** | NUC :30901–30910 | none | 1–2 per challenge (10 challenges) | Quick check validation, injection/execution scenarios |
+| **camazotz** | NUC :30080 (unpoliced), :30090 (policed) | OIDC (Zitadel) | 138 | Full T01/T02/T03 testing, ensemble AI, credential forwarding |
+| **zerotrust** | NUC internal (ClusterIP) | k8s SA | varies | Zero-trust lane probes |
+
+Scan commands:
+```bash
+# DVMCP (all challenges, no auth needed)
+./scan --port-range <cluster-node>:30901-30910 --verbose
+
+# Camazotz (needs OIDC token — use portal flow or --oidc-url)
+./scan --targets http://<cluster-node>:30080/sse --oidc-url http://zitadel:8080 --client-id <id> --client-secret <secret>
+
+# Full with AI analysis
+./scan --port-range <cluster-node>:30901-30910 --ollama-analysis http://<ollama-host>:11434 --ollama-model qwen2.5:14b
+```
