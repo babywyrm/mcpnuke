@@ -27,6 +27,7 @@ def check_tool_shadowing(
                 "tool_shadowing",
                 "HIGH",
                 f"Tool shadowing: redefines common name(s): {sorted(shadows)}",
+                taxonomy_id="MCP-T25",
             )
 
         for other in all_results:

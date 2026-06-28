@@ -33,6 +33,7 @@ def check_rate_limit(result: TargetResult):
                         f"Rate limit concern in tool '{name}'",
                         f"Pattern suggests unbounded or unthrottled usage: {pat}",
                         evidence=combined[:300],
+                        taxonomy_id="MCP-T27",
                     )
                     break
 

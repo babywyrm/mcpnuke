@@ -33,6 +33,7 @@ def check_token_theft(result: TargetResult):
                         f"Token theft pattern in tool '{name}'",
                         f"Pattern: {pat}",
                         evidence=combined[:300],
+                        taxonomy_id="MCP-T21",
                     )
                     break
 

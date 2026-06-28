@@ -142,6 +142,7 @@ def check_shell_injection(
                                 f"Payload: {payload_info['payload']}\n"
                                 f"Response: {text[:300]}"
                             ),
+                            taxonomy_id="MCP-T54",
                         )
                         break
 
