@@ -97,6 +97,8 @@ from mcpnuke.checks.prompt_injection_t01 import check_prompt_injection as check_
 from mcpnuke.checks.tool_output_poisoning import check_tool_output_poisoning, check_credential_forwarding
 from mcpnuke.checks.command_injection_broad import check_command_injection_broad
 from mcpnuke.checks.remote_package_exec import check_remote_package_execution
+from mcpnuke.checks.agentic_loop import check_agentic_loop, check_agentic_loop_behavioral
+from mcpnuke.checks.insecure_agent_comms import check_insecure_agent_comms
 
 # Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
 # State-mutating checks are inappropriate for internet targets without explicit
@@ -285,6 +287,8 @@ def run_all_checks(
     _run("credential_in_schema", check_credential_in_schema, result)
     _run("credential_forwarding", check_credential_forwarding, result)
     _run("remote_package_execution", check_remote_package_execution, result)
+    _run("agentic_loop", check_agentic_loop, result)
+    _run("insecure_agent_comms", check_insecure_agent_comms, result)
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)
@@ -345,6 +349,7 @@ def run_all_checks(
             ("prompt_injection_t01", check_prompt_injection_t01, (session, result), {"probe_opts": opts}),
             ("tool_output_poisoning_t02", check_tool_output_poisoning, (session, result), {"probe_opts": opts}),
             ("command_injection_broad_t05", check_command_injection_broad, (session, result), {"probe_opts": opts}),
+            ("agentic_loop_behavioral_t10", check_agentic_loop_behavioral, (session, result), {"probe_opts": opts}),
         ]
 
         if fast_mode:
