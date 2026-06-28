@@ -32,6 +32,7 @@ def check_excessive_permissions(result: TargetResult):
                     f"Dangerous capability [{category}]: '{tool['name']}'",
                     tool.get("description", "")[:200],
                     evidence=f"Pattern: {pattern}",
+                    taxonomy_id="MCP-T20",
                 )
 
             if len(desc_only_hits) >= _WEAK_SIGNAL_THRESHOLD:

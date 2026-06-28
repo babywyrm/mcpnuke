@@ -53,6 +53,7 @@ def check_webhook_persistence(result: TargetResult):
                         f"Webhook/callback tool '{name}' accepts URL",
                         "Tool name indicates webhook/callback registration with a URL parameter "
                         "— attacker-controlled URLs enable persistent re-injection across sessions",
+                        taxonomy_id="MCP-T14",
                     )
                     break
 

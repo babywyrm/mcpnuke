@@ -19,6 +19,7 @@ def _scan_text_for_creds(text: str, source: str, result: TargetResult):
                 f"Credential leak in {source}: {cred_type}",
                 f"Response contains what appears to be a live {cred_type}",
                 evidence=m.group()[:200],
+                taxonomy_id="MCP-T07",
             )
             break
 

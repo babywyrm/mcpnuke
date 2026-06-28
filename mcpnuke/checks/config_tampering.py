@@ -54,6 +54,7 @@ def check_config_tampering(result: TargetResult):
                         "CRITICAL",
                         f"Agent self-modification tool: '{name}'",
                         "Tool name suggests ability to modify agent config, prompts, or tool registry",
+                        taxonomy_id="MCP-T09",
                     )
                     break
 

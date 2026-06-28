@@ -139,6 +139,7 @@ def check_exfil_flow(result: TargetResult, session=None, probe_opts: dict | None
                         f"Exfiltration path: sensitive data → '{sink_name}'",
                         f"Sensitive sources: {source_names}. "
                         f"Sink: '{sink_name}' ({sink.get('description', '')[:100]})",
+                        taxonomy_id="MCP-T12",
                     )
             elif sources:
                 real_sources = [s for s in sources if s.get("name", "") != sink_name]
