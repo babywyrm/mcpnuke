@@ -30,7 +30,7 @@ _add = lane_tagged(lane=2, transport="A")
 # Tool parameters likely to reach an LLM context
 _LLM_PARAM_KEYWORDS = frozenset({
     "message", "query", "prompt", "question", "input", "text",
-    "instruction", "command", "request", "content", "description",
+    "instruction", "request", "content", "description",
     "task", "goal", "objective", "context", "chat",
 })
 
