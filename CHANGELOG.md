@@ -2,6 +2,52 @@
 
 All notable changes to this submodule are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **MCP-T01 prompt injection probe** (`checks/prompt_injection_t01.py`): Behavioral
+  check injecting instruction-override canaries in AI-facing tool parameters.
+  Detects unsanitized passthrough to LLM context.
+- **MCP-T02 tool output poisoning** (`checks/tool_output_poisoning.py`): Behavioral
+  scan of tool responses for embedded instruction patterns (override commands,
+  role markers, token boundaries) that would manipulate downstream agents.
+- **MCP-T03 credential forwarding** (`checks/tool_output_poisoning.py`): Static
+  detection of tools accepting both credential AND endpoint parameters — enabling
+  credential theft by design.
+- **MCP-T05 command injection (broad)** (`checks/command_injection_broad.py`):
+  Behavioral probe testing ALL string params for shell metacharacters, not just
+  shell-named tools. Catches injection in tools that internally shell out.
+- **MCP-T08 remote package execution** (`checks/remote_package_exec.py`): Static
+  detection of tools that fetch+execute remote code (npx, uvx, pip install URL,
+  curl|sh, git clone+exec patterns).
+- **MCP-T10 agentic loop** (`checks/agentic_loop.py`): Static + behavioral.
+  Detects meta-tools (accept tool-name params), unbounded repetition, orchestration
+  patterns, and tool-call JSON in responses that could trigger recursion.
+- **MCP-T13 insecure agent comms** (`checks/insecure_agent_comms.py`): Static
+  detection of unsigned inter-agent messaging tools. Skips tools with signature/
+  HMAC/attestation parameters (safe).
+- **MCP-T15 model routing** (`checks/model_routing.py`): Static detection of
+  attacker-controllable model selection (management tools, model params, routing
+  descriptions).
+- **ROADMAP.md**: Full taxonomy gap map (56 IDs), tiered priority, live test targets.
+
+### Fixed
+
+- Static-check signatures: `credential_forwarding` + `remote_package_execution`
+  had behavioral-style `(session, result)` signatures but were in the static phase
+  (which passes only `result`). Fixed.
+- `_add()` pattern: new checks incorrectly used `result.findings.append(_add({...}))`
+  instead of the correct `_add(result, ...)` call pattern. Fixed.
+- `prompt_injection_t01`: removed `command` from LLM-param keywords to avoid
+  false-positive overlap with T05 command injection.
+
+### Coverage
+
+- Taxonomy: 14 → 22 IDs (25% → 39%)
+- Tier 1 complete (8 of 9 checks; T11 cross-tenant deferred for multi-auth infra)
+- Live-verified against DVMCP (10 challenges, NUC) + brainbox AI analysis
+
 ## [6.13.0] - 2026-05-19
 
 ### Added

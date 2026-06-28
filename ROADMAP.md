@@ -17,7 +17,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | AI-augmented analysis (Claude + Ollama ensemble) | **Strong** — 3-phase analysis, consensus mode |
 | Transport security (JWT, DPoP, scope, boundaries) | **Strong** — 8 transport checks |
 | Lane coverage (5 identity lanes) | **All 5 represented** |
-| Taxonomy coverage | **14/56 IDs (25%)** — see gap map below |
+| Taxonomy coverage | **22/56 IDs (39%)** — Tier 1 complete, see gap map below |
 | CI integration (SARIF, --fail-on) | **Done** |
 | Distribution (PyPI, install script) | **Gap** — source-only |
 | CI/CD workflow for the tool itself | **Gap** — no GHA |
@@ -45,19 +45,22 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | MCP-T55 | Inference backend integrity | `inference_backend.py` |
 | MCP-T56 | DPoP enforcement gaps | `dpop_enforcement.py` |
 
-### Tier 1 — Next (high-value, directly scannable from outside)
+### Tier 1 — DONE (high-value, directly scannable from outside)
+
+> **Completed 2026-06-28.** All checks live-verified against DVMCP on NUC.
+> Coverage: 14 → 22 IDs. Only T11 (cross-tenant) deferred (needs multi-auth infra).
 
 | ID | Threat | Approach |
 |----|--------|----------|
-| **MCP-T01** | Prompt injection via tool args | Behavioral: inject override instructions in tool arguments, detect if server passes them unsanitized to LLM |
-| **MCP-T02** | Tool output poisoning (indirect injection) | Behavioral: invoke tools and check if responses contain embedded instructions that would manipulate a downstream agent |
-| **MCP-T03** | Credential forwarding in tool calls | Static: detect tools whose schema accepts credential-like parameters (tokens, keys, passwords) that could be forwarded to attacker-controlled endpoints |
-| **MCP-T05** | Command injection via tool args | Behavioral: pass shell metacharacters (`;`, `|`, `$()`, backticks) in tool arguments, detect execution indicators in response |
-| **MCP-T08** | Remote package execution | Static: detect tools that fetch and execute remote code (`npx`, `uvx`, `pip install`, `curl | sh` patterns in tool descriptions or args) |
-| **MCP-T10** | Agentic loop / resource exhaustion | Behavioral: detect recursive tool invocations or unbounded fan-out (tool A calls tool B calls tool A) |
+| ✅ **MCP-T01** | Prompt injection via tool args | Behavioral: inject override instructions in tool arguments, detect if server passes them unsanitized to LLM |
+| ✅ **MCP-T02** | Tool output poisoning (indirect injection) | Behavioral: invoke tools and check if responses contain embedded instructions that would manipulate a downstream agent |
+| ✅ **MCP-T03** | Credential forwarding in tool calls | Static: detect tools whose schema accepts credential-like parameters (tokens, keys, passwords) that could be forwarded to attacker-controlled endpoints |
+| ✅ **MCP-T05** | Command injection via tool args | Behavioral: pass shell metacharacters (`;`, `|`, `$()`, backticks) in tool arguments, detect execution indicators in response |
+| ✅ **MCP-T08** | Remote package execution | Static: detect tools that fetch and execute remote code (`npx`, `uvx`, `pip install`, `curl | sh` patterns in tool descriptions or args) |
+| ✅ **MCP-T10** | Agentic loop / resource exhaustion | Behavioral: detect recursive tool invocations or unbounded fan-out (tool A calls tool B calls tool A) |
 | **MCP-T11** | Cross-tenant data access | Behavioral: probe with different auth contexts, detect if one tenant's data leaks to another |
-| **MCP-T13** | Insecure inter-agent communication | Static: detect unsigned message-passing tools, check for agent-to-agent trust without verification |
-| **MCP-T15** | Model routing manipulation | Behavioral: probe if model selection can be influenced via tool parameters or headers |
+| ✅ **MCP-T13** | Insecure inter-agent communication | Static: detect unsigned message-passing tools, check for agent-to-agent trust without verification |
+| ✅ **MCP-T15** | Model routing manipulation | Behavioral: probe if model selection can be influenced via tool parameters or headers |
 
 ### Tier 2 — Medium-term
 
