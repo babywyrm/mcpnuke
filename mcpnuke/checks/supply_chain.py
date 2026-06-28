@@ -28,5 +28,6 @@ def check_supply_chain(result: TargetResult):
                         f"Supply chain risk in tool '{name}'",
                         f"Pattern suggests dynamic/user-controlled package install: {pat}",
                         evidence=combined[:300],
+                        taxonomy_id="MCP-T04",
                     )
                     break

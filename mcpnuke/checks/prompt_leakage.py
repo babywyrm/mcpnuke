@@ -28,5 +28,6 @@ def check_prompt_leakage(result: TargetResult):
                         f"Prompt leakage risk in tool '{name}'",
                         f"Pattern suggests prompts may be echoed, logged, or exposed: {pat}",
                         evidence=combined[:300],
+                        taxonomy_id="MCP-T01",
                     )
                     break
