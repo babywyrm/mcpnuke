@@ -100,6 +100,18 @@ from mcpnuke.checks.remote_package_exec import check_remote_package_execution
 from mcpnuke.checks.agentic_loop import check_agentic_loop, check_agentic_loop_behavioral
 from mcpnuke.checks.insecure_agent_comms import check_insecure_agent_comms
 from mcpnuke.checks.model_routing import check_model_routing
+from mcpnuke.checks.taxonomy_coverage import (
+    check_notification_sampling_abuse,
+    check_delegation_depth,
+    check_subprocess_credential_inheritance,
+    check_tool_description_injection,
+    check_pre_auth_injection,
+    check_cached_session_exposure,
+    check_host_network_loopback,
+    check_role_escalation_tool,
+    check_shell_wrapping_injection,
+    check_native_function_identity_erasure,
+)
 
 # Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
 # State-mutating checks are inappropriate for internet targets without explicit
@@ -291,6 +303,16 @@ def run_all_checks(
     _run("agentic_loop", check_agentic_loop, result)
     _run("insecure_agent_comms", check_insecure_agent_comms, result)
     _run("model_routing", check_model_routing, result)
+    _run("notification_sampling_abuse", check_notification_sampling_abuse, result)
+    _run("delegation_depth", check_delegation_depth, result)
+    _run("subprocess_cred_inheritance", check_subprocess_credential_inheritance, result)
+    _run("tool_description_injection", check_tool_description_injection, result)
+    _run("pre_auth_injection", check_pre_auth_injection, result)
+    _run("cached_session_exposure", check_cached_session_exposure, result)
+    _run("host_network_loopback", check_host_network_loopback, result)
+    _run("role_escalation_tool", check_role_escalation_tool, result)
+    _run("shell_wrapping_injection", check_shell_wrapping_injection, result)
+    _run("native_function_identity_erasure", check_native_function_identity_erasure, result)
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)
