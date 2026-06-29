@@ -725,6 +725,7 @@ def _fuzz_single_tool(
             result.add(
                 "input_sanitization", severity, title, detail,
                 evidence=tpl_evidence,
+                taxonomy_id="MCP-T44",
             )
 
         if not probe_text and tpl_evidence:
