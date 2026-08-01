@@ -25,7 +25,11 @@ INFRA_LEAK_PATTERNS: list[tuple[str, str, str]] = [
     (r"/etc/[\w/.-]*(?:secret|key|cert|pem|credential)", "HIGH", "Secret file path"),
     (r"-----BEGIN (?:\w+ )?PRIVATE KEY-----", "CRITICAL", "Private key in response"),
     (r"\[file:[^\]]+\]", "MEDIUM", "File path reference"),
-    (r"(?:ollama|redis|postgres|mysql|mongodb|rabbitmq|elasticsearch)\S*:\d{2,5}", "MEDIUM", "Internal service endpoint"),
+    (
+        r"(?:ollama|redis|postgres|mysql|mongodb|rabbitmq|elasticsearch)\S*:\d{2,5}",
+        "MEDIUM",
+        "Internal service endpoint",
+    ),
     (r"(?:guardrail|safety|evaluator|ai)[_\s]*[:=]", "MEDIUM", "AI safety config exposure"),
 ]
 

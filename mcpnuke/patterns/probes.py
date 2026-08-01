@@ -307,10 +307,18 @@ SEMANTIC_INJECTION_PATTERNS = [
     (r"(?:switching|entering|activating)\s+(?:to\s+)?(?:\w+\s+)?mode", "mode_switch"),
     (r"(?:do\s+not|don't|never)\s+(?:tell|inform|alert|notify)\s+(?:the\s+)?user", "secrecy_directive"),
     (r"(?:this|the\s+following)\s+(?:is|are)\s+confidential", "secrecy_directive"),
-    (r"(?:please\s+)?(?:provide|enter|give|share)\s+(?:your\s+)?(?:password|credentials?|api[_\s]?key|token|secret)", "credential_request"),
+    (
+        r"(?:please\s+)?(?:provide|enter|give|share)\s+(?:your\s+)?"
+        r"(?:password|credentials?|api[_\s]?key|token|secret)",
+        "credential_request",
+    ),
     (r"<(?:tool_call|function_call|plugin|action)>", "xml_tool_injection"),
     (r"<\|(?:plugin|tool|function|action)\|>", "delimiter_injection"),
-    (r"(?:authenticate|log\s*in|verify)\s+(?:with|using)\s+(?:your\s+)?(?:credentials?|password|token)", "credential_request"),
+    (
+        r"(?:authenticate|log\s*in|verify)\s+(?:with|using)\s+(?:your\s+)?"
+        r"(?:credentials?|password|token)",
+        "credential_request",
+    ),
 ]
 
 # ---------------------------------------------------------------------------

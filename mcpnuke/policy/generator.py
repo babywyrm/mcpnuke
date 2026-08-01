@@ -17,7 +17,6 @@ def generate_policy(
     Tools with no findings are not included (default deny covers them).
     """
     tool_rules: dict[str, PolicyRule] = {}
-    global_rules: list[PolicyRule] = []
 
     for result in results:
         for finding in result.findings:

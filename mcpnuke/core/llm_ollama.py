@@ -107,7 +107,7 @@ def cluster_findings(
 
     results: list[EnsembleFinding] = []
 
-    for tid, entries in by_tax.items():
+    for _tid, entries in by_tax.items():
         # Pick the most severe finding as the representative for the group.
         entries_sorted = sorted(entries, key=lambda e: _SEV_ORDER.get(e[1].severity, 9))
         representative = entries_sorted[0][1]

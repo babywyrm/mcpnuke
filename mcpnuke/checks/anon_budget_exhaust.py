@@ -53,9 +53,7 @@ def _session_is_anonymous(result: TargetResult) -> bool:
     auth = result.auth_context or {}
     if auth.get("_raw_token") or auth.get("jwt_claims_summary"):
         return False
-    if auth.get("oidc_url") or auth.get("introspection_active"):
-        return False
-    return True
+    return not (auth.get("oidc_url") or auth.get("introspection_active"))
 
 
 def _tools_advertise_per_caller_accounting(tools: list[dict]) -> bool:

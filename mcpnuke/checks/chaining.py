@@ -122,10 +122,7 @@ def check_attack_chains(result: TargetResult):
                     AttackChain(source=a, target=b, evidence_tools=evidence_tools)
                 )
 
-                if evidence_tools:
-                    detail = f"{a} → {b} ({', '.join(evidence_tools[:5])})"
-                else:
-                    detail = f"{a} → {b}"
+                detail = f"{a} → {b} ({', '.join(evidence_tools[:5])})" if evidence_tools else f"{a} → {b}"
                 _add(result,
                     "attack_chain",
                     "CRITICAL",

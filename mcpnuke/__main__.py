@@ -385,7 +385,13 @@ def _main_inner() -> None:
         and not getattr(args, "public_targets", False)
         and not args.port_range
     )
-    if inference_only or (args.k8s_discover and not args.targets and not args.targets_file and not getattr(args, "public_targets", False) and not args.port_range):
+    if inference_only or (
+        args.k8s_discover
+        and not args.targets
+        and not args.targets_file
+        and not getattr(args, "public_targets", False)
+        and not args.port_range
+    ):
         urls = []
     else:
         urls = build_url_list(args)
@@ -409,7 +415,10 @@ def _main_inner() -> None:
             console.print(f"  [yellow]⚠[/yellow]  Target requires auth: {info.summary()}")
             if info.token_endpoint:
                 console.print(f"  [dim]  Token endpoint: {info.token_endpoint}[/dim]")
-                console.print(f"  [dim]  Use: --oidc-url {info.issuer or '...'} --client-id ID --client-secret SECRET[/dim]")
+                console.print(
+                    f"  [dim]  Use: --oidc-url {info.issuer or '...'} "
+                    f"--client-id ID --client-secret SECRET[/dim]"
+                )
     jwt_claims_summary: dict = {}
     auth_context_summary: dict = {}
     if auth_token:
@@ -462,7 +471,7 @@ def _main_inner() -> None:
         f"Group   : {args.group_findings}" if args.group_findings else "",
         f"Started : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
     ]
-    panel_lines = [l for l in panel_lines if l]
+    panel_lines = [line for line in panel_lines if line]
     if args.baseline:
         panel_lines.append(f"Baseline: {args.baseline}")
     if args.save_baseline:
@@ -577,7 +586,10 @@ def _main_inner() -> None:
     if args.fast:
         console.print("  [yellow]--fast: sampling top 5 tools, skipping heavy probes[/yellow]")
     elif getattr(args, "coverage", None):
-        console.print(f"  [yellow]--coverage {args.coverage}: sampling top {args.coverage} security-relevant tools[/yellow]")
+        console.print(
+            f"  [yellow]--coverage {args.coverage}: sampling top "
+            f"{args.coverage} security-relevant tools[/yellow]"
+        )
     if deterministic_mode:
         console.print("  [yellow]--deterministic: stable ordering, single-threaded probes/AI phase2[/yellow]")
     if args.tls_verify:

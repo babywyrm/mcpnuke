@@ -84,7 +84,11 @@ def _probe_mcp_endpoint(host: str, port: int, paths: list[str] | None = None) ->
 
     mcp_body = {
         "jsonrpc": "2.0", "id": 1, "method": "initialize",
-        "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "k8s-probe", "version": "1.0"}},
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "k8s-probe", "version": "1.0"},
+        },
     }
     tool_body = {"tool": "get_cluster_health"}  # minimal payload for /execute-style APIs
 
@@ -102,7 +106,9 @@ def _probe_mcp_endpoint(host: str, port: int, paths: list[str] | None = None) ->
                 if r.status_code in (400, 422) and ("jsonrpc" in r.text or "method" in r.text):
                     return path
                 # Custom tool servers (e.g. /execute) often return 400 for wrong payload with "error" / "tool"
-                if r.status_code in (400, 422) and ("error" in r.text and ("tool" in r.text or "result" in r.text or "Unknown" in r.text)):
+                if r.status_code in (400, 422) and "error" in r.text and (
+                    "tool" in r.text or "result" in r.text or "Unknown" in r.text
+                ):
                     return path
         except Exception:
             pass
@@ -118,10 +124,12 @@ def _probe_mcp_endpoint(host: str, port: int, paths: list[str] | None = None) ->
                 pass
 
         try:
-            with httpx.Client(verify=False, timeout=3.0) as c:
-                with c.stream("GET", url, headers={"Accept": "text/event-stream"}) as resp:
-                    if resp.status_code == 200 and "text/event-stream" in resp.headers.get("content-type", ""):
-                        return path
+            with (
+                httpx.Client(verify=False, timeout=3.0) as c,
+                c.stream("GET", url, headers={"Accept": "text/event-stream"}) as resp,
+            ):
+                if resp.status_code == 200 and "text/event-stream" in resp.headers.get("content-type", ""):
+                    return path
         except Exception:
             pass
 

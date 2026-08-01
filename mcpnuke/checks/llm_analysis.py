@@ -86,7 +86,7 @@ def _build_phase2_payload(text: str, resp: dict | None, max_chars: int = 3000) -
     low_signal: bool = False
     if isinstance(result_obj, dict):
         content = result_obj.get("content")
-        extra_keys: list[str] = [k for k in result_obj.keys() if k not in {"content", "isError"}]
+        extra_keys: list[str] = [k for k in result_obj if k not in {"content", "isError"}]
         if isinstance(content, list):
             parts: list[str] = []
             for item in content:
@@ -98,9 +98,8 @@ def _build_phase2_payload(text: str, resp: dict | None, max_chars: int = 3000) -
             if joined == cleaned and extra_keys:
                 low_signal = True
 
-    if len(cleaned) < 20 or low_signal:
-        if raw_payload and raw_payload.strip() != cleaned:
-            return f"Extracted text:\n{cleaned}\n\nRaw response envelope:\n{raw_payload}"
+    if (len(cleaned) < 20 or low_signal) and raw_payload and raw_payload.strip() != cleaned:
+        return f"Extracted text:\n{cleaned}\n\nRaw response envelope:\n{raw_payload}"
 
     return cleaned[:max_chars]
 

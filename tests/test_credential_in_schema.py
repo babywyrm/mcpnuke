@@ -14,7 +14,9 @@ def test_openai_key_in_default():
     r = _make([{
         "name": "ai_query",
         "description": "Query AI",
-        "inputSchema": {"properties": {"api_key": {"type": "string", "default": "sk-abc123def456ghi789jkl012mno345pqr678"}}},
+        "inputSchema": {"properties": {
+            "api_key": {"type": "string", "default": "sk-abc123def456ghi789jkl012mno345pqr678"},
+        }},
     }])
     check_credential_in_schema(r)
     assert any(f.check == "credential_in_schema" for f in r.findings)
@@ -35,7 +37,11 @@ def test_jwt_in_enum():
     r = _make([{
         "name": "auth",
         "description": "Auth",
-        "inputSchema": {"properties": {"token": {"type": "string", "enum": ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"]}}},
+        "inputSchema": {"properties": {"token": {"type": "string", "enum": [
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+            ".eyJzdWIiOiIxMjM0NTY3ODkwIn0"
+            ".dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
+        ]}}},
     }])
     check_credential_in_schema(r)
     assert any(f.check == "credential_in_schema" for f in r.findings)

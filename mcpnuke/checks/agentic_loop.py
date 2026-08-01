@@ -76,7 +76,6 @@ def check_agentic_loop(
             name = tool.get("name", "")
             desc = (tool.get("description", "") or "").lower()
             props = tool.get("inputSchema", {}).get("properties", {})
-            param_names = {p.lower() for p in props}
 
             # Check 1: tool accepts a tool-name/function-name parameter
             meta_params = [p for p in props if p.lower() in _META_TOOL_PARAMS]

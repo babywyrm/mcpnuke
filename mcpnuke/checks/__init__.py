@@ -9,9 +9,6 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-from mcpnuke.core.models import TargetResult
-
-_log_internal = logging.getLogger("mcpnuke.checks")
 from mcpnuke.checks.actuator_probe import check_actuator_probe
 from mcpnuke.checks.agentic_loop import check_agentic_loop, check_agentic_loop_behavioral
 from mcpnuke.checks.ai_guardrail_probe import check_ai_guardrail
@@ -112,6 +109,9 @@ from mcpnuke.checks.tool_probes import (
 )
 from mcpnuke.checks.transport import check_sse_security
 from mcpnuke.checks.webhook_persistence import check_webhook_persistence
+from mcpnuke.core.models import TargetResult
+
+_log_internal = logging.getLogger("mcpnuke.checks")
 
 # Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
 # State-mutating checks are inappropriate for internet targets without explicit
@@ -319,10 +319,7 @@ def _emit_duration_estimate(
             deep_secs /= min(probe_workers, n_tools or 1)
 
     total_secs = static_secs + behavioral_secs + deep_secs
-    if total_secs < 60:
-        est = f"~{int(total_secs)}s"
-    else:
-        est = f"~{total_secs / 60:.0f}min"
+    est = f"~{int(total_secs)}s" if total_secs < 60 else f"~{total_secs / 60:.0f}min"
 
     transport = "stdio" if stdio else "HTTP"
     mode = "fast" if fast_mode else "deep"
@@ -378,7 +375,10 @@ def run_all_checks(
         result.tools = _pick_security_relevant(result.tools, effective_coverage)
         if verbose:
             label = "--fast" if fast_mode else f"--coverage {effective_coverage}"
-            _log(f"  [yellow]{label}: sampled {len(result.tools)}/{len(_original_tools)} security-relevant tools[/yellow]")
+            _log(
+                f"  [yellow]{label}: sampled {len(result.tools)}/"
+                f"{len(_original_tools)} security-relevant tools[/yellow]"
+            )
         if fast_mode:
             probe_workers = min(probe_workers or 2, 2)
     else:
@@ -578,7 +578,10 @@ def run_all_checks(
     _run("multi_vector", check_multi_vector, result)
     _run("attack_chains", check_attack_chains, result)
     if verbose:
-        _log(f"\n  [bold green]  ✓ All {check_num} checks complete: {len(result.findings)} total finding(s)[/bold green]")
+        _log(
+            f"\n  [bold green]  ✓ All {check_num} checks complete: "
+            f"{len(result.findings)} total finding(s)[/bold green]"
+        )
 
 
 def _pick_security_relevant(tools: list[dict], n: int) -> list[dict]:

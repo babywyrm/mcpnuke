@@ -56,7 +56,7 @@ def check_webhook_persistence(result: TargetResult):
                     )
                     break
 
-            for pname, pdef in props.items():
+            for pname, _pdef in props.items():
                 for pat in WEBHOOK_PARAM_PATTERNS:
                     if re.search(pat, pname, re.IGNORECASE):
                         _add(result,

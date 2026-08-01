@@ -10,9 +10,8 @@ class FakeSession:
 
     def call(self, method, params=None, timeout=None, retries=2):
         if method == "tools/call":
-            name = (params or {}).get("name", "")
             args = (params or {}).get("arguments", {})
-            for pname, pval in args.items():
+            for pval in args.values():
                 if pval in self._responses:
                     return {"result": {"content": [{"type": "text", "text": self._responses[pval]}]}}
             default = self._responses.get("_default", "OK")

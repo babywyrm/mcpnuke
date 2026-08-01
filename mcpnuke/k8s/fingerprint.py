@@ -139,7 +139,10 @@ def _fingerprint_one_service(
             f = Finding(
                 target="k8s", check="service_fingerprint", severity="LOW",
                 title=f"API documentation exposed on {dns}:{port}",
-                detail=f"Paths: {', '.join(p for p in debug_exposed if any(s in p for s in ('swagger', 'api-doc', 'openapi', 'graphi')))}",
+                detail="Paths: " + ", ".join(
+                    p for p in debug_exposed
+                    if any(s in p for s in ("swagger", "api-doc", "openapi", "graphi"))
+                ),
             )
             fp.findings.append(f)
             findings.append(f)

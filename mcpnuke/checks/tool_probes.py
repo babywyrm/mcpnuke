@@ -11,6 +11,7 @@ with safe payloads and examining what comes back. They detect:
 """
 
 import base64
+import contextlib
 import json
 import re
 import time
@@ -73,19 +74,14 @@ def _is_dangerous_tool(tool: dict) -> bool:
         if kw in name.split("_") or kw in name.split("-"):
             return True
 
-    if any(kw in combined for kw in ("side effect", "irreversible", "destructive", "permanent")):
-        return True
-
-    return False
+    return bool(any(kw in combined for kw in ("side effect", "irreversible", "destructive", "permanent")))
 
 
 def _should_invoke(tool: dict, probe_opts: dict) -> bool:
     """Decide whether to invoke a tool given the current probe options."""
     if probe_opts.get("no_invoke"):
         return False
-    if probe_opts.get("safe_mode") and _is_dangerous_tool(tool):
-        return False
-    return True
+    return not (probe_opts.get("safe_mode") and _is_dangerous_tool(tool))
 
 
 # ---------------------------------------------------------------------------
@@ -765,10 +761,8 @@ def check_input_sanitization(session, result: TargetResult, probe_opts: dict | N
                     for idx, tool in enumerate(invokable)
                 }
                 for f in as_completed(futures):
-                    try:
+                    with contextlib.suppress(Exception):
                         f.result()
-                    except Exception:
-                        pass
         else:
             for idx, tool in enumerate(invokable):
                 _fuzz_single_tool(session, tool, result, opts, _log, idx, len(invokable))

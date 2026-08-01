@@ -24,6 +24,7 @@ class TestK8sApiParameterized:
 
             result = _k8s_api("/api/v1/namespaces/default/services", "tok", api_url="http://localhost:8001")
 
+            assert result == {"items": []}
             call_args = mock_urlopen.call_args
             request_obj = call_args[0][0]
             assert request_obj.full_url.startswith("http://localhost:8001")
@@ -39,6 +40,7 @@ class TestK8sApiParameterized:
 
             result = _k8s_get("/api/v1/pods", "tok", api_url="http://proxy:8001")
 
+            assert result == {"items": []}
             call_args = mock_urlopen.call_args
             request_obj = call_args[0][0]
             assert "http://proxy:8001" in request_obj.full_url

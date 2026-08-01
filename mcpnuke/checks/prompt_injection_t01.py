@@ -145,7 +145,9 @@ def check_prompt_injection(
                         "prompt_injection_t01",
                         probe["severity"],
                         f"Prompt injection via tool '{name}' param '{target_param}' ({probe['category']})",
-                        f"The tool '{name}' passes parameter '{target_param}' into an LLM context without sanitization. Injection payload '{probe['category']}' produced the expected canary marker.",
+                        f"The tool '{name}' passes parameter '{target_param}' into an "
+                        f"LLM context without sanitization. Injection payload "
+                        f"'{probe['category']}' produced the expected canary marker.",
                         evidence=text[:500],
                         taxonomy_id="MCP-T01",
                     )

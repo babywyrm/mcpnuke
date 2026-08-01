@@ -1,5 +1,6 @@
 """Rug pull, deep rug pull, state mutation, notification abuse, and protocol robustness checks."""
 
+import contextlib
 import json
 import queue
 import re
@@ -124,7 +125,10 @@ def check_deep_rug_pull(session, result: TargetResult, probe_opts: dict | None =
         probe_tools = sorted(before.values(), key=_priority)[:12]
         total_probes = len(probe_tools) * calls_per_tool
         probe_num = 0
-        _log(f"    [dim]    phase 2: probing {len(probe_tools)} tools × {calls_per_tool} calls = {total_probes} invocations[/dim]")
+        _log(
+            f"    [dim]    phase 2: probing {len(probe_tools)} tools × "
+            f"{calls_per_tool} calls = {total_probes} invocations[/dim]"
+        )
 
         for tool in probe_tools:
             name = tool.get("name", "")
@@ -277,10 +281,8 @@ def check_state_mutation(session, result: TargetResult):
                 for tool in result.tools[:4]:
                     name = tool.get("name", "")
                     args = _build_args(tool)
-                    try:
+                    with contextlib.suppress(Exception):
                         session.call("tools/call", {"name": name, "arguments": args}, timeout=8)
-                    except Exception:
-                        pass
                 time.sleep(1)
 
                 rr2 = session.call("resources/list", timeout=15)

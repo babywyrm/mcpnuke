@@ -221,7 +221,7 @@ def detect_auth_requirements(
     extra_headers: dict[str, str] | None = None,
 ) -> AuthInfo:
     """Probe an MCP endpoint for authentication requirements.
-    
+
     Sends an unauthenticated initialize and examines the response.
     If 401/403, parses WWW-Authenticate and tries OIDC discovery.
     """
@@ -370,16 +370,16 @@ def fetch_client_credentials_token(
     extra_headers: dict[str, str] | None = None,
 ) -> str:
     """Fetch an access token using OAuth2 client_credentials grant.
-    
+
     Args:
         oidc_url: OIDC issuer URL (e.g. http://keycloak:8080/realms/warbird)
                   or direct token endpoint URL.
         client_id: OAuth2 client ID.
         client_secret: OAuth2 client secret.
-    
+
     Returns:
         Access token string.
-    
+
     Raises:
         RuntimeError on failure.
     """

@@ -11,6 +11,7 @@ import json
 import ssl
 import urllib.request
 
+from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
 
 
@@ -19,7 +20,6 @@ def _add(result: TargetResult, *args, **kwargs):
     kwargs.setdefault("lane", 3)
     kwargs.setdefault("transport", "A")
     return result.add(*args, **kwargs)
-from mcpnuke.checks.base import time_check
 
 
 def _probe_url(url: str, timeout: float = 3.0) -> dict | None:

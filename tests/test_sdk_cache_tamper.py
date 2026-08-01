@@ -380,9 +380,11 @@ def test_behavioral_skips_when_no_tool_pair(make_result, mock_session):
     from unittest.mock import patch
 
     r = make_result([SDK_WRITE_TOOL])  # no invoke tool
-    with patch("mcpnuke.checks.sdk_cache_tamper._call_tool") as mock_call:
-        with patch("mcpnuke.checks.sdk_cache_tamper._should_invoke", return_value=True):
-            check_sdk_cache_poisoning(mock_session, r)
+    with (
+        patch("mcpnuke.checks.sdk_cache_tamper._call_tool") as mock_call,
+        patch("mcpnuke.checks.sdk_cache_tamper._should_invoke", return_value=True),
+    ):
+        check_sdk_cache_poisoning(mock_session, r)
     mock_call.assert_not_called()
 
 
@@ -390,9 +392,11 @@ def test_behavioral_skips_when_should_invoke_false(make_result, mock_session):
     from unittest.mock import patch
 
     r = make_result([SDK_WRITE_TOOL, SDK_INVOKE_TOOL])
-    with patch("mcpnuke.checks.sdk_cache_tamper._call_tool") as mock_call:
-        with patch("mcpnuke.checks.sdk_cache_tamper._should_invoke", return_value=False):
-            check_sdk_cache_poisoning(mock_session, r)
+    with (
+        patch("mcpnuke.checks.sdk_cache_tamper._call_tool") as mock_call,
+        patch("mcpnuke.checks.sdk_cache_tamper._should_invoke", return_value=False),
+    ):
+        check_sdk_cache_poisoning(mock_session, r)
     mock_call.assert_not_called()
 
 

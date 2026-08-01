@@ -88,7 +88,11 @@ class TestPolicyGeneration:
     def test_teleport_lab_findings(self):
         result = _result_with_findings([
             ("teleport_lab_bot_theft", "CRITICAL", "Tool 'bot_identity_theft.read_tbot_secret' — tbot secret readable"),
-            ("teleport_lab_role_escalation", "CRITICAL", "Tool 'teleport_role_escalation.request_role' — role escalation succeeded"),
+            (
+                "teleport_lab_role_escalation",
+                "CRITICAL",
+                "Tool 'teleport_role_escalation.request_role' — role escalation succeeded",
+            ),
         ])
         rules = generate_policy([result])
         deny_rules = [r for r in rules if r.action == "DENY" and "*" not in r.tool_names]

@@ -85,7 +85,7 @@ def test_audience_missing_does_not_double_report():
     assert not r.findings
 
 
-def test_no_token_skips_silently():
+def test_audience_match_no_token_skips_silently():
     r = TargetResult(url="http://<cluster-node>:30080/mcp")
     check_jwt_audience_target_match(r)
     assert not r.findings
@@ -173,7 +173,7 @@ def test_roles_array_with_admin_does_not_fire():
     assert not r.findings
 
 
-def test_no_token_skips_silently():
+def test_cross_role_replay_no_token_skips_silently():
     r = TargetResult(url="http://example/mcp")
     r.tools = [{"name": "delete_widget"}]
     check_jwt_cross_role_replay(r)

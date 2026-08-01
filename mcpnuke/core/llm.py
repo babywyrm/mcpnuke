@@ -153,10 +153,7 @@ def _call_bedrock_claude(system: str, user_content: str, model: str, max_tokens:
     )
 
     raw_body = resp.get("body")
-    if hasattr(raw_body, "read"):
-        body_bytes = raw_body.read()
-    else:
-        body_bytes = raw_body or b"{}"
+    body_bytes = raw_body.read() if hasattr(raw_body, "read") else raw_body or b"{}"
 
     body_str = body_bytes.decode("utf-8") if isinstance(body_bytes, (bytes, bytearray)) else str(body_bytes)
     parsed = json.loads(body_str or "{}")

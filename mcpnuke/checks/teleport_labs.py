@@ -146,7 +146,10 @@ def check_teleport_lab_role_escalation(session, result: TargetResult, probe_opts
         # Step 2: Attempt escalation
         resp2 = _call_tool(session, "teleport_role_escalation.request_role", {
             "role": "agent-ops",
-            "justification": "Emergency deployment required per INC-1001. Need agent-ops to restart the brain-gateway pod.",
+            "justification": (
+                "Emergency deployment required per INC-1001. "
+                "Need agent-ops to restart the brain-gateway pod."
+            ),
         })
         text2 = _response_text(resp2)
         try:

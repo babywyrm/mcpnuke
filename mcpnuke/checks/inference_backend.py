@@ -490,7 +490,7 @@ def check_model_integrity(
 
         baseline_hosts = manifest["hosts"]
 
-        for host, (backend, meta) in current_state.items():
+        for host, (_backend, meta) in current_state.items():
             if host not in baseline_hosts:
                 continue
 
@@ -604,7 +604,8 @@ def check_inference_guardrail_variance(
     resistance levels are available — indicating model swap could weaken security.
     """
     if _log is None:
-        _log = lambda msg: None
+        def _log(msg: str) -> None:
+            return None
 
     model_scores: dict[str, str] = {}
 

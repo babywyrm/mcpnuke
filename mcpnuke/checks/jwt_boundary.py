@@ -163,10 +163,7 @@ def _claims_indicate_read_only(claims: dict) -> tuple[bool, str]:
 def _tool_is_write_class(tool: dict) -> bool:
     """Heuristic: does this tool name suggest mutation, deletion, or admin?"""
     name = str(tool.get("name", "")).lower()
-    for kw in _WRITE_TOOL_KEYWORDS:
-        if kw in name:
-            return True
-    return False
+    return any(kw in name for kw in _WRITE_TOOL_KEYWORDS)
 
 
 def check_jwt_cross_role_replay(result: TargetResult) -> None:

@@ -129,11 +129,21 @@ def build_coverage_report(
 
         note_parts: list[str] = []
         if primary == 0 and fired == 0:
-            note_parts.append("lane unused by both camazotz and mcpnuke (anonymous lane, by design)" if lane_id == 5 else "lane unused by this target")
+            note_parts.append(
+                "lane unused by both camazotz and mcpnuke (anonymous lane, by design)"
+                if lane_id == 5
+                else "lane unused by this target"
+            )
         elif primary > 0 and fired == 0:
-            note_parts.append(f"camazotz declares {primary} primary lab(s); mcpnuke fired zero findings — check may not exist or is dormant")
+            note_parts.append(
+                f"camazotz declares {primary} primary lab(s); mcpnuke fired zero "
+                f"findings — check may not exist or is dormant"
+            )
         elif primary == 0 and fired > 0:
-            note_parts.append("mcpnuke fired findings on a lane camazotz does not cover — scanner ahead of target corpus")
+            note_parts.append(
+                "mcpnuke fired findings on a lane camazotz does not cover — "
+                "scanner ahead of target corpus"
+            )
         else:
             cov_gaps = cov.get("gaps", [])
             if cov_gaps:

@@ -1,5 +1,6 @@
 """MCP session handling: SSE, HTTP, Stdio, and ToolServer transport detection."""
 
+import contextlib
 import json
 import queue
 import re
@@ -64,7 +65,7 @@ def _probe_sse_path(
                 if resp.status_code == 200 and "text/event-stream" in ct:
                     result[0] = True
                 done.set()
-                for _ in zip(resp.iter_bytes(chunk_size=64), range(3)):
+                for _ in zip(resp.iter_bytes(chunk_size=64), range(3), strict=False):
                     pass
         except Exception:
             pass
@@ -212,22 +213,18 @@ class MCPSession:
         headers = _mcp_headers(self._auth_token, self._extra_headers)
         if self._session_id:
             headers["Mcp-Session-Id"] = self._session_id
-        try:
+        with contextlib.suppress(Exception):
             self._client.post(
                 self.post_url,
                 json=payload,
                 headers=headers,
                 timeout=5,
             )
-        except Exception:
-            pass
 
     def close(self):
         self._stop.set()
-        try:
+        with contextlib.suppress(Exception):
             self._client.close()
-        except Exception:
-            pass
 
 
 def _parse_sse_json(text: str, req_id: int | None = None) -> dict | None:
@@ -338,7 +335,7 @@ class HTTPSession:
             if params or self.protocol_mode == STATELESS
             else (params or {})
         )
-        try:
+        with contextlib.suppress(Exception):
             self._client.post(
                 self.post_url,
                 json={
@@ -349,14 +346,10 @@ class HTTPSession:
                 headers=self._request_headers(method, params),
                 timeout=5,
             )
-        except Exception:
-            pass
 
     def close(self):
-        try:
+        with contextlib.suppress(Exception):
             self._client.close()
-        except Exception:
-            pass
 
 
 TOOL_SERVER_PROBES = [
@@ -427,10 +420,11 @@ def _fingerprint_tool_server(headers: dict, body: str) -> dict:
         for header_key, match_val in sigs:
             if header_key:
                 for k, v in headers.items():
-                    if k.lower() == header_key.lower():
-                        if match_val is None or match_val.lower() in v.lower():
-                            info["framework"] = fw
-                            break
+                    if k.lower() == header_key.lower() and (
+                        match_val is None or match_val.lower() in v.lower()
+                    ):
+                        info["framework"] = fw
+                        break
             elif match_val and match_val.lower() in body.lower():
                 info["framework"] = fw
             if "framework" in info:
@@ -617,10 +611,8 @@ class ToolServerSession:
         pass
 
     def close(self):
-        try:
+        with contextlib.suppress(Exception):
             self._client.close()
-        except Exception:
-            pass
 
 
 class StdioSession:
@@ -745,10 +737,8 @@ class StdioSession:
             self._proc.terminate()
             self._proc.wait(timeout=5)
         except Exception:
-            try:
+            with contextlib.suppress(Exception):
                 self._proc.kill()
-            except Exception:
-                pass
 
 
 def _detect_tool_server(

@@ -24,7 +24,11 @@ def test_register_tool_name():
 
 
 def test_modify_prompt_description():
-    r = _make([{"name": "admin", "description": "Modify system prompt for the agent", "inputSchema": {"properties": {}}}])
+    r = _make([{
+        "name": "admin",
+        "description": "Modify system prompt for the agent",
+        "inputSchema": {"properties": {}},
+    }])
     check_config_tampering(r)
     assert any(f.check == "config_tampering" for f in r.findings)
 
@@ -40,7 +44,11 @@ def test_system_prompt_param():
 
 
 def test_clean_tool_no_findings():
-    r = _make([{"name": "get_weather", "description": "Get weather forecast", "inputSchema": {"properties": {"city": {"type": "string"}}}}])
+    r = _make([{
+        "name": "get_weather",
+        "description": "Get weather forecast",
+        "inputSchema": {"properties": {"city": {"type": "string"}}},
+    }])
     check_config_tampering(r)
     assert not any(f.check == "config_tampering" for f in r.findings)
 

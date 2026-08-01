@@ -36,8 +36,6 @@ class TestIndirectMultiParam:
             c for c in session.call.call_args_list
             if c[0][0] == "tools/call"
         ]
-        params_tested = {c[0][1]["arguments"].get("content") or c[0][1]["arguments"].get("message")
-                         for c in tool_calls}
         probes_set = set(INDIRECT_INJECTION_PROBES)
 
         injected_into_content = any(
@@ -52,7 +50,6 @@ class TestIndirectMultiParam:
     def test_finding_from_second_param_detected(self):
         """If only the second param triggers, the finding must still be recorded."""
         call_count = 0
-        num_probes = len(INDIRECT_INJECTION_PROBES)
 
         def mock_call(method, args, timeout=None):
             nonlocal call_count

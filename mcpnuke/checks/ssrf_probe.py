@@ -51,7 +51,6 @@ def check_ssrf_probe(session, result: TargetResult, probe_opts: dict | None = No
     with time_check("ssrf_probe", result):
         invokable = [t for t in result.tools if _should_invoke(t, opts)]
         _log(f"    [dim]    SSRF-probing {len(invokable)} tools[/dim]")
-        tool_idx = 0
         for tool in result.tools:
             if not _should_invoke(tool, opts):
                 continue
@@ -96,7 +95,9 @@ def check_ssrf_probe(session, result: TargetResult, probe_opts: dict | None = No
 
                     if not found_critical:
                         for pat in INTERNAL_INDICATORS:
-                            if re.search(pat, text, re.IGNORECASE) and not re.search(pat, safe_text or "", re.IGNORECASE):
+                            if re.search(pat, text, re.IGNORECASE) and not re.search(
+                                pat, safe_text or "", re.IGNORECASE,
+                            ):
                                 result.add(
                                     "ssrf_probe",
                                     "HIGH",

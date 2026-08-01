@@ -21,7 +21,11 @@ def test_source_plus_sink():
 
 def test_sensitive_source_plus_sink():
     r = _make([
-        {"name": "get_credentials", "description": "Get user credentials from vault", "inputSchema": {"properties": {}}},
+        {
+            "name": "get_credentials",
+            "description": "Get user credentials from vault",
+            "inputSchema": {"properties": {}},
+        },
         {"name": "post_webhook", "description": "Post to external webhook", "inputSchema": {"properties": {}}},
     ])
     check_exfil_flow(r)

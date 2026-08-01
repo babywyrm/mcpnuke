@@ -178,7 +178,7 @@ def enumerate_server(
     if verbose:
         _log("  [dim]Enumerating tools...[/dim]")
 
-    for attempt in range(3):
+    for _attempt in range(3):
         tools, tools_truncated = _paginated_list(
             session, "tools/list", max_pages=max_pages, timeout=15,
         )

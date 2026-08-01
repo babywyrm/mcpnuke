@@ -217,7 +217,11 @@ def _check_sa_blast_radius(namespace: str, token: str, console=None, api_url: st
             continue
 
         pods_using = sa_to_pods.get(sa_name, [])
-        pod_label = f" (pods: {', '.join(pods_using[:3])}{'...' if len(pods_using) > 3 else ''})" if pods_using else " (unused)"
+        if pods_using:
+            _more = "..." if len(pods_using) > 3 else ""
+            pod_label = f" (pods: {', '.join(pods_using[:3])}{_more})"
+        else:
+            pod_label = " (unused)"
 
         permissions: list[str] = []
         risk_flags: list[str] = []
@@ -330,9 +334,15 @@ def _check_helm_version_drift(namespace: str, token: str, console=None, api_url:
             for key in set(old_flat.keys()) & set(latest_flat.keys()):
                 old_v = old_flat[key]
                 new_v = latest_flat[key]
-                if old_v != new_v and isinstance(old_v, str):
-                    if "PRIVATE KEY" in old_v or any(s in key.lower() for s in _SENSITIVE_VALUE_PATTERNS):
-                        changed_secrets.add(key)
+                if (
+                    old_v != new_v
+                    and isinstance(old_v, str)
+                    and (
+                        "PRIVATE KEY" in old_v
+                        or any(s in key.lower() for s in _SENSITIVE_VALUE_PATTERNS)
+                    )
+                ):
+                    changed_secrets.add(key)
 
             if changed_secrets:
                 GLOBAL_K8S_FINDINGS.append(Finding(
@@ -435,11 +445,9 @@ def _check_session_token_exposure(
     if not pods_data:
         return
 
-    import re
     import ssl
     import urllib.request
 
-    jwt_re = re.compile(r"eyJ[a-zA-Z0-9_\-]{10,}\.eyJ[a-zA-Z0-9_\-]{10,}")
     base_url = api_url or "https://kubernetes.default"
     ctx = ssl.create_default_context()
     ctx.check_hostname = False

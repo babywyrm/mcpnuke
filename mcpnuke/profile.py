@@ -108,12 +108,12 @@ def enrich_tool(profile: ProfileData, tool: dict) -> dict:
     """Return a shallow copy of tool dict enriched with profile metadata."""
     name = tool.get("name", "")
     enriched = dict(tool)
-    l = lane_for(profile, name)
+    lane = lane_for(profile, name)
     tr = transport_for(profile, name)
     tid = threat_id_for(profile, name)
     n = notes_for(profile, name)
-    if l is not None:
-        enriched["_profile_lane"] = l
+    if lane is not None:
+        enriched["_profile_lane"] = lane
     if tr is not None:
         enriched["_profile_transport"] = tr
     if tid:

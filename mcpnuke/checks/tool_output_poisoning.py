@@ -90,7 +90,9 @@ def check_tool_output_poisoning(
                         "tool_output_poisoning",
                         "HIGH",
                         f"Tool output contains injection pattern: '{name}' ({pattern.pattern[:40]})",
-                        f"Tool '{name}' returned output containing an instruction-injection pattern (matched: '{match.group()}'). Indirect prompt injection via tool output poisoning.",
+                        f"Tool '{name}' returned output containing an "
+                        f"instruction-injection pattern (matched: '{match.group()}'). "
+                        f"Indirect prompt injection via tool output poisoning.",
                         evidence=text[:500],
                         taxonomy_id="MCP-T02",
                     )
@@ -124,7 +126,6 @@ def check_credential_forwarding(
         for tool in result.tools:
             name = tool.get("name", "")
             props = tool.get("inputSchema", {}).get("properties", {})
-            param_names = set(p.lower() for p in props)
 
             cred_params = [
                 p for p in props
@@ -141,8 +142,10 @@ def check_credential_forwarding(
                     result,
                     "credential_forwarding",
                     severity,
-                    f"Credential forwarding risk: '{name}' accepts credentials ({', '.join(cred_params)}) AND endpoints ({', '.join(endpoint_params)})",
-                    f"Tool '{name}' accepts both credential and endpoint parameters, enabling credential theft by design.",
+                    f"Credential forwarding risk: '{name}' accepts credentials "
+                    f"({', '.join(cred_params)}) AND endpoints ({', '.join(endpoint_params)})",
+                    f"Tool '{name}' accepts both credential and endpoint parameters, "
+                    f"enabling credential theft by design.",
                     taxonomy_id="MCP-T03",
                 )
             elif cred_params and not endpoint_params:
@@ -155,6 +158,7 @@ def check_credential_forwarding(
                         "credential_forwarding",
                         "HIGH",
                         f"Credential parameter in externally-calling tool: '{name}' ({', '.join(cred_params)})",
-                        f"Tool '{name}' accepts credential parameters and makes external calls — credential exposure risk.",
+                        f"Tool '{name}' accepts credential parameters and makes "
+                        f"external calls — credential exposure risk.",
                         taxonomy_id="MCP-T03",
                     )
