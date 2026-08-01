@@ -10,6 +10,7 @@ the target MCP server exposes the Teleport lab tools.
 
 from __future__ import annotations
 
+from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _call_tool, _response_text
 from mcpnuke.core.models import TargetResult
@@ -19,12 +20,9 @@ def _has_tool(result: TargetResult, prefix: str) -> bool:
     return any(t.get("name", "").startswith(prefix) for t in result.tools)
 
 
-def _add(result: TargetResult, *args, **kwargs):
-    """Lane-tagged wrapper: every finding from this module is Lane 3 (Machine),
-    Transport A (MCP). Backfilled per the 2026-04-26 by-lane reporting spec."""
-    kwargs.setdefault("lane", 3)
-    kwargs.setdefault("transport", "A")
-    return result.add(*args, **kwargs)
+# Every finding from this module is Lane 3 (Machine), Transport A (MCP).
+# Backfilled per the 2026-04-26 by-lane reporting spec.
+_add = lane_tagged(lane=3, transport="A")
 
 
 def check_teleport_lab_bot_theft(session, result: TargetResult, probe_opts: dict | None = None):

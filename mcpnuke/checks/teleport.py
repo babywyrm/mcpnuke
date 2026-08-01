@@ -11,15 +11,12 @@ import json
 import ssl
 import urllib.request
 
+from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
 
-
-def _add(result: TargetResult, *args, **kwargs):
-    """Lane-tagged wrapper: Teleport infra findings are Lane 3 (Machine), Transport A."""
-    kwargs.setdefault("lane", 3)
-    kwargs.setdefault("transport", "A")
-    return result.add(*args, **kwargs)
+# Teleport infra findings are Lane 3 (Machine), Transport A.
+_add = lane_tagged(lane=3, transport="A")
 
 
 def _probe_url(url: str, timeout: float = 3.0) -> dict | None:

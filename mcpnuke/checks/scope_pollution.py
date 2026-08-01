@@ -20,12 +20,11 @@ Pairs with camazotz ``shared_idp_pollution_lab`` (MCP-T42).
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import time_check, tool_text
 from mcpnuke.core.auth import decode_jwt_claims
 from mcpnuke.core.models import TargetResult
 
@@ -85,12 +84,7 @@ def _scope_tokens(claims: dict[str, Any]) -> set[str]:
     return out
 
 
-def _schema_text(tool: dict) -> str:
-    return " ".join((
-        str(tool.get("name", "")),
-        str(tool.get("description", "")),
-        json.dumps(tool.get("inputSchema", {}), default=str),
-    ))
+_schema_text = tool_text
 
 
 def _schema_has_requested_scope_param(tool: dict) -> bool:

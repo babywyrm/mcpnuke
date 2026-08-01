@@ -375,7 +375,11 @@ def _response_text(resp: dict | None) -> str:
     if isinstance(result, str):
         return result
     if isinstance(result, dict):
-        content = result.get("content", [])
+        # .get("content") rather than .get("content", []): an absent content key
+        # used to yield an empty list, which is a list, so the branches below
+        # were unreachable. Error messages and structured results extracted as
+        # "" and no check ever scanned them.
+        content = result.get("content")
         if isinstance(content, list):
             parts = []
             for c in content:
@@ -387,7 +391,7 @@ def _response_text(resp: dict | None) -> str:
         # error responses
         if "message" in result:
             return result["message"]
-        return json.dumps(result)[:2000]
+        return json.dumps(result)[:2000] if result else ""
     return str(result) if result else ""
 
 

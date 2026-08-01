@@ -28,11 +28,10 @@ isn't a credential leak but still hands attackers reconnaissance for free.
 
 from __future__ import annotations
 
-import json
 import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import time_check, tool_text
 from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.credentials import RECON_CREDENTIALS, find_credential
 
@@ -76,22 +75,7 @@ _PATH_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 ]
 
 
-def _tool_searchable_text(tool: dict) -> str:
-    """Build the searchable surface for a tool definition.
-
-    Includes name, description, and the full inputSchema (which contains
-    parameter descriptions, defaults, enums — all attacker-visible via
-    ``tools/list``).
-    """
-    parts: list[str] = [
-        str(tool.get("name", "")),
-        str(tool.get("description", "")),
-    ]
-    schema = tool.get("inputSchema", {})
-    if schema:
-        # Dump the whole schema so we catch values in defaults, enums, examples
-        parts.append(json.dumps(schema, default=str))
-    return "\n".join(parts)
+_tool_searchable_text = tool_text
 
 
 def check_schema_overdisclosure(result: TargetResult) -> None:

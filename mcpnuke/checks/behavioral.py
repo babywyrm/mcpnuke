@@ -7,6 +7,7 @@ import re
 import time
 
 from mcpnuke.checks.base import time_check
+from mcpnuke.checks.tool_probes import _response_text
 from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.probes import RESPONSE_INJECTION_PATTERNS
 
@@ -69,22 +70,10 @@ def check_rug_pull(session, result: TargetResult):
 # Deep rug pull (NEW — invoke tools between enumerations)
 # ---------------------------------------------------------------------------
 
-def _extract_text(resp: dict | None) -> str:
-    """Pull text out of a tools/call response."""
-    if not resp:
-        return ""
-    r = resp.get("result", resp.get("error", {}))
-    if isinstance(r, str):
-        return r
-    if isinstance(r, dict):
-        content = r.get("content", [])
-        if isinstance(content, list):
-            return "\n".join(
-                c.get("text", "") if isinstance(c, dict) else str(c) for c in content
-            )
-        if "message" in r:
-            return r["message"]
-    return str(r) if r else ""
+# Shared with tool_probes rather than reimplemented. The local copy dropped
+# blob content blocks and stringified structured results, so anything it missed
+# was invisible to every behavioral check that scans response text.
+_extract_text = _response_text
 
 
 def check_deep_rug_pull(session, result: TargetResult, probe_opts: dict | None = None):
