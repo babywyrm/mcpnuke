@@ -42,6 +42,11 @@ All notable changes to this submodule are documented here.
 - **MCP-T15 model routing** (`checks/model_routing.py`): Static detection of
   attacker-controllable model selection (management tools, model params, routing
   descriptions).
+- **`core/transports/base.py`**: `MCPSessionProtocol` and `HTTPCapableSession`,
+  the first shared contract across the four transports. 42 previously untyped
+  `session` parameters now declare it, so a check can only rely on what every
+  transport provides, and `post_raw` is an explicit capability rather than a
+  member some transports raise on.
 - **`patterns/credentials.py`**: single source of truth for credential detection,
   replacing five divergent definitions. Tiered by false-positive risk —
   `STRUCTURAL_CREDENTIALS` (shape-based, safe on tool schemas),
@@ -117,6 +122,14 @@ All notable changes to this submodule are documented here.
   denominator is now derived from the check inventory, and `--fast` is accounted for
   exactly via the pre-built deep-probe plan. The duration estimate uses the real
   deep count, so it now reads more conservatively than before.
+- **`negotiate_protocol` wrote `session.protocol_mode` on transports that never
+  declared it.** Python creates the attribute on assignment, so three of the
+  four silently grew a field nothing read. All four now declare it.
+- **`TargetResult.scan_diff` was typed `object`**, leaving the four attributes
+  the JSON reporter reads off it unverifiable, and `__main__` bound the same
+  local name to two unrelated diff types in one scope.
+- **`ACTIVE_INJECTION_PAYLOADS` inferred as `list[dict[str, object]]`**, hiding
+  every field access on the active-injection probes from type checking.
 - **Response text was silently dropped before any check saw it**
   (`tool_probes._response_text`, and the weaker copy in `behavioral.py`):
   `content` defaulted to `[]`, which is a list, making the `message` and JSON
