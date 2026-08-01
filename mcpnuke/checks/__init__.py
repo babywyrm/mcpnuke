@@ -145,27 +145,176 @@ def _has_dangerous_params(tools: list[dict]) -> bool:
     return False
 
 
+# ── Check inventory ───────────────────────────────────────────────────
+#
+# These tables exist so the progress denominator is derived rather than
+# guessed. They must mirror the ``_run("name", ...)`` call sites in
+# run_all_checks one-for-one; tests/test_check_progress.py parses the source
+# and fails if the two ever diverge. Deep behavioral probes are not listed
+# here — they are already a declarative list built by _build_deep_checks(),
+# so their count is exact by construction.
+
+_STATIC_CHECK_NAMES: tuple[str, ...] = (
+    "tool_shadowing",
+    "prompt_injection",
+    "tool_poisoning",
+    "excessive_permissions",
+    "token_theft",
+    "code_execution",
+    "remote_access",
+    "schema_risks",
+    "rate_limit",
+    "prompt_leakage",
+    "supply_chain",
+    "config_tampering",
+    "webhook_persistence",
+    "credential_in_schema",
+    "credential_forwarding",
+    "remote_package_execution",
+    "agentic_loop",
+    "insecure_agent_comms",
+    "model_routing",
+    "notification_sampling_abuse",
+    "delegation_depth",
+    "subprocess_cred_inheritance",
+    "tool_description_injection",
+    "pre_auth_injection",
+    "cached_session_exposure",
+    "host_network_loopback",
+    "role_escalation_tool",
+    "shell_wrapping_injection",
+    "native_function_identity_erasure",
+    "schema_overdisclosure",
+    "scope_pollution",
+    "sdk_cache_tamper",
+    "exfil_flow",
+)
+
+_JWT_CHECK_NAMES: tuple[str, ...] = (
+    "jwt_algorithm",
+    "jwt_issuer",
+    "jwt_audience",
+    "jwt_token_id",
+    "jwt_ttl",
+    "jwt_weak_key",
+    "jwt_audience_target_match",
+    "jwt_cross_role_replay",
+)
+
+_LIGHT_BEHAVIORAL_CHECK_NAMES: tuple[str, ...] = (
+    "rug_pull",
+    "indirect_injection",
+    "protocol_robustness",
+)
+
+_TRANSPORT_CHECK_NAMES: tuple[str, ...] = ("sse_security",)
+
+_TARGET_SURFACE_CHECK_NAMES: tuple[str, ...] = ("actuator_probe",)
+
+_INFERENCE_CHECK_NAMES: tuple[str, ...] = ("inference_backend",)
+
+_INFERENCE_BASELINE_CHECK_NAMES: tuple[str, ...] = ("model_integrity",)
+
+_TELEPORT_BASE_CHECK_NAMES: tuple[str, ...] = (
+    "teleport_proxy_discovery",
+    "teleport_cert_validation",
+    "teleport_app_enumeration",
+)
+
+_TELEPORT_ALWAYS_CHECK_NAMES: tuple[str, ...] = (
+    "tbot_credential_exposure",
+    "teleport_bot_overprivilege",
+)
+
+_AGGREGATE_CHECK_NAMES: tuple[str, ...] = ("multi_vector", "attack_chains")
+
+
+DeepCheck = tuple[str, Callable[..., Any], tuple[Any, ...], dict[str, Any]]
+
+
+def _build_deep_checks(
+    session: Any,
+    result: TargetResult,
+    opts: dict[str, Any],
+    *,
+    fast_mode: bool,
+) -> tuple[list[DeepCheck], set[str]]:
+    """Build the deep behavioral probe plan, applying --fast filtering.
+
+    Returns ``(plan, skipped)``. Built before any check runs so the progress
+    denominator can account for --fast exactly: the filter is not simply
+    ``FAST_SKIP_CHECKS``, because input_sanitization is retained when a tool
+    exposes a dangerous parameter.
+    """
+    plan: list[DeepCheck] = [
+        ("deep_rug_pull", check_deep_rug_pull, (session, result), {"probe_opts": opts}),
+        ("tool_response_injection", check_tool_response_injection, (session, result), {"probe_opts": opts}),
+        ("input_sanitization", check_input_sanitization, (session, result), {"probe_opts": opts}),
+        ("error_leakage", check_error_leakage, (session, result), {"probe_opts": opts}),
+        ("temporal_consistency", check_temporal_consistency, (session, result), {"probe_opts": opts}),
+        ("resource_poisoning", check_resource_poisoning, (session, result), {}),
+        ("response_credentials", check_response_credentials, (session, result), {"probe_opts": opts}),
+        ("ssrf_probe", check_ssrf_probe, (session, result), {"probe_opts": opts}),
+        ("config_dump", check_config_dump, (session, result), {"probe_opts": opts}),
+        ("behavioral_rate_limit", check_behavioral_rate_limit, (session, result), {"probe_opts": opts}),
+        ("anon_budget_exhaust", check_anon_budget_exhaust, (session, result), {"probe_opts": opts}),
+        ("state_mutation", check_state_mutation, (session, result), {}),
+        ("notification_abuse", check_notification_abuse, (session, result), {}),
+        ("active_prompt_injection", check_active_prompt_injection, (session, result), {"probe_opts": opts}),
+        ("teleport_lab_bot_theft", check_teleport_lab_bot_theft, (session, result), {"probe_opts": opts}),
+        ("teleport_lab_role_escalation", check_teleport_lab_role_escalation, (session, result), {"probe_opts": opts}),
+        ("teleport_lab_cert_replay", check_teleport_lab_cert_replay, (session, result), {"probe_opts": opts}),
+        ("shell_injection", check_shell_injection, (session, result), {"probe_opts": opts}),
+        ("sdk_cache_poisoning", check_sdk_cache_poisoning, (session, result), {"probe_opts": opts}),
+        ("ai_guardrail_probe", check_ai_guardrail, (session, result), {"probe_opts": opts}),
+        ("prompt_injection_t01", check_prompt_injection_t01, (session, result), {"probe_opts": opts}),
+        ("tool_output_poisoning_t02", check_tool_output_poisoning, (session, result), {"probe_opts": opts}),
+        ("command_injection_broad_t05", check_command_injection_broad, (session, result), {"probe_opts": opts}),
+        ("agentic_loop_behavioral_t10", check_agentic_loop_behavioral, (session, result), {"probe_opts": opts}),
+    ]
+
+    if not fast_mode:
+        return plan, set()
+
+    skip = set(FAST_SKIP_CHECKS)
+    if "input_sanitization" in skip and _has_dangerous_params(result.tools):
+        skip.discard("input_sanitization")
+
+    plan = [entry for entry in plan if entry[0] not in skip]
+    return plan, skip
+
+
 def _emit_duration_estimate(
+    *,
     n_tools: int,
     session,
     no_invoke: bool,
     fast_mode: bool,
     probe_workers: int,
+    n_deep: int,
     _log,
 ):
-    """Print a rough scan-time estimate so operators know what to expect."""
+    """Print a rough scan-time estimate so operators know what to expect.
+
+    *n_deep* is the size of the already-filtered deep probe plan, so the
+    estimate tracks the work that will actually run.
+    """
     stdio = hasattr(session, "_proc") if session else False
+    # Deliberately conservative: the estimate is an upper bound, since an
+    # operator who kills a scan that looked short is worse off than one who
+    # sees a generous number. The linear model also mispredicts by shape —
+    # deep_rug_pull dominated a measured local run at 47s of 63s total deep
+    # time (Camazotz on localhost, 5 sampled tools, 1 probe worker), where
+    # this model predicted ~300s. Recalibrating needs samples across several
+    # targets and latencies, not one lab host.
     avg_per_tool = 8.0 if stdio else 3.0
     static_secs = 2.0
     behavioral_secs = 3.0 if not no_invoke else 0.0
 
-    if no_invoke:
+    if no_invoke or not n_deep:
         deep_secs = 0.0
     else:
-        deep_checks = 10
-        if fast_mode:
-            deep_checks -= len(FAST_SKIP_CHECKS)
-        deep_secs = deep_checks * n_tools * avg_per_tool
+        deep_secs = n_deep * n_tools * avg_per_tool
         if probe_workers > 1:
             deep_secs /= min(probe_workers, n_tools or 1)
 
@@ -235,9 +384,24 @@ def run_all_checks(
     else:
         result.tools_total = len(result.tools)
 
+    # Built before anything runs so the progress denominator and the ETA both
+    # reflect the plan that will actually execute (including --fast filtering).
+    deep_checks: list[DeepCheck] = []
+    deep_skipped: set[str] = set()
+    if not no_invoke:
+        deep_checks, deep_skipped = _build_deep_checks(
+            session, result, opts, fast_mode=fast_mode,
+        )
+
     if verbose:
         _emit_duration_estimate(
-            len(result.tools), session, no_invoke, fast_mode, probe_workers, _log,
+            n_tools=len(result.tools),
+            session=session,
+            no_invoke=no_invoke,
+            fast_mode=fast_mode,
+            probe_workers=probe_workers,
+            n_deep=len(deep_checks),
+            _log=_log,
         )
 
     check_num = 0
@@ -266,20 +430,26 @@ def run_all_checks(
             status = f"[green]✓[/green] {len(new_findings)} finding(s)" if new_findings else "[dim]clean[/dim]"
             _log(f"  [dim]    └─ {status}  ({elapsed:.2f}s)[/dim]")
 
-    # Count total checks for progress display
+    # Progress denominator, derived from the check inventory rather than
+    # hardcoded. See the tables above _build_deep_checks().
     has_jwt = bool(result.auth_context.get("_raw_token") or result.auth_context.get("jwt_claims_summary"))
-    total_checks = 17  # static (exfil_flow counted separately below)
-    total_checks += 1  # exfil_flow
+    total_checks = len(_STATIC_CHECK_NAMES)
     if has_jwt:
-        total_checks += 8  # JWT hardening checks (6 baseline + 2 boundary)
+        total_checks += len(_JWT_CHECK_NAMES)
     if not no_invoke:
-        deep_count = 13 if not fast_mode else (13 - len(FAST_SKIP_CHECKS))
-        total_checks += 3 + deep_count  # light behavioral + deep
+        total_checks += len(_LIGHT_BEHAVIORAL_CHECK_NAMES) + len(deep_checks)
     if base and sse_path:
-        total_checks += 1
+        total_checks += len(_TRANSPORT_CHECK_NAMES)
     if base:
-        total_checks += 1
-    total_checks += 2  # aggregate
+        total_checks += len(_TARGET_SURFACE_CHECK_NAMES)
+    if opts.get("inference_host") or opts.get("inference_scan"):
+        total_checks += len(_INFERENCE_CHECK_NAMES)
+        if opts.get("inference_baseline") or opts.get("save_inference_baseline"):
+            total_checks += len(_INFERENCE_BASELINE_CHECK_NAMES)
+    if base:
+        total_checks += len(_TELEPORT_BASE_CHECK_NAMES)
+    total_checks += len(_TELEPORT_ALWAYS_CHECK_NAMES)
+    total_checks += len(_AGGREGATE_CHECK_NAMES)
 
     # ── Static checks (metadata only — always run) ─────────────────────
     if verbose:
@@ -319,7 +489,7 @@ def run_all_checks(
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
 
     # JWT hardening checks (only when auth token is present)
-    if result.auth_context.get("_raw_token") or result.auth_context.get("jwt_claims_summary"):
+    if has_jwt:
         _run("jwt_algorithm", check_jwt_algorithm, result)
         _run("jwt_issuer", check_jwt_issuer, result)
         _run("jwt_audience", check_jwt_audience, result)
@@ -349,45 +519,10 @@ def run_all_checks(
             if probe_workers > 1:
                 _log(f"  [dim]  (running with {probe_workers} parallel probe workers)[/dim]")
 
-        deep_checks: list[tuple[str, Callable[..., Any], tuple[Any, ...], dict[str, Any]]] = [
-            ("deep_rug_pull", check_deep_rug_pull, (session, result), {"probe_opts": opts}),
-            ("tool_response_injection", check_tool_response_injection, (session, result), {"probe_opts": opts}),
-            ("input_sanitization", check_input_sanitization, (session, result), {"probe_opts": opts}),
-            ("error_leakage", check_error_leakage, (session, result), {"probe_opts": opts}),
-            ("temporal_consistency", check_temporal_consistency, (session, result), {"probe_opts": opts}),
-            ("resource_poisoning", check_resource_poisoning, (session, result), {}),
-            ("response_credentials", check_response_credentials, (session, result), {"probe_opts": opts}),
-            ("ssrf_probe", check_ssrf_probe, (session, result), {"probe_opts": opts}),
-            ("config_dump", check_config_dump, (session, result), {"probe_opts": opts}),
-            ("behavioral_rate_limit", check_behavioral_rate_limit, (session, result), {"probe_opts": opts}),
-            ("anon_budget_exhaust", check_anon_budget_exhaust, (session, result), {"probe_opts": opts}),
-            ("state_mutation", check_state_mutation, (session, result), {}),
-            ("notification_abuse", check_notification_abuse, (session, result), {}),
-            ("active_prompt_injection", check_active_prompt_injection, (session, result), {"probe_opts": opts}),
-            ("teleport_lab_bot_theft", check_teleport_lab_bot_theft, (session, result), {"probe_opts": opts}),
-            ("teleport_lab_role_escalation", check_teleport_lab_role_escalation, (session, result), {"probe_opts": opts}),
-            ("teleport_lab_cert_replay", check_teleport_lab_cert_replay, (session, result), {"probe_opts": opts}),
-            ("shell_injection", check_shell_injection, (session, result), {"probe_opts": opts}),
-            ("sdk_cache_poisoning", check_sdk_cache_poisoning, (session, result), {"probe_opts": opts}),
-            ("ai_guardrail_probe", check_ai_guardrail, (session, result), {"probe_opts": opts}),
-            ("prompt_injection_t01", check_prompt_injection_t01, (session, result), {"probe_opts": opts}),
-            ("tool_output_poisoning_t02", check_tool_output_poisoning, (session, result), {"probe_opts": opts}),
-            ("command_injection_broad_t05", check_command_injection_broad, (session, result), {"probe_opts": opts}),
-            ("agentic_loop_behavioral_t10", check_agentic_loop_behavioral, (session, result), {"probe_opts": opts}),
-        ]
-
-        if fast_mode:
-            skip = set(FAST_SKIP_CHECKS)
-            if "input_sanitization" in skip and _has_dangerous_params(result.tools):
-                skip.discard("input_sanitization")
-                if verbose:
-                    _log("  [yellow]--fast: retaining input_sanitization (dangerous params detected)[/yellow]")
-            deep_checks = [
-                (name, fn, a, kw) for name, fn, a, kw in deep_checks
-                if name not in skip
-            ]
-            if verbose:
-                _log(f"  [yellow]--fast: skipping {', '.join(sorted(skip))}[/yellow]")
+        if fast_mode and verbose:
+            if "input_sanitization" not in deep_skipped:
+                _log("  [yellow]--fast: retaining input_sanitization (dangerous params detected)[/yellow]")
+            _log(f"  [yellow]--fast: skipping {', '.join(sorted(deep_skipped))}[/yellow]")
 
         if probe_workers > 1:
             with ThreadPoolExecutor(max_workers=probe_workers) as pool:
