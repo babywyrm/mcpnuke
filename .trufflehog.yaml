@@ -18,4 +18,4 @@ exclude_detectors:
 #   tests/test_actuator_probe.py              — scanner test fixture
 #   tests/test_targets/DVMCP/challenges/      — CTF challenge servers
 #   tests/test_targets/DVMCP/solutions/       — CTF walkthrough docs
-#   camazotz-nuc-*.json                       — scan result artifacts
+#   camazotz-cluster-*.json                       — scan result artifacts

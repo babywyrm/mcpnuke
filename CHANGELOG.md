@@ -142,7 +142,7 @@ All notable changes to this submodule are documented here.
   a false positive a human dismisses. Also fixed: `actuator_probe` escalated any
   body containing a bare `sk-` to CRITICAL, and `tool_probes` passed
   `re.IGNORECASE` alongside the pattern, which raises outright on a compiled one.
-  Verified against 139 live Camazotz tools: zero findings lost, zero gained.
+  Verified against a 139-tool reference target: zero findings lost, zero gained.
 - **`InferenceBackend.VLLM` did not exist** (`checks/inference_backend.py`): both
   references would have raised `AttributeError`. vLLM fingerprints as
   `OPENAI_COMPAT`, which is now used. Latent only because
@@ -161,7 +161,7 @@ All notable changes to this submodule are documented here.
 
 - Taxonomy: 14 → 22 IDs (25% → 39%)
 - Tier 1 complete (8 of 9 checks; T11 cross-tenant deferred for multi-auth infra)
-- Live-verified against DVMCP (10 challenges, NUC) + brainbox AI analysis
+- Live-verified against DVMCP (10 challenges, K3s cluster) + brainbox AI analysis
 
 ## [6.13.0] - 2026-05-19
 
@@ -315,7 +315,7 @@ The 4b model is too small for a 138-tool server. Practical sweet spot: `qwen2.5:
     role isolation in the same OIDC realm. Static check; does not invoke
     the write tools.
 
-  Live verification on the NUC reference deployment with a forged read-only
+  Live verification on the reference cluster deployment with a forged read-only
   token: Lane 1 went from 0 findings to 2 HIGH findings; total scan
   produced 168 findings, score 1380, 5/5 lanes covered.
 

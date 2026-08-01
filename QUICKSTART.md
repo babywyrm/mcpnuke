@@ -36,7 +36,7 @@ This adds behavioral probes: rug-pull detection, response injection, input
 sanitization, temporal consistency, SSRF probes, and the Teleport lab exploit
 chains.
 
-## 3) Scan K8s-Deployed Target (NUC / Cluster)
+## 3) Scan K8s-Deployed Target (K3s / Cluster)
 
 When camazotz runs behind nullfield on Kubernetes:
 
@@ -278,7 +278,7 @@ mcpnuke --targets http://<cluster-node>:30080/mcp \
   --by-lane
 ```
 
-Example output snippet (live NUC scan with a forged read-only token —
+Example output snippet (live cluster scan with a forged read-only token —
 Lane 1 jumped from 0 to 2 findings once the new MCP-T04 JWT checks
 landed):
 

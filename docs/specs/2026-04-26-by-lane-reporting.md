@@ -314,7 +314,7 @@ from the spec body; everything not mentioned here landed as written.
   not part of this spec but shipped together with `--by-lane` because
   they were the first concrete, lane-tagged Lane 1 / Transport A checks
   available to validate the per-lane reporting against. Lane 1 went from
-  zero findings to two on the live NUC scan with a forged read-only
+  zero findings to two on the live cluster scan with a forged read-only
   token.
 - **`--coverage-report` exit code semantics.** Confirmed diagnostic-only
   per the README "Exit Code" table: `0` clean, `1` findings, `2` scanner
@@ -322,7 +322,7 @@ from the spec body; everything not mentioned here landed as written.
   camazotz are printed in red but do not change the exit code or abort
   the scan. This matches the spec's "fail loudly with guidance" intent
   while staying composable with CI gates that key off finding severity.
-- **Live verification.** Against the NUC reference deployment with a
+- **Live verification.** Against the reference cluster deployment with a
   forged read-only JWT, `--coverage-report` reported 5/5 lanes covered,
   168 findings, score 1380. Lane 1 was the lane the new JWT checks
   promoted from "uncovered" to "covered with HIGH findings."

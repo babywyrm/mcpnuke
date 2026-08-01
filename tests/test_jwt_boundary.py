@@ -35,8 +35,8 @@ def _result_with_token(url: str, claims: dict) -> TargetResult:
 
 def test_audience_match_with_url_substring_passes():
     r = _result_with_token(
-        "http://<cluster-node>:30080/mcp",
-        {"aud": "http://<cluster-node>:30080/mcp", "sub": "u1"},
+        "http://mcp.test:30080/mcp",
+        {"aud": "http://mcp.test:30080/mcp", "sub": "u1"},
     )
     check_jwt_audience_target_match(r)
     assert not r.findings, "URL-equality audience must not flag"
@@ -44,8 +44,8 @@ def test_audience_match_with_url_substring_passes():
 
 def test_audience_match_with_host_only_passes():
     r = _result_with_token(
-        "http://<cluster-node>:30080/mcp",
-        {"aud": "<cluster-node>", "sub": "u1"},
+        "http://mcp.test:30080/mcp",
+        {"aud": "mcp.test", "sub": "u1"},
     )
     check_jwt_audience_target_match(r)
     assert not r.findings
@@ -53,8 +53,8 @@ def test_audience_match_with_host_only_passes():
 
 def test_audience_match_with_array_form_passes():
     r = _result_with_token(
-        "http://<cluster-node>:30080/mcp",
-        {"aud": ["other-svc", "<cluster-node>:30080"], "sub": "u1"},
+        "http://mcp.test:30080/mcp",
+        {"aud": ["other-svc", "mcp.test:30080"], "sub": "u1"},
     )
     check_jwt_audience_target_match(r)
     assert not r.findings
@@ -62,7 +62,7 @@ def test_audience_match_with_array_form_passes():
 
 def test_audience_mismatch_fires_high_finding():
     r = _result_with_token(
-        "http://<cluster-node>:30080/mcp",
+        "http://mcp.test:30080/mcp",
         {"aud": "api://billing-service", "sub": "u1"},
     )
     check_jwt_audience_target_match(r)
@@ -78,7 +78,7 @@ def test_audience_mismatch_fires_high_finding():
 def test_audience_missing_does_not_double_report():
     """check_jwt_audience already covers the missing-aud case."""
     r = _result_with_token(
-        "http://<cluster-node>:30080/mcp",
+        "http://mcp.test:30080/mcp",
         {"sub": "u1"},
     )
     check_jwt_audience_target_match(r)
@@ -86,13 +86,13 @@ def test_audience_missing_does_not_double_report():
 
 
 def test_audience_match_no_token_skips_silently():
-    r = TargetResult(url="http://<cluster-node>:30080/mcp")
+    r = TargetResult(url="http://mcp.test:30080/mcp")
     check_jwt_audience_target_match(r)
     assert not r.findings
 
 
 def test_uses_summary_claims_when_raw_token_absent():
-    r = TargetResult(url="http://<cluster-node>:30080/mcp")
+    r = TargetResult(url="http://mcp.test:30080/mcp")
     r.auth_context["jwt_claims_summary"] = {"aud": "wrong-aud", "sub": "u1"}
     check_jwt_audience_target_match(r)
     assert len(r.findings) == 1

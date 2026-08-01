@@ -720,13 +720,13 @@ class TestDVMCPFullPipeline:
 
 DVMCP_PORTS = list(range(9001, 9011))
 
-# When DVMCP is deployed in K3s (e.g. on the NUC at <cluster-node>), set:
-#   DVMCP_HOST=<cluster-node>   — host to connect to   (default: localhost)
+# When DVMCP is deployed in K3s (e.g. at mcp.test), set:
+#   DVMCP_HOST=mcp.test   — host to connect to   (default: localhost)
 #   DVMCP_PORT_OFFSET=29900   — added to challenge number (default: 0, giving 9001-9010)
 #                               For K3s NodePorts 30901-30910: DVMCP_PORT_OFFSET=21900
 #
-# Quick NUC invocation:
-#   DVMCP_LIVE=1 DVMCP_HOST=<cluster-node> DVMCP_PORT_OFFSET=21900 \
+# Quick cluster invocation:
+#   DVMCP_LIVE=1 DVMCP_HOST=mcp.test DVMCP_PORT_OFFSET=21900 \
 #     pytest tests/test_dvmcp.py::TestDVMCPLive -v
 _DVMCP_HOST = os.environ.get("DVMCP_HOST", "localhost")
 _DVMCP_PORT_OFFSET = int(os.environ.get("DVMCP_PORT_OFFSET", "0"))
@@ -743,7 +743,7 @@ class TestDVMCPLive:
     """Live tests against running DVMCP challenge servers.
 
     Targets localhost:9001-9010 by default. Override with env vars:
-      DVMCP_HOST=<cluster-node> DVMCP_PORT_OFFSET=21900   (K3s NodePorts 30901-30910)
+      DVMCP_HOST=mcp.test DVMCP_PORT_OFFSET=21900   (K3s NodePorts 30901-30910)
     """
 
     @pytest.mark.parametrize("port", DVMCP_PORTS)
