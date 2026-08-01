@@ -24,7 +24,12 @@ htmlcov/
 
 *.json
 !mcpnuke/data/*.json
+# Profiles are hand-written target definitions and belong in the repo. Scan
+# output written into the same directory does not — it is large, regenerable,
+# and was how 1.3 MB of reports ended up tracked.
 !profiles/*.json
+profiles/*-scan.json
+profiles/*-fast.json
 
 .mypy_cache/
 .ruff_cache/
