@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 import httpx
 
 from mcpnuke.core.constants import MCP_INIT_PARAMS, SSE_PATHS, POST_PATHS, build_jsonrpc_request as _jrpc
+from mcpnuke.core.protocol import LEGACY, STATELESS, inject_meta, routing_headers
 
 
 def _auth_headers(auth_token: str | None, extra_headers: dict | None = None) -> dict:
@@ -254,11 +255,13 @@ class HTTPSession:
         timeout: float = 25.0,
         headers: dict | None = None,
         verify_tls: bool = False,
+        protocol_mode: str = LEGACY,
     ):
         self.base = base
         self.sse_url = ""
         self.post_url = post_url
         self.timeout = timeout
+        self.protocol_mode = protocol_mode
         self._req_id = 0
         self._session_id: str | None = None
         self._headers = headers or {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
@@ -269,13 +272,22 @@ class HTTPSession:
     def wait_ready(self, timeout: float = 10.0) -> bool:
         return True
 
-    def _request_headers(self) -> dict:
+    def _request_headers(
+        self,
+        method: str = "",
+        params: dict | None = None,
+    ) -> dict:
         h = dict(self._headers)
+        if self.protocol_mode == STATELESS:
+            h.update(routing_headers(method, params, self.protocol_mode))
+            return h
         if self._session_id:
             h["Mcp-Session-Id"] = self._session_id
         return h
 
     def _capture_session_id(self, resp_headers) -> None:
+        if self.protocol_mode == STATELESS:
+            return
         for k, v in resp_headers.items():
             if k.lower() == "mcp-session-id" and v:
                 self._session_id = v
@@ -290,11 +302,16 @@ class HTTPSession:
     ) -> dict | None:
         for attempt in range(retries + 1):
             self._req_id += 1
+            sent_params = (
+                inject_meta(params, self.protocol_mode)
+                if params or self.protocol_mode == STATELESS
+                else params
+            )
             try:
                 r = self._client.post(
                     self.post_url,
-                    json=_jrpc(method, params, self._req_id),
-                    headers=self._request_headers(),
+                    json=_jrpc(method, sent_params, self._req_id),
+                    headers=self._request_headers(method, params),
                     timeout=timeout or self.timeout,
                 )
                 self._capture_session_id(r.headers)
@@ -316,15 +333,20 @@ class HTTPSession:
         return None
 
     def notify(self, method: str, params: dict | None = None):
+        sent_params = (
+            inject_meta(params, self.protocol_mode)
+            if params or self.protocol_mode == STATELESS
+            else (params or {})
+        )
         try:
             self._client.post(
                 self.post_url,
                 json={
                     "jsonrpc": "2.0",
                     "method": method,
-                    "params": params or {},
+                    "params": sent_params,
                 },
-                headers=self._request_headers(),
+                headers=self._request_headers(method, params),
                 timeout=5,
             )
         except Exception:
