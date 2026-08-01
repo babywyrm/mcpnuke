@@ -78,7 +78,14 @@ def scan_stdio_target(
     result.transport = "stdio"
     console.print(f"  [green]✓[/green] Transport=stdio  pid={session._proc.pid}")
 
-    enumerate_server(session, result, verbose=verbose, log=_log, max_pages=opts.get("max_pages", 20))
+    enumerate_server(
+        session,
+        result,
+        verbose=verbose,
+        log=_log,
+        max_pages=opts.get("max_pages", 20),
+        protocol_mode=opts.get("protocol_mode", "auto"),
+    )
 
     if result.server_info:
         si = result.server_info.get("serverInfo", {})
@@ -233,7 +240,14 @@ def scan_target(
         base = f"{parsed.scheme}://{parsed.netloc}"
         sse_path = urlparse(session.sse_url).path
 
-    enumerate_server(session, result, verbose=verbose, log=_log, max_pages=opts.get("max_pages", 20))
+    enumerate_server(
+        session,
+        result,
+        verbose=verbose,
+        log=_log,
+        max_pages=opts.get("max_pages", 20),
+        protocol_mode=opts.get("protocol_mode", "auto"),
+    )
 
     # Print server info if available
     if result.server_info:

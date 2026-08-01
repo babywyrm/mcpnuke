@@ -1,3 +1,4 @@
+from mcpnuke.cli import parse_args
 from mcpnuke.core.enumerator import negotiate_protocol
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.protocol import AUTO, LEGACY, STATELESS
@@ -92,3 +93,13 @@ def test_stateless_server_records_anonymous_discovery_finding():
     finding = next(f for f in result.findings if f.check == "auth")
     assert finding.lane == 5
     assert finding.transport == "A"
+
+
+def test_protocol_mode_flag_defaults_to_auto():
+    args = parse_args(["--targets", "http://t/mcp"])
+    assert args.protocol_mode == "auto"
+
+
+def test_protocol_mode_flag_accepts_stateless():
+    args = parse_args(["--targets", "http://t/mcp", "--protocol-mode", "stateless"])
+    assert args.protocol_mode == "stateless"

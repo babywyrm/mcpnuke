@@ -263,6 +263,15 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         "via nextCursor pagination (default: 20).",
     )
     p.add_argument(
+        "--protocol-mode",
+        choices=["auto", "legacy", "stateless"],
+        default="auto",
+        help="MCP protocol mode (default: auto). 'legacy' uses the "
+        "initialize/initialized handshake; 'stateless' uses the 2026-07-28 "
+        "spec with Mcp-Method/Mcp-Name headers and no session; 'auto' probes "
+        "for whichever the server speaks.",
+    )
+    p.add_argument(
         "--jwt-max-ttl",
         type=int,
         default=int(os.environ.get("MCPNUKE_JWT_MAX_TTL", "14400")),
