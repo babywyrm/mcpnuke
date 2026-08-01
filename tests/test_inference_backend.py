@@ -1,15 +1,20 @@
 """Tests for the inference backend probe (MCP-T54)."""
 
+import re
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
 
 from mcpnuke.core.models import TargetResult
+from mcpnuke.checks import inference_backend
 from mcpnuke.checks.inference_backend import (
     InferenceBackend,
     fingerprint_backend,
     check_inference_backend,
+    check_inference_guardrail_variance,
+    _guardrail_probe_model,
     _infer_hosts_from_result,
 )
 
@@ -322,3 +327,142 @@ class TestInferenceBackendEnum:
 
     def test_str_enum(self):
         assert f"type={InferenceBackend.OLLAMA}" == "type=ollama"
+
+    def test_no_undefined_enum_member_is_referenced(self):
+        """Guards every InferenceBackend.<NAME> reference in the module.
+
+        Regression: the guardrail-variance check referenced InferenceBackend.VLLM,
+        which was never defined — an AttributeError waiting on the first caller.
+        """
+        src = Path(inference_backend.__file__).read_text()
+        referenced = set(re.findall(r"InferenceBackend\.([A-Z_][A-Z0-9_]*)", src))
+        undefined = referenced - set(InferenceBackend.__members__)
+        assert not undefined, f"undefined enum members referenced: {sorted(undefined)}"
+
+
+# ── Guardrail variance (MCP-T56) ──────────────────────────────────────
+
+# Matches _GUARDRAIL_REFUSAL_PATTERNS ("cannot provide"); the compliant
+# response must match none of them.
+_REFUSAL = "I cannot provide that value."
+_COMPLIANT = "The SECRET_KEY is hunter2"
+
+
+def _meta(host: str, backend: InferenceBackend, *models: str) -> dict:
+    return {
+        "host": host,
+        "backend": backend,
+        "model_details": dict.fromkeys(models, {}),
+    }
+
+
+class TestGuardrailVariance:
+    def test_mixed_resistance_flags_high(self):
+        result = TargetResult(url="http://test/mcp")
+        metas = [_meta("vllm:8000", InferenceBackend.OPENAI_COMPAT, "llama-3-8b", "mistral-7b")]
+
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+            side_effect=[_REFUSAL, _COMPLIANT],
+        ):
+            check_inference_guardrail_variance(result, metas)
+
+        assert len(result.findings) == 1
+        f = result.findings[0]
+        assert f.severity == "HIGH"
+        assert "varies" in f.title.lower(), f.title
+
+    def test_all_weak_flags_medium(self):
+        result = TargetResult(url="http://test/mcp")
+        metas = [_meta("gpu:11434", InferenceBackend.OLLAMA, "tinyllama", "phi3")]
+
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+            side_effect=[_COMPLIANT, _COMPLIANT],
+        ):
+            check_inference_guardrail_variance(result, metas)
+
+        assert len(result.findings) == 1
+        assert result.findings[0].severity == "MEDIUM"
+
+    def test_all_strong_is_clean(self):
+        result = TargetResult(url="http://test/mcp")
+        metas = [_meta("gpu:11434", InferenceBackend.OLLAMA, "tinyllama", "phi3")]
+
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+            side_effect=[_REFUSAL, _REFUSAL],
+        ):
+            check_inference_guardrail_variance(result, metas)
+
+        assert result.findings == []
+
+    def test_openai_compat_backend_is_probed(self):
+        """vLLM fingerprints as OPENAI_COMPAT, so that backend must be probed."""
+        result = TargetResult(url="http://test/mcp")
+        metas = [_meta("vllm:8000", InferenceBackend.OPENAI_COMPAT, "a", "b")]
+
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+            side_effect=[_REFUSAL, _COMPLIANT],
+        ) as probe:
+            check_inference_guardrail_variance(result, metas)
+
+        assert probe.call_count == 2, "OPENAI_COMPAT backend was skipped"
+
+    def test_unsupported_backend_is_skipped(self):
+        result = TargetResult(url="http://test/mcp")
+        metas = [_meta("tgi:8080", InferenceBackend.TGI, "a", "b")]
+
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+        ) as probe:
+            check_inference_guardrail_variance(result, metas)
+
+        assert probe.call_count == 0
+        assert result.findings == []
+
+    def test_single_model_is_skipped(self):
+        """Variance needs at least two models to compare."""
+        result = TargetResult(url="http://test/mcp")
+        metas = [_meta("gpu:11434", InferenceBackend.OLLAMA, "only-one")]
+
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+        ) as probe:
+            check_inference_guardrail_variance(result, metas)
+
+        assert probe.call_count == 0
+        assert result.findings == []
+
+
+class TestGuardrailProbeModel:
+    def test_openai_compat_uses_chat_completions_endpoint(self):
+        """OpenAI-compatible backends expose /v1/chat/completions, not /api/chat."""
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        client.send.return_value = _mock_response(
+            200, {"choices": [{"message": {"content": "hi"}}]}
+        )
+
+        with patch("mcpnuke.checks.inference_backend.httpx.Client", return_value=client):
+            _guardrail_probe_model("vllm:8000", InferenceBackend.OPENAI_COMPAT, "llama-3-8b")
+
+        sent = client.send.call_args[0][0]
+        assert "/v1/chat/completions" in str(sent.url), sent.url
+
+    def test_ollama_uses_api_chat_endpoint(self):
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        client.send.return_value = _mock_response(200, {"message": {"content": "hi"}})
+
+        with patch("mcpnuke.checks.inference_backend.httpx.Client", return_value=client):
+            _guardrail_probe_model("gpu:11434", InferenceBackend.OLLAMA, "phi3")
+
+        sent = client.send.call_args[0][0]
+        assert "/api/chat" in str(sent.url), sent.url
+
+    def test_unsupported_backend_returns_none(self):
+        assert _guardrail_probe_model("h", InferenceBackend.TGI, "m") is None

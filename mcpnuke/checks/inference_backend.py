@@ -611,7 +611,7 @@ def check_inference_guardrail_variance(
     for meta in inference_metas:
         host = meta.get("host", "?")
         backend = meta.get("backend")
-        if backend not in (InferenceBackend.OLLAMA, InferenceBackend.VLLM):
+        if backend not in (InferenceBackend.OLLAMA, InferenceBackend.OPENAI_COMPAT):
             continue
 
         models = meta.get("model_details", {})
@@ -677,7 +677,7 @@ def _guardrail_probe_model(
             "stream": False,
             "options": {"num_predict": 128},
         }).encode()
-    elif backend == InferenceBackend.VLLM:
+    elif backend == InferenceBackend.OPENAI_COMPAT:
         url = f"http://{host}/v1/chat/completions"
         payload = json.dumps({
             "model": model,
