@@ -36,6 +36,7 @@ class AttackChain:
 class TargetResult:
     url: str
     transport: str = "unknown"
+    protocol_mode: str = "unknown"
     server_info: dict[str, Any] = field(default_factory=dict)
     auth_context: dict[str, Any] = field(default_factory=dict)
     tools: list[dict[str, Any]] = field(default_factory=list)
