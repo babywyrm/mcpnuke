@@ -5,6 +5,7 @@ import time
 
 from mcpnuke.core.constants import MCP_INIT_PARAMS
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.protocol import AUTO, LEGACY, STATELESS
 
 DEFAULT_MAX_PAGES: int = 20
 
@@ -55,12 +56,75 @@ def _paginated_list(
     return all_items, truncated
 
 
+def negotiate_protocol(
+    session,
+    result: TargetResult,
+    mode: str = AUTO,
+    verbose: bool = False,
+    log=None,
+) -> str:
+    """Determine whether *session* speaks the legacy or stateless protocol.
+
+    Probes ``initialize`` (legacy handshake), then ``server/discover``, then a
+    bare ``tools/list`` (both stateless). Returns the winning mode, or ``""``
+    when the server answered none of them. Sets ``result.protocol_mode`` and
+    ``session.protocol_mode`` as a side effect.
+    """
+    _log = log or (lambda msg: None)
+
+    if mode in (AUTO, LEGACY):
+        if verbose:
+            _log("  [dim]Sending initialize...[/dim]")
+        resp = session.call("initialize", MCP_INIT_PARAMS, retries=3)
+        if resp and "result" in resp:
+            result.server_info = resp["result"]
+            result.protocol_mode = LEGACY
+            session.protocol_mode = LEGACY
+            return LEGACY
+        if mode == LEGACY:
+            return ""
+
+    # Stateless: capabilities are optional, so a failed discover is not fatal.
+    session.protocol_mode = STATELESS
+
+    if verbose:
+        _log("  [dim]Trying stateless server/discover...[/dim]")
+    resp = session.call("server/discover", None, retries=2)
+    if resp and "result" in resp:
+        result.server_info = resp["result"]
+        result.protocol_mode = STATELESS
+        info = resp["result"].get("serverInfo", {})
+        result.add(
+            "auth",
+            "HIGH",
+            "Unauthenticated MCP server/discover accepted",
+            f"Server '{info.get('name','?')}' v{info.get('version','?')} "
+            f"disclosed capabilities to an anonymous caller via server/discover",
+            evidence=json.dumps(resp["result"], indent=2)[:500],
+            skip_transports=["stdio"],
+            lane=5,
+            transport="A",
+        )
+        return STATELESS
+
+    if verbose:
+        _log("  [dim]Trying stateless tools/list without discovery...[/dim]")
+    resp = session.call("tools/list", None, retries=2)
+    if resp and "result" in resp:
+        result.protocol_mode = STATELESS
+        return STATELESS
+
+    session.protocol_mode = LEGACY
+    return ""
+
+
 def enumerate_server(
     session,
     result: TargetResult,
     verbose: bool = False,
     log=None,
     max_pages: int = DEFAULT_MAX_PAGES,
+    protocol_mode: str = AUTO,
 ):
     """Enumerate an MCP server: initialize, list tools/resources/prompts.
 
@@ -69,23 +133,19 @@ def enumerate_server(
     _log = log or (lambda msg: None)
     t0 = time.time()
 
-    if verbose:
-        _log(f"  [dim]Sending initialize...[/dim]")
+    mode = negotiate_protocol(session, result, protocol_mode, verbose=verbose, log=log)
 
-    resp = session.call("initialize", MCP_INIT_PARAMS, retries=3)
-
-    if not resp or "result" not in resp:
+    if not mode:
         result.add(
             "init",
             "HIGH",
             "No response to MCP initialize",
-            "Server did not respond to initialize handshake",
+            "Server did not respond to initialize, server/discover, or tools/list",
         )
         result.timings["enumerate"] = time.time() - t0
         return
 
-    r = resp["result"]
-    result.server_info = r
+    r = result.server_info
     info = r.get("serverInfo", {})
     caps = r.get("capabilities", {})
 
@@ -93,26 +153,27 @@ def enumerate_server(
         server_name = info.get("name", "?")
         server_version = info.get("version", "?")
         proto = r.get("protocolVersion", "?")
-        _log(f"  [dim]Server: {server_name} v{server_version}  protocol={proto}[/dim]")
+        _log(f"  [dim]Server: {server_name} v{server_version}  protocol={proto} mode={mode}[/dim]")
         cap_list = list(caps.keys()) if caps else ["none"]
         _log(f"  [dim]Capabilities: {', '.join(cap_list)}[/dim]")
 
-    result.add(
-        "auth",
-        "HIGH",
-        "Unauthenticated MCP initialize accepted",
-        f"Server '{info.get('name','?')}' v{info.get('version','?')} "
-        f"accepted initialize with no credentials",
-        evidence=json.dumps(r, indent=2)[:500],
-        skip_transports=["stdio"],
-        # The "anybody can initialize" failure is a Lane 5 (anonymous)
-        # finding: it describes what a pre-auth caller can do.
-        lane=5,
-        transport="A",
-    )
+    if mode == LEGACY:
+        result.add(
+            "auth",
+            "HIGH",
+            "Unauthenticated MCP initialize accepted",
+            f"Server '{info.get('name','?')}' v{info.get('version','?')} "
+            f"accepted initialize with no credentials",
+            evidence=json.dumps(r, indent=2)[:500],
+            skip_transports=["stdio"],
+            # The "anybody can initialize" failure is a Lane 5 (anonymous)
+            # finding: it describes what a pre-auth caller can do.
+            lane=5,
+            transport="A",
+        )
 
-    session.notify("notifications/initialized")
-    time.sleep(0.5)
+        session.notify("notifications/initialized")
+        time.sleep(0.5)
 
     if verbose:
         _log(f"  [dim]Enumerating tools...[/dim]")
