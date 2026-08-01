@@ -37,20 +37,16 @@ from mcpnuke.checks.tool_probes import (
     _should_invoke,
 )
 from mcpnuke.core.models import TargetResult
+from mcpnuke.patterns.rules import INJECTION_PATTERNS
 
 _add = lane_tagged(lane=2, transport="A")
 
 # ── MCP-T02: Tool output poisoning ───────────────────────────────────────────
 
-_INJECTION_PATTERNS = [
-    re.compile(r"ignore\s+(all\s+)?previous\s+instructions", re.IGNORECASE),
-    re.compile(r"you\s+are\s+now\s+(a|an)\s+", re.IGNORECASE),
-    re.compile(r"<\|im_start\|>|<\|im_end\|>", re.IGNORECASE),
-    re.compile(r"\[INST\]|\[/INST\]", re.IGNORECASE),
-    re.compile(r"system:\s*you\s+(are|must|should)", re.IGNORECASE),
-    re.compile(r"from\s+now\s+on,?\s+(always|never|do\s+not)", re.IGNORECASE),
-    re.compile(r"(override|bypass|disable)\s+(safety|security|filter)", re.IGNORECASE),
-]
+# Shared with the primary prompt_injection check. This was a private copy whose
+# markers — <|im_end|>, "from now on", "override safety", "system: you must" —
+# existed nowhere else, so no other check could see them.
+_INJECTION_PATTERNS = INJECTION_PATTERNS
 
 
 def check_tool_output_poisoning(
@@ -83,13 +79,13 @@ def check_tool_output_poisoning(
                 continue
 
             for pattern in _INJECTION_PATTERNS:
-                match = pattern.search(text)
+                match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     _add(
                         result,
                         "tool_output_poisoning",
                         "HIGH",
-                        f"Tool output contains injection pattern: '{name}' ({pattern.pattern[:40]})",
+                        f"Tool output contains injection pattern: '{name}' ({pattern[:40]})",
                         f"Tool '{name}' returned output containing an "
                         f"instruction-injection pattern (matched: '{match.group()}'). "
                         f"Indirect prompt injection via tool output poisoning.",

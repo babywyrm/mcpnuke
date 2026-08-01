@@ -18,10 +18,19 @@ INJECTION_PATTERNS = [
     r"###\s*(instruction|system|human|assistant)",
     r"<\s*/?s\s*>",
     r"<\|im_start\|>",
+    r"<\|im_end\|>",
     r"\[\/INST\]",
     r"IGNORE ALL PREVIOUS",
     r"END OF CONVERSATION",
+    # Previously private to tool_output_poisoning, so the primary
+    # prompt_injection check could not see them.
+    r"system:\s*you\s+(are|must|should)",
+    r"from\s+now\s+on,?\s+(always|never|do\s+not)",
+    r"(override|bypass|disable)\s+(the\s+)?(safety|security|filter)",
 ]
+
+# Every consumer searches with re.IGNORECASE, so these stay plain strings —
+# passing a flag alongside a precompiled pattern raises.
 
 POISON_PATTERNS = [
     r"<\s*hidden\s*>",

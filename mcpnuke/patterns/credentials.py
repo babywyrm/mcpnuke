@@ -166,7 +166,7 @@ _COMPILED_CACHE: dict[int, tuple[tuple[re.Pattern[str], str], ...]] = {}
 
 
 def compile_patterns(
-    patterns: "tuple[PatternSpec, ...] | list[PatternSpec]",
+    patterns: tuple[PatternSpec, ...] | list[PatternSpec],
 ) -> tuple[tuple[re.Pattern[str], str], ...]:
     """Compile a pattern tier once and reuse it.
 
@@ -189,7 +189,7 @@ def compile_patterns(
 
 def find_credential(
     text: str,
-    patterns: "tuple[PatternSpec, ...] | list[PatternSpec]" = STRUCTURAL_CREDENTIALS,
+    patterns: tuple[PatternSpec, ...] | list[PatternSpec] = STRUCTURAL_CREDENTIALS,
 ) -> tuple[str, str] | None:
     """Return ``(credential_type, matched_text)`` for the first hit, else None.
 
