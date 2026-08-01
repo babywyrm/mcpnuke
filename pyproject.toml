@@ -32,9 +32,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
-    "pytest-asyncio>=0.24",
     "ruff>=0.8",
     "mypy>=1.13",
+    "types-PyYAML>=6.0",
 ]
 k8s = [
     "kubernetes>=31.0",
@@ -88,3 +88,19 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
+
+# Optional extras (ai, k8s, server). These are imported lazily inside
+# functions and are absent from the base install and from CI, so mypy cannot
+# resolve them. pyyaml is a core dependency and gets real stubs instead, via
+# types-PyYAML in the dev extra.
+[[tool.mypy.overrides]]
+module = [
+    "anthropic.*",
+    "boto3.*",
+    "botocore.*",
+    "fastapi.*",
+    "kubernetes.*",
+    "pydantic.*",
+    "uvicorn.*",
+]
+ignore_missing_imports = true
