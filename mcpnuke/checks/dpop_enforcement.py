@@ -89,7 +89,7 @@ def _probe_no_dpop_header(
                 timeout=10,
             )
         except Exception as exc:
-            result.errors.append(f"dpop_no_header probe error: {exc}")
+            result.note_error(f"dpop_no_header probe error: {exc}")
             return
 
     # A DPoP-enforcing server MUST return 401 for requests without DPoP proof.
@@ -131,7 +131,7 @@ def _probe_malformed_dpop(
                 timeout=10,
             )
         except Exception as exc:
-            result.errors.append(f"dpop_malformed probe error: {exc}")
+            result.note_error(f"dpop_malformed probe error: {exc}")
             return
 
     # RFC 9449 §7.1: malformed DPoP proof → 401 with error=invalid_dpop_proof
@@ -174,7 +174,7 @@ def _probe_missing_htm_htu(
                 timeout=10,
             )
         except Exception as exc:
-            result.errors.append(f"dpop_missing_binding probe error: {exc}")
+            result.note_error(f"dpop_missing_binding probe error: {exc}")
             return
 
     # RFC 9449 §4.2: htm and htu are REQUIRED in every DPoP proof.

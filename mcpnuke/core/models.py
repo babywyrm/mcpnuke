@@ -73,6 +73,16 @@ class TargetResult:
         self.findings.append(f)
         return f
 
+    def note_error(self, msg: str) -> None:
+        """Record a non-fatal error, keeping ``error`` a flat semicolon-joined str.
+
+        Callers that hit a recoverable failure mid-scan use this instead of
+        assigning ``error`` directly, so one probe's failure cannot discard an
+        earlier one. ``error`` stays a string because reporting and scoring
+        read it as one.
+        """
+        self.error = f"{self.error}; {msg}" if self.error else msg
+
     def risk_score(self) -> int:
         from mcpnuke.core.constants import SEVERITY_WEIGHTS
         return sum(SEVERITY_WEIGHTS.get(f.severity, 0) for f in self.findings)
