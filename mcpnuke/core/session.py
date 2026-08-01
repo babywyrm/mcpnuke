@@ -221,6 +221,29 @@ class MCPSession:
                 timeout=5,
             )
 
+    def post_raw(
+        self,
+        payload: dict,
+        extra_headers: dict | None = None,
+        timeout: float | None = None,
+    ):
+        """POST *payload* to the SSE message endpoint, returning the raw response.
+
+        See HTTPSession.post_raw. Requires post_url, which is only known after
+        the SSE handshake resolves the message endpoint.
+        """
+        headers = _mcp_headers(self._auth_token, self._extra_headers)
+        if self._session_id:
+            headers["Mcp-Session-Id"] = self._session_id
+        if extra_headers:
+            headers.update(extra_headers)
+        return self._client.post(
+            self.post_url,
+            json=payload,
+            headers=headers,
+            timeout=timeout or self.timeout,
+        )
+
     def close(self):
         self._stop.set()
         with contextlib.suppress(Exception):
@@ -289,6 +312,35 @@ class HTTPSession:
             if k.lower() == "mcp-session-id" and v:
                 self._session_id = v
                 break
+
+    def post_raw(
+        self,
+        payload: dict,
+        extra_headers: dict | None = None,
+        timeout: float | None = None,
+    ):
+        """POST *payload* to the MCP endpoint and return the raw httpx response.
+
+        For checks that must set transport headers themselves or read the HTTP
+        status directly — the DPoP proof probes, which need a request that is
+        otherwise fully authorized so a 401 means "missing proof" rather than
+        "missing token". Ordinary callers want call(), which owns request ids,
+        retries, and response parsing.
+
+        Defined only on HTTP transports, so ``hasattr(session, "post_raw")``
+        is the capability test for "this transport has headers to probe".
+        """
+        headers = self._request_headers(
+            payload.get("method", ""), payload.get("params"),
+        )
+        if extra_headers:
+            headers.update(extra_headers)
+        return self._client.post(
+            self.post_url,
+            json=payload,
+            headers=headers,
+            timeout=timeout or self.timeout,
+        )
 
     def call(
         self,
@@ -478,6 +530,28 @@ class ToolServerSession:
 
     def wait_ready(self, timeout: float = 10.0) -> bool:
         return True
+
+    def post_raw(
+        self,
+        payload: dict,
+        extra_headers: dict | None = None,
+        timeout: float | None = None,
+    ):
+        """POST *payload* to the tool endpoint, returning the raw response.
+
+        See HTTPSession.post_raw. This transport speaks its own wire format
+        rather than JSON-RPC, but DPoP is enforced at the HTTP layer above the
+        body, so header probes still apply.
+        """
+        headers = dict(self._headers)
+        if extra_headers:
+            headers.update(extra_headers)
+        return self._client.post(
+            self.post_url,
+            json=payload,
+            headers=headers,
+            timeout=timeout or self.timeout,
+        )
 
     def enumerate_tools(self) -> list[dict]:
         """Probe tool names from wordlist and return the ones the server recognizes."""

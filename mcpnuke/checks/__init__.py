@@ -499,7 +499,7 @@ def run_all_checks(
         _run("jwt_audience_target_match", check_jwt_audience_target_match, result)
         _run("jwt_cross_role_replay", check_jwt_cross_role_replay, result)
         # DPoP enforcement probes (RFC 9449 — Lane 3 / Machine Identity)
-        run_dpop_enforcement_checks(result, session=session, base_url=base, no_invoke=no_invoke)
+        run_dpop_enforcement_checks(result, session=session)
 
     static_count = len(result.findings)
     if verbose:

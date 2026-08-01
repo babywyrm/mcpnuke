@@ -61,33 +61,33 @@ def _minimal_jwt(*, include_htm: bool = True, include_htu: bool = True) -> str:
     return f"{_b64(header)}.{_b64(payload)}.fakesignature"
 
 
-def run_dpop_enforcement_checks(
-    result: TargetResult,
-    session: Any,
-    base_url: str,
-    no_invoke: bool = False,
-) -> None:
-    """Run all DPoP enforcement probes against *base_url*.
+def _probe_payload(req_id: int) -> dict[str, Any]:
+    """A minimal, side-effect-free JSON-RPC request to authorize."""
+    return {"jsonrpc": "2.0", "id": req_id, "method": _PROBE_TOOL, "params": {}}
 
-    Three targeted probes that require only ``tools/list`` — they are always
-    safe to run and do not call any lab tools.
+
+def run_dpop_enforcement_checks(result: TargetResult, session: Any) -> None:
+    """Run all DPoP enforcement probes against *session*'s MCP endpoint.
+
+    Three targeted probes that need only ``tools/list`` — safe to run always,
+    and they never call a lab tool, so ``--no-invoke`` does not suppress them.
+
+    Skips transports with no HTTP header layer for a proof to live in (stdio),
+    and sessions whose endpoint is not yet resolved (SSE before handshake).
     """
-    _probe_no_dpop_header(result, session, base_url)
-    _probe_malformed_dpop(result, session, base_url)
-    _probe_missing_htm_htu(result, session, base_url)
+    if not hasattr(session, "post_raw") or not getattr(session, "post_url", ""):
+        return
+
+    _probe_no_dpop_header(result, session)
+    _probe_malformed_dpop(result, session)
+    _probe_missing_htm_htu(result, session)
 
 
-def _probe_no_dpop_header(
-    result: TargetResult, session: Any, base_url: str
-) -> None:
+def _probe_no_dpop_header(result: TargetResult, session: Any) -> None:
     """Check 1: plain bearer request accepted → DPoP not enforced."""
     with time_check("dpop_no_header", result):
         try:
-            resp = session.post(
-                f"{base_url}",
-                json={"jsonrpc": "2.0", "id": 1, "method": _PROBE_TOOL, "params": {}},
-                timeout=10,
-            )
+            resp = session.post_raw(_probe_payload(1), timeout=10)
         except Exception as exc:
             result.note_error(f"dpop_no_header probe error: {exc}")
             return
@@ -118,16 +118,13 @@ def _probe_no_dpop_header(
         )
 
 
-def _probe_malformed_dpop(
-    result: TargetResult, session: Any, base_url: str
-) -> None:
+def _probe_malformed_dpop(result: TargetResult, session: Any) -> None:
     """Check 2: malformed DPoP header accepted → header is decorative."""
     with time_check("dpop_malformed", result):
         try:
-            resp = session.post(
-                f"{base_url}",
-                json={"jsonrpc": "2.0", "id": 2, "method": _PROBE_TOOL, "params": {}},
-                headers={"DPoP": "not.a.valid.jwt"},
+            resp = session.post_raw(
+                _probe_payload(2),
+                extra_headers={"DPoP": "not.a.valid.jwt"},
                 timeout=10,
             )
         except Exception as exc:
@@ -160,17 +157,14 @@ def _probe_malformed_dpop(
         )
 
 
-def _probe_missing_htm_htu(
-    result: TargetResult, session: Any, base_url: str
-) -> None:
+def _probe_missing_htm_htu(result: TargetResult, session: Any) -> None:
     """Check 3: JWT missing htm/htu accepted → binding not checked."""
     proof = _minimal_jwt(include_htm=False, include_htu=False)
     with time_check("dpop_missing_binding", result):
         try:
-            resp = session.post(
-                f"{base_url}",
-                json={"jsonrpc": "2.0", "id": 3, "method": _PROBE_TOOL, "params": {}},
-                headers={"DPoP": proof},
+            resp = session.post_raw(
+                _probe_payload(3),
+                extra_headers={"DPoP": proof},
                 timeout=10,
             )
         except Exception as exc:

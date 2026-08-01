@@ -1,11 +1,9 @@
 """Tests for the DPoP enforcement probes (MCP-T43, RFC 9449).
 
-Known gap, deliberately not papered over here: the probes call
-``session.post()``, but no session class in ``mcpnuke.core.session`` defines
-``post`` — only ``call`` and ``notify``. Against a real session every probe
-therefore lands in its error handler. The detection tests below drive the RFC
-logic through a duck-typed stub so the logic is covered, and
-``TestProbeErrorHandling`` pins the error path that real sessions hit today.
+The probes go through Session.post_raw() so the request carries the session's
+own auth and lands on the real MCP endpoint. Both matter for the verdict: an
+unauthenticated or misrouted request returns 401/404 for reasons that have
+nothing to do with DPoP, which would read as "enforced" and hide the finding.
 """
 
 import base64
@@ -21,7 +19,8 @@ from mcpnuke.checks.dpop_enforcement import (
 )
 from mcpnuke.core.models import TargetResult
 
-_BASE = "http://target.invalid/mcp"
+_URL = "http://target.invalid/mcp"
+_ENDPOINT = "http://target.invalid/mcp"
 
 
 def _resp(status: int):
@@ -30,76 +29,93 @@ def _resp(status: int):
     return r
 
 
-def _session(status: int = 200):
-    """A duck-typed session exposing the ``post`` the probes expect."""
+def _session(status: int = 200, post_url: str = _ENDPOINT):
     s = MagicMock()
-    s.post.return_value = _resp(status)
+    s.post_url = post_url
+    s.post_raw.return_value = _resp(status)
     return s
 
 
-class _SessionWithoutPost:
-    """Mirrors the real session classes, which have no ``post`` method."""
+class _StdioLikeSession:
+    """Mirrors StdioSession: a post_url, but no post_raw and no HTTP layer."""
+
+    post_url = "stdio://server.py"
 
     def call(self, method, params=None, **kw):
         return None
 
 
-# ── Probe error handling ──────────────────────────────────────────────
+# ── Transport gating ──────────────────────────────────────────────────
 
 
-class TestProbeErrorHandling:
-    def test_session_without_post_records_error_not_raises(self):
-        """Regression: the except handlers called .append on a str field.
+class TestTransportGating:
+    def test_non_http_transport_is_skipped(self):
+        """DPoP is an HTTP header mechanism; stdio has nothing to probe."""
+        result = TargetResult(url="stdio://server.py", transport="stdio")
 
-        Reproduces the real-world path — HTTPSession has no ``post`` — which
-        raised AttributeError out of the handler meant to absorb it. In
-        single-target mode that aborted the scan; under run_parallel the
-        worker died and the target silently vanished from results.
-        """
-        result = TargetResult(url=_BASE)
+        run_dpop_enforcement_checks(result, session=_StdioLikeSession())
 
-        run_dpop_enforcement_checks(
-            result, session=_SessionWithoutPost(), base_url=_BASE, no_invoke=False,
-        )
-
-        assert "post" in result.error, result.error
         assert result.findings == []
+        assert result.error == ""
+        assert result.timings == {}
 
-    def test_each_probe_records_its_own_error(self):
-        session = MagicMock()
-        session.post.side_effect = RuntimeError("connection refused")
+    def test_session_without_a_resolved_endpoint_is_skipped(self):
+        """MCPSession has no post_url until the SSE handshake resolves one."""
+        result = TargetResult(url=_URL)
+        session = _session(200, post_url="")
 
-        result = TargetResult(url=_BASE)
-        run_dpop_enforcement_checks(
-            result, session=session, base_url=_BASE, no_invoke=False,
-        )
+        run_dpop_enforcement_checks(result, session=session)
 
-        for probe in ("dpop_no_header", "dpop_malformed", "dpop_missing_binding"):
-            assert probe in result.error, f"{probe} missing from {result.error!r}"
-        assert result.error.count("connection refused") == 3
+        assert result.findings == []
+        assert session.post_raw.call_count == 0
 
-    def test_error_notes_accumulate_without_clobbering(self):
-        result = TargetResult(url=_BASE)
-        result.note_error("earlier failure")
 
-        session = MagicMock()
-        session.post.side_effect = RuntimeError("boom")
-        _probe_no_dpop_header(result, session, _BASE)
+# ── Request shape ─────────────────────────────────────────────────────
 
-        assert "earlier failure" in result.error
-        assert "boom" in result.error
 
-    def test_error_is_still_a_flat_string(self):
-        """Other code reads result.error as a str (scanner, inference_backend)."""
-        result = TargetResult(url=_BASE)
-        session = MagicMock()
-        session.post.side_effect = RuntimeError("boom")
+class TestRequestShape:
+    def test_probes_target_the_mcp_endpoint_via_post_raw(self):
+        """Regression: probes used to POST to the bare scheme://host base URL.
 
-        run_dpop_enforcement_checks(
-            result, session=session, base_url=_BASE, no_invoke=False,
-        )
+        run_all_checks passes base as scheme://netloc with no path, so those
+        requests never reached the MCP endpoint and could not return 200.
+        """
+        session = _session(401)
+        run_dpop_enforcement_checks(TargetResult(url=_URL), session=session)
 
-        assert isinstance(result.error, str)
+        assert session.post_raw.call_count == 3
+        assert session.post.call_count == 0, "post() does not exist on real sessions"
+
+    def test_first_probe_sends_no_dpop_header(self):
+        session = _session(401)
+        _probe_no_dpop_header(TargetResult(url=_URL), session)
+
+        extra = session.post_raw.call_args.kwargs.get("extra_headers") or {}
+        assert "DPoP" not in extra
+
+    def test_second_probe_sends_a_malformed_proof(self):
+        session = _session(401)
+        _probe_malformed_dpop(TargetResult(url=_URL), session)
+
+        assert session.post_raw.call_args.kwargs["extra_headers"]["DPoP"] == "not.a.valid.jwt"
+
+    def test_third_probe_sends_a_proof_without_htm_or_htu(self):
+        session = _session(401)
+        _probe_missing_htm_htu(TargetResult(url=_URL), session)
+
+        proof = session.post_raw.call_args.kwargs["extra_headers"]["DPoP"]
+        payload = _decode_segment(proof.split(".")[1])
+        assert "htm" not in payload
+        assert "htu" not in payload
+
+    def test_probes_send_a_valid_jsonrpc_body(self):
+        session = _session(401)
+        run_dpop_enforcement_checks(TargetResult(url=_URL), session=session)
+
+        for call in session.post_raw.call_args_list:
+            payload = call[0][0]
+            assert payload["jsonrpc"] == "2.0"
+            assert payload["method"] == "tools/list"
 
 
 # ── Detection logic (RFC 9449) ────────────────────────────────────────
@@ -107,74 +123,50 @@ class TestProbeErrorHandling:
 
 class TestNoDpopHeaderProbe:
     def test_200_flags_not_enforced(self):
-        result = TargetResult(url=_BASE)
-        _probe_no_dpop_header(result, _session(200), _BASE)
+        result = TargetResult(url=_URL)
+        _probe_no_dpop_header(result, _session(200))
 
         assert [f.check for f in result.findings] == ["dpop_not_enforced"]
         assert result.findings[0].severity == "HIGH"
 
     def test_401_is_clean(self):
-        result = TargetResult(url=_BASE)
-        _probe_no_dpop_header(result, _session(401), _BASE)
+        result = TargetResult(url=_URL)
+        _probe_no_dpop_header(result, _session(401))
         assert result.findings == []
-
-    def test_sends_no_dpop_header(self):
-        session = _session(401)
-        _probe_no_dpop_header(TargetResult(url=_BASE), session, _BASE)
-
-        kwargs = session.post.call_args.kwargs
-        assert "DPoP" not in (kwargs.get("headers") or {})
 
 
 class TestMalformedDpopProbe:
     def test_200_flags_not_validated(self):
-        result = TargetResult(url=_BASE)
-        _probe_malformed_dpop(result, _session(200), _BASE)
+        result = TargetResult(url=_URL)
+        _probe_malformed_dpop(result, _session(200))
 
         assert [f.check for f in result.findings] == ["dpop_header_not_validated"]
         assert result.findings[0].severity == "HIGH"
 
     def test_401_is_clean(self):
-        result = TargetResult(url=_BASE)
-        _probe_malformed_dpop(result, _session(401), _BASE)
+        result = TargetResult(url=_URL)
+        _probe_malformed_dpop(result, _session(401))
         assert result.findings == []
-
-    def test_sends_a_malformed_proof(self):
-        session = _session(401)
-        _probe_malformed_dpop(TargetResult(url=_BASE), session, _BASE)
-
-        assert session.post.call_args.kwargs["headers"]["DPoP"] == "not.a.valid.jwt"
 
 
 class TestMissingBindingProbe:
     def test_200_flags_binding_not_enforced(self):
-        result = TargetResult(url=_BASE)
-        _probe_missing_htm_htu(result, _session(200), _BASE)
+        result = TargetResult(url=_URL)
+        _probe_missing_htm_htu(result, _session(200))
 
         assert [f.check for f in result.findings] == ["dpop_binding_not_enforced"]
         assert result.findings[0].severity == "HIGH"
 
     def test_401_is_clean(self):
-        result = TargetResult(url=_BASE)
-        _probe_missing_htm_htu(result, _session(401), _BASE)
+        result = TargetResult(url=_URL)
+        _probe_missing_htm_htu(result, _session(401))
         assert result.findings == []
-
-    def test_sends_proof_without_htm_or_htu(self):
-        session = _session(401)
-        _probe_missing_htm_htu(TargetResult(url=_BASE), session, _BASE)
-
-        proof = session.post.call_args.kwargs["headers"]["DPoP"]
-        payload = _decode_segment(proof.split(".")[1])
-        assert "htm" not in payload
-        assert "htu" not in payload
 
 
 class TestRunAll:
     def test_all_three_findings_on_permissive_server(self):
-        result = TargetResult(url=_BASE)
-        run_dpop_enforcement_checks(
-            result, session=_session(200), base_url=_BASE, no_invoke=False,
-        )
+        result = TargetResult(url=_URL)
+        run_dpop_enforcement_checks(result, session=_session(200))
 
         assert {f.check for f in result.findings} == {
             "dpop_not_enforced",
@@ -183,29 +175,69 @@ class TestRunAll:
         }
 
     def test_compliant_server_is_clean(self):
-        result = TargetResult(url=_BASE)
-        run_dpop_enforcement_checks(
-            result, session=_session(401), base_url=_BASE, no_invoke=False,
-        )
+        result = TargetResult(url=_URL)
+        run_dpop_enforcement_checks(result, session=_session(401))
         assert result.findings == []
 
     def test_timings_recorded(self):
-        result = TargetResult(url=_BASE)
-        run_dpop_enforcement_checks(
-            result, session=_session(401), base_url=_BASE, no_invoke=False,
-        )
+        result = TargetResult(url=_URL)
+        run_dpop_enforcement_checks(result, session=_session(401))
 
         for probe in ("dpop_no_header", "dpop_malformed", "dpop_missing_binding"):
             assert probe in result.timings
 
     def test_findings_tagged_lane3_transport_a(self):
-        result = TargetResult(url=_BASE)
-        run_dpop_enforcement_checks(
-            result, session=_session(200), base_url=_BASE, no_invoke=False,
-        )
+        result = TargetResult(url=_URL)
+        run_dpop_enforcement_checks(result, session=_session(200))
 
         assert all(f.lane == 3 for f in result.findings)
         assert all(f.transport == "A" for f in result.findings)
+
+
+# ── Probe error handling ──────────────────────────────────────────────
+
+
+class TestProbeErrorHandling:
+    def test_transport_error_is_recorded_not_raised(self):
+        """Regression: the handlers called .append() on a str field."""
+        session = _session()
+        session.post_raw.side_effect = RuntimeError("connection refused")
+
+        result = TargetResult(url=_URL)
+        run_dpop_enforcement_checks(result, session=session)
+
+        assert "connection refused" in result.error
+        assert result.findings == []
+
+    def test_each_probe_records_its_own_error(self):
+        session = _session()
+        session.post_raw.side_effect = RuntimeError("boom")
+
+        result = TargetResult(url=_URL)
+        run_dpop_enforcement_checks(result, session=session)
+
+        for probe in ("dpop_no_header", "dpop_malformed", "dpop_missing_binding"):
+            assert probe in result.error, f"{probe} missing from {result.error!r}"
+
+    def test_error_notes_accumulate_without_clobbering(self):
+        result = TargetResult(url=_URL)
+        result.note_error("earlier failure")
+
+        session = _session()
+        session.post_raw.side_effect = RuntimeError("boom")
+        _probe_no_dpop_header(result, session)
+
+        assert "earlier failure" in result.error
+        assert "boom" in result.error
+
+    def test_error_is_still_a_flat_string(self):
+        session = _session()
+        session.post_raw.side_effect = RuntimeError("boom")
+
+        result = TargetResult(url=_URL)
+        run_dpop_enforcement_checks(result, session=session)
+
+        assert isinstance(result.error, str)
 
 
 # ── Proof construction ────────────────────────────────────────────────
