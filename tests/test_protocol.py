@@ -4,6 +4,7 @@ from mcpnuke.core.protocol import (
     MCP_PROTOCOL_VERSION_STATELESS,
     CLIENT_INFO_META_KEY,
     inject_meta,
+    routing_headers,
 )
 
 
@@ -37,3 +38,35 @@ def test_inject_meta_preserves_existing_meta_keys():
     params = inject_meta({"_meta": {"custom": 1}}, STATELESS)
     assert params["_meta"]["custom"] == 1
     assert CLIENT_INFO_META_KEY in params["_meta"]
+
+
+def test_routing_headers_empty_in_legacy_mode():
+    assert routing_headers("tools/list", None, LEGACY) == {}
+
+
+def test_routing_headers_carry_method_and_version():
+    h = routing_headers("tools/list", None, STATELESS)
+    assert h["Mcp-Method"] == "tools/list"
+    assert h["MCP-Protocol-Version"] == "2026-07-28"
+    assert "Mcp-Name" not in h
+
+
+def test_routing_headers_carry_tool_name():
+    h = routing_headers("tools/call", {"name": "search"}, STATELESS)
+    assert h["Mcp-Name"] == "search"
+
+
+def test_routing_headers_use_uri_for_resource_read():
+    h = routing_headers("resources/read", {"uri": "file:///etc/passwd"}, STATELESS)
+    assert h["Mcp-Name"] == "file:///etc/passwd"
+
+
+def test_routing_headers_omit_name_for_non_string_name():
+    h = routing_headers("tools/call", {"name": {"nested": 1}}, STATELESS)
+    assert "Mcp-Name" not in h
+
+
+def test_routing_headers_strip_newlines_from_name():
+    h = routing_headers("tools/call", {"name": "search\r\nX-Injected: 1"}, STATELESS)
+    assert "\n" not in h["Mcp-Name"]
+    assert "\r" not in h["Mcp-Name"]

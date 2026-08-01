@@ -38,3 +38,37 @@ def inject_meta(params: dict[str, Any] | None, mode: str) -> dict[str, Any]:
     meta.update(client_info_meta())
     out["_meta"] = meta
     return out
+
+
+_NAME_PARAM_KEYS: tuple[str, ...] = ("name", "uri")
+
+
+def _header_safe(value: str) -> str:
+    """Strip CR/LF so a hostile tool name cannot inject extra headers."""
+    return value.replace("\r", "").replace("\n", "").strip()
+
+
+def routing_headers(
+    method: str,
+    params: dict[str, Any] | None,
+    mode: str,
+) -> dict[str, str]:
+    """Build the stateless routing headers for a request.
+
+    Returns an empty dict in legacy mode so callers can unconditionally merge.
+    """
+    if mode != STATELESS:
+        return {}
+
+    headers: dict[str, str] = {
+        "MCP-Protocol-Version": MCP_PROTOCOL_VERSION_STATELESS,
+        "Mcp-Method": _header_safe(method),
+    }
+
+    for key in _NAME_PARAM_KEYS:
+        value = (params or {}).get(key)
+        if isinstance(value, str) and value.strip():
+            headers["Mcp-Name"] = _header_safe(value)
+            break
+
+    return headers
