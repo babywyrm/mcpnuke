@@ -54,9 +54,40 @@ All notable changes to this submodule are documented here.
   SEP-2567. `notifications/initialized` is likewise legacy-only.
 - `MCPSession` (HTTP+SSE) intentionally stays on the legacy path; the 2026-07-28
   spec deprecates that transport with a twelve-month offramp.
+- **CI actually runs now.** The Tests workflow had been failing on every run:
+  `setup-uv` used `enable-cache: true`, whose `**/uv.lock` glob finds nothing
+  because the lock file is untracked, so the job died before pytest. Install steps
+  now use `uv sync --extra dev`. A `lint` job gates the suite — `ruff` strict at
+  zero, `mypy` on a ratchet (ceiling 63, measured cold).
+- Lint debt cleared: `ruff check` goes 370 → 0 errors. Scan findings verified
+  byte-identical before and after across 359 findings.
+- `mypy` errors 81 → 63, entirely by resolving lazily-imported optional extras in
+  config. No `# type: ignore` was added; the repo still has none.
+- Repo slimmed: nine scan reports (1.3 MB) untracked from `profiles/`, which now
+  holds only the three hand-written target profiles. `pytest-asyncio` dropped as
+  an unused dev dependency.
 
 ### Fixed
 
+- **DPoP probes no longer abort the scan** (`checks/dpop_enforcement.py`): the three
+  probe error handlers called `result.errors.append()`, but `TargetResult` has
+  `error: str` — so the handler meant to absorb a failed probe raised
+  `AttributeError` itself. Reachable on any scan carrying a JWT. Single-target scans
+  died with a traceback; under `run_parallel` the worker died and the target
+  vanished from results without a message. Added `TargetResult.note_error()`.
+- **Scan progress no longer overflows its own denominator** (`checks/__init__.py`):
+  `total_checks` was hardcoded arithmetic assuming 17 static and 13 deep checks;
+  the real counts are 33 and 24, and the teleport and inference sections were never
+  counted. Verbose output showed `[38/35]` then `All 41 checks complete`. The
+  denominator is now derived from the check inventory, and `--fast` is accounted for
+  exactly via the pre-built deep-probe plan. The duration estimate uses the real
+  deep count, so it now reads more conservatively than before.
+- **`InferenceBackend.VLLM` did not exist** (`checks/inference_backend.py`): both
+  references would have raised `AttributeError`. vLLM fingerprints as
+  `OPENAI_COMPAT`, which is now used. Latent only because
+  `check_inference_guardrail_variance` is never wired into `run_all_checks`.
+- Recovered a test that never ran: two module-level `test_no_token_skips_silently`
+  definitions in `tests/test_jwt_boundary.py`, the second shadowing the first.
 - Static-check signatures: `credential_forwarding` + `remote_package_execution`
   had behavioral-style `(session, result)` signatures but were in the static phase
   (which passes only `result`). Fixed.
