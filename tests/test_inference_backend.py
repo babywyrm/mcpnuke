@@ -464,3 +464,196 @@ class TestGuardrailProbeModel:
 
     def test_unsupported_backend_returns_none(self):
         assert _guardrail_probe_model("h", InferenceBackend.TGI, "m") is None
+
+    def _sent_url(self, host: str, backend: InferenceBackend) -> str:
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        client.send.return_value = _mock_response(200, {"message": {"content": "hi"}})
+        with patch("mcpnuke.checks.inference_backend.httpx.Client", return_value=client):
+            _guardrail_probe_model(host, backend, "m")
+        return str(client.send.call_args[0][0].url)
+
+    def test_host_with_scheme_is_not_double_prefixed(self):
+        """Regression: hosts arrive scheme-qualified, yielding http://http://host.
+
+        fingerprint_backend and every other probe in this module treat host as a
+        full URL. Only this probe prepended a scheme, so a wired-up run built an
+        unusable URL and silently found nothing.
+        """
+        url = self._sent_url("http://gpu:11434", InferenceBackend.OLLAMA)
+        assert url == "http://gpu:11434/api/chat", url
+
+    def test_https_host_scheme_is_preserved(self):
+        url = self._sent_url("https://gpu:11434", InferenceBackend.OLLAMA)
+        assert url == "https://gpu:11434/api/chat", url
+
+    def test_bare_host_still_gets_a_scheme(self):
+        url = self._sent_url("gpu:11434", InferenceBackend.OLLAMA)
+        assert url == "http://gpu:11434/api/chat", url
+
+    def test_openai_compat_host_with_scheme(self):
+        url = self._sent_url("http://vllm:8000", InferenceBackend.OPENAI_COMPAT)
+        assert url == "http://vllm:8000/v1/chat/completions", url
+
+    def test_trailing_slash_does_not_double(self):
+        url = self._sent_url("http://gpu:11434/", InferenceBackend.OLLAMA)
+        assert url == "http://gpu:11434/api/chat", url
+
+
+class TestGuardrailVarianceTiming:
+    def test_timing_is_recorded(self):
+        """Project convention: every check records its own duration."""
+        result = TargetResult(url="http://test/mcp")
+        metas = [_meta("gpu:11434", InferenceBackend.OLLAMA, "a", "b")]
+
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+            side_effect=[_REFUSAL, _COMPLIANT],
+        ):
+            check_inference_guardrail_variance(result, metas)
+
+        assert "inference_guardrail_variance" in result.timings
+
+    def test_timing_recorded_even_when_nothing_to_probe(self):
+        result = TargetResult(url="http://test/mcp")
+        check_inference_guardrail_variance(result, [])
+        assert "inference_guardrail_variance" in result.timings
+
+
+# ── Wiring: fingerprint metas reach the guardrail probe ──────────────
+
+
+def _tags_response(*names: str) -> dict:
+    return {"models": [{"name": n, "digest": f"sha256:{n}"} for n in names]}
+
+
+class TestMetasOut:
+    """check_inference_backend hands its fingerprints to the caller.
+
+    The guardrail-variance probe needs the host, backend, and model list that
+    check_inference_backend already discovered; re-fingerprinting would double
+    the network round-trips.
+    """
+
+    def _run(self, metas_out, models=("phi3", "tinyllama")):
+        result = TargetResult(url="http://test/mcp")
+        with patch(
+            "mcpnuke.checks.inference_backend.fingerprint_backend",
+            return_value=(
+                InferenceBackend.OLLAMA,
+                {"models": list(models), "model_count": len(models),
+                 "model_details": dict.fromkeys(models, {})},
+            ),
+        ):
+            check_inference_backend(
+                result,
+                probe_opts={"inference_host": "http://gpu:11434"},
+                metas_out=metas_out,
+            )
+        return result
+
+    def test_meta_is_collected(self):
+        metas: list[dict] = []
+        self._run(metas)
+        assert len(metas) == 1
+
+    def test_meta_carries_host_and_backend(self):
+        """fingerprint_backend returns neither, but the probe reads both."""
+        metas: list[dict] = []
+        self._run(metas)
+        assert metas[0]["host"] == "http://gpu:11434"
+        assert metas[0]["backend"] == InferenceBackend.OLLAMA
+
+    def test_meta_carries_the_model_list(self):
+        metas: list[dict] = []
+        self._run(metas)
+        assert set(metas[0]["model_details"]) == {"phi3", "tinyllama"}
+
+    def test_metas_out_is_optional(self):
+        """Callers that do not want the metas keep the old signature."""
+        self._run(None)
+
+    def test_unknown_backends_are_not_collected(self):
+        metas: list[dict] = []
+        result = TargetResult(url="http://test/mcp")
+        with patch(
+            "mcpnuke.checks.inference_backend.fingerprint_backend",
+            return_value=(InferenceBackend.UNKNOWN, {}),
+        ):
+            check_inference_backend(
+                result,
+                probe_opts={"inference_host": "http://gpu:11434"},
+                metas_out=metas,
+            )
+        assert metas == []
+
+
+class TestGuardrailVarianceRealMetaShape:
+    """The probe must work on the meta shape fingerprint_backend really returns.
+
+    Regression: fingerprint_backend only builds model_details for Ollama. The
+    OpenAI-compatible branch returns a flat "models" list, so a probe keyed on
+    model_details alone was a permanent no-op on vLLM, LocalAI, and LiteLLM.
+    """
+
+    def test_openai_compat_meta_without_model_details_is_probed(self):
+        result = TargetResult(url="http://test/mcp")
+        meta = {
+            "host": "vllm:8000",
+            "backend": InferenceBackend.OPENAI_COMPAT,
+            "models": ["llama-3-8b", "mistral-7b"],
+            "model_count": 2,
+        }
+
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+            side_effect=[_REFUSAL, _COMPLIANT],
+        ) as probe:
+            check_inference_guardrail_variance(result, [meta])
+
+        assert probe.call_count == 2, "flat models list was ignored"
+        assert len(result.findings) == 1
+
+    def test_real_openai_compat_fingerprint_shape_has_no_model_details(self):
+        """Pins the upstream shape this regression depends on."""
+        client = MagicMock()
+        client.get.side_effect = [
+            httpx.RequestError("no ollama"),
+            _mock_response(200, {"data": [{"id": "a"}, {"id": "b"}]}),
+        ]
+        with patch("mcpnuke.checks.inference_backend.httpx.Client", return_value=client):
+            backend, meta = fingerprint_backend("http://vllm:8000")
+
+        assert backend == InferenceBackend.OPENAI_COMPAT
+        assert "model_details" not in meta
+        assert meta["models"] == ["a", "b"]
+
+    def test_single_model_still_skipped_with_flat_list(self):
+        result = TargetResult(url="http://test/mcp")
+        meta = {
+            "host": "vllm:8000",
+            "backend": InferenceBackend.OPENAI_COMPAT,
+            "models": ["only-one"],
+        }
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+        ) as probe:
+            check_inference_guardrail_variance(result, [meta])
+
+        assert probe.call_count == 0
+
+    def test_model_count_is_capped(self):
+        result = TargetResult(url="http://test/mcp")
+        meta = {
+            "host": "gpu:11434",
+            "backend": InferenceBackend.OLLAMA,
+            "model_details": dict.fromkeys([f"m{i}" for i in range(20)], {}),
+        }
+        with patch(
+            "mcpnuke.checks.inference_backend._guardrail_probe_model",
+            return_value=_COMPLIANT,
+        ) as probe:
+            check_inference_guardrail_variance(result, [meta])
+
+        assert probe.call_count == inference_backend._GUARDRAIL_MAX_MODELS

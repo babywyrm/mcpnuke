@@ -9,6 +9,7 @@ tables against drifting from the real ``_run`` call sites.
 
 import re
 from pathlib import Path
+from unittest.mock import patch
 
 from mcpnuke import checks as checks_pkg
 from mcpnuke.checks import (
@@ -26,6 +27,7 @@ from mcpnuke.checks import (
     _build_deep_checks,
     run_all_checks,
 )
+from mcpnuke.checks.inference_backend import InferenceBackend
 from mcpnuke.core.models import TargetResult
 
 _PROGRESS_RE = re.compile(r"\[(\d+)/(\d+)\]")
@@ -133,6 +135,42 @@ class TestProgressDenominator:
 
         expected = len(_TARGET_SURFACE_CHECK_NAMES) + len(_TELEPORT_BASE_CHECK_NAMES)
         assert n_with == n_without + expected
+
+    def test_inference_context_increases_the_denominator(self):
+        plain = TargetResult(url="http://t/mcp")
+        plain.tools = _tools()
+        with_inf = TargetResult(url="http://t/mcp")
+        with_inf.tools = _tools()
+
+        n_plain = _progress_pairs(
+            _run_and_collect(plain, probe_opts={"no_invoke": True})
+        )[0][1]
+        with patch(
+            "mcpnuke.checks.inference_backend.fingerprint_backend",
+            return_value=(InferenceBackend.UNKNOWN, {}),
+        ):
+            n_inf = _progress_pairs(_run_and_collect(
+                with_inf,
+                probe_opts={"no_invoke": True, "inference_host": "http://gpu:11434"},
+            ))[0][1]
+
+        assert n_inf == n_plain + len(_INFERENCE_CHECK_NAMES)
+
+    def test_inference_count_lands_exactly(self):
+        """Both inference checks run whenever the section is enabled."""
+        result = TargetResult(url="http://t/mcp")
+        result.tools = _tools()
+
+        with patch(
+            "mcpnuke.checks.inference_backend.fingerprint_backend",
+            return_value=(InferenceBackend.UNKNOWN, {}),
+        ):
+            pairs = _progress_pairs(_run_and_collect(
+                result,
+                probe_opts={"no_invoke": True, "inference_host": "http://gpu:11434"},
+            ))
+
+        assert max(n for n, _ in pairs) == pairs[0][1]
 
     def test_teleport_and_aggregate_are_counted_at_all(self):
         """Regression: neither section was included in the old arithmetic."""

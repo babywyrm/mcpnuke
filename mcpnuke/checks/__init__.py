@@ -35,7 +35,11 @@ from mcpnuke.checks.execution import (
     check_remote_access,
 )
 from mcpnuke.checks.exfil_flow import check_exfil_flow
-from mcpnuke.checks.inference_backend import check_inference_backend, check_model_integrity
+from mcpnuke.checks.inference_backend import (
+    check_inference_backend,
+    check_inference_guardrail_variance,
+    check_model_integrity,
+)
 from mcpnuke.checks.injection import (
     check_active_prompt_injection,
     check_indirect_injection,
@@ -211,7 +215,10 @@ _TRANSPORT_CHECK_NAMES: tuple[str, ...] = ("sse_security",)
 
 _TARGET_SURFACE_CHECK_NAMES: tuple[str, ...] = ("actuator_probe",)
 
-_INFERENCE_CHECK_NAMES: tuple[str, ...] = ("inference_backend",)
+_INFERENCE_CHECK_NAMES: tuple[str, ...] = (
+    "inference_backend",
+    "inference_guardrail_variance",
+)
 
 _INFERENCE_BASELINE_CHECK_NAMES: tuple[str, ...] = ("model_integrity",)
 
@@ -558,7 +565,17 @@ def run_all_checks(
     if opts.get("inference_host") or opts.get("inference_scan"):
         if verbose:
             _log("\n  [bold cyan]── Inference Backend Probe ──[/bold cyan]")
-        _run("inference_backend", check_inference_backend, result, probe_opts=opts)
+        # The guardrail probe reuses these fingerprints rather than re-probing
+        # every host; it self-skips when no backend serves two or more models.
+        inference_metas: list[dict] = []
+        _run(
+            "inference_backend", check_inference_backend, result,
+            probe_opts=opts, metas_out=inference_metas,
+        )
+        _run(
+            "inference_guardrail_variance", check_inference_guardrail_variance,
+            result, inference_metas, _log=_log if verbose else None,
+        )
         if opts.get("inference_baseline") or opts.get("save_inference_baseline"):
             _run("model_integrity", check_model_integrity, result, probe_opts=opts)
 
