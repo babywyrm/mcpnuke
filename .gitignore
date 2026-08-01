@@ -42,6 +42,9 @@ tests/test_targets/
 # Scan output
 walkthrough/report.json
 
+# Implementation plans are local scratch; durable design docs live in docs/specs/
+docs/superpowers/plans/
+
 # Secrets — never commit these
 **/.*KEY*
 **/__KEY*
