@@ -42,6 +42,14 @@ All notable changes to this submodule are documented here.
 - **MCP-T15 model routing** (`checks/model_routing.py`): Static detection of
   attacker-controllable model selection (management tools, model params, routing
   descriptions).
+- **`patterns/credentials.py`**: single source of truth for credential detection,
+  replacing five divergent definitions. Tiered by false-positive risk —
+  `STRUCTURAL_CREDENTIALS` (shape-based, safe on tool schemas),
+  `KEYWORD_CREDENTIALS` (`password: <value>`, body text only, since they also
+  match a JSON Schema property declaration), `VENDOR_CREDENTIALS` (lab formats),
+  and `REFERENCE_PATTERNS` (paths pointing at a secret). Backed by a golden
+  corpus (`tests/test_credential_patterns.py`) asserting every consumer detects
+  the same set, which is what stops the drift recurring.
 - **ROADMAP.md**: Full taxonomy gap map (56 IDs), tiered priority, live test targets.
 
 ### Changed
@@ -109,6 +117,19 @@ All notable changes to this submodule are documented here.
   denominator is now derived from the check inventory, and `--fast` is accounted for
   exactly via the pre-built deep-probe plan. The duration estimate uses the real
   deep count, so it now reads more conservatively than before.
+- **Credential detection was inconsistent across checks**, which is a
+  false-negative class, not a tidiness one: the same secret was caught on one
+  code path and missed on another, and the gaps were invisible. Five definitions
+  disagreed — an Anthropic key hardcoded in a tool schema was missed by
+  `credential_in_schema`, the check whose entire job is that, along with GitLab
+  PATs, GCP keys, OPENSSH private keys, and Slack `xoxo-` tokens. A GitHub PAT
+  shorter than 36 chars was seen by exactly one of three consumers, and a
+  capitalized `Bearer ` by only one. Where definitions conflicted the wider one
+  won, since a false negative on a distinctively-prefixed token costs more than
+  a false positive a human dismisses. Also fixed: `actuator_probe` escalated any
+  body containing a bare `sk-` to CRITICAL, and `tool_probes` passed
+  `re.IGNORECASE` alongside the pattern, which raises outright on a compiled one.
+  Verified against 139 live Camazotz tools: zero findings lost, zero gained.
 - **`InferenceBackend.VLLM` did not exist** (`checks/inference_backend.py`): both
   references would have raised `AttributeError`. vLLM fingerprints as
   `OPENAI_COMPAT`, which is now used. Latent only because

@@ -19,6 +19,7 @@ import time
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.llm import _call_claude
 from mcpnuke.core.models import TargetResult
+from mcpnuke.patterns.credentials import compile_patterns
 from mcpnuke.patterns.probes import (
     CANARY,
     COMMAND_INJECTION_PROBES,
@@ -1034,8 +1035,11 @@ def check_resource_poisoning(session, result: TargetResult):
                             )
 
                     # --- Credential content (actual secrets in resource text) ---
-                    for pat, cred_type in CREDENTIAL_CONTENT_PATTERNS:
-                        m = re.search(pat, text, re.IGNORECASE)
+                    # Case sensitivity now comes from the pattern itself: token
+                    # prefixes like AKIA and ghp_ are case-specific by format,
+                    # while the keyword patterns carry their own (?i).
+                    for cred_pat, cred_type in compile_patterns(CREDENTIAL_CONTENT_PATTERNS):
+                        m = cred_pat.search(text)
                         if m:
                             result.add(
                                 "resource_poisoning",

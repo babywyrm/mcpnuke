@@ -4,6 +4,7 @@ import httpx
 
 from mcpnuke.checks.actuator_probe import DEBUG_ENDPOINTS, SENSITIVE_CONTENT_PATTERNS, check_actuator_probe
 from mcpnuke.core.models import TargetResult
+from mcpnuke.patterns.credentials import find_credential
 
 
 def test_debug_endpoints_list():
@@ -13,15 +14,22 @@ def test_debug_endpoints_list():
 
 
 def test_sensitive_patterns_match():
-    import re
-    assert any(re.search(p, "password=hunter2", re.IGNORECASE) for p in SENSITIVE_CONTENT_PATTERNS)
-    assert any(re.search(p, "AKIAIOSFODNN7EXAMPLE", re.IGNORECASE) for p in SENSITIVE_CONTENT_PATTERNS)
-    assert any(re.search(p, "postgres://admin:pass@db:5432", re.IGNORECASE) for p in SENSITIVE_CONTENT_PATTERNS)
+    for body in (
+        "password=hunter2",
+        "AKIAIOSFODNN7EXAMPLE",
+        "postgres://admin:pass@db:5432",
+    ):
+        assert find_credential(body, SENSITIVE_CONTENT_PATTERNS), body
 
 
 def test_sensitive_patterns_no_false_positive():
-    import re
-    assert not any(re.search(p, "Hello world, status OK", re.IGNORECASE) for p in SENSITIVE_CONTENT_PATTERNS)
+    assert find_credential("Hello world, status OK", SENSITIVE_CONTENT_PATTERNS) is None
+
+
+def test_bare_prefix_no_longer_escalates():
+    """The local list matched a lone "sk-"; the shared tier needs a real token."""
+    assert find_credential("task sk-1 queued", SENSITIVE_CONTENT_PATTERNS) is None
+    assert find_credential("key sk-" + "a" * 32, SENSITIVE_CONTENT_PATTERNS)
 
 
 def test_timing_recorded_on_unreachable():

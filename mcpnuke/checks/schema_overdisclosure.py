@@ -34,23 +34,16 @@ import re
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
+from mcpnuke.patterns.credentials import RECON_CREDENTIALS, find_credential
 
 _add = lane_tagged(lane=5, transport="A")
 
 
 # Credential-like patterns. Where these overlap with credential_in_schema we
 # still emit here so anonymous-recon findings stand on their own; severity
-# tunes the de-dup expectations downstream.
-_CREDENTIAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"cztz-[a-zA-Z0-9_\-]{6,}", re.IGNORECASE), "cztz_token"),
-    (re.compile(r"CZTZ_[A-Z][A-Z0-9_]{2,}"), "cztz_env_var"),
-    (re.compile(r"\bsk-[a-zA-Z0-9]{20,}\b"), "openai_key"),
-    (re.compile(r"\bghp_[a-zA-Z0-9]{20,}\b"), "github_pat"),
-    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "aws_access_key"),
-    (re.compile(r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----"), "private_key"),
-    (re.compile(r"eyJ[a-zA-Z0-9_-]{10,}\.eyJ[a-zA-Z0-9_-]{10,}"), "jwt_token"),
-    (re.compile(r"\bbearer\s+[a-zA-Z0-9._\-]{16,}", re.IGNORECASE), "bearer_token"),
-]
+# tunes the de-dup expectations downstream. Lab token formats come first so a
+# cztz token is reported as such rather than as a generic secret.
+_CREDENTIAL_PATTERNS = RECON_CREDENTIALS
 
 # Internal-looking hostnames and URLs (recon surface, not a credential)
 _INTERNAL_HOST_PATTERNS: list[tuple[re.Pattern[str], str]] = [
@@ -108,21 +101,20 @@ def check_schema_overdisclosure(result: TargetResult) -> None:
             name = tool.get("name", "")
             text = _tool_searchable_text(tool)
 
-            for pattern, label in _CREDENTIAL_PATTERNS:
-                m = pattern.search(text)
-                if m:
-                    _add(
-                        result,
-                        "schema_overdisclosure",
-                        "CRITICAL",
-                        f"Anonymous credential disclosure in tool '{name}'",
-                        f"Credential pattern ({label}) is visible to anonymous "
-                        "callers via tools/list (MCP-T50). Pre-auth recon "
-                        "surface — no authentication needed.",
-                        evidence=m.group()[:200],
-                        taxonomy_id="MCP-T50",
-                    )
-                    break
+            hit = find_credential(text, _CREDENTIAL_PATTERNS)
+            if hit:
+                label, matched = hit
+                _add(
+                    result,
+                    "schema_overdisclosure",
+                    "CRITICAL",
+                    f"Anonymous credential disclosure in tool '{name}'",
+                    f"Credential pattern ({label}) is visible to anonymous "
+                    "callers via tools/list (MCP-T50). Pre-auth recon "
+                    "surface — no authentication needed.",
+                    evidence=matched[:200],
+                    taxonomy_id="MCP-T50",
+                )
 
             for pattern, label in _INTERNAL_HOST_PATTERNS:
                 m = pattern.search(text)

@@ -11,12 +11,12 @@ Phase 2 (active):  POST-based exploitation probes for Spring Boot
                    the corresponding endpoint is present and reachable.
 """
 
-import re
 
 import httpx
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
+from mcpnuke.patterns.credentials import CONTENT_CREDENTIALS, find_credential
 
 DEBUG_ENDPOINTS = [
     ("/actuator/env", "CRITICAL", "Spring Boot actuator env — may expose secrets and config"),
@@ -44,13 +44,11 @@ DEBUG_ENDPOINTS = [
     ("/elmah.axd", "HIGH", "ASP.NET error log"),
 ]
 
-SENSITIVE_CONTENT_PATTERNS = [
-    r"(?:password|passwd|secret|credential|private.?key)\s*[:=]",
-    r"(?:AKIA|sk-|ghp_|gho_|xox[bpsar]-)",
-    r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----",
-    r"(?:postgres|mysql|mongodb|redis)://\w+:\w+@",
-    r"(?:DATABASE_URL|SECRET_KEY|API_KEY|AWS_SECRET)\s*=",
-]
+# Severity triage for an exposed endpoint's body: does the response actually
+# contain secrets? The previous local list matched bare prefixes (a lone "sk-"
+# anywhere escalated to CRITICAL); the shared tier requires a plausible token
+# length, so this is stricter as well as consistent with every other check.
+SENSITIVE_CONTENT_PATTERNS = CONTENT_CREDENTIALS
 
 # Spring Boot actuator POST exploitation probes.
 # Each entry: (path, method, payload, description, severity)
@@ -125,10 +123,7 @@ def check_actuator_probe(base_url: str, result: TargetResult, auth_token: str | 
                     if not ("json" in ct or "html" in ct or "text" in ct):
                         continue
 
-                    has_sensitive = any(
-                        re.search(pat, text, re.IGNORECASE)
-                        for pat in SENSITIVE_CONTENT_PATTERNS
-                    )
+                    has_sensitive = find_credential(text, SENSITIVE_CONTENT_PATTERNS) is not None
 
                     severity = "CRITICAL" if has_sensitive else default_sev
                     result.add(

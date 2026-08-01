@@ -6,22 +6,16 @@ be in the schema.
 """
 
 import json
-import re
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
+from mcpnuke.patterns.credentials import SCHEMA_CREDENTIALS, find_credential
 
-SCHEMA_CREDENTIAL_PATTERNS = [
-    (r"sk-[a-zA-Z0-9]{20,}", "openai_key"),
-    (r"ghp_[a-zA-Z0-9]{36}", "github_pat"),
-    (r"gho_[a-zA-Z0-9]{36}", "github_oauth"),
-    (r"AKIA[0-9A-Z]{16}", "aws_access_key"),
-    (r"(?:bearer|token)\s+[a-zA-Z0-9._\-]{20,}", "bearer_token"),
-    (r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----", "private_key"),
-    (r"(?:postgres|mysql|mongodb|redis)://\w+:\w+@", "connection_string"),
-    (r"eyJ[a-zA-Z0-9_-]{10,}\.eyJ[a-zA-Z0-9_-]{10,}", "jwt_token"),
-    (r"xox[bpsar]-[a-zA-Z0-9-]{10,}", "slack_token"),
-]
+# Structural patterns only. Keyword patterns such as ``password: <value>``
+# cannot tell a leaked secret from a JSON Schema property declaration —
+# ``{"api_key": {"type": "string"}}`` satisfies them — and every tool that
+# takes a credential parameter would be reported CRITICAL.
+SCHEMA_CREDENTIAL_PATTERNS = SCHEMA_CREDENTIALS
 
 
 def check_credential_in_schema(result: TargetResult):
@@ -30,14 +24,13 @@ def check_credential_in_schema(result: TargetResult):
             name = tool.get("name", "")
             schema_text = json.dumps(tool, default=str)
 
-            for pat, cred_type in SCHEMA_CREDENTIAL_PATTERNS:
-                m = re.search(pat, schema_text)
-                if m:
-                    result.add(
-                        "credential_in_schema",
-                        "CRITICAL",
-                        f"Hardcoded {cred_type} in tool '{name}' definition",
-                        "Credential embedded in tool schema — visible to any client that calls tools/list",
-                        evidence=m.group()[:200],
-                    )
-                    break
+            hit = find_credential(schema_text, SCHEMA_CREDENTIAL_PATTERNS)
+            if hit:
+                cred_type, matched = hit
+                result.add(
+                    "credential_in_schema",
+                    "CRITICAL",
+                    f"Hardcoded {cred_type} in tool '{name}' definition",
+                    "Credential embedded in tool schema — visible to any client that calls tools/list",
+                    evidence=matched[:200],
+                )
