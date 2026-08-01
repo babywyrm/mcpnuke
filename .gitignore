@@ -67,6 +67,9 @@ kubeconfig
 *.secret
 secrets.*
 credentials.*
+# Detection patterns, not a credential file. The rule above is path-agnostic
+# and would otherwise silently drop this module from commits.
+!mcpnuke/patterns/credentials.py
 id_rsa
 id_rsa.pub
 id_ed25519
