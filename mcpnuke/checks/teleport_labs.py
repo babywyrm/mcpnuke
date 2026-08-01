@@ -14,6 +14,7 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _call_tool, _response_text
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 
 def _has_tool(result: TargetResult, prefix: str) -> bool:
@@ -25,7 +26,7 @@ def _has_tool(result: TargetResult, prefix: str) -> bool:
 _add = lane_tagged(lane=3, transport="A")
 
 
-def check_teleport_lab_bot_theft(session, result: TargetResult, probe_opts: dict | None = None):
+def check_teleport_lab_bot_theft(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Chain: read tbot secret -> replay stolen identity -> check session binding.
 
     Exercises the bot_identity_theft_lab to test whether stolen tbot
@@ -114,7 +115,11 @@ def check_teleport_lab_bot_theft(session, result: TargetResult, probe_opts: dict
             )
 
 
-def check_teleport_lab_role_escalation(session, result: TargetResult, probe_opts: dict | None = None):
+def check_teleport_lab_role_escalation(
+    session: MCPSessionProtocol,
+    result: TargetResult,
+    probe_opts: dict | None = None,
+):
     """Chain: get current roles -> request escalation -> attempt privileged op.
 
     Exercises the teleport_role_escalation_lab to test whether a bot
@@ -201,7 +206,7 @@ def check_teleport_lab_role_escalation(session, result: TargetResult, probe_opts
             )
 
 
-def check_teleport_lab_cert_replay(session, result: TargetResult, probe_opts: dict | None = None):
+def check_teleport_lab_cert_replay(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Chain: get expired cert -> replay it -> check replay detection.
 
     Exercises the cert_replay_lab to test whether an expired short-lived

@@ -12,6 +12,7 @@ import re
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 # All findings in this module are scoped to Lane 2 / Transport "B"
 # (2026-04-26 by-lane reporting spec).
@@ -62,7 +63,7 @@ def _classify_tool(tool: dict) -> tuple[bool, bool, bool]:
 EXFIL_CANARY = "MCPV_EXFIL_CANARY_7x9k2"
 
 
-def _try_source_read(session, tool: dict) -> str | None:
+def _try_source_read(session: MCPSessionProtocol, tool: dict) -> str | None:
     """Attempt to call a source tool and extract text from the response."""
     from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text
     name = tool.get("name", "")
@@ -72,7 +73,7 @@ def _try_source_read(session, tool: dict) -> str | None:
     return text if text and len(text) > 5 else None
 
 
-def _try_sink_send(session, tool: dict, data: str) -> tuple[bool, str]:
+def _try_sink_send(session: MCPSessionProtocol, tool: dict, data: str) -> tuple[bool, str]:
     """Attempt to route canary data through a sink tool.
 
     Returns (sent, response_text). 'sent' is True if the call succeeded
@@ -105,7 +106,11 @@ def _try_sink_send(session, tool: dict, data: str) -> tuple[bool, str]:
     return resp is not None, text or ""
 
 
-def check_exfil_flow(result: TargetResult, session=None, probe_opts: dict | None = None):
+def check_exfil_flow(
+    result: TargetResult,
+    session: MCPSessionProtocol | None = None,
+    probe_opts: dict | None = None,
+):
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
     with time_check("exfil_flow", result):

@@ -15,6 +15,7 @@ from typing import Protocol
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 
 class LLMBackend(Protocol):
@@ -111,7 +112,7 @@ def _default_backend() -> LLMBackend:
 
 
 def run_llm_analysis(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     probe_opts: dict | None = None,
     model: str = "claude-sonnet-4-20250514",

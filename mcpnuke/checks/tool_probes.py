@@ -19,6 +19,7 @@ import time
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.llm import _call_claude
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.credentials import compile_patterns
 from mcpnuke.patterns.probes import (
     CANARY,
@@ -252,7 +253,7 @@ def _build_extended_args(tool: dict) -> dict:
 _latency_tracker: dict[str, list[float]] = {}
 
 
-def _is_stdio(session) -> bool:
+def _is_stdio(session: MCPSessionProtocol) -> bool:
     return hasattr(session, "_proc")
 
 
@@ -301,7 +302,7 @@ def _call_claude_for_args(tool: dict, model: str = "claude-sonnet-4-20250514") -
         return None
 
 
-def _generate_claude_args(tool: dict, session, model: str = "claude-sonnet-4-20250514") -> dict:
+def _generate_claude_args(tool: dict, session: MCPSessionProtocol, model: str = "claude-sonnet-4-20250514") -> dict:
     """Tier 2 argument generation: Claude-assisted, with _build_extended_args fallback.
 
     Calls _call_claude_for_args and merges result with extended_args baseline so
@@ -320,7 +321,13 @@ def _generate_claude_args(tool: dict, session, model: str = "claude-sonnet-4-202
     return merged
 
 
-def _call_tool(session, name: str, args: dict, timeout: float = 10.0, retries: int = 2) -> dict | None:
+def _call_tool(
+    session: MCPSessionProtocol,
+    name: str,
+    args: dict,
+    timeout: float = 10.0,
+    retries: int = 2,
+) -> dict | None:
     """Call a tool via tools/call with adaptive backoff and jitter.
 
     Tracks per-tool latency to set progressive timeouts and retries with
@@ -458,7 +465,7 @@ def _scan_response_threats(text: str) -> list[tuple[str, str, str]]:
 # Check: Tool Response Injection
 # ---------------------------------------------------------------------------
 
-def check_tool_response_injection(session, result: TargetResult, probe_opts: dict | None = None):
+def check_tool_response_injection(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Call each tool with safe inputs and scan responses for injection / manipulation.
 
     Also detects input reflection — if a tool echoes user input back in the
@@ -590,7 +597,7 @@ def _classify_ssti(
 
 
 def _fuzz_single_tool(
-    session,
+    session: MCPSessionProtocol,
     tool: dict,
     result: TargetResult,
     opts: dict,
@@ -746,7 +753,7 @@ def _fuzz_single_tool(
                 break
 
 
-def check_input_sanitization(session, result: TargetResult, probe_opts: dict | None = None):
+def check_input_sanitization(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Send injection probe payloads and detect missing sanitization."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
@@ -817,7 +824,7 @@ def _match_error_patterns(texts: list[str]) -> re.Match | None:
     return None
 
 
-def check_error_leakage(session, result: TargetResult, probe_opts: dict | None = None):
+def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Send malformed inputs to tools and look for information disclosure in errors."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
@@ -887,7 +894,7 @@ def check_error_leakage(session, result: TargetResult, probe_opts: dict | None =
 # Check: Temporal Consistency
 # ---------------------------------------------------------------------------
 
-def check_temporal_consistency(session, result: TargetResult, probe_opts: dict | None = None):
+def check_temporal_consistency(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Call the same tool repeatedly and detect behavioral drift or escalation."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
@@ -954,7 +961,7 @@ def check_temporal_consistency(session, result: TargetResult, probe_opts: dict |
 # Check: Resource Content Deep Analysis (poisoning beyond simple regex)
 # ---------------------------------------------------------------------------
 
-def check_resource_poisoning(session, result: TargetResult):
+def check_resource_poisoning(session: MCPSessionProtocol, result: TargetResult):
     """Deep content analysis of resources for obfuscated injection payloads."""
     with time_check("resource_poisoning", result):
         from mcpnuke.patterns.rules import INJECTION_PATTERNS, POISON_PATTERNS

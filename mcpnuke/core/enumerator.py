@@ -6,6 +6,7 @@ import time
 from mcpnuke.core.constants import MCP_INIT_PARAMS
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.protocol import AUTO, LEGACY, STATELESS
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 DEFAULT_MAX_PAGES: int = 20
 
@@ -17,7 +18,7 @@ _LIST_ITEM_KEYS: dict[str, str] = {
 
 
 def _paginated_list(
-    session,
+    session: MCPSessionProtocol,
     method: str,
     max_pages: int = DEFAULT_MAX_PAGES,
     timeout: float = 15,
@@ -57,7 +58,7 @@ def _paginated_list(
 
 
 def negotiate_protocol(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     mode: str = AUTO,
     verbose: bool = False,
@@ -119,7 +120,7 @@ def negotiate_protocol(
 
 
 def enumerate_server(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     verbose: bool = False,
     log=None,

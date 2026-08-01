@@ -26,6 +26,7 @@ from mcpnuke.checks.tool_probes import (
     _should_invoke,
 )
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=2, transport="A")
 
@@ -95,7 +96,7 @@ def _get_string_params(tool: dict) -> list[str]:
 
 
 def check_command_injection_broad(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     probe_opts: dict | None = None,
 ) -> None:

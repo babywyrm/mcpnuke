@@ -10,6 +10,7 @@ import re
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 CONFIG_TOOL_NAMES = re.compile(
     r"(config|settings|env|environment|status|info|diagnostics|debug|healthz|metadata|describe|inspect)",
@@ -34,7 +35,7 @@ INFRA_LEAK_PATTERNS: list[tuple[str, str, str]] = [
 ]
 
 
-def check_config_dump(session, result: TargetResult, probe_opts: dict | None = None):
+def check_config_dump(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Detect tools that dump internal configuration, service topology, or secret paths."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)

@@ -24,6 +24,7 @@ from mcpnuke.checks.tool_probes import (
     _should_invoke,
 )
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=3, transport="D")
 
@@ -96,7 +97,7 @@ def _find_injectable_params(tool: dict) -> list[str]:
 
 
 def check_shell_injection(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     probe_opts: dict | None = None,
 ) -> None:
@@ -150,7 +151,7 @@ def check_shell_injection(
 
 
 def _probe_dangerous_base(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     tool: dict,
     base_args: dict,

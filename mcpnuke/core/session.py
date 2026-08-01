@@ -94,6 +94,10 @@ class MCPSession:
         self.sse_url = base + sse_path
         self.post_url: str = ""
         self.timeout = timeout
+        # Negotiated by enumerator.negotiate_protocol. Only HTTPSession
+        # varies its framing on this today; the rest carry it so the
+        # negotiated mode is readable from any transport.
+        self.protocol_mode = LEGACY
         self._auth_token = auth_token
         self._verify_tls = verify_tls
         self._extra_headers = extra_headers or {}
@@ -522,6 +526,10 @@ class ToolServerSession:
         self.sse_url = ""
         self.post_url = post_url
         self.timeout = timeout
+        # Negotiated by enumerator.negotiate_protocol. Only HTTPSession
+        # varies its framing on this today; the rest carry it so the
+        # negotiated mode is readable from any transport.
+        self.protocol_mode = LEGACY
         self._headers = headers or {"Content-Type": "application/json"}
         self._client = httpx.Client(verify=verify_tls, timeout=timeout, follow_redirects=True)
         self._discovered_tools: list[dict] = []
@@ -702,6 +710,10 @@ class StdioSession:
         else:
             self.cmd = list(cmd)
         self.timeout = timeout
+        # Negotiated by enumerator.negotiate_protocol. Only HTTPSession
+        # varies its framing on this today; the rest carry it so the
+        # negotiated mode is readable from any transport.
+        self.protocol_mode = LEGACY
         self.post_url = f"stdio://{' '.join(self.cmd)}"
         self.sse_url = ""
         self._req_id = 0

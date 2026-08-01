@@ -37,6 +37,7 @@ from mcpnuke.checks.tool_probes import (
     _should_invoke,
 )
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.rules import INJECTION_PATTERNS
 
 _add = lane_tagged(lane=2, transport="A")
@@ -50,7 +51,7 @@ _INJECTION_PATTERNS = INJECTION_PATTERNS
 
 
 def check_tool_output_poisoning(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     probe_opts: dict | None = None,
 ) -> None:

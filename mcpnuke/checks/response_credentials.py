@@ -5,6 +5,7 @@ import re
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import CREDENTIAL_CONTENT_PATTERNS
 
 
@@ -24,7 +25,7 @@ def _scan_text_for_creds(text: str, source: str, result: TargetResult):
             break
 
 
-def check_response_credentials(session, result: TargetResult, probe_opts: dict | None = None):
+def check_response_credentials(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Scan tool responses and resource content for credential patterns.
 
     Goes beyond error_leakage by checking ALL responses (success and error)

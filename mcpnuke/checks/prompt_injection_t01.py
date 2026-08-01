@@ -24,6 +24,7 @@ from mcpnuke.checks.tool_probes import (
     _should_invoke,
 )
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=2, transport="A")
 
@@ -95,7 +96,7 @@ def _is_ai_tool(tool: dict) -> bool:
 
 
 def check_prompt_injection(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     probe_opts: dict | None = None,
 ) -> None:

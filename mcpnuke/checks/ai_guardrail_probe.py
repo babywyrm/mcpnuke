@@ -15,6 +15,7 @@ import logging
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     AI_GUARDRAIL_PROBES,
     AI_GUARDRAIL_TOOL_HINTS,
@@ -68,7 +69,7 @@ def _find_message_param(tool: dict) -> str | None:
     return None
 
 
-def check_ai_guardrail(session, result: TargetResult, probe_opts: dict | None = None):
+def check_ai_guardrail(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Probe AI-gated tools with social-engineering strategies."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)

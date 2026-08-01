@@ -33,6 +33,7 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 logger = logging.getLogger("mcpnuke.checks.sdk_cache_tamper")
 
@@ -229,7 +230,7 @@ def check_sdk_cache_tamper(result: TargetResult) -> None:
 
 
 def check_sdk_cache_poisoning(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     probe_opts: dict | None = None,
 ) -> None:

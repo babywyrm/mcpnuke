@@ -33,6 +33,7 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=5, transport="A")
 
@@ -95,7 +96,7 @@ def _pick_burst_target(tools: list[dict], opts: dict) -> dict | None:
 
 
 def check_anon_budget_exhaust(
-    session, result: TargetResult, probe_opts: dict | None = None,
+    session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None,
 ) -> None:
     """Burst probe for anonymous rate-limit exhaustion (MCP-T51)."""
     opts = probe_opts or {}

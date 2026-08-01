@@ -114,6 +114,7 @@ from mcpnuke.checks.tool_probes import (
 from mcpnuke.checks.transport import check_sse_security
 from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _log_internal = logging.getLogger("mcpnuke.checks")
 
@@ -294,7 +295,7 @@ def _build_deep_checks(
 def _emit_duration_estimate(
     *,
     n_tools: int,
-    session,
+    session: MCPSessionProtocol,
     no_invoke: bool,
     fast_mode: bool,
     probe_workers: int,
@@ -334,7 +335,7 @@ def _emit_duration_estimate(
 
 
 def run_all_checks(
-    session,
+    session: MCPSessionProtocol,
     result: TargetResult,
     all_results: list[TargetResult],
     base: str = "",

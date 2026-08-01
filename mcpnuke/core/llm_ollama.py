@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 import httpx
 
 from mcpnuke.core.llm import LLMFinding, _parse_findings
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 logger = logging.getLogger("mcpnuke.core.llm_ollama")
 
@@ -300,7 +301,7 @@ class OllamaBackend:
 # ── Ensemble entry point ──────────────────────────────────────────────────────
 
 def run_ensemble_analysis(
-    session,
+    session: MCPSessionProtocol,
     result,
     *,
     host: str,

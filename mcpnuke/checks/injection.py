@@ -6,6 +6,7 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     ACTIVE_INJECTION_PAYLOADS,
     CONTENT_PARAM_KEYWORDS,
@@ -96,7 +97,7 @@ def check_tool_poisoning(result: TargetResult):
                     break
 
 
-def check_indirect_injection(session, result: TargetResult, probe_opts: dict | None = None):
+def check_indirect_injection(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     with time_check("indirect_injection", result):
         # Phase 1: scan resource contents (original behavior)
         for resource in result.resources:
@@ -193,7 +194,7 @@ def check_indirect_injection(session, result: TargetResult, probe_opts: dict | N
                         break
 
 
-def check_active_prompt_injection(session, result: TargetResult, probe_opts: dict | None = None):
+def check_active_prompt_injection(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
     """Send injection payloads as tool inputs and confirm the server follows them.
 
     Goes beyond static prompt_injection (metadata-only) by actively testing whether
