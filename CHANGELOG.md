@@ -56,9 +56,13 @@ All notable changes to this submodule are documented here.
   spec deprecates that transport with a twelve-month offramp.
 - **CI actually runs now.** The Tests workflow had been failing on every run:
   `setup-uv` used `enable-cache: true`, whose `**/uv.lock` glob finds nothing
-  because the lock file is untracked, so the job died before pytest. Install steps
-  now use `uv sync --extra dev`. A `lint` job gates the suite — `ruff` strict at
-  zero, `mypy` on a ratchet (ceiling 63, measured cold).
+  because the lock file is untracked, so the job died before pytest. A `lint` job
+  gates the suite — `ruff` strict at zero, `mypy` on a ratchet (ceiling 63,
+  measured cold). First green run: ruff clean, mypy 63, 714 passed on 3.12+3.13.
+- `uv.lock` is tracked, so CI installs one pinned set of 57 packages via
+  `uv sync --frozen` with uv's cache restored. A `uv lock --check` step fails the
+  build when `pyproject.toml` is edited without re-locking, since `--frozen`
+  would otherwise install the stale set silently.
 - Lint debt cleared: `ruff check` goes 370 → 0 errors. Scan findings verified
   byte-identical before and after across 359 findings.
 - `mypy` errors 81 → 63, entirely by resolving lazily-imported optional extras in
@@ -69,12 +73,35 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **DPoP probes now actually test DPoP** (`checks/dpop_enforcement.py`,
+  `core/session.py`): the three probes were dead code with three independent
+  defects. They called `session.post()`, which no session class defines; they
+  aimed at `base` (`scheme://host`, no path) rather than the MCP endpoint, so a
+  request that did go out could never return 200; and they sent no auth, so a
+  401 meant "no token" rather than "proof required" — reading as *enforced* and
+  suppressing the finding either way. Sessions gained `post_raw()`, which reuses
+  the session's own auth and endpoint; its presence is the capability test for
+  "this transport has headers worth probing", so stdio skips instead of being
+  probed meaninglessly. Verified against a live target: 3 HIGH findings
+  (`dpop_not_enforced`, `dpop_header_not_validated`, `dpop_binding_not_enforced`).
 - **DPoP probes no longer abort the scan** (`checks/dpop_enforcement.py`): the three
   probe error handlers called `result.errors.append()`, but `TargetResult` has
   `error: str` — so the handler meant to absorb a failed probe raised
   `AttributeError` itself. Reachable on any scan carrying a JWT. Single-target scans
   died with a traceback; under `run_parallel` the worker died and the target
   vanished from results without a message. Added `TargetResult.note_error()`.
+- **`check_inference_guardrail_variance` is wired in and works** (MCP-T56,
+  `checks/inference_backend.py`): the check was fully written and tested but never
+  called, and it carried two defects that its own fixtures hid. It read model
+  names only from `model_details`, which `fingerprint_backend` populates for Ollama
+  and not for the OpenAI-compatible branch — a permanent no-op against vLLM,
+  LocalAI, and LiteLLM; it now falls back to the flat `models` list.
+  `_guardrail_probe_model` built `f"http://{host}/api/chat"` while every other
+  probe in the module treats `host` as already scheme-qualified, producing
+  `http://http://host:port/api/chat`. It also recorded no timing, unlike every
+  other check. `check_inference_backend` now hands its fingerprints to the caller
+  via `metas_out`, so the guardrail probe reuses that discovery instead of
+  re-fingerprinting each host, and both inference checks are counted in progress.
 - **Scan progress no longer overflows its own denominator** (`checks/__init__.py`):
   `total_checks` was hardcoded arithmetic assuming 17 static and 13 deep checks;
   the real counts are 33 and 24, and the teleport and inference sections were never
@@ -85,7 +112,7 @@ All notable changes to this submodule are documented here.
 - **`InferenceBackend.VLLM` did not exist** (`checks/inference_backend.py`): both
   references would have raised `AttributeError`. vLLM fingerprints as
   `OPENAI_COMPAT`, which is now used. Latent only because
-  `check_inference_guardrail_variance` is never wired into `run_all_checks`.
+  `check_inference_guardrail_variance` was not yet wired into `run_all_checks`.
 - Recovered a test that never ran: two module-level `test_no_token_skips_silently`
   definitions in `tests/test_jwt_boundary.py`, the second shadowing the first.
 - Static-check signatures: `credential_forwarding` + `remote_package_execution`
