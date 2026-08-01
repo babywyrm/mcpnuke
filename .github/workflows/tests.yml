@@ -5,9 +5,10 @@ name: Tests
 # policy round-trip lint that confirms `--generate-policy` still emits YAML the
 # nullfield v1alpha1 controller can load (catches schema drift early).
 #
-# Install steps use `uv sync --extra dev` without uv's cache: uv.lock is not
-# tracked, so both `--frozen` and setup-uv's cache-dependency-glob fail on a
-# clean checkout. Committing the lock file would let both come back.
+# Install steps use `uv sync --frozen --extra dev` with uv's cache keyed on the
+# committed uv.lock, so CI resolves the same dependency set every run. Both had
+# to be switched off while uv.lock was untracked: the cache glob matched no file
+# and `--frozen` had no lock to honour, which failed every job before pytest ran.
 #
 # Cross-repo coherence (transport taxonomy, lab count) lives in
 # agentic-sec's `cross-repo-coherence` workflow; we notify it via
@@ -33,12 +34,19 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install 3.12
 
+      # --frozen installs from the lock without re-resolving, so a pyproject
+      # edit that was never locked would otherwise pass unnoticed.
+      - name: Check uv.lock is in sync with pyproject.toml
+        run: uv lock --check
+
       - name: Install project
-        run: uv sync --extra dev
+        run: uv sync --frozen --extra dev
 
       # Strict: the tree is clean, so any new finding is a regression.
       - name: Ruff
@@ -79,12 +87,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install project
-        run: uv sync --extra dev
+        run: uv sync --frozen --extra dev
 
       - name: Run pytest verbose
         run: uv run pytest -v --tb=short
@@ -99,12 +109,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install 3.12
 
       - name: Install project
-        run: uv sync --extra dev
+        run: uv sync --frozen --extra dev
 
       - name: Render and parse a sample policy
         run: |

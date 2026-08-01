@@ -40,7 +40,6 @@ profiles/*-fast.json
 *~
 
 .uv/
-uv.lock
 tests/test_targets/
 1/
 
