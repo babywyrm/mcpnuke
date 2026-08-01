@@ -117,6 +117,19 @@ All notable changes to this submodule are documented here.
   denominator is now derived from the check inventory, and `--fast` is accounted for
   exactly via the pre-built deep-probe plan. The duration estimate uses the real
   deep count, so it now reads more conservatively than before.
+- **Response text was silently dropped before any check saw it**
+  (`tool_probes._response_text`, and the weaker copy in `behavioral.py`):
+  `content` defaulted to `[]`, which is a list, making the `message` and JSON
+  branches below it unreachable. Every error response and any structured result
+  without a `content` list extracted as the empty string, so no check scanned
+  it. The `behavioral.py` copy additionally dropped `blob` content blocks.
+- **Four prompt-injection markers existed only in `tool_output_poisoning`'s
+  private pattern copy** — `<|im_end|>`, `from now on, …`, `override/bypass/
+  disable safety`, and `system: you must` — so the primary `prompt_injection`
+  check and three other consumers could not see them. Now shared via
+  `rules.INJECTION_PATTERNS`, with an 18-marker corpus.
+- **`.gitignore` silently excluded a source module**: the path-agnostic
+  secrets rule `credentials.*` matched `mcpnuke/patterns/credentials.py`.
 - **Credential detection was inconsistent across checks**, which is a
   false-negative class, not a tidiness one: the same secret was caught on one
   code path and missed on another, and the gaps were invisible. Five definitions
