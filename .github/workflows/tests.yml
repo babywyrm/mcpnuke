@@ -80,7 +80,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.12', '3.13']
+        # Covers the full declared range. requires-python is >=3.11, and ruff
+        # and mypy both target 3.11, so the floor is tested rather than assumed.
+        python-version: ['3.11', '3.12', '3.13']
 
     steps:
       - uses: actions/checkout@v4

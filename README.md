@@ -246,8 +246,14 @@ The scanner runs checks in a deliberate order:
 | `model_removed` | HIGH | Model present in baseline is missing — unauthorized deletion |
 | `model_injected` | MEDIUM | New model appeared that wasn't in the baseline — unauthorized pull |
 | `model_size_drift` | HIGH | Digest matches but file size changed — partial corruption or metadata tampering |
+| `inference_guardrail_variance` | HIGH–MEDIUM | Guardrail strength differs across the models a backend serves, so an attacker can pick the weakest one — MCP-T56 |
 
 Enable with `--inference` (auto-detect from MCP context) or `--inference-host URL` (explicit target).
+
+`inference_guardrail_variance` sends the same refusal-baiting prompt to each
+model the backend exposes (capped at 6 to bound scan time) and compares
+resistance. HIGH means the spread is wide enough that model choice alone
+defeats the guardrail; MEDIUM means every model is weak.
 
 **Model Integrity Verification** (MCP-T55): Snapshot known-good model digests with `--save-inference-baseline FILE`, then detect tampering on later scans with `--inference-baseline FILE`.
 
@@ -257,8 +263,15 @@ Enable with `--inference` (auto-detect from MCP context) or `--inference-host UR
 |-------|----------|----------------|
 | `auth` | HIGH | Unauthenticated MCP/tool-server initialize accepted |
 | `sse_security` | HIGH–MEDIUM | Unauthenticated SSE stream, CORS misconfiguration, cross-origin POST |
+| `dpop_not_enforced` | HIGH | Request accepted with no DPoP proof — a stolen bearer token replays without the paired key (RFC 9449 §7) |
+| `dpop_header_not_validated` | HIGH | A malformed DPoP header is accepted, so the proof is decorative (RFC 9449 §7.1) |
+| `dpop_binding_not_enforced` | HIGH | Proof accepted without `htm`/`htu`, so it replays against any endpoint (RFC 9449 §4.2) |
 | `multi_vector` | CRITICAL | 2+ dangerous vulnerability categories active on one server |
 | `attack_chain` | CRITICAL | Linked vulnerability pairs (e.g. `input_sanitization → code_execution`) |
+
+The DPoP probes run only on HTTP-family transports and target the resolved MCP
+endpoint using the session's own auth headers, so a finding means the live,
+authenticated path is unprotected. Stdio is skipped — it has no header layer.
 
 ---
 
@@ -694,6 +707,23 @@ uv run pytest tests/test_dvmcp.py -v
 uv run pytest tests/ -v -x
 ```
 
+CI runs three gates on every push and pull request, and a change has to clear
+all of them:
+
+```bash
+uv run ruff check .      # must be zero
+uv run mypy mcpnuke/     # must stay at or below the ceiling in the workflow
+uv run pytest tests/     # 900+ passed, 0 failed, on Python 3.12 and 3.13
+```
+
+The mypy ceiling is a ratchet: it only ever moves down, so new code cannot add
+untyped surface. `mcpnuke/core/` is stricter still — `disallow_untyped_defs` is
+enforced there, so every function in it needs annotations.
+
+Dependencies are pinned in `uv.lock` and CI installs with `--frozen`. If you
+change `pyproject.toml`, run `uv lock` and commit the result, or the
+`uv lock --check` step will fail on the drift.
+
 ---
 
 ## Kubernetes Deployment
@@ -798,13 +828,21 @@ args:
 │   ├── diff.py                # Differential scanning (baseline save/load/compare)
 │   ├── core/
 │   │   ├── constants.py       # Protocol versions, severity weights, attack chain patterns
-│   │   ├── enumerator.py      # MCP handshake: initialize → list tools/resources/prompts
+│   │   ├── enumerator.py      # Protocol negotiation + list tools/resources/prompts
+│   │   ├── protocol.py        # Legacy vs stateless framing (MCP 2026-07-28 spec)
 │   │   ├── models.py          # Finding, TargetResult dataclasses
-│   │   └── session.py         # SSE + HTTP + Stdio + ToolServer transport detection and sessions
+│   │   ├── auth.py            # OIDC/OAuth discovery and token resolution
+│   │   ├── llm.py             # Claude / Bedrock analysis backends
+│   │   ├── llm_ollama.py      # Local Ollama analysis, single and ensemble
+│   │   ├── taxonomy.py        # agentic-sec taxonomy loading (MCP-T01–T56)
+│   │   ├── session.py         # SSE + HTTP + Stdio + ToolServer detection and sessions
+│   │   └── transports/
+│   │       └── base.py        # MCPSessionProtocol, HTTPCapableSession contracts
 │   ├── patterns/
 │   │   ├── rules.py           # Static regex patterns (injection, poison, theft, exec, etc.)
-│   │   └── probes.py          # Behavioral probe payloads, canary strings, response analysis
-│   ├── checks/
+│   │   ├── probes.py          # Behavioral probe payloads, canary strings, response analysis
+│   │   └── credentials.py     # The only credential regexes, tiered by false-positive risk
+│   ├── checks/                # 43 modules; a representative selection below
 │   │   ├── __init__.py        # Check registry and run_all_checks() orchestrator
 │   │   ├── injection.py       # prompt_injection, tool_poisoning, indirect_injection, active_prompt_injection
 │   │   ├── permissions.py     # excessive_permissions, schema_risks
@@ -821,7 +859,10 @@ args:
 │   │   ├── credential_in_schema.py # credential_in_schema
 │   │   ├── config_tampering.py     # config_tampering
 │   │   ├── exfil_flow.py           # exfil_flow (source→sink with live verification)
-│   │   └── response_credentials.py # response_credentials (cached response reuse)
+│   │   ├── response_credentials.py # response_credentials (cached response reuse)
+│   │   ├── dpop_enforcement.py     # RFC 9449 proof enforcement, validation, binding
+│   │   ├── inference_backend.py    # Backend fingerprint, model integrity, guardrail variance
+│   │   └── ...                     # See "Security Checks Reference" for the full list
 │   ├── data/
 │   │   ├── public_targets.txt # Built-in target URLs (DVMCP, public MCP servers)
 │   │   └── tool_names.txt     # Wordlist for ToolServer tool enumeration
@@ -833,8 +874,12 @@ args:
 │   │   └── manifests/         # Kustomize-ready K8s deployment manifests
 │   └── reporting/
 │       ├── console.py         # Rich table output
-│       └── json_out.py        # JSON report writer
-├── tests/                     # Pytest suite (224 tests, incl. DVMCP challenges)
+│       ├── json_out.py        # JSON report writer
+│       ├── sarif.py           # SARIF 2.1.0 for code-scanning upload
+│       ├── diff.py            # Scan-to-scan comparison against a baseline
+│       ├── by_lane.py         # Per-lane finding breakdown
+│       └── coverage_report.py # Check coverage against a target's declared labs
+├── tests/                     # Pytest suite (900+ tests, incl. DVMCP challenges)
 │   ├── test_dvmcp.py          # DVMCP challenges 1-10 (offline + optional live)
 │   ├── test_cli.py            # CLI argument parsing
 │   ├── test_diff.py           # Differential scanning

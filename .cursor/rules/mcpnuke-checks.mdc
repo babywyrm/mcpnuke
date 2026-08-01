@@ -31,8 +31,18 @@ def check_your_check(result: TargetResult) -> None:
 
 ## Behavioral Check Template
 
+`session` is typed with `MCPSessionProtocol` from
+`mcpnuke.core.transports.base`. Rely only on what it declares — `call`,
+`notify`, `close`, `wait_ready`, `protocol_mode`. For anything HTTP-specific
+(`post_raw`), gate on `hasattr(session, "post_raw")`, because stdio has no
+header layer.
+
 ```python
-def check_your_check(session, result: TargetResult, probe_opts: dict | None = None) -> None:
+def check_your_check(
+    session: MCPSessionProtocol,
+    result: TargetResult,
+    probe_opts: dict | None = None,
+) -> None:
     opts: dict = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
     cache: dict = opts.get("_response_cache", {})

@@ -79,7 +79,12 @@ All notable changes to this submodule are documented here.
 - Lint debt cleared: `ruff check` goes 370 → 0 errors. Scan findings verified
   byte-identical before and after across 359 findings.
 - `mypy` errors 81 → 63, entirely by resolving lazily-imported optional extras in
-  config. No `# type: ignore` was added; the repo still has none.
+  config, then 63 → 48 once `core/` was fully annotated. The CI ceiling tracks
+  each drop, so the ratchet only tightens. No `# type: ignore` was added; the
+  repo still has none.
+- `mcpnuke.core.*` now enforces `disallow_untyped_defs`. With every function in
+  the package annotated, the stricter setting is free to turn on and keeps the
+  transport and model layer from regressing.
 - Repo slimmed: nine scan reports (1.3 MB) untracked from `profiles/`, which now
   holds only the three hand-written target profiles. `pytest-asyncio` dropped as
   an unused dev dependency.

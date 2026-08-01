@@ -25,7 +25,8 @@ All development on mcpnuke follows the superpowers skills framework:
 
 - Strong typing throughout: use `dict`, `list`, `frozenset`, `int`, `str` type hints on all functions
 - Module-level constants: `UPPER_SNAKE_CASE`, typed explicitly (e.g. `_NAME_MULTIPLIER: int = 3`)
-- Check functions signature: `check_name(result: TargetResult)` for static, `check_name(session, result: TargetResult, probe_opts: dict | None = None)` for behavioral
+- Check functions signature: `check_name(result: TargetResult)` for static, `check_name(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None)` for behavioral
+- Credential regexes belong in `patterns/credentials.py` only, in the tier that matches their false-positive risk — never in `rules.py`, `probes.py`, or a check module
 - Every check wrapped in `with time_check("check_name", result):`
 - Findings via `result.add(check_name, severity, title, detail, evidence=...)`
 - Severity levels: CRITICAL, HIGH, MEDIUM, LOW
@@ -35,22 +36,41 @@ All development on mcpnuke follows the superpowers skills framework:
 - Every new check needs a dedicated `tests/test_<check_name>.py`
 - Minimum 3 tests per check: positive detection, clean/negative, timing recorded
 - Use `conftest.py` fixtures: `result_with_tools([{...}])`
-- Full suite must pass before any commit: 618+ passed, 36 skipped, 0 failed
+- Full suite must pass before any commit: 900+ passed, 37 skipped, 0 failed
+- Also green before committing: `ruff check .` at zero, `mypy mcpnuke/` at or below the CI ceiling. `mcpnuke.core.*` additionally enforces `disallow_untyped_defs`
 - DVMCP live tests gated behind `DVMCP_LIVE=1`
 
 ## Architecture Quick Reference
 
 ```
-mcpnuke/checks/__init__.py    — orchestrator, _pick_security_relevant, run_all_checks
-mcpnuke/checks/<name>.py      — individual check modules
-mcpnuke/patterns/rules.py     — static regex pattern sets
-mcpnuke/patterns/probes.py    — behavioral probe payloads and response analysis
-mcpnuke/core/session.py       — transport detection and session classes
-mcpnuke/core/models.py        — Finding, TargetResult dataclasses
-mcpnuke/core/constants.py     — severity weights, attack chain patterns
-mcpnuke/scanner.py            — parallel scan orchestration
-mcpnuke/__main__.py           — CLI entry point
+mcpnuke/checks/__init__.py       — orchestrator, _pick_security_relevant, run_all_checks
+mcpnuke/checks/<name>.py         — individual check modules
+mcpnuke/checks/base.py           — time_check, tool_text (shared searchable surface)
+mcpnuke/patterns/rules.py        — static regex pattern sets
+mcpnuke/patterns/probes.py       — behavioral probe payloads and response analysis
+mcpnuke/patterns/credentials.py  — the only credential regexes, tiered by FP risk
+mcpnuke/core/session.py          — transport detection and the four session classes
+mcpnuke/core/transports/base.py  — MCPSessionProtocol, HTTPCapableSession
+mcpnuke/core/protocol.py         — legacy vs stateless framing (2026-07-28 spec)
+mcpnuke/core/enumerator.py       — protocol negotiation and server enumeration
+mcpnuke/core/models.py           — Finding, TargetResult dataclasses
+mcpnuke/core/constants.py        — severity weights, attack chain patterns
+mcpnuke/scanner.py               — parallel scan orchestration
+mcpnuke/__main__.py              — CLI entry point
 ```
+
+## Invariants Guarded by Tests
+
+These exist because each one broke once. Do not route around them:
+
+- `tests/test_credential_patterns.py` — every consumer of the credential tiers
+  detects the same set. Add new secrets to the corpus.
+- `tests/test_injection_patterns.py` — one shared injection marker set, no
+  private copies.
+- `tests/test_session_protocol.py` — all four transports satisfy the Protocol,
+  and stdio never gains `post_raw`.
+- `tests/test_check_progress.py` — the progress denominator is derived from the
+  check inventory, never hardcoded.
 
 ## Project-Specific Skills
 
