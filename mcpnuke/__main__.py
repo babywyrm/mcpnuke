@@ -781,11 +781,13 @@ def _main_inner() -> None:
         from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal
         if args.json_out:
             try:
-                diff = compare_json_files(args.diff_baseline, args.json_out)
+                # Not `diff`: that name already holds a DiffResult from the
+                # inventory comparison above, an unrelated type.
+                scan_diff = compare_json_files(args.diff_baseline, args.json_out)
                 for result in results:
-                    result.scan_diff = diff
+                    result.scan_diff = scan_diff
                 console.print("\n[bold cyan]── Diff vs baseline ──[/bold cyan]")
-                console.print(format_diff_terminal(diff))
+                console.print(format_diff_terminal(scan_diff))
                 # Re-write JSON with diff block attached
                 write_json(results, args.json_out, console=None)
             except FileNotFoundError as exc:

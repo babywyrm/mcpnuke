@@ -34,10 +34,12 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 import httpx
 
 from mcpnuke.core.llm import LLMFinding, _parse_findings
+from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 logger = logging.getLogger("mcpnuke.core.llm_ollama")
@@ -302,12 +304,12 @@ class OllamaBackend:
 
 def run_ensemble_analysis(
     session: MCPSessionProtocol,
-    result,
+    result: TargetResult,
     *,
     host: str,
     models: list[str],
     probe_opts: dict | None = None,
-    console=None,
+    console: Any = None,
 ) -> list[EnsembleFinding]:
     """Run phases 1+3 for each model independently, cluster by taxonomy_id.
 

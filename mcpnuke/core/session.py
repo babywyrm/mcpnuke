@@ -8,7 +8,9 @@ import shlex
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -54,7 +56,7 @@ def _probe_sse_path(
     done = threading.Event()
     headers = _auth_headers(auth_token, extra_headers)
 
-    def _try():
+    def _try() -> None:
         try:
             with httpx.Client(
                 verify=verify_tls, timeout=httpx.Timeout(timeout, connect=4.0)
@@ -114,7 +116,7 @@ class MCPSession:
         )
         self._listener.start()
 
-    def _listen(self):
+    def _listen(self) -> None:
         headers = _auth_headers(self._auth_token, self._extra_headers)
         headers["Accept"] = "text/event-stream"
         try:
@@ -208,7 +210,7 @@ class MCPSession:
                 time.sleep(1.0)
         return None
 
-    def notify(self, method: str, params: dict | None = None):
+    def notify(self, method: str, params: dict | None = None) -> None:
         payload = {
             "jsonrpc": "2.0",
             "method": method,
@@ -230,7 +232,7 @@ class MCPSession:
         payload: dict,
         extra_headers: dict | None = None,
         timeout: float | None = None,
-    ):
+    ) -> httpx.Response:
         """POST *payload* to the SSE message endpoint, returning the raw response.
 
         See HTTPSession.post_raw. Requires post_url, which is only known after
@@ -248,7 +250,7 @@ class MCPSession:
             timeout=timeout or self.timeout,
         )
 
-    def close(self):
+    def close(self) -> None:
         self._stop.set()
         with contextlib.suppress(Exception):
             self._client.close()
@@ -309,7 +311,7 @@ class HTTPSession:
             h["Mcp-Session-Id"] = self._session_id
         return h
 
-    def _capture_session_id(self, resp_headers) -> None:
+    def _capture_session_id(self, resp_headers: httpx.Headers) -> None:
         if self.protocol_mode == STATELESS:
             return
         for k, v in resp_headers.items():
@@ -322,7 +324,7 @@ class HTTPSession:
         payload: dict,
         extra_headers: dict | None = None,
         timeout: float | None = None,
-    ):
+    ) -> httpx.Response:
         """POST *payload* to the MCP endpoint and return the raw httpx response.
 
         For checks that must set transport headers themselves or read the HTTP
@@ -385,7 +387,7 @@ class HTTPSession:
                     time.sleep(0.5)
         return None
 
-    def notify(self, method: str, params: dict | None = None):
+    def notify(self, method: str, params: dict | None = None) -> None:
         sent_params = (
             inject_meta(params, self.protocol_mode)
             if params or self.protocol_mode == STATELESS
@@ -403,7 +405,7 @@ class HTTPSession:
                 timeout=5,
             )
 
-    def close(self):
+    def close(self) -> None:
         with contextlib.suppress(Exception):
             self._client.close()
 
@@ -544,7 +546,7 @@ class ToolServerSession:
         payload: dict,
         extra_headers: dict | None = None,
         timeout: float | None = None,
-    ):
+    ) -> httpx.Response:
         """POST *payload* to the tool endpoint, returning the raw response.
 
         See HTTPSession.post_raw. This transport speaks its own wire format
@@ -586,7 +588,7 @@ class ToolServerSession:
         self._discovered_tools = tools
         return tools
 
-    def _build_tool_def(self, name: str, r) -> dict:
+    def _build_tool_def(self, name: str, r: httpx.Response) -> dict:
         """Build a tool definition from a probe response."""
         tool_def: dict = {
             "name": name,
@@ -689,10 +691,10 @@ class ToolServerSession:
 
         return None
 
-    def notify(self, method: str, params: dict | None = None):
+    def notify(self, method: str, params: dict | None = None) -> None:
         pass
 
-    def close(self):
+    def close(self) -> None:
         with contextlib.suppress(Exception):
             self._client.close()
 
@@ -737,7 +739,7 @@ class StdioSession:
         )
         self._reader.start()
 
-    def _read_stdout(self):
+    def _read_stdout(self) -> None:
         assert self._proc.stdout is not None
         for raw in self._proc.stdout:
             if self._stop.is_set():
@@ -801,7 +803,7 @@ class StdioSession:
                 time.sleep(0.5)
         return None
 
-    def notify(self, method: str, params: dict | None = None):
+    def notify(self, method: str, params: dict | None = None) -> None:
         payload = {
             "jsonrpc": "2.0",
             "method": method,
@@ -815,7 +817,7 @@ class StdioSession:
         except (BrokenPipeError, OSError):
             pass
 
-    def close(self):
+    def close(self) -> None:
         self._stop.set()
         try:
             if self._proc.stdin:
@@ -921,8 +923,8 @@ def detect_transport(
     auth_token: str | None = None,
     verify_tls: bool = False,
     extra_headers: dict | None = None,
-    log=None,
-    **kwargs,
+    log: Callable[[str], None] | None = None,
+    **kwargs: Any,
 ) -> MCPSession | HTTPSession | ToolServerSession | None:
     """Detect MCP transport at the given URL.
 

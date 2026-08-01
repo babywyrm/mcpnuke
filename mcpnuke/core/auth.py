@@ -1,5 +1,6 @@
 """OAuth2/OIDC authentication support for mcpnuke."""
 
+import argparse
 import base64
 import json
 from dataclasses import dataclass
@@ -318,7 +319,7 @@ def detect_auth_requirements(
     return info
 
 
-def _discover_oidc(client: httpx.Client, issuer_url: str, info: AuthInfo):
+def _discover_oidc(client: httpx.Client, issuer_url: str, info: AuthInfo) -> None:
     """Try to fetch OIDC configuration from an issuer URL."""
     issuer_url = issuer_url.rstrip("/")
     well_known = f"{issuer_url}/.well-known/openid-configuration"
@@ -332,7 +333,7 @@ def _discover_oidc(client: httpx.Client, issuer_url: str, info: AuthInfo):
         pass
 
 
-def _try_keycloak_discovery(client: httpx.Client, base: str, info: AuthInfo):
+def _try_keycloak_discovery(client: httpx.Client, base: str, info: AuthInfo) -> None:
     """Try common Keycloak realm paths for OIDC discovery."""
     # Common patterns: /realms/{name}/.well-known/openid-configuration
     # Try to find realm name from existing info or common names
@@ -442,7 +443,7 @@ def fetch_client_credentials_token(
         client.close()
 
 
-def resolve_auth_token(args) -> str | None:
+def resolve_auth_token(args: argparse.Namespace) -> str | None:
     """Resolve the auth token from CLI args (direct token or OIDC client credentials)."""
     if getattr(args, "auth_token", None):
         return args.auth_token

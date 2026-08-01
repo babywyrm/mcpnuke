@@ -25,9 +25,9 @@ MCP_INIT_PARAMS: dict[str, object] = {
     "clientInfo": {"name": "mcpnuke", "version": __version__},
 }
 
-SEVERITY_WEIGHTS = {"CRITICAL": 10, "HIGH": 7, "MEDIUM": 4, "LOW": 1}
+SEVERITY_WEIGHTS: dict[str, int] = {"CRITICAL": 10, "HIGH": 7, "MEDIUM": 4, "LOW": 1}
 
-SEV_COLOR = {
+SEV_COLOR: dict[str, str] = {
     "CRITICAL": "bold red",
     "HIGH": "red",
     "MEDIUM": "yellow",
@@ -35,10 +35,10 @@ SEV_COLOR = {
     "INFO": "dim",
 }
 
-SSE_PATHS = ["/sse", "/mcp/sse", "/v1/sse", "/stream", "/events", ""]
-POST_PATHS = ["/mcp", "/message", "/rpc", "/jsonrpc", "/v1/mcp", "/messages", ""]
+SSE_PATHS: list[str] = ["/sse", "/mcp/sse", "/v1/sse", "/stream", "/events", ""]
+POST_PATHS: list[str] = ["/mcp", "/message", "/rpc", "/jsonrpc", "/v1/mcp", "/messages", ""]
 
-ATTACK_CHAIN_PATTERNS = [
+ATTACK_CHAIN_PATTERNS: list[tuple[str, str]] = [
     ("prompt_injection", "code_execution"),
     ("prompt_injection", "token_theft"),
     ("code_execution", "token_theft"),
@@ -76,7 +76,7 @@ ATTACK_CHAIN_PATTERNS = [
     ("jwt_ttl", "token_theft"),
 ]
 
-SHADOW_TARGETS = {
+SHADOW_TARGETS: set[str] = {
     "ls", "cat", "echo", "read", "write", "open", "close", "get", "set",
     "list", "search", "find", "help", "info", "status", "ping", "run",
     "execute", "create", "delete", "update", "fetch", "send", "post",

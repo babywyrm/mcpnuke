@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    # Import-only: reporting.diff imports this module, so a runtime import
+    # here would be circular.
+    from mcpnuke.reporting.diff import ScanDiffResult
 
 
 @dataclass
@@ -47,7 +52,10 @@ class TargetResult:
     timings: dict[str, float] = field(default_factory=dict)
     error: str = ""
     tools_total: int = 0
-    scan_diff: object | None = None
+    # Only ever a reporting.diff.ScanDiffResult. Typed as object it forced
+    # every reader to guess, and json_out reached for four attributes mypy
+    # could not confirm existed.
+    scan_diff: ScanDiffResult | None = None
 
     def add(
         self,

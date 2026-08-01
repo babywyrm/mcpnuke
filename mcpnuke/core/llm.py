@@ -4,6 +4,7 @@ import json
 import os
 import re as _re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -42,7 +43,7 @@ def _extract_taxonomy(title: str, raw_taxonomy: str, raw_mitre: str = "") -> tup
     return mcp_id, mitre_id
 
 
-def _get_client():
+def _get_client() -> Any:
     global _client
     if _client is None:
         import anthropic
@@ -81,7 +82,13 @@ class LLMFinding:
     mitre_id: str = ""
 
 
-def _call_claude(system: str, user_content: str, model: str, max_tokens: int, log=None):
+def _call_claude(
+    system: str,
+    user_content: str,
+    model: str,
+    max_tokens: int,
+    log: Callable[[str], None] | None = None,
+) -> str:
     """Call Claude and return the response text, with optional debug logging."""
     _log = log or (lambda msg: None)
 
@@ -119,7 +126,13 @@ def _call_claude(system: str, user_content: str, model: str, max_tokens: int, lo
     return text
 
 
-def _call_bedrock_claude(system: str, user_content: str, model: str, max_tokens: int, log=None) -> str:
+def _call_bedrock_claude(
+    system: str,
+    user_content: str,
+    model: str,
+    max_tokens: int,
+    log: Callable[[str], None] | None = None,
+) -> str:
     """Call Claude via AWS Bedrock Runtime and return response text."""
     _log = log or (lambda msg: None)
 
@@ -181,7 +194,11 @@ def _call_bedrock_claude(system: str, user_content: str, model: str, max_tokens:
     return text
 
 
-def analyze_tools(tools: list[dict], model: str = "claude-sonnet-4-20250514", log=None) -> list[LLMFinding]:
+def analyze_tools(
+    tools: list[dict],
+    model: str = "claude-sonnet-4-20250514",
+    log: Callable[[str], None] | None = None,
+) -> list[LLMFinding]:
     """Use Claude to analyze tool definitions for subtle security issues."""
     if not tools:
         return []
@@ -216,7 +233,7 @@ def analyze_findings(
     tools: list[dict],
     findings: list[dict],
     model: str = "claude-sonnet-4-20250514",
-    log=None,
+    log: Callable[[str], None] | None = None,
 ) -> list[LLMFinding]:
     """Use Claude to reason about findings and discover attack chains."""
     if not findings:
@@ -257,7 +274,7 @@ def analyze_response(
     tool_description: str,
     response_text: str,
     model: str = "claude-sonnet-4-20250514",
-    log=None,
+    log: Callable[[str], None] | None = None,
 ) -> list[LLMFinding]:
     """Use Claude to analyze a tool response for embedded threats."""
     if not response_text or len(response_text) < 10:
@@ -292,7 +309,7 @@ def classify_probe_response(
     probe_type: str,
     response_text: str,
     model: str = "claude-sonnet-4-20250514",
-    log=None,
+    log: Callable[[str], None] | None = None,
 ) -> str | None:
     """Classify an ambiguous probe response as malicious, benign, or unclear.
 

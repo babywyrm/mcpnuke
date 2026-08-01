@@ -2,6 +2,7 @@
 
 import json
 import time
+from collections.abc import Callable
 
 from mcpnuke.core.constants import MCP_INIT_PARAMS
 from mcpnuke.core.models import TargetResult
@@ -62,7 +63,7 @@ def negotiate_protocol(
     result: TargetResult,
     mode: str = AUTO,
     verbose: bool = False,
-    log=None,
+    log: Callable[[str], None] | None = None,
 ) -> str:
     """Determine whether *session* speaks the legacy or stateless protocol.
 
@@ -123,10 +124,10 @@ def enumerate_server(
     session: MCPSessionProtocol,
     result: TargetResult,
     verbose: bool = False,
-    log=None,
+    log: Callable[[str], None] | None = None,
     max_pages: int = DEFAULT_MAX_PAGES,
     protocol_mode: str = AUTO,
-):
+) -> None:
     """Enumerate an MCP server: initialize, list tools/resources/prompts.
 
     When verbose=True and log is provided, emits detailed progress.

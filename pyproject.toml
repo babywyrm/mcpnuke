@@ -89,6 +89,13 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 
+# core/ is fully annotated, so it holds the stricter line: a new function here
+# must declare its types. The checks/ layer is not there yet — 74 untyped defs
+# at last count — and gets the same treatment once that is cleared.
+[[tool.mypy.overrides]]
+module = ["mcpnuke.core.*"]
+disallow_untyped_defs = true
+
 # Optional extras (ai, k8s, server). These are imported lazily inside
 # functions and are absent from the base install and from CI, so mypy cannot
 # resolve them. pyyaml is a core dependency and gets real stubs instead, via
