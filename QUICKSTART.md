@@ -349,3 +349,29 @@ mcpnuke --targets http://localhost:8080/mcp \
 ```
 
 New findings not in the baseline are flagged as regressions.
+
+---
+
+## 14) Stateless Servers (MCP spec 2026-07-28)
+
+The 2026-07-28 spec retires the `initialize` handshake and the `Mcp-Session-Id`
+header. mcpnuke auto-detects which protocol a server speaks, so no flag is
+normally needed:
+
+```bash
+mcpnuke --targets https://server.example.com/mcp --verbose
+```
+
+Verbose output reports the negotiated protocol, e.g.
+`Server: camazotz-brain-gateway v0.2.0  protocol=2025-03-26 mode=legacy`.
+
+Force a mode when auto-detection is undesirable — for example when a gateway
+rejects the legacy handshake outright:
+
+```bash
+# Skip the initialize probe entirely
+mcpnuke --targets https://server.example.com/mcp --protocol-mode stateless --verbose
+
+# Force legacy-only (never send Mcp-Method/Mcp-Name routing headers)
+mcpnuke --targets http://localhost:8080/mcp --protocol-mode legacy --verbose
+```

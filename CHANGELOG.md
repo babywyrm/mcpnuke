@@ -6,6 +6,18 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **MCP 2026-07-28 stateless protocol support** (`core/protocol.py`): mcpnuke now
+  scans servers speaking the stateless spec alongside legacy handshake servers.
+  - `--protocol-mode {auto,legacy,stateless}` — `auto` (default) probes for
+    whichever protocol the server speaks.
+  - `Mcp-Method` / `Mcp-Name` / `MCP-Protocol-Version` routing headers (SEP-2243),
+    with CR/LF stripped so a hostile tool name cannot smuggle extra headers.
+  - Per-request client identity in `params._meta`
+    (`io.modelcontextprotocol/clientInfo`), replacing the retired handshake.
+  - `server/discover` probing, with a new Lane 5 / Transport A finding
+    **"Unauthenticated MCP server/discover accepted"** when an anonymous caller
+    can read server capabilities.
+  - `TargetResult.protocol_mode` records the negotiated protocol for reporting.
 - **MCP-T01 prompt injection probe** (`checks/prompt_injection_t01.py`): Behavioral
   check injecting instruction-override canaries in AI-facing tool parameters.
   Detects unsanitized passthrough to LLM context.
@@ -31,6 +43,17 @@ All notable changes to this submodule are documented here.
   attacker-controllable model selection (management tools, model params, routing
   descriptions).
 - **ROADMAP.md**: Full taxonomy gap map (56 IDs), tiered priority, live test targets.
+
+### Changed
+
+- Enumeration negotiates the protocol (`initialize` → `server/discover` → bare
+  `tools/list`) instead of assuming the legacy handshake. Previously a
+  stateless-only server scored as a zero-tool target, silently disabling every
+  downstream check.
+- `Mcp-Session-Id` is now sent only in legacy mode — the header is retired by
+  SEP-2567. `notifications/initialized` is likewise legacy-only.
+- `MCPSession` (HTTP+SSE) intentionally stays on the legacy path; the 2026-07-28
+  spec deprecates that transport with a twelve-month offramp.
 
 ### Fixed
 

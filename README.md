@@ -391,6 +391,13 @@ Authentication:
 Scan Options:
   --timeout SEC               Per-target connection timeout (default: 25)
   --workers N                 Parallel scan workers (default: 4)
+  --max-pages N               Max pages to follow via nextCursor when enumerating
+                              tools/resources/prompts (default: 20)
+  --protocol-mode MODE        MCP protocol mode: auto|legacy|stateless (default: auto).
+                              'legacy' uses the initialize/initialized handshake;
+                              'stateless' uses the 2026-07-28 spec with
+                              Mcp-Method/Mcp-Name headers and no session;
+                              'auto' probes for whichever the server speaks.
 
 Stdio Transport:
   --stdio CMD                 Scan a local MCP server via stdin/stdout JSON-RPC
