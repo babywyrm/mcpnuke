@@ -1,25 +1,22 @@
 """Tests for K8s discovery and scanner modules."""
 
-import pytest
 
 from mcpnuke.cli import parse_args
 from mcpnuke.k8s.discovery import (
     DiscoveredEndpoint,
-    discover_services,
     _get_sa_token,
+    discover_services,
+)
+from mcpnuke.k8s.fingerprint import (
+    ServiceFingerprint,
+    _detect_framework,
 )
 from mcpnuke.k8s.scanner import (
     GLOBAL_K8S_FINDINGS,
-    _check_pod_security,
     _check_configmap_leaks,
-    _check_helm_version_drift,
+    _check_pod_security,
     _flatten_values,
 )
-from mcpnuke.k8s.fingerprint import (
-    _detect_framework,
-    ServiceFingerprint,
-)
-from mcpnuke.core.models import Finding
 
 
 def test_discover_services_no_sa_token():

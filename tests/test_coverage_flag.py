@@ -1,8 +1,9 @@
 """Tests for --coverage N tool sampling knob."""
 
 import pytest
-from mcpnuke.cli import parse_args
+
 from mcpnuke.checks import _pick_security_relevant
+from mcpnuke.cli import parse_args
 
 
 class TestCoverageCLI:

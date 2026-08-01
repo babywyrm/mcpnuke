@@ -12,7 +12,8 @@ from urllib.parse import urlparse
 
 import httpx
 
-from mcpnuke.core.constants import MCP_INIT_PARAMS, SSE_PATHS, POST_PATHS, build_jsonrpc_request as _jrpc
+from mcpnuke.core.constants import MCP_INIT_PARAMS, POST_PATHS, SSE_PATHS
+from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
 from mcpnuke.core.protocol import LEGACY, STATELESS, inject_meta, routing_headers
 
 
@@ -56,16 +57,15 @@ def _probe_sse_path(
         try:
             with httpx.Client(
                 verify=verify_tls, timeout=httpx.Timeout(timeout, connect=4.0)
-            ) as c:
-                with c.stream(
-                    "GET", url, headers=headers
-                ) as resp:
-                    ct = resp.headers.get("content-type", "")
-                    if resp.status_code == 200 and "text/event-stream" in ct:
-                        result[0] = True
-                    done.set()
-                    for _ in zip(resp.iter_bytes(chunk_size=64), range(3)):
-                        pass
+            ) as c, c.stream(
+                "GET", url, headers=headers
+            ) as resp:
+                ct = resp.headers.get("content-type", "")
+                if resp.status_code == 200 and "text/event-stream" in ct:
+                    result[0] = True
+                done.set()
+                for _ in zip(resp.iter_bytes(chunk_size=64), range(3)):
+                    pass
         except Exception:
             pass
         finally:
@@ -502,10 +502,7 @@ class ToolServerSession:
                     timeout=5,
                 )
                 body = r.text.lower()
-                if r.status_code == 200:
-                    tool_def = self._build_tool_def(name, r)
-                    tools.append(tool_def)
-                elif r.status_code in (400, 403, 422) and "unknown tool" not in body:
+                if r.status_code == 200 or r.status_code in (400, 403, 422) and "unknown tool" not in body:
                     tool_def = self._build_tool_def(name, r)
                     tools.append(tool_def)
             except Exception:
@@ -970,15 +967,15 @@ def detect_transport(
                 )
         except httpx.ConnectError:
             if verbose:
-                _log(f"  [dim]  → Connection refused[/dim]")
+                _log("  [dim]  → Connection refused[/dim]")
         except httpx.TimeoutException:
             if verbose:
-                _log(f"  [dim]  → Timeout[/dim]")
+                _log("  [dim]  → Timeout[/dim]")
         except Exception:
             pass
 
     if verbose:
-        _log(f"  [dim]Trying SSE+POST combinations...[/dim]")
+        _log("  [dim]Trying SSE+POST combinations...[/dim]")
 
     for sse_path in ["/sse", ""]:
         for post_path in ["/messages", "/message", "/mcp"]:
@@ -1009,7 +1006,7 @@ def detect_transport(
     client.close()
 
     if verbose:
-        _log(f"  [dim]Trying ToolServer detection...[/dim]")
+        _log("  [dim]Trying ToolServer detection...[/dim]")
 
     tool_session = _detect_tool_server(
         base, hint, connect_timeout, auth_token, verify_tls, extra_headers,

@@ -11,6 +11,6 @@ The service is intentionally stateless beyond an in-memory job table; it
 holds no credentials and performs the same checks as the CLI.
 """
 
-from mcpnuke.server.models import ScanDepth, ScanRequest, ScanJob
+from mcpnuke.server.models import ScanDepth, ScanJob, ScanRequest
 
 __all__ = ["ScanDepth", "ScanRequest", "ScanJob"]

@@ -1,8 +1,6 @@
 """Tests for rate_limit check."""
 
-import pytest
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.rate_limit import check_rate_limit
 
 

@@ -1,9 +1,9 @@
 """Tests for actuator_probe check."""
 
 import httpx
-import pytest
+
+from mcpnuke.checks.actuator_probe import DEBUG_ENDPOINTS, SENSITIVE_CONTENT_PATTERNS, check_actuator_probe
 from mcpnuke.core.models import TargetResult
-from mcpnuke.checks.actuator_probe import check_actuator_probe, DEBUG_ENDPOINTS, SENSITIVE_CONTENT_PATTERNS
 
 
 def test_debug_endpoints_list():
@@ -25,7 +25,7 @@ def test_sensitive_patterns_no_false_positive():
 
 
 def test_timing_recorded_on_unreachable():
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
 
     mock_client = MagicMock()
     mock_client.get.side_effect = httpx.ConnectError("unreachable")

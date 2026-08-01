@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 
 from mcpnuke.checks.base import time_check
-from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
+from mcpnuke.checks.tool_probes import _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.probes import (
     AI_GUARDRAIL_PROBES,

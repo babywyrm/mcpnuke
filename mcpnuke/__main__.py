@@ -14,8 +14,11 @@ import sys
 import time
 from datetime import datetime
 
+from rich.console import Console
+from rich.panel import Panel
+
 from mcpnuke import __version__
-from mcpnuke.cli import parse_args, build_url_list
+from mcpnuke.cli import build_url_list, parse_args
 from mcpnuke.core.auth import (
     decode_jwt_claims,
     detect_auth_requirements,
@@ -28,17 +31,15 @@ from mcpnuke.core.auth import (
     summarize_jwt_claims,
 )
 from mcpnuke.core.models import TargetResult
-from mcpnuke.scanner import scan_target, scan_stdio_target, run_parallel, detect_cross_shadowing
-from mcpnuke.reporting import print_report, write_json, write_sarif
-from mcpnuke.k8s import run_k8s_checks, discover_services, fingerprint_services
 from mcpnuke.diff import (
-    load_baseline,
-    save_baseline,
     diff_against_baseline,
+    load_baseline,
     print_diff_report,
+    save_baseline,
 )
-from rich.console import Console
-from rich.panel import Panel
+from mcpnuke.k8s import discover_services, fingerprint_services, run_k8s_checks
+from mcpnuke.reporting import print_report, write_json, write_sarif
+from mcpnuke.scanner import detect_cross_shadowing, run_parallel, scan_stdio_target, scan_target
 
 EXIT_CLEAN = 0
 EXIT_FINDINGS = 1
@@ -66,8 +67,9 @@ def _should_fail(findings: list, fail_on: str) -> bool:
 
 def _run_doctor(console: Console) -> None:
     """Check installation health and report missing deps / config."""
-    from mcpnuke import __version__
     import shutil
+
+    from mcpnuke import __version__
 
     console.print(f"\n[bold cyan]mcpnuke v{__version__} — doctor[/bold cyan]\n")
     ok_count = 0
@@ -160,7 +162,7 @@ def _run_doctor(console: Console) -> None:
     if os.environ.get("MCP_AUTH_TOKEN"):
         _ok("MCP_AUTH_TOKEN set")
     else:
-        console.print(f"  [dim]─[/dim] MCP_AUTH_TOKEN not set  [dim](optional, for authenticated targets)[/dim]")
+        console.print("  [dim]─[/dim] MCP_AUTH_TOKEN not set  [dim](optional, for authenticated targets)[/dim]")
 
     # Python version
     _ok(f"Python {sys.version.split()[0]}")
@@ -183,6 +185,7 @@ def _run_doctor(console: Console) -> None:
 def _run_diff_subcommand(argv: list[str]) -> None:
     """Handle: mcpnuke diff <before.json> <after.json>"""
     import argparse as _argparse
+
     from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal
 
     p = _argparse.ArgumentParser(
@@ -350,7 +353,7 @@ def _main_inner() -> None:
 
         panel_lines = [
             f"[bold cyan]mcpnuke v{__version__}[/bold cyan]  [dim]MCP Red Teaming & Security Scanner[/dim]",
-            f"Mode    : stdio",
+            "Mode    : stdio",
             f"Command : {args.stdio}",
             f"Fast    : {args.fast}",
             f"Workers : {effective_probe_workers} probe thread(s)",
@@ -392,7 +395,7 @@ def _main_inner() -> None:
     if not auth_token and args.client_id and args.client_secret:
         try:
             auth_token = resolve_auth_token(args)
-            console.print(f"  [green]✓[/green] Token acquired via OIDC client_credentials")
+            console.print("  [green]✓[/green] Token acquired via OIDC client_credentials")
         except RuntimeError as e:
             console.print(f"  [red]✗[/red] OIDC token fetch failed: {e}")
             sys.exit(EXIT_ERROR)
@@ -782,6 +785,7 @@ def _main_inner() -> None:
 
     if getattr(args, "policy_out", None):
         from pathlib import Path as _PolicyPath
+
         from mcpnuke.policy import generate_policy, serialize_policy
         rules = generate_policy(results)
 
@@ -826,13 +830,14 @@ def _main_inner() -> None:
         print_by_lane(results, console=console)
 
     if getattr(args, "coverage_report", None):
+        import httpx as _httpx
+
         from mcpnuke.reporting import (
+            SchemaMismatchError,
             build_coverage_report,
             fetch_lane_taxonomy,
             print_coverage_report,
-            SchemaMismatchError,
         )
-        import httpx as _httpx
         try:
             taxonomy = fetch_lane_taxonomy(args.coverage_report)
             report = build_coverage_report(results, taxonomy)
@@ -851,7 +856,8 @@ def _main_inner() -> None:
     if getattr(args, "taxonomy", None) is not None or any(
         f.taxonomy_id for r in results for f in r.findings
     ):
-        from mcpnuke.core.taxonomy import load_taxonomy, threat_ids as _tids
+        from mcpnuke.core.taxonomy import load_taxonomy
+        from mcpnuke.core.taxonomy import threat_ids as _tids
         try:
             tax = load_taxonomy(args.taxonomy)
             valid = _tids(tax)

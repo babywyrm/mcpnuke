@@ -1,7 +1,7 @@
 """Tests for taxonomy_id extraction and JSON serialization."""
 
 import json
-import pytest
+
 from mcpnuke.core.llm import _parse_findings
 from mcpnuke.core.models import TargetResult
 

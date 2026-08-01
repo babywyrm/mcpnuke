@@ -6,10 +6,9 @@ be used for persistent re-injection across sessions.
 
 import re
 
-from mcpnuke.core.models import TargetResult
-from mcpnuke.checks.base import time_check
-
 from mcpnuke.checks._lane_helpers import lane_tagged
+from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
 
 # All findings in this module are scoped to Lane 5 / Transport "A"
 # (2026-04-26 by-lane reporting spec).
@@ -47,7 +46,7 @@ def check_webhook_persistence(result: TargetResult):
 
             for pat in WEBHOOK_NAME_PATTERNS:
                 if re.search(pat, name, re.IGNORECASE) and has_url_param:
-                    _add(result, 
+                    _add(result,
                         "webhook_persistence",
                         "HIGH",
                         f"Webhook/callback tool '{name}' accepts URL",
@@ -60,7 +59,7 @@ def check_webhook_persistence(result: TargetResult):
             for pname, pdef in props.items():
                 for pat in WEBHOOK_PARAM_PATTERNS:
                     if re.search(pat, pname, re.IGNORECASE):
-                        _add(result, 
+                        _add(result,
                             "webhook_persistence",
                             "HIGH",
                             f"Webhook/callback param '{pname}' in tool '{name}'",
@@ -70,7 +69,7 @@ def check_webhook_persistence(result: TargetResult):
 
             for pat in WEBHOOK_DESC_PATTERNS:
                 if re.search(pat, desc, re.IGNORECASE):
-                    _add(result, 
+                    _add(result,
                         "webhook_persistence",
                         "HIGH",
                         f"Webhook registration capability in '{name}'",

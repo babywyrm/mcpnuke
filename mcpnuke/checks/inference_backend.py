@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 
@@ -182,7 +182,7 @@ def _infer_hosts_from_result(result: TargetResult) -> list[str]:
         target_host = host_from_target.group(1)
         for port in _DEFAULT_PORTS.values():
             candidates.add(f"http://{target_host}:{port}")
-        candidates.add(f"http://localhost:11434")
+        candidates.add("http://localhost:11434")
 
     return sorted(candidates)
 
@@ -382,8 +382,8 @@ def check_inference_backend(
             result.add(
                 "inference_model_enum", "HIGH",
                 f"{meta.get('model_count', 0)} model(s) enumerated on {backend.value} at {host}: {model_list}",
-                f"Unauthenticated model enumeration — anyone on the network can list "
-                f"available models without credentials.",
+                "Unauthenticated model enumeration — anyone on the network can list "
+                "available models without credentials.",
                 evidence=f"backend={backend.value} host={host} models={model_list}",
                 taxonomy_id=_TAXONOMY_ID,
             )
@@ -434,7 +434,7 @@ def save_inference_baseline(
 
     manifest = {
         "version": _MANIFEST_VERSION,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "hosts": hosts_block,
     }
     p = Path(path)

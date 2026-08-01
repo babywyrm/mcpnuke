@@ -1,6 +1,6 @@
 """Tests for risk-aware --fast mode that retains input_sanitization for dangerous params."""
 
-from mcpnuke.checks import _has_dangerous_params, FAST_SKIP_CHECKS, _FAST_RETAIN_PARAM_NAMES
+from mcpnuke.checks import _FAST_RETAIN_PARAM_NAMES, FAST_SKIP_CHECKS, _has_dangerous_params
 
 
 def test_dangerous_param_names_exist():

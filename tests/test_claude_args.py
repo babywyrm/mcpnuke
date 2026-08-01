@@ -1,8 +1,7 @@
 """Tests for Phase 2 Tier 2 Claude-assisted argument generation."""
 
 import json
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 class TestGenerateClaudeArgs:
@@ -34,7 +33,7 @@ class TestGenerateClaudeArgs:
         assert "secret_name" in result
 
     def test_falls_back_on_claude_failure(self):
-        from mcpnuke.checks.tool_probes import _generate_claude_args, _build_extended_args
+        from mcpnuke.checks.tool_probes import _generate_claude_args
         tool = self._make_tool(
             "fetch_data",
             "Fetches data from an endpoint",

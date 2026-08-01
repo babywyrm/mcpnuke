@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from mcpnuke.core.enumerator import _paginated_list, DEFAULT_MAX_PAGES
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.enumerator import DEFAULT_MAX_PAGES, _paginated_list
 
 
 class FakeSession:

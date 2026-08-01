@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-
 from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.policy.rules import ACTION_PRIORITY, FINDING_TO_ACTION, PolicyRule
 

@@ -2,8 +2,8 @@
 
 import re
 
-from mcpnuke.patterns.probes import SEMANTIC_INJECTION_PATTERNS
 from mcpnuke.checks.tool_probes import _scan_response_threats
+from mcpnuke.patterns.probes import SEMANTIC_INJECTION_PATTERNS
 
 
 def test_semantic_patterns_compile():

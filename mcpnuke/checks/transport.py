@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import httpx
 
-from mcpnuke.core.models import TargetResult
-from mcpnuke.core.constants import MCP_INIT_PARAMS, build_jsonrpc_request as _jrpc
 from mcpnuke.checks.base import time_check
+from mcpnuke.core.constants import MCP_INIT_PARAMS
+from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
+from mcpnuke.core.models import TargetResult
 
 
 def check_sse_security(base: str, sse_path: str, result: TargetResult):

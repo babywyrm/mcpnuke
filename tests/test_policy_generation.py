@@ -5,7 +5,7 @@ from __future__ import annotations
 from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.policy.generator import generate_policy
 from mcpnuke.policy.nullfield import serialize_policy
-from mcpnuke.policy.rules import PolicyRule, ACTION_PRIORITY
+from mcpnuke.policy.rules import ACTION_PRIORITY, PolicyRule
 
 
 def _result_with_findings(findings: list[tuple[str, str, str]]) -> TargetResult:

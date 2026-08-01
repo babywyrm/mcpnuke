@@ -5,12 +5,12 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.teleport_labs import (
     check_teleport_lab_bot_theft,
-    check_teleport_lab_role_escalation,
     check_teleport_lab_cert_replay,
+    check_teleport_lab_role_escalation,
 )
+from mcpnuke.core.models import TargetResult
 
 
 def _make_result_with_tools(tool_names: list[str]) -> TargetResult:

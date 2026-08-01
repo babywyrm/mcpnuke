@@ -19,8 +19,7 @@ from typing import Any
 import httpx
 
 from mcpnuke.core.models import TargetResult
-from mcpnuke.reporting.by_lane import build_by_lane, LANE_NAMES, LANE_SLUGS
-
+from mcpnuke.reporting.by_lane import LANE_NAMES, LANE_SLUGS, build_by_lane
 
 SUPPORTED_SCHEMA = "v1"
 

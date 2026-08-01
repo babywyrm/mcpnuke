@@ -15,30 +15,30 @@ import json
 import re
 import time
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.llm import _call_claude
+from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.probes import (
     CANARY,
-    SAFE_DEFAULTS,
+    COMMAND_INJECTION_PROBES,
+    CREDENTIAL_CONTENT_PATTERNS,
+    CROSS_TOOL_PATTERNS,
+    CSS_HIDDEN_PATTERN,
+    ENCODING_BYPASS_PROBES,
+    ERROR_LEAKAGE_PATTERNS,
+    HIDDEN_CONTENT_PATTERNS,
+    INTERPRETER_INJECTION_PROBES,
+    MD_IMAGE_EXFIL_PATTERN,
     PARAM_SAFE_VALUES,
     PATH_TRAVERSAL_PROBES,
-    COMMAND_INJECTION_PROBES,
-    INTERPRETER_INJECTION_PROBES,
-    TEMPLATE_INJECTION_PROBES_V2,
-    SQL_INJECTION_PROBES,
-    ENCODING_BYPASS_PROBES,
-    RESPONSE_INJECTION_PATTERNS,
-    RESPONSE_EXFIL_PATTERNS,
-    CROSS_TOOL_PATTERNS,
-    HIDDEN_CONTENT_PATTERNS,
-    ERROR_LEAKAGE_PATTERNS,
-    CREDENTIAL_CONTENT_PATTERNS,
     REFLECTION_PAYLOAD,
-    CSS_HIDDEN_PATTERN,
-    MD_IMAGE_EXFIL_PATTERN,
-    SSTI_ENGINE_FINGERPRINTS,
+    RESPONSE_EXFIL_PATTERNS,
+    RESPONSE_INJECTION_PATTERNS,
+    SAFE_DEFAULTS,
     SEMANTIC_INJECTION_PATTERNS,
+    SQL_INJECTION_PROBES,
+    SSTI_ENGINE_FINGERPRINTS,
+    TEMPLATE_INJECTION_PROBES_V2,
     has_invisible_unicode,
 )
 
@@ -707,8 +707,8 @@ def _fuzz_single_tool(
                 severity = "MEDIUM"
                 title = f"LLM evaluates template syntax in '{name}' param '{pname}'"
                 detail = (
-                    f"Payload evaluated to expected result but no engine-specific "
-                    f"fingerprint matched — likely LLM math evaluation, not code SSTI"
+                    "Payload evaluated to expected result but no engine-specific "
+                    "fingerprint matched — likely LLM math evaluation, not code SSTI"
                 )
             elif classification == "code_ssti":
                 severity = "CRITICAL"

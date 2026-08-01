@@ -50,7 +50,7 @@ bucket in ``--by-lane`` output.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from mcpnuke.core.models import Finding, TargetResult
 

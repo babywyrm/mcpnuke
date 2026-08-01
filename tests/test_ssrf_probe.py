@@ -1,8 +1,7 @@
 """Tests for ssrf_probe check."""
 
-import pytest
+from mcpnuke.checks.ssrf_probe import URL_PARAM_PATTERNS, check_ssrf_probe
 from mcpnuke.core.models import TargetResult
-from mcpnuke.checks.ssrf_probe import check_ssrf_probe, URL_PARAM_PATTERNS
 
 
 class FakeSession:

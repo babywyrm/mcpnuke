@@ -32,12 +32,12 @@ import json
 import logging
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import httpx
 
-from mcpnuke.core.llm import LLMFinding, _extract_taxonomy, _parse_findings
+from mcpnuke.core.llm import LLMFinding, _parse_findings
 
 logger = logging.getLogger("mcpnuke.core.llm_ollama")
 
@@ -188,7 +188,7 @@ class OllamaBackend:
 
         _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
         _log(f"  [dim]  │ Tokens: prompt={prompt_eval} generated={usage}[/dim]")
-        _log(f"  [dim]  └─ Response body (first 200 chars):[/dim]")
+        _log("  [dim]  └─ Response body (first 200 chars):[/dim]")
         for line in text.strip()[:200].split("\n"):
             _log(f"  [dim]    {line}[/dim]")
 

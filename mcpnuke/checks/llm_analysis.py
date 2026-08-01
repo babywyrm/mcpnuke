@@ -7,13 +7,14 @@ context-dependent risks.
 """
 
 import json
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Callable, Protocol
+from typing import Protocol
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
+from mcpnuke.core.models import TargetResult
 
 
 class LLMBackend(Protocol):
@@ -171,7 +172,7 @@ def run_llm_analysis(
                     finding.mitre_id = getattr(f, "mitre_id", "")
             _log(f"  [green]  Phase 1 complete: {len(llm_findings)} finding(s)[/green]")
         except KeyboardInterrupt:
-            _log(f"  [yellow]  Phase 1 interrupted[/yellow]")
+            _log("  [yellow]  Phase 1 interrupted[/yellow]")
             return
         except Exception as e:
             _log(f"  [yellow]  Phase 1 failed: {type(e).__name__}: {e}[/yellow]")
@@ -253,7 +254,7 @@ def run_llm_analysis(
                         response_findings += 1
                 _log(f"  [green]  Phase 2 complete: {response_findings} finding(s) in tool responses[/green]")
             except KeyboardInterrupt:
-                _log(f"  [yellow]  Phase 2 interrupted[/yellow]")
+                _log("  [yellow]  Phase 2 interrupted[/yellow]")
                 return
             except Exception as e:
                 _log(f"  [yellow]  Phase 2 failed: {type(e).__name__}: {e}[/yellow]")
@@ -283,6 +284,6 @@ def run_llm_analysis(
                     finding.mitre_id = getattr(f, "mitre_id", "")
             _log(f"  [green]  Phase 3 complete: {len(chain_findings)} chain(s)/insight(s)[/green]")
         except KeyboardInterrupt:
-            _log(f"  [yellow]  Phase 3 interrupted[/yellow]")
+            _log("  [yellow]  Phase 3 interrupted[/yellow]")
         except Exception as e:
             _log(f"  [yellow]  Phase 3 failed: {type(e).__name__}: {e}[/yellow]")

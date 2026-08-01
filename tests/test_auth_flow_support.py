@@ -7,8 +7,13 @@ import json
 
 import pytest
 
-from mcpnuke.core.auth import decode_jwt_claims, parse_header_kv_pairs, summarize_jwt_claims
-from mcpnuke.core.auth import summarize_introspection, summarize_jwks
+from mcpnuke.core.auth import (
+    decode_jwt_claims,
+    parse_header_kv_pairs,
+    summarize_introspection,
+    summarize_jwks,
+    summarize_jwt_claims,
+)
 from mcpnuke.core.session import _auth_headers, _mcp_headers
 
 

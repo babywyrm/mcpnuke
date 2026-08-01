@@ -2,8 +2,8 @@
 
 import re
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.rules import PROMPT_LEAKAGE_PATTERNS
 
 

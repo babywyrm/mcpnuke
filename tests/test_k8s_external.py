@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import json
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import pytest
-
-from mcpnuke.k8s.discovery import _k8s_api, discover_services, _get_sa_token
-from mcpnuke.k8s.scanner import _k8s_get, run_k8s_checks, GLOBAL_K8S_FINDINGS
 from mcpnuke.cli import parse_args
+from mcpnuke.k8s.discovery import _k8s_api, discover_services
+from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS, _k8s_get, run_k8s_checks
 
 
 class TestK8sApiParameterized:

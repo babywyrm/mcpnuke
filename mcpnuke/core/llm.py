@@ -112,7 +112,7 @@ def _call_claude(system: str, user_content: str, model: str, max_tokens: int, lo
     _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
     _log(f"  [dim]  │ Tokens: input={usage.input_tokens} output={usage.output_tokens}[/dim]")
     _log(f"  [dim]  │ Stop reason: {resp.stop_reason}[/dim]")
-    _log(f"  [dim]  └─ Response body:[/dim]")
+    _log("  [dim]  └─ Response body:[/dim]")
     for line in text.strip().split("\n"):
         _log(f"  [dim]    {line}[/dim]")
 
@@ -177,7 +177,7 @@ def _call_bedrock_claude(system: str, user_content: str, model: str, max_tokens:
     _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
     _log(f"  [dim]  │ Tokens: input={in_tokens} output={out_tokens}[/dim]")
     _log(f"  [dim]  │ Stop reason: {stop_reason}[/dim]")
-    _log(f"  [dim]  └─ Response body:[/dim]")
+    _log("  [dim]  └─ Response body:[/dim]")
     for line in text.strip().split("\n"):
         _log(f"  [dim]    {line}[/dim]")
 

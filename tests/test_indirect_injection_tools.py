@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 from mcpnuke.core.models import TargetResult
-from mcpnuke.patterns.probes import CONTENT_TOOL_KEYWORDS, CONTENT_PARAM_KEYWORDS
+from mcpnuke.patterns.probes import CONTENT_PARAM_KEYWORDS, CONTENT_TOOL_KEYWORDS
 
 
 def test_content_tool_keywords_exist():

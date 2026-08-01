@@ -10,7 +10,6 @@ logic through a duck-typed stub so the logic is covered, and
 
 import base64
 import json
-
 from unittest.mock import MagicMock
 
 from mcpnuke.checks.dpop_enforcement import (

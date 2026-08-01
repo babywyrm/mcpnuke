@@ -161,7 +161,7 @@ def fingerprint_services(
         fingerprint_workers: Max concurrent service probes (for many-service clusters).
         console: Rich console for output (optional).
     """
-    from mcpnuke.k8s.scanner import _k8s_get, GLOBAL_K8S_FINDINGS
+    from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS, _k8s_get
 
     svc_data = _k8s_get(f"/api/v1/namespaces/{namespace}/services", token)
     if not svc_data:

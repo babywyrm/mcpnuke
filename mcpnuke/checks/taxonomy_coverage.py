@@ -112,8 +112,8 @@ def check_tool_description_injection(result: TargetResult) -> None:
                     _add_l2(
                         result, "tool_description_injection", "CRITICAL",
                         f"Injection pattern in tool description: '{tool.get('name', '')}'",
-                        f"Tool description contains instruction-override language that "
-                        f"would manipulate an agent loading this manifest",
+                        "Tool description contains instruction-override language that "
+                        "would manipulate an agent loading this manifest",
                         evidence=desc[:300],
                         taxonomy_id="MCP-T36",
                     )

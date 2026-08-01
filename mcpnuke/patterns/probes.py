@@ -47,7 +47,7 @@ PARAM_SAFE_VALUES = [
 
 PATH_TRAVERSAL_PROBES = [
     f"../../../tmp/{CANARY}",
-    f"/tmp/../../../etc/hostname",
+    "/tmp/../../../etc/hostname",
     f"....//....//tmp/{CANARY}",
     f"/tmp/{CANARY}/%00.txt",
 ]

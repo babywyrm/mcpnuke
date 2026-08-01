@@ -9,10 +9,9 @@ reachability of theoretical exfiltration paths.
 
 import re
 
-from mcpnuke.core.models import TargetResult
-from mcpnuke.checks.base import time_check
-
 from mcpnuke.checks._lane_helpers import lane_tagged
+from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
 
 # All findings in this module are scoped to Lane 2 / Transport "B"
 # (2026-04-26 by-lane reporting spec).
@@ -133,7 +132,7 @@ def check_exfil_flow(result: TargetResult, session=None, probe_opts: dict | None
                 real_sensitive = [s for s in sensitive_sources if s.get("name", "") != sink_name]
                 if real_sensitive:
                     source_names = [s.get("name", "") for s in real_sensitive]
-                    _add(result, 
+                    _add(result,
                         "exfil_flow",
                         "CRITICAL",
                         f"Exfiltration path: sensitive data → '{sink_name}'",
@@ -145,7 +144,7 @@ def check_exfil_flow(result: TargetResult, session=None, probe_opts: dict | None
                 real_sources = [s for s in sources if s.get("name", "") != sink_name]
                 if real_sources:
                     source_names = [s.get("name", "") for s in real_sources[:5]]
-                    _add(result, 
+                    _add(result,
                         "exfil_flow",
                         "HIGH",
                         f"Data exfiltration path: {len(real_sources)} source(s) → '{sink_name}'",
@@ -169,7 +168,7 @@ def check_exfil_flow(result: TargetResult, session=None, probe_opts: dict | None
                     _log(f"    [dim]      {source_name} → {sink_name}[/dim]")
                     sent, resp_text = _try_sink_send(session, sink, canary)
                     if sent:
-                        _add(result, 
+                        _add(result,
                             "exfil_flow",
                             "CRITICAL",
                             f"Live exfil confirmed: '{source_name}' → '{sink_name}'",

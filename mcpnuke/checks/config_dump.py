@@ -7,9 +7,9 @@ paths — even when individual credential patterns don't match.
 
 import re
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
+from mcpnuke.core.models import TargetResult
 
 CONFIG_TOOL_NAMES = re.compile(
     r"(config|settings|env|environment|status|info|diagnostics|debug|healthz|metadata|describe|inspect)",

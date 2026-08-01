@@ -1,7 +1,7 @@
 """Tests for --diff-baseline live scan wiring."""
 
 import json
-import pytest
+
 from mcpnuke.cli import parse_args
 
 
@@ -44,8 +44,8 @@ class TestDiffBaselineIntegration:
         return str(p)
 
     def test_scan_diff_attached_when_baseline_provided(self, tmp_path):
-        from mcpnuke.core.models import TargetResult, Finding
-        from mcpnuke.reporting.diff import compare_json_files, ScanDiffResult
+        from mcpnuke.core.models import Finding, TargetResult
+        from mcpnuke.reporting.diff import ScanDiffResult, compare_json_files
         from mcpnuke.reporting.json_out import write_json
 
         # Build a "current" scan result
@@ -68,7 +68,7 @@ class TestDiffBaselineIntegration:
         assert len(result.scan_diff.new_findings) == 1
 
     def test_scan_diff_written_to_json_output(self, tmp_path):
-        from mcpnuke.core.models import TargetResult, Finding
+        from mcpnuke.core.models import Finding, TargetResult
         from mcpnuke.reporting.diff import ScanDiffResult
         from mcpnuke.reporting.json_out import write_json
 

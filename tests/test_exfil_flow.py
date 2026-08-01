@@ -1,8 +1,7 @@
 """Tests for exfil_flow check."""
 
-import pytest
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.exfil_flow import check_exfil_flow
+from mcpnuke.core.models import TargetResult
 
 
 def _make(tools):

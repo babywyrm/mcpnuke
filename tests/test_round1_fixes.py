@@ -2,7 +2,6 @@
 
 from mcpnuke.core.models import TargetResult
 
-
 # ---------------------------------------------------------------------------
 # A1: _extract_tool_names validates against actual tools
 # ---------------------------------------------------------------------------

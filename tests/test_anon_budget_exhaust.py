@@ -7,7 +7,6 @@ from typing import Any
 from mcpnuke.checks.anon_budget_exhaust import ANON_BURST_COUNT, check_anon_budget_exhaust
 from mcpnuke.core.models import TargetResult
 
-
 # ---------------------------------------------------------------------------
 # Fake session that returns canned responses
 # ---------------------------------------------------------------------------

@@ -34,7 +34,6 @@ import yaml
 
 from mcpnuke.core.taxonomy import threat_ids
 
-
 _REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 _PROFILE = _REPO_ROOT / "profiles" / "camazotz.json"
 _CAMAZOTZ_REPO = _REPO_ROOT.parent / "camazotz"

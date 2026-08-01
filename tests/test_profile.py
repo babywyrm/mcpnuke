@@ -1,8 +1,9 @@
 """Tests for the profile system."""
 
 import json
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 class TestLoadProfile:

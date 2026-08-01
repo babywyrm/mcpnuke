@@ -6,11 +6,12 @@ Skipped by default — opt in with:  MCP_PUBLIC_TARGETS=1 pytest tests/test_publ
 """
 
 import os
+
 import pytest
 
-from mcpnuke.core.session import detect_transport
-from mcpnuke.core.models import TargetResult
 from mcpnuke.core.enumerator import enumerate_server
+from mcpnuke.core.models import TargetResult
+from mcpnuke.core.session import detect_transport
 
 skip_remote = pytest.mark.skipif(
     os.environ.get("MCP_PUBLIC_TARGETS", "0") != "1",

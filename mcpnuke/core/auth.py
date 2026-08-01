@@ -280,7 +280,7 @@ def detect_auth_requirements(
             # Try OIDC discovery if we have a realm URL
             if info.realm:
                 _discover_oidc(client, info.realm, info)
-            
+
             # Try common Keycloak patterns from the server URL
             if not info.token_endpoint:
                 _try_keycloak_discovery(client, base, info)
@@ -384,7 +384,7 @@ def fetch_client_credentials_token(
         RuntimeError on failure.
     """
     oidc_url = oidc_url.rstrip("/")
-    
+
     # Determine token endpoint
     token_endpoint = ""
     if "/token" in oidc_url:
@@ -402,7 +402,7 @@ def fetch_client_credentials_token(
             pass
         finally:
             client.close()
-        
+
         if not token_endpoint:
             # Fallback: assume standard path
             token_endpoint = f"{oidc_url}/protocol/openid-connect/token"
@@ -469,7 +469,7 @@ def resolve_auth_token(args) -> str | None:
             if info.token_endpoint:
                 # Extract issuer from token endpoint
                 oidc_url = info.issuer or info.token_endpoint.rsplit("/protocol/", 1)[0]
-        
+
         if not oidc_url:
             raise RuntimeError(
                 "Cannot determine OIDC URL. Provide --oidc-url or ensure the target "

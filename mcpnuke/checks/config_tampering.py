@@ -6,10 +6,9 @@ or tool registry — the highest-severity finding in MCP security.
 
 import re
 
-from mcpnuke.core.models import TargetResult
-from mcpnuke.checks.base import time_check
-
 from mcpnuke.checks._lane_helpers import lane_tagged
+from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
 
 # All findings in this module are scoped to Lane 3 / Transport "A"
 # (2026-04-26 by-lane reporting spec).
@@ -49,7 +48,7 @@ def check_config_tampering(result: TargetResult):
 
             for pat in CONFIG_TOOL_PATTERNS:
                 if re.search(pat, name, re.IGNORECASE):
-                    _add(result, 
+                    _add(result,
                         "config_tampering",
                         "CRITICAL",
                         f"Agent self-modification tool: '{name}'",
@@ -60,7 +59,7 @@ def check_config_tampering(result: TargetResult):
 
             for pat in CONFIG_DESC_PATTERNS:
                 if re.search(pat, desc, re.IGNORECASE):
-                    _add(result, 
+                    _add(result,
                         "config_tampering",
                         "CRITICAL",
                         f"Config tampering capability in '{name}'",
@@ -71,7 +70,7 @@ def check_config_tampering(result: TargetResult):
             for pname in props:
                 for pat in CONFIG_PARAM_PATTERNS:
                     if re.search(pat, pname, re.IGNORECASE):
-                        _add(result, 
+                        _add(result,
                             "config_tampering",
                             "HIGH",
                             f"Config/prompt param '{pname}' in tool '{name}'",

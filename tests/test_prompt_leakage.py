@@ -1,8 +1,6 @@
 """Tests for prompt_leakage check."""
 
-import pytest
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.prompt_leakage import check_prompt_leakage
 
 

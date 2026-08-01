@@ -15,10 +15,10 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from mcpnuke.core.models import TargetResult
-from mcpnuke.core.session import detect_transport, StdioSession, ToolServerSession
-from mcpnuke.core.enumerator import enumerate_server
 from mcpnuke.checks import run_all_checks
+from mcpnuke.core.enumerator import enumerate_server
+from mcpnuke.core.models import TargetResult
+from mcpnuke.core.session import StdioSession, ToolServerSession, detect_transport
 
 console = Console()
 
@@ -68,7 +68,7 @@ def scan_stdio_target(
         return result
 
     if not session.wait_ready(timeout=10.0):
-        console.print(f"  [red]✗[/red] Subprocess not ready (exited or timed out)")
+        console.print("  [red]✗[/red] Subprocess not ready (exited or timed out)")
         result.transport = "stdio-error"
         result.error = "Process not ready"
         session.close()

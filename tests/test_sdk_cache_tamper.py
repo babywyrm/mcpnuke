@@ -17,7 +17,6 @@ from mcpnuke.checks.sdk_cache_tamper import (
 )
 from mcpnuke.core.models import TargetResult
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 SDK_WRITE_TOOL = {

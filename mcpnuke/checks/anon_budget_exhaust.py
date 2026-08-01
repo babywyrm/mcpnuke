@@ -34,7 +34,6 @@ from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
 
-
 _add = lane_tagged(lane=5, transport="A")
 
 ANON_BURST_COUNT = 25

@@ -1,6 +1,6 @@
 """Tests for LLM-augmented probe classification (classify_probe_response)."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from mcpnuke.core.models import TargetResult
 

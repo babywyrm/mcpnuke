@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.core.models import TargetResult
 from mcpnuke.reporting.coverage_report import (
     SchemaMismatchError,
     build_coverage_report,
@@ -41,7 +41,6 @@ def _scan_with_findings(by_lane: dict[int, int]) -> list[TargetResult]:
 
 
 def test_fetch_rejects_wrong_schema(monkeypatch):
-    import httpx
     from mcpnuke.reporting import coverage_report
 
     class _R:

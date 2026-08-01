@@ -1,9 +1,8 @@
 """Tests for response_credentials check."""
 
-import pytest
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.response_credentials import check_response_credentials
+from mcpnuke.core.models import TargetResult
 
 
 class FakeSession:

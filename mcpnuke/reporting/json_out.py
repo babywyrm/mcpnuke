@@ -1,12 +1,11 @@
 """JSON report output."""
 
 import json
-from datetime import datetime, timezone
 from collections import Counter
+from datetime import UTC, datetime
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
-
 
 _REDACTED_KEYS: frozenset[str] = frozenset({"_raw_token"})
 
@@ -77,7 +76,7 @@ def build_report(results: list[TargetResult], *, include_k8s: bool = True) -> di
     structured results over an API without touching disk.
     """
     report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "summary": {
             "targets": len(results),
             "total_findings": sum(len(r.findings) for r in results),

@@ -2,11 +2,10 @@
 
 import re
 
-from mcpnuke.core.models import TargetResult
-from mcpnuke.checks.base import time_check
-from mcpnuke.patterns.rules import CODE_EXEC_PATTERNS, RAC_PATTERNS
-
 from mcpnuke.checks._lane_helpers import lane_tagged
+from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
+from mcpnuke.patterns.rules import CODE_EXEC_PATTERNS, RAC_PATTERNS
 
 # All findings in this module are scoped to Lane 4 / Transport "A"
 # (2026-04-26 by-lane reporting spec).
@@ -27,7 +26,7 @@ def check_code_execution(result: TargetResult):
 
             for pat in CODE_EXEC_PATTERNS:
                 if re.search(pat, combined, re.IGNORECASE):
-                    _add(result, 
+                    _add(result,
                         "code_execution",
                         "CRITICAL",
                         f"Code execution indicator in tool '{name}'",
@@ -51,7 +50,7 @@ def check_code_execution(result: TargetResult):
                         "statement",
                     ]
                 ):
-                    _add(result, 
+                    _add(result,
                         "code_execution",
                         "HIGH",
                         f"Tool '{name}' has execution-like param: '{pname}'",
@@ -65,7 +64,7 @@ def check_remote_access(result: TargetResult):
             combined = name + " " + tool.get("description", "")
             for category, (pattern, severity) in RAC_PATTERNS.items():
                 if re.search(pattern, combined, re.IGNORECASE):
-                    _add(result, 
+                    _add(result,
                         "remote_access",
                         severity,
                         f"Remote access [{category}]: '{name}'",

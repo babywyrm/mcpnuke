@@ -1,8 +1,8 @@
 """Tests for SARIF 2.1.0 export."""
 
 import json
-import pytest
-from mcpnuke.core.models import TargetResult, Finding
+
+from mcpnuke.core.models import TargetResult
 from mcpnuke.reporting.sarif import build_sarif, write_sarif
 
 

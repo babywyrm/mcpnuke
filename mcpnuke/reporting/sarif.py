@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from mcpnuke import __version__
@@ -119,7 +119,7 @@ def build_sarif(results: list[TargetResult]) -> dict[str, Any]:
                 "invocations": [
                     {
                         "executionSuccessful": True,
-                        "endTimeUtc": datetime.now(timezone.utc).isoformat(),
+                        "endTimeUtc": datetime.now(UTC).isoformat(),
                     }
                 ],
             }

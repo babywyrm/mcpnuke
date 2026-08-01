@@ -29,7 +29,6 @@ from mcpnuke.checks.base import time_check
 from mcpnuke.core.auth import decode_jwt_claims
 from mcpnuke.core.models import TargetResult
 
-
 _add = lane_tagged(lane=2, transport="A")
 
 _TOKEN_MINT_TOOL = re.compile(

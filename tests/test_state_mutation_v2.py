@@ -1,10 +1,13 @@
 """Tests for enhanced state mutation detection with write-then-read probes."""
 
 from unittest.mock import MagicMock
-from mcpnuke.core.models import TargetResult
+
 from mcpnuke.checks.behavioral import (
-    check_state_mutation, _classify_tool, _STATE_CANARY,
+    _STATE_CANARY,
+    _classify_tool,
+    check_state_mutation,
 )
+from mcpnuke.core.models import TargetResult
 
 
 class TestClassifyTool:

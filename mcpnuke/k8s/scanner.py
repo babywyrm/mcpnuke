@@ -288,7 +288,7 @@ def _check_helm_version_drift(namespace: str, token: str, console=None, api_url:
             pass
 
     if console and releases:
-        console.print(f"\n[bold]── Helm Release Version Drift ──[/bold]")
+        console.print("\n[bold]── Helm Release Version Drift ──[/bold]")
 
     for release_name, versions in releases.items():
         if len(versions) < 2:
@@ -480,9 +480,9 @@ def _check_session_token_exposure(
                                 severity="HIGH",
                                 title=f"Potential session token file in {pod_name}:{fpath}",
                                 detail=(
-                                    f"JSON file in temp directory may contain cached "
-                                    f"OAuth/OIDC tokens. Post-RCE access enables lateral "
-                                    f"movement to MCP endpoints using stolen tokens."
+                                    "JSON file in temp directory may contain cached "
+                                    "OAuth/OIDC tokens. Post-RCE access enables lateral "
+                                    "movement to MCP endpoints using stolen tokens."
                                 ),
                                 taxonomy_id="MCP-T57",
                             ))

@@ -2,11 +2,9 @@
 
 import re
 
-import pytest
-
 from mcpnuke.patterns.rules import (
-    RATE_LIMIT_PATTERNS,
     PROMPT_LEAKAGE_PATTERNS,
+    RATE_LIMIT_PATTERNS,
     SUPPLY_CHAIN_PATTERNS,
 )
 

@@ -2,11 +2,10 @@
 
 import re
 
-from mcpnuke.core.models import TargetResult
-from mcpnuke.checks.base import time_check
-from mcpnuke.patterns.rules import TOKEN_THEFT_PATTERNS
-
 from mcpnuke.checks._lane_helpers import lane_tagged
+from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
+from mcpnuke.patterns.rules import TOKEN_THEFT_PATTERNS
 
 # All findings in this module are scoped to Lane 2 / Transport "A"
 # (2026-04-26 by-lane reporting spec).
@@ -27,7 +26,7 @@ def check_token_theft(result: TargetResult):
 
             for pat in TOKEN_THEFT_PATTERNS:
                 if re.search(pat, combined, re.IGNORECASE):
-                    _add(result, 
+                    _add(result,
                         "token_theft",
                         "CRITICAL",
                         f"Token theft pattern in tool '{name}'",
@@ -49,7 +48,7 @@ def check_token_theft(result: TargetResult):
                         "auth",
                     ]
                 ):
-                    _add(result, 
+                    _add(result,
                         "token_theft",
                         "HIGH",
                         f"Tool '{name}' accepts credential param: '{pname}'",

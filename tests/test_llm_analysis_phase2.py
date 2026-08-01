@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mcpnuke.checks.llm_analysis import run_llm_analysis, _resolve_phase2_workers
+from mcpnuke.checks.llm_analysis import _resolve_phase2_workers, run_llm_analysis
 from mcpnuke.core.models import TargetResult
 
 

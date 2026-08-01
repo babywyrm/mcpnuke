@@ -1,6 +1,6 @@
 """Tests for structured attack chain JSON output with evidence-based tool names."""
 
-from mcpnuke.core.models import TargetResult, AttackChain
+from mcpnuke.core.models import AttackChain, TargetResult
 
 
 def test_attack_chain_dataclass():

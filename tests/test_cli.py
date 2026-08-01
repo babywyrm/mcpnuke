@@ -6,11 +6,11 @@ from pathlib import Path
 import pytest
 
 from mcpnuke.cli import (
-    parse_args,
-    build_url_list,
-    _load_urls_from_file,
-    expand_port_range,
     PUBLIC_TARGETS_FILE,
+    _load_urls_from_file,
+    build_url_list,
+    expand_port_range,
+    parse_args,
 )
 
 

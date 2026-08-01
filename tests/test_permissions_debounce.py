@@ -1,7 +1,7 @@
 """Tests for permissions debouncing — weak signals require 2+ categories."""
 
+from mcpnuke.checks.permissions import _WEAK_SIGNAL_THRESHOLD, check_excessive_permissions
 from mcpnuke.core.models import TargetResult
-from mcpnuke.checks.permissions import check_excessive_permissions, _WEAK_SIGNAL_THRESHOLD
 
 
 def test_weak_signal_threshold_is_two():

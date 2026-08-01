@@ -1,9 +1,9 @@
 """Tests that indirect injection Phase 2 iterates ALL content params, not just the first."""
 
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.injection import check_indirect_injection
+from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.probes import INDIRECT_INJECTION_PROBES
 
 

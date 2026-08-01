@@ -5,13 +5,13 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from rich import box
 
-from mcpnuke.core.models import TargetResult, Finding
 from mcpnuke.core.constants import SEV_COLOR
+from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 
 _default_console = Console()

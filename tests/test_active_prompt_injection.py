@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.probes import (
     ACTIVE_INJECTION_PAYLOADS,
-    SYSTEM_PROMPT_INDICATORS,
     CANARY,
+    SYSTEM_PROMPT_INDICATORS,
 )
 
 

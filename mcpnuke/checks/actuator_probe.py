@@ -15,8 +15,8 @@ import re
 
 import httpx
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
 
 DEBUG_ENDPOINTS = [
     ("/actuator/env", "CRITICAL", "Spring Boot actuator env — may expose secrets and config"),

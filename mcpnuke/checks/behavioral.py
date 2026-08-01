@@ -5,10 +5,9 @@ import queue
 import re
 import time
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.probes import RESPONSE_INJECTION_PATTERNS
-
 
 # ---------------------------------------------------------------------------
 # Shallow rug pull (existing — two tools/list calls)
@@ -292,7 +291,7 @@ def check_state_mutation(session, result: TargetResult):
                     if new_uris:
                         result.add(
                             "state_mutation", "HIGH",
-                            f"New resource(s) appeared after tool invocations",
+                            "New resource(s) appeared after tool invocations",
                             f"New URIs: {sorted(new_uris)}",
                             taxonomy_id="MCP-T16",
                         )

@@ -8,8 +8,8 @@ be in the schema.
 import json
 import re
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
+from mcpnuke.core.models import TargetResult
 
 SCHEMA_CREDENTIAL_PATTERNS = [
     (r"sk-[a-zA-Z0-9]{20,}", "openai_key"),

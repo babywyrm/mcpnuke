@@ -176,7 +176,7 @@ def enumerate_server(
         time.sleep(0.5)
 
     if verbose:
-        _log(f"  [dim]Enumerating tools...[/dim]")
+        _log("  [dim]Enumerating tools...[/dim]")
 
     for attempt in range(3):
         tools, tools_truncated = _paginated_list(
@@ -203,7 +203,7 @@ def enumerate_server(
             _log(f"  [dim]    {t['name']}: {desc}[/dim]")
 
     if verbose:
-        _log(f"  [dim]Enumerating resources...[/dim]")
+        _log("  [dim]Enumerating resources...[/dim]")
 
     resources, res_truncated = _paginated_list(
         session, "resources/list", max_pages=max_pages, timeout=15,
@@ -225,7 +225,7 @@ def enumerate_server(
             _log(f"  [dim]    {r_item.get('uri', r_item.get('name', '?'))}[/dim]")
 
     if verbose:
-        _log(f"  [dim]Enumerating prompts...[/dim]")
+        _log("  [dim]Enumerating prompts...[/dim]")
 
     prompts, prompts_truncated = _paginated_list(
         session, "prompts/list", max_pages=max_pages, timeout=15,

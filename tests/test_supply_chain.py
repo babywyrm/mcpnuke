@@ -1,8 +1,6 @@
 """Tests for supply_chain check."""
 
-import pytest
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.supply_chain import check_supply_chain
 
 

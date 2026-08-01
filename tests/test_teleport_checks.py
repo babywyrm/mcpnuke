@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import json
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from unittest.mock import patch
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.teleport import (
-    check_teleport_proxy_discovery,
-    check_teleport_cert_validation,
-    check_teleport_app_enumeration,
     check_tbot_credential_exposure,
+    check_teleport_app_enumeration,
     check_teleport_bot_overprivilege,
+    check_teleport_cert_validation,
+    check_teleport_proxy_discovery,
 )
+from mcpnuke.core.models import TargetResult
 
 
 class _TeleportMockHandler(BaseHTTPRequestHandler):

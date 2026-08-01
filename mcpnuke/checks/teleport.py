@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import ssl
 import urllib.request
-from urllib.error import URLError
 
 from mcpnuke.core.models import TargetResult
 
@@ -61,7 +60,7 @@ def check_teleport_proxy_discovery(base: str, result: TargetResult):
                 cluster = data.get("cluster_name", "unknown")
                 version = data.get("server_version", "unknown")
                 auth_type = data.get("auth", {}).get("type", "unknown")
-                _add(result, 
+                _add(result,
                     "teleport_proxy_discovery",
                     "MEDIUM",
                     f"Teleport proxy discovered: {cluster} v{version}",
@@ -96,7 +95,7 @@ def check_teleport_cert_validation(base: str, result: TargetResult):
             except ssl.SSLCertVerificationError:
                 insecure_data = _probe_url(url)
                 if insecure_data and "server_version" in insecure_data:
-                    _add(result, 
+                    _add(result,
                         "teleport_cert_validation",
                         "HIGH",
                         f"Teleport proxy uses self-signed certificate on port {port}",
@@ -132,7 +131,7 @@ def check_teleport_app_enumeration(base: str, result: TargetResult):
                     apps = data if isinstance(data, list) else data.get("apps", [])
                     if apps:
                         app_names = [a.get("name", "?") for a in apps[:10]]
-                        _add(result, 
+                        _add(result,
                             "teleport_app_enumeration",
                             "HIGH",
                             f"Teleport application list accessible without auth ({len(apps)} apps)",
@@ -192,7 +191,7 @@ def check_tbot_credential_exposure(result: TargetResult):
                     secret_data = json.loads(resp.read())
                     keys = list(secret_data.get("data", {}).keys())
                     if "identity" in keys or "kubeconfig.yaml" in keys or "tlscert" in keys:
-                        _add(result, 
+                        _add(result,
                             "tbot_credential_exposure",
                             "HIGH",
                             f"tbot credential secret '{secret_name}' readable from scan pod",
@@ -253,7 +252,7 @@ def check_teleport_bot_overprivilege(result: TargetResult):
             for subject in binding.get("subjects", []):
                 sa_name = subject.get("name", "")
                 if "tbot" in sa_name or "teleport" in sa_name.lower():
-                    _add(result, 
+                    _add(result,
                         "teleport_bot_overprivilege",
                         "HIGH",
                         f"Teleport bot SA '{sa_name}' bound to privileged role '{role_ref}'",

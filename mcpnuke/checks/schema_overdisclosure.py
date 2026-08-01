@@ -35,7 +35,6 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
 
-
 _add = lane_tagged(lane=5, transport="A")
 
 

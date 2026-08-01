@@ -1,8 +1,8 @@
 from mcpnuke.core.protocol import (
-    LEGACY,
-    STATELESS,
-    MCP_PROTOCOL_VERSION_STATELESS,
     CLIENT_INFO_META_KEY,
+    LEGACY,
+    MCP_PROTOCOL_VERSION_STATELESS,
+    STATELESS,
     inject_meta,
     routing_headers,
 )

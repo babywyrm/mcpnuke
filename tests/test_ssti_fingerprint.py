@@ -1,6 +1,5 @@
 """Tests for SSTI engine fingerprinting and LLM-aware classification."""
 
-import pytest
 from mcpnuke.patterns.probes import SSTI_ENGINE_FINGERPRINTS
 
 

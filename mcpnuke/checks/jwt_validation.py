@@ -4,13 +4,12 @@ Inspects the auth token attached to the scan for weak algorithm choices,
 missing standard claims, excessive TTL, and known weak signing keys.
 """
 
-import hashlib
 import hmac
 import time
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
-from mcpnuke.core.auth import decode_jwt_header, decode_jwt_claims
+from mcpnuke.core.auth import decode_jwt_claims, decode_jwt_header
+from mcpnuke.core.models import TargetResult
 
 DEFAULT_MAX_TTL: int = 14400  # 4 hours in seconds
 
@@ -192,7 +191,7 @@ def check_jwt_weak_key(result: TargetResult) -> None:
             return
 
         import base64
-        signing_input = f"{parts[0]}.{parts[1]}".encode("utf-8")
+        signing_input = f"{parts[0]}.{parts[1]}".encode()
         sig_padding = "=" * ((4 - len(parts[2]) % 4) % 4)
         try:
             expected_sig = base64.urlsafe_b64decode(parts[2] + sig_padding)

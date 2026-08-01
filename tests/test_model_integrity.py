@@ -6,16 +6,15 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import httpx
-import pytest
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.inference_backend import (
     InferenceBackend,
-    fingerprint_backend,
-    check_model_integrity,
-    save_inference_baseline,
     _load_manifest,
+    check_model_integrity,
+    fingerprint_backend,
+    save_inference_baseline,
 )
+from mcpnuke.core.models import TargetResult
 
 
 def _mock_response(status_code: int, json_data: dict | None = None, text: str = ""):

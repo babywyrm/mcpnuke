@@ -3,15 +3,10 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import hmac
 import json
 import time
 
-import pytest
-
-from mcpnuke.core.models import TargetResult
-from mcpnuke.core.auth import decode_jwt_header
 from mcpnuke.checks.jwt_validation import (
     check_jwt_algorithm,
     check_jwt_audience,
@@ -20,6 +15,8 @@ from mcpnuke.checks.jwt_validation import (
     check_jwt_ttl,
     check_jwt_weak_key,
 )
+from mcpnuke.core.auth import decode_jwt_header
+from mcpnuke.core.models import TargetResult
 
 
 def _b64url(obj: dict) -> str:
@@ -32,7 +29,7 @@ def _make_token(header: dict, claims: dict, key: str = "") -> str:
     p = _b64url(claims)
     if header.get("alg", "none") == "none":
         return f"{h}.{p}."
-    signing_input = f"{h}.{p}".encode("utf-8")
+    signing_input = f"{h}.{p}".encode()
     alg_map = {"HS256": "sha256", "HS384": "sha384", "HS512": "sha512"}
     hash_name = alg_map.get(header["alg"], "sha256")
     sig = hmac.new(key.encode("utf-8"), signing_input, hash_name).digest()

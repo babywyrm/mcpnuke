@@ -1,7 +1,6 @@
 """Tests for Phase 2 Tier 1 extended argument heuristics."""
 
-import pytest
-from mcpnuke.checks.tool_probes import _build_safe_args, _build_extended_args
+from mcpnuke.checks.tool_probes import _build_extended_args, _build_safe_args
 
 
 class TestBuildSafeArgsBaseline:

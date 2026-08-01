@@ -7,9 +7,9 @@ or differential behavior between internal and external URLs.
 
 import re
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
+from mcpnuke.core.models import TargetResult
 
 URL_PARAM_PATTERNS = re.compile(
     r"(url|uri|endpoint|href|target|host|webhook|link|address|redirect|proxy|fetch|request|resource_url|source_url|dest|destination)",

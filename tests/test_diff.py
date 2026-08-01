@@ -1,12 +1,14 @@
 """Tests for the scan diff engine."""
 
 import json
+
 import pytest
+
 from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.reporting.diff import (
     ScanDiffResult,
-    compare_scans,
     compare_json_files,
+    compare_scans,
     format_diff_terminal,
 )
 

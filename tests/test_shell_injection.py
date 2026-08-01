@@ -2,13 +2,13 @@
 
 from unittest.mock import MagicMock
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.shell_injection import (
-    check_shell_injection,
-    _is_shell_tool,
-    _find_injectable_params,
     _INJECTION_PAYLOADS,
+    _find_injectable_params,
+    _is_shell_tool,
+    check_shell_injection,
 )
+from mcpnuke.core.models import TargetResult
 
 
 def _make_session(response_text: str):

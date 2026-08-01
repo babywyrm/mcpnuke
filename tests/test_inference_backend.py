@@ -5,19 +5,17 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import httpx
-import pytest
 
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks import inference_backend
 from mcpnuke.checks.inference_backend import (
     InferenceBackend,
-    fingerprint_backend,
-    check_inference_backend,
-    check_inference_guardrail_variance,
     _guardrail_probe_model,
     _infer_hosts_from_result,
+    check_inference_backend,
+    check_inference_guardrail_variance,
+    fingerprint_backend,
 )
-
+from mcpnuke.core.models import TargetResult
 
 # ── Fingerprint detection ────────────────────────────────────────────
 

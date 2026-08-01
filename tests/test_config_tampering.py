@@ -1,8 +1,7 @@
 """Tests for config_tampering check."""
 
-import pytest
-from mcpnuke.core.models import TargetResult
 from mcpnuke.checks.config_tampering import check_config_tampering
+from mcpnuke.core.models import TargetResult
 
 
 def _make(tools):

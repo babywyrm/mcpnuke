@@ -11,19 +11,18 @@ Run live:     DVMCP_LIVE=1 pytest tests/test_dvmcp.py -v
 """
 
 import os
-import re
 
 import pytest
 
-from mcpnuke.core.models import TargetResult, Finding
+from mcpnuke.checks.chaining import check_attack_chains, check_multi_vector, check_tool_shadowing
+from mcpnuke.checks.execution import check_code_execution, check_remote_access
 from mcpnuke.checks.injection import check_prompt_injection, check_tool_poisoning
 from mcpnuke.checks.permissions import check_excessive_permissions, check_schema_risks
-from mcpnuke.checks.theft import check_token_theft
-from mcpnuke.checks.execution import check_code_execution, check_remote_access
-from mcpnuke.checks.chaining import check_tool_shadowing, check_multi_vector, check_attack_chains
-from mcpnuke.checks.rate_limit import check_rate_limit
 from mcpnuke.checks.prompt_leakage import check_prompt_leakage
+from mcpnuke.checks.rate_limit import check_rate_limit
 from mcpnuke.checks.supply_chain import check_supply_chain
+from mcpnuke.checks.theft import check_token_theft
+from mcpnuke.core.models import TargetResult
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -757,8 +756,8 @@ class TestDVMCPLive:
 
     @pytest.mark.parametrize("port", DVMCP_PORTS)
     def test_has_tools(self, port):
-        from mcpnuke.core.session import detect_transport
         from mcpnuke.core.enumerator import enumerate_server
+        from mcpnuke.core.session import detect_transport
         url = _dvmcp_url(port)
         session = detect_transport(url, connect_timeout=10.0)
         assert session is not None
@@ -770,9 +769,9 @@ class TestDVMCPLive:
     @pytest.mark.parametrize("port", DVMCP_PORTS)
     def test_findings_detected(self, port):
         """Each DVMCP challenge should produce at least one finding."""
-        from mcpnuke.core.session import detect_transport
-        from mcpnuke.core.enumerator import enumerate_server
         from mcpnuke.checks import run_all_checks
+        from mcpnuke.core.enumerator import enumerate_server
+        from mcpnuke.core.session import detect_transport
 
         url = _dvmcp_url(port)
         session = detect_transport(url, connect_timeout=10.0)

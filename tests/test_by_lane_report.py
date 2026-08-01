@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.core.models import TargetResult
 from mcpnuke.reporting.by_lane import build_by_lane
 
 

@@ -21,7 +21,7 @@ import queue as _queue
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from mcpnuke.server.models import ScanDepth, ScanJob, ScanRequest, ScanStatus
 
@@ -35,7 +35,7 @@ _MP_CTX = mp.get_context("spawn")
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _probe_opts_for(req: ScanRequest) -> dict:
@@ -161,7 +161,7 @@ class JobManager:
         timeout = req.max_seconds or self._default_timeout
         self._set(job_id, status=ScanStatus.running, started_at=_now())
 
-        q: "mp.Queue" = _MP_CTX.Queue()
+        q: mp.Queue = _MP_CTX.Queue()
         proc = _MP_CTX.Process(target=_scan_worker, args=(req.model_dump(), q), daemon=True)
         proc.start()
 

@@ -12,106 +12,106 @@ from typing import Any
 from mcpnuke.core.models import TargetResult
 
 _log_internal = logging.getLogger("mcpnuke.checks")
-from mcpnuke.checks.injection import (
-    check_prompt_injection,
-    check_tool_poisoning,
-    check_indirect_injection,
-    check_active_prompt_injection,
-)
-from mcpnuke.checks.permissions import (
-    check_excessive_permissions,
-    check_schema_risks,
-)
+from mcpnuke.checks.actuator_probe import check_actuator_probe
+from mcpnuke.checks.agentic_loop import check_agentic_loop, check_agentic_loop_behavioral
+from mcpnuke.checks.ai_guardrail_probe import check_ai_guardrail
+from mcpnuke.checks.anon_budget_exhaust import check_anon_budget_exhaust
 from mcpnuke.checks.behavioral import (
-    check_rug_pull,
     check_deep_rug_pull,
-    check_state_mutation,
     check_notification_abuse,
     check_protocol_robustness,
+    check_rug_pull,
+    check_state_mutation,
 )
-from mcpnuke.checks.theft import check_token_theft
+from mcpnuke.checks.chaining import (
+    check_attack_chains,
+    check_multi_vector,
+    check_tool_shadowing,
+)
+from mcpnuke.checks.command_injection_broad import check_command_injection_broad
+from mcpnuke.checks.config_dump import check_config_dump
+from mcpnuke.checks.config_tampering import check_config_tampering
+from mcpnuke.checks.credential_in_schema import check_credential_in_schema
+from mcpnuke.checks.dpop_enforcement import run_dpop_enforcement_checks
 from mcpnuke.checks.execution import (
     check_code_execution,
     check_remote_access,
 )
-from mcpnuke.checks.chaining import (
-    check_tool_shadowing,
-    check_multi_vector,
-    check_attack_chains,
-)
-from mcpnuke.checks.transport import check_sse_security
-from mcpnuke.checks.rate_limit import check_rate_limit, check_behavioral_rate_limit
-from mcpnuke.checks.prompt_leakage import check_prompt_leakage
-from mcpnuke.checks.supply_chain import check_supply_chain
-from mcpnuke.checks.tool_probes import (
-    check_tool_response_injection,
-    check_input_sanitization,
-    check_error_leakage,
-    check_temporal_consistency,
-    check_resource_poisoning,
-)
-from mcpnuke.checks.response_credentials import check_response_credentials
-from mcpnuke.checks.config_dump import check_config_dump
-from mcpnuke.checks.config_tampering import check_config_tampering
-from mcpnuke.checks.webhook_persistence import check_webhook_persistence
-from mcpnuke.checks.credential_in_schema import check_credential_in_schema
-from mcpnuke.checks.schema_overdisclosure import check_schema_overdisclosure
-from mcpnuke.checks.anon_budget_exhaust import check_anon_budget_exhaust
-from mcpnuke.checks.scope_pollution import check_scope_pollution
 from mcpnuke.checks.exfil_flow import check_exfil_flow
-from mcpnuke.checks.ssrf_probe import check_ssrf_probe
-from mcpnuke.checks.actuator_probe import check_actuator_probe
 from mcpnuke.checks.inference_backend import check_inference_backend, check_model_integrity
-from mcpnuke.checks.teleport import (
-    check_teleport_proxy_discovery,
-    check_teleport_cert_validation,
-    check_teleport_app_enumeration,
-    check_tbot_credential_exposure,
-    check_teleport_bot_overprivilege,
+from mcpnuke.checks.injection import (
+    check_active_prompt_injection,
+    check_indirect_injection,
+    check_prompt_injection,
+    check_tool_poisoning,
 )
-from mcpnuke.checks.teleport_labs import (
-    check_teleport_lab_bot_theft,
-    check_teleport_lab_role_escalation,
-    check_teleport_lab_cert_replay,
-)
-from mcpnuke.checks.jwt_validation import (
-    check_jwt_algorithm,
-    check_jwt_issuer,
-    check_jwt_audience,
-    check_jwt_token_id,
-    check_jwt_ttl,
-    check_jwt_weak_key,
-)
+from mcpnuke.checks.insecure_agent_comms import check_insecure_agent_comms
 from mcpnuke.checks.jwt_boundary import (
     check_jwt_audience_target_match,
     check_jwt_cross_role_replay,
 )
-from mcpnuke.checks.dpop_enforcement import run_dpop_enforcement_checks
-from mcpnuke.checks.shell_injection import check_shell_injection
-from mcpnuke.checks.sdk_cache_tamper import (
-    check_sdk_cache_tamper,
-    check_sdk_cache_poisoning,
+from mcpnuke.checks.jwt_validation import (
+    check_jwt_algorithm,
+    check_jwt_audience,
+    check_jwt_issuer,
+    check_jwt_token_id,
+    check_jwt_ttl,
+    check_jwt_weak_key,
 )
-from mcpnuke.checks.ai_guardrail_probe import check_ai_guardrail
-from mcpnuke.checks.prompt_injection_t01 import check_prompt_injection as check_prompt_injection_t01
-from mcpnuke.checks.tool_output_poisoning import check_tool_output_poisoning, check_credential_forwarding
-from mcpnuke.checks.command_injection_broad import check_command_injection_broad
-from mcpnuke.checks.remote_package_exec import check_remote_package_execution
-from mcpnuke.checks.agentic_loop import check_agentic_loop, check_agentic_loop_behavioral
-from mcpnuke.checks.insecure_agent_comms import check_insecure_agent_comms
 from mcpnuke.checks.model_routing import check_model_routing
+from mcpnuke.checks.permissions import (
+    check_excessive_permissions,
+    check_schema_risks,
+)
+from mcpnuke.checks.prompt_injection_t01 import check_prompt_injection as check_prompt_injection_t01
+from mcpnuke.checks.prompt_leakage import check_prompt_leakage
+from mcpnuke.checks.rate_limit import check_behavioral_rate_limit, check_rate_limit
+from mcpnuke.checks.remote_package_exec import check_remote_package_execution
+from mcpnuke.checks.response_credentials import check_response_credentials
+from mcpnuke.checks.schema_overdisclosure import check_schema_overdisclosure
+from mcpnuke.checks.scope_pollution import check_scope_pollution
+from mcpnuke.checks.sdk_cache_tamper import (
+    check_sdk_cache_poisoning,
+    check_sdk_cache_tamper,
+)
+from mcpnuke.checks.shell_injection import check_shell_injection
+from mcpnuke.checks.ssrf_probe import check_ssrf_probe
+from mcpnuke.checks.supply_chain import check_supply_chain
 from mcpnuke.checks.taxonomy_coverage import (
-    check_notification_sampling_abuse,
-    check_delegation_depth,
-    check_subprocess_credential_inheritance,
-    check_tool_description_injection,
-    check_pre_auth_injection,
     check_cached_session_exposure,
+    check_delegation_depth,
     check_host_network_loopback,
+    check_native_function_identity_erasure,
+    check_notification_sampling_abuse,
+    check_pre_auth_injection,
     check_role_escalation_tool,
     check_shell_wrapping_injection,
-    check_native_function_identity_erasure,
+    check_subprocess_credential_inheritance,
+    check_tool_description_injection,
 )
+from mcpnuke.checks.teleport import (
+    check_tbot_credential_exposure,
+    check_teleport_app_enumeration,
+    check_teleport_bot_overprivilege,
+    check_teleport_cert_validation,
+    check_teleport_proxy_discovery,
+)
+from mcpnuke.checks.teleport_labs import (
+    check_teleport_lab_bot_theft,
+    check_teleport_lab_cert_replay,
+    check_teleport_lab_role_escalation,
+)
+from mcpnuke.checks.theft import check_token_theft
+from mcpnuke.checks.tool_output_poisoning import check_credential_forwarding, check_tool_output_poisoning
+from mcpnuke.checks.tool_probes import (
+    check_error_leakage,
+    check_input_sanitization,
+    check_resource_poisoning,
+    check_temporal_consistency,
+    check_tool_response_injection,
+)
+from mcpnuke.checks.transport import check_sse_security
+from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 
 # Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
 # State-mutating checks are inappropriate for internet targets without explicit
