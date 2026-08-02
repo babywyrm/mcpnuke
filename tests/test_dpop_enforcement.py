@@ -15,6 +15,7 @@ from mcpnuke.checks.dpop_enforcement import (
     _probe_malformed_dpop,
     _probe_missing_htm_htu,
     _probe_no_dpop_header,
+    dpop_probeable,
     run_dpop_enforcement_checks,
 )
 from mcpnuke.core.models import TargetResult
@@ -43,6 +44,52 @@ class _StdioLikeSession:
 
     def call(self, method, params=None, **kw):
         return None
+
+
+# ── Transport capability predicate ────────────────────────────────────
+
+
+class TestDpopProbeable:
+    """The single source of truth for "can this transport carry a proof?".
+
+    Both the orchestrator's progress gate and run_dpop_enforcement_checks'
+    early return read this, so a drift between them is not expressible.
+    """
+
+    def test_http_session_with_a_resolved_endpoint(self):
+        assert dpop_probeable(_session()) is True
+
+    def test_missing_post_raw(self):
+        """stdio has no HTTP layer for a proof header to live in."""
+
+        class _NoPostRaw:
+            post_url = _ENDPOINT
+
+        assert dpop_probeable(_NoPostRaw()) is False
+
+    def test_stdio_like_session_is_excluded_by_post_raw_not_post_url(self):
+        """StdioSession sets a truthy stdio:// post_url; post_raw is the discriminator."""
+        stdio = _StdioLikeSession()
+
+        assert stdio.post_url, "fixture must keep a truthy post_url to be meaningful"
+        assert dpop_probeable(stdio) is False
+
+    def test_post_url_empty_string(self):
+        """SSE before the handshake: the endpoint is not resolved yet."""
+        assert dpop_probeable(_session(post_url="")) is False
+
+    def test_post_url_none(self):
+        assert dpop_probeable(_session(post_url=None)) is False
+
+    def test_post_url_missing_entirely(self):
+        class _NoPostUrl:
+            def post_raw(self, *a, **kw):
+                raise AssertionError("not called")
+
+        assert dpop_probeable(_NoPostUrl()) is False
+
+    def test_none_session(self):
+        assert dpop_probeable(None) is False
 
 
 # ── Transport gating ──────────────────────────────────────────────────

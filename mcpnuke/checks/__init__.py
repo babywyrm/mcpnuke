@@ -33,6 +33,7 @@ from mcpnuke.checks.dpop_enforcement import (
     _probe_malformed_dpop,
     _probe_missing_htm_htu,
     _probe_no_dpop_header,
+    dpop_probeable,
 )
 from mcpnuke.checks.execution import (
     check_code_execution,
@@ -455,11 +456,7 @@ def run_all_checks(
     # Progress denominator, derived from the check inventory rather than
     # hardcoded. See the tables above _build_deep_checks().
     has_jwt = bool(result.auth_context.get("_raw_token") or result.auth_context.get("jwt_claims_summary"))
-    dpop_capable = bool(
-        has_jwt
-        and hasattr(session, "post_raw")
-        and getattr(session, "post_url", "")
-    )
+    dpop_capable = has_jwt and dpop_probeable(session)
     total_checks = len(_STATIC_CHECK_NAMES)
     if has_jwt:
         total_checks += len(_JWT_CHECK_NAMES)

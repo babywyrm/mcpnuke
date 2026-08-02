@@ -126,7 +126,12 @@ All notable changes to this submodule are documented here.
   counted. Verbose output showed `[38/35]` then `All 41 checks complete`. The
   denominator is now derived from the check inventory, and `--fast` is accounted for
   exactly via the pre-built deep-probe plan. The duration estimate uses the real
-  deep count, so it now reads more conservatively than before.
+  deep count, so it now reads more conservatively than before. The three DPoP
+  probes were a residual gap in that fix: invoked directly rather than through
+  `_run`, they touched neither side of the ratio, so a JWT-bearing HTTP scan
+  silently ran three more checks than it reported. They now run through `_run`
+  and are counted only when the transport can carry a proof, which
+  `dpop_enforcement.dpop_probeable` decides for both the counter and the probes.
 - **`negotiate_protocol` wrote `session.protocol_mode` on transports that never
   declared it.** Python creates the attribute on assignment, so three of the
   four silently grew a field nothing read. All four now declare it.

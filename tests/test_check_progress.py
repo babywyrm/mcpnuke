@@ -343,14 +343,32 @@ class _HTTPish:
         raise AssertionError("probe should not reach the network in this test")
 
 
+class _UnresolvedHTTPish(_HTTPish):
+    """SSE before the handshake: an HTTP layer, but no endpoint resolved yet."""
+
+    post_url = ""
+
+
+class _StdioLike:
+    """Mirrors StdioSession: a truthy post_url, but no HTTP layer to probe."""
+
+    post_url = "stdio://server.py"
+
+    def call(self, method, params=None, **kw):
+        return None
+
+
+_PROBE_ATTRS: dict[str, str] = {
+    "_probe_no_dpop_header": "dpop_no_header",
+    "_probe_malformed_dpop": "dpop_malformed",
+    "_probe_missing_htm_htu": "dpop_missing_binding",
+}
+
+
 def _stub_probes(monkeypatch) -> list[str]:
     """Replace the three probes with recorders; return the call log."""
     called: list[str] = []
-    for probe, label in zip(
-        ("_probe_no_dpop_header", "_probe_malformed_dpop", "_probe_missing_htm_htu"),
-        _DPOP_CHECK_NAMES,
-        strict=True,
-    ):
+    for probe, label in _PROBE_ATTRS.items():
         def _record(result, session, _label=label):
             called.append(_label)
 
@@ -391,10 +409,13 @@ class TestDpopCounted:
 
         assert n_http == n_plain + len(_DPOP_CHECK_NAMES)
         assert stubbed == list(_DPOP_CHECK_NAMES), "the stubs did not take effect"
+        # The probes swallow every exception into result.error, so a real probe
+        # reaching _HTTPish.post_raw would otherwise look like a clean run.
+        assert not jwt_http.error
 
     def test_http_jwt_scan_lands_exactly(self, monkeypatch):
         """The numerator must reach the inflated denominator, not fall short."""
-        _stub_probes(monkeypatch)
+        stubbed = _stub_probes(monkeypatch)
 
         result = TargetResult(url="http://t/mcp")
         result.tools = _tools()
@@ -404,13 +425,58 @@ class TestDpopCounted:
             result, session=_HTTPish(), probe_opts={"no_invoke": True},
         ))
         assert max(n for n, _ in pairs) == pairs[0][1]
+        assert stubbed == list(_DPOP_CHECK_NAMES), "the stubs did not take effect"
+        assert not result.error
 
     def test_non_http_session_does_not_count_them(self):
         """Stdio has no header layer, so the probes must not inflate the denominator."""
-        stdio_like = TargetResult(url="http://t/mcp")
-        stdio_like.tools = _tools()
-        stdio_like.auth_context = {"_raw_token": "a.b.c"}
+        result = TargetResult(url="http://t/mcp")
+        result.tools = _tools()
+        result.auth_context = {"_raw_token": "a.b.c"}
 
-        lines = _run_and_collect(stdio_like, probe_opts={"no_invoke": True})
+        lines = _run_and_collect(
+            result, session=_StdioLike(), probe_opts={"no_invoke": True},
+        )
         numerator, denominator = _progress_pairs(lines)[-1]
         assert numerator == denominator
+        assert not any(name in ln for ln in lines for name in _DPOP_CHECK_NAMES)
+
+    def test_http_without_a_jwt_does_not_count_them(self):
+        """No token means no DPoP block runs, so the denominator must not grow.
+
+        ``has_jwt`` looks redundant with the enclosing ``if has_jwt:``, and
+        dropping it as dead code would inflate the denominator by three with
+        nothing to run against it.
+        """
+        result = TargetResult(url="http://t/mcp")
+        result.tools = _tools()
+
+        lines = _run_and_collect(
+            result, session=_HTTPish(), probe_opts={"no_invoke": True},
+        )
+        numerator, denominator = _progress_pairs(lines)[-1]
+
+        assert numerator == denominator
+        assert not any(name in ln for ln in lines for name in _DPOP_CHECK_NAMES)
+
+    def test_unresolved_endpoint_does_not_count_them(self):
+        """SSE before the handshake has post_raw but no endpoint to probe."""
+        jwt_only = TargetResult(url="http://t/mcp")
+        jwt_only.tools = _tools()
+        jwt_only.auth_context = {"_raw_token": "a.b.c"}
+
+        unresolved = TargetResult(url="http://t/mcp")
+        unresolved.tools = _tools()
+        unresolved.auth_context = {"_raw_token": "a.b.c"}
+
+        n_baseline = _progress_pairs(
+            _run_and_collect(jwt_only, probe_opts={"no_invoke": True})
+        )[0][1]
+        pairs = _progress_pairs(_run_and_collect(
+            unresolved,
+            session=_UnresolvedHTTPish(),
+            probe_opts={"no_invoke": True},
+        ))
+
+        assert pairs[0][1] == n_baseline
+        assert pairs[-1][0] == pairs[-1][1]

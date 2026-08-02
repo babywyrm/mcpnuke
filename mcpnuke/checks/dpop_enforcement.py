@@ -34,6 +34,7 @@ from typing import Any
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=3, transport="A")
 
@@ -66,6 +67,20 @@ def _probe_payload(req_id: int) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": req_id, "method": _PROBE_TOOL, "params": {}}
 
 
+def dpop_probeable(session: MCPSessionProtocol | None) -> bool:
+    """True when the transport can carry a DPoP proof and its endpoint is resolved.
+
+    A proof travels in an HTTP header, so ``post_raw`` is the discriminator:
+    stdio sets a truthy ``stdio://`` ``post_url`` but has no header layer, and
+    is excluded by the first conjunct alone. The second excludes SSE before its
+    handshake resolves an endpoint, where ``post_url`` is still empty.
+
+    The orchestrator's progress gate and ``run_dpop_enforcement_checks`` both
+    read this, so the denominator cannot disagree with what runs.
+    """
+    return bool(getattr(session, "post_raw", None) and getattr(session, "post_url", ""))
+
+
 def run_dpop_enforcement_checks(result: TargetResult, session: Any) -> None:
     """Run all DPoP enforcement probes against *session*'s MCP endpoint.
 
@@ -74,8 +89,13 @@ def run_dpop_enforcement_checks(result: TargetResult, session: Any) -> None:
 
     Skips transports with no HTTP header layer for a proof to live in (stdio),
     and sessions whose endpoint is not yet resolved (SSE before handshake).
+
+    Not the path a scan takes: ``run_all_checks`` drives the three probes
+    individually through its ``_run`` helper so each one appears in the
+    progress count. This remains the entry point for callers outside the
+    orchestrator — do not add a second call to it from there.
     """
-    if not hasattr(session, "post_raw") or not getattr(session, "post_url", ""):
+    if not dpop_probeable(session):
         return
 
     _probe_no_dpop_header(result, session)
