@@ -549,3 +549,89 @@ class TestDocLinks:
             "methodology.md",
         ):
             assert (_docsgen.REPO_ROOT / "docs" / name).is_file(), f"docs/{name} missing"
+
+
+def _heading_anchors(text: str) -> set[str]:
+    """The anchor GitHub generates for every `##`/`###` heading.
+
+    Lowercase, drop everything that is not alphanumeric, space or hyphen, then
+    hyphenate the spaces. A dropped `&` leaves the spaces on both sides of it,
+    so `Identity Lanes & Transports` anchors as `identity-lanes--transports` —
+    the intuitive single-hyphen form links nowhere.
+    """
+    return {
+        re.sub(r"[^a-z0-9 -]", "", heading.lower()).replace(" ", "-")
+        for heading in re.findall(r"^#{2,3} (.+)$", text, re.M)
+    }
+
+
+def _toc_anchors(text: str) -> list[str]:
+    """In-page anchors linked from the `## Contents` block, in order.
+
+    Scoped to the block so a working anchor elsewhere in the document cannot
+    stand in for a broken one in the table of contents.
+    """
+    toc = text.split("## Contents")[1].split("\n## ")[0]
+    return re.findall(r"\]\(#([a-z0-9-]+)\)", toc)
+
+
+class TestReadmeShape:
+    """Navigation and length, the two things that made the 1018-line README
+    unusable. Anchors are derived from the headings rather than listed, so
+    renaming a section is caught rather than silently orphaning a link.
+    """
+
+    def _readme(self) -> str:
+        return (_docsgen.REPO_ROOT / "README.md").read_text()
+
+    def test_has_a_table_of_contents(self):
+        assert "## Contents" in self._readme()
+
+    def test_toc_anchors_match_real_headings(self):
+        text = self._readme()
+        headings = _heading_anchors(text)
+        missing = [a for a in _toc_anchors(text) if a not in headings]
+        assert not missing, f"TOC anchors with no heading: {missing}"
+
+    def test_the_toc_actually_links_somewhere(self):
+        """A Contents block holding no in-page anchors satisfies the check
+        above vacuously."""
+        assert len(_toc_anchors(self._readme())) >= 5
+
+    def test_there_is_one_document_index(self):
+        """Two lists of documents in one README is the duplication this
+        restructure exists to remove: they disagree the first time a document
+        is added to one of them. `## Contents` is the only index."""
+        text = self._readme()
+        assert text.count("## Contents") == 1
+        assert "## Documentation Hub" not in text
+
+    def test_stays_navigable(self):
+        n = len(self._readme().splitlines())
+        assert n < 400, f"README is {n} lines; reference belongs in docs/"
+
+
+class TestChecksDocShape:
+    """234 lines and nine headings, arrived at mid-file by search. The same
+    anchor rule applies, and `Token & Identity` and `Teleport / Machine
+    Identity` both hit the double-hyphen case."""
+
+    def _checks(self) -> str:
+        return _docsgen.CHECKS_PATH.read_text()
+
+    def test_has_a_table_of_contents(self):
+        assert "## Contents" in self._checks()
+
+    def test_toc_anchors_match_real_headings(self):
+        text = self._checks()
+        headings = _heading_anchors(text)
+        missing = [a for a in _toc_anchors(text) if a not in headings]
+        assert not missing, f"TOC anchors with no heading: {missing}"
+
+    def test_the_toc_reaches_every_section(self):
+        """Unlike the README, nothing here is a handoff — every heading holds
+        a table, so an unlisted one is unreachable from the top of the file."""
+        text = self._checks()
+        listed = set(_toc_anchors(text))
+        unreachable = sorted(_heading_anchors(text) - listed - {"contents"})
+        assert not unreachable, f"sections missing from the TOC: {unreachable}"

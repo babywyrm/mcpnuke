@@ -18,6 +18,38 @@ for training, or point at any MCP server in dev/staging/prod.
 
 ---
 
+## Contents
+
+**On this page**
+
+- [Install](#install)
+- [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
+- [Security Checks](#security-checks)
+- [Identity Lanes & Transports](#identity-lanes--transports)
+- [Exit Code](#exit-code)
+
+**Reference**
+
+| Document | Contents |
+|----------|----------|
+| [docs/cli-reference.md](docs/cli-reference.md) | Every flag, generated from the parser |
+| [docs/checks.md](docs/checks.md) | Full check inventory with severities |
+| [docs/scan-modes.md](docs/scan-modes.md) | Scan modes and fast-mode scoring |
+| [docs/ai-analysis.md](docs/ai-analysis.md) | Claude, Bedrock and Ollama analysis |
+| [docs/kubernetes.md](docs/kubernetes.md) | In-cluster deployment and posture checks |
+| [docs/methodology.md](docs/methodology.md) | Probing methodology, risk scoring, attack chains |
+| [QUICKSTART.md](QUICKSTART.md) | End-to-end scenarios |
+| [docs/ci-cd-guide.md](docs/ci-cd-guide.md) | Integrating scans into your pipeline |
+| [walkthrough/README.md](walkthrough/README.md) | Guided DVMCP scan, finding by finding |
+
+**Ecosystem**
+
+[agentic-sec](https://github.com/babywyrm/agentic-sec) — architecture,
+walkthroughs and cross-project guides for camazotz + nullfield + mcpnuke.
+
+---
+
 ## Install
 
 **Quickstart (recommended):**
@@ -270,8 +302,3 @@ list and CronJob scheduling: **[docs/kubernetes.md](docs/kubernetes.md)**.
 | **0** | Clean — scan finished with no findings |
 | **1** | Findings — at least one finding was reported |
 | **2** | Error — scan did not complete successfully (e.g. unreachable target, bad flags) |
-
-## Documentation Hub
-
-For ecosystem architecture, walkthroughs, and cross-project guides:
-**[agentic-sec](https://github.com/babywyrm/agentic-sec)** — the central documentation for camazotz + nullfield + mcpnuke.

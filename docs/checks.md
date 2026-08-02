@@ -34,6 +34,18 @@ rows inherited from the README, seven named the wrong severity and three
 described more than the code does. Treat a row that contradicts the code as a
 bug in this file, and fix it here.
 
+## Contents
+
+- [When each check runs](#when-each-check-runs)
+- [Static Checks (metadata only)](#static-checks-metadata-only)
+  - [Token & Identity Checks (JWT)](#token--identity-checks-jwt)
+- [Behavioral Checks (active server interaction)](#behavioral-checks-active-server-interaction)
+- [Infrastructure Checks (opt-in)](#infrastructure-checks-opt-in)
+  - [Target Surface](#target-surface)
+  - [Teleport / Machine Identity](#teleport--machine-identity)
+- [Transport & Aggregate Checks](#transport--aggregate-checks)
+  - [DPoP Enforcement (RFC 9449)](#dpop-enforcement-rfc-9449)
+
 ## When each check runs
 
 | Group | Condition |
