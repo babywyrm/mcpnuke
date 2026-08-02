@@ -59,6 +59,28 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
+- **README restructured from 1018 lines to 304, with a table of contents.**
+  Reference material moved into `docs/`, and the parts with a machine-readable
+  source are now generated rather than transcribed: `docs/cli-reference.md` is
+  rendered from the argparse parser, and coverage tests fail the build when a
+  registered check or deep probe is missing from `docs/checks.md`. Relocating
+  the prose without generating it would only have moved the problem — the
+  hand-written reference had drifted to 62 of 76 flags with 8 documented
+  nowhere, seven check severities disagreed with the code that emits them, and
+  two working checks were invisible in the docs after being repaired. New
+  documents: `docs/cli-reference.md`, `docs/checks.md`, `docs/scan-modes.md`,
+  `docs/ai-analysis.md`, `docs/kubernetes.md`, `docs/methodology.md`. A link
+  checker resolves every relative link across the project's markdown, and a
+  length cap keeps reference material from creeping back into the README.
+- **`mcpnuke --help` groups its 76 flags into 15 sections** instead of printing
+  one flat list, and opens with a one-line usage summary rather than 31 lines of
+  flag soup. The grouping previously existed only inside a README code block.
+  `--doctor` moved out of `Output` — it is a mode that exits before scanning —
+  and `--coverage` now sits with `--fast`, which is documented as its alias.
+- Seven check severities in the inventory corrected against the emitting
+  `result.add(...)` call: `excessive_permissions`, `credential_in_schema`,
+  `config_tampering`, `exfil_flow`, `webhook_persistence`, `input_sanitization`
+  and `response_credentials`. Documentation only; no behaviour changed.
 - Enumeration negotiates the protocol (`initialize` → `server/discover` → bare
   `tools/list`) instead of assuming the legacy handshake. Previously a
   stateless-only server scored as a zero-tool target, silently disabling every
