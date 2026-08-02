@@ -10,6 +10,7 @@ Usage:
     mcpnuke --targets http://target:9090 --fast --group-findings
 """
 
+import argparse
 import sys
 import time
 from datetime import datetime
@@ -182,20 +183,30 @@ def _run_doctor(console: Console) -> None:
         console.print("  [dim]Fix warnings above for full functionality.[/dim]\n")
 
 
-def _run_diff_subcommand(argv: list[str]) -> None:
-    """Handle: mcpnuke diff <before.json> <after.json>"""
-    import argparse as _argparse
+def _build_diff_parser() -> argparse.ArgumentParser:
+    """Construct the parser for `mcpnuke diff`.
 
-    from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal
-
-    p = _argparse.ArgumentParser(
+    Split out from _run_diff_subcommand for the same reason build_parser was
+    split out of parse_args: the reference generator has to introspect it.
+    `diff` is dispatched off sys.argv before the main parser runs, so
+    build_parser() cannot see it and a hand-written section went stale
+    immediately.
+    """
+    p = argparse.ArgumentParser(
         prog="mcpnuke diff",
         description="Compare two mcpnuke JSON scan outputs and show what changed.",
     )
     p.add_argument("before", help="Path to the baseline (older) scan JSON")
     p.add_argument("after", help="Path to the new scan JSON")
     p.add_argument("--json", metavar="FILE", help="Write diff summary as JSON to FILE")
-    args = p.parse_args(argv)
+    return p
+
+
+def _run_diff_subcommand(argv: list[str]) -> None:
+    """Handle: mcpnuke diff <before.json> <after.json>"""
+    from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal
+
+    args = _build_diff_parser().parse_args(argv)
 
     try:
         diff = compare_json_files(args.before, args.after)

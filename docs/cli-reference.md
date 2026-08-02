@@ -10,7 +10,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Target Selection
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--targets URL [URL ...]` | One or more MCP target URLs |
 | `--targets-file FILE` | Read target URLs from file (one per line, # comments ignored) |
 | `--port-range HOST:START-END` | Scan a port range, e.g. localhost:9001-9010 |
@@ -19,7 +19,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Authentication
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--auth-token TOKEN` | Bearer token for authenticated MCP endpoints (JWT, PAT, etc.). Or set MCP_AUTH_TOKEN env var. |
 | `--header KEY:VALUE` | Extra HTTP header (repeatable). Example: --header 'X-Tenant: blue' |
 | `--tls-verify` | Enable TLS certificate verification for outbound HTTP calls. Default is disabled for lab/self-signed targets. |
@@ -37,7 +37,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Scan Options
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--timeout SEC` | Per-target connection timeout (default: 25) |
 | `--workers N` | Parallel scan workers (default: 4) |
 | `--max-pages N` | Maximum pages to follow when enumerating tools/resources/prompts via nextCursor pagination (default: 20). |
@@ -46,13 +46,13 @@ Generated from the parser, so it cannot fall behind the code.
 ## Stdio Transport
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--stdio CMD` | Scan a local MCP server via stdin/stdout JSON-RPC. Launch CMD as a subprocess and communicate over stdio. E.g. --stdio 'npx -y @modelcontextprotocol/server-everything' |
 
 ## Safety Controls
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--no-invoke` | Static-only mode: skip all behavioral probes that call tools. Safe for production servers where tool invocation could have side effects. |
 | `--safe-mode` | Skip invoking tools classified as dangerous (delete, send, exec, write). Behavioral probes still run on read-only / low-risk tools. |
 | `--probe-calls N` | Number of tool invocations per tool for deep rug pull detection (default: 10) |
@@ -60,7 +60,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Performance
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--fast` | Fast scan: sample top 5 security-relevant tools, skip heavy probes (input_sanitization, error_leakage, temporal_consistency, ssrf_probe), cap probe workers at 2. Cuts LLM-backed scan time from ~30min to ~2min. Alias for --coverage 5. |
 | `--coverage N` | Sample the top N most security-relevant tools (by keyword risk score). 0 = scan all tools. --fast is an alias for --coverage 5. Example: --coverage 20 scans ~20% of a 100-tool server in fast-mode time. |
 | `--probe-workers N` | Parallel deep behavioral probe threads (default: 1). Higher values speed up deep probes but increase server load. |
@@ -69,7 +69,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## AI Analysis
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--claude` | Enable AI-powered analysis using Claude. Requires ANTHROPIC_API_KEY env var. Layers LLM reasoning on top of deterministic checks to catch subtle issues. |
 | `--claude-max-tools N` | Max tools for Claude AI response analysis (default: 10). Higher = more thorough but slower and costs more. |
 | `--claude-model MODEL` | Claude model to use for AI analysis (default: claude-sonnet-4-20250514). Use claude-opus-4-20250514 for deepest analysis. |
@@ -85,13 +85,13 @@ Generated from the parser, so it cannot fall behind the code.
 ## Tool Server
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--tool-names-file FILE` | Custom wordlist of tool names for ToolServer enumeration (one per line, # comments). Supplements the built-in list. |
 
 ## Output
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--json FILE` | Write JSON report to FILE |
 | `--sarif FILE` | Write SARIF 2.1.0 report to FILE (for GitHub Code Scanning, VS Code, and CI integration) |
 | `--verbose, -v` | Enable verbose output |
@@ -103,7 +103,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Policy Generation
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--generate-policy FILE` | Generate nullfield policy YAML from findings and write to FILE |
 | `--policy-name NAME` | metadata.name for the generated NullfieldPolicy |
 | `--policy-namespace NAMESPACE` | metadata.namespace for the generated NullfieldPolicy |
@@ -113,7 +113,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Lane Reporting & Cross-Project Coverage
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--by-lane` | Group scan findings by agentic-identity lane (1..5) and print a per-lane severity tally. Also emitted to --json when both are set. |
 | `--coverage-report CAMAZOTZ_URL` | Fetch camazotz /api/lanes (schema v1) from CAMAZOTZ_URL, intersect with this scan's findings, and print a cross-project coverage report. Example: --coverage-report http://localhost:3000 |
 | `--taxonomy PATH_OR_URL` | Override the vendored agentic-sec threat taxonomy (mcpnuke/data/taxonomy/lanes.yaml). Accepts a filesystem path or http(s) URL. Used to validate finding threat_ids and to surface lane/transport metadata. The vendored copy is used when not set. |
@@ -122,7 +122,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Differential
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--baseline FILE` | Compare against baseline (differential scan) |
 | `--diff-baseline FILE` | Path to a previous mcpnuke JSON output to diff against. The scan result will include a 'diff' block showing new, resolved, and severity-changed findings. |
 | `--save-baseline FILE` | Save current scan as baseline for future differential scans |
@@ -130,7 +130,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Inference Backend
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--inference` | Enable inference backend scanning — auto-detect LLM backends (Ollama, vLLM, LocalAI, llama.cpp, TGI) from MCP server context and probe for unauthenticated access. Off by default. |
 | `--inference-host URL` | Explicit inference backend URL to probe (e.g. http://gpu-box:11434). Implies --inference. Supports Ollama, vLLM, LocalAI, llama.cpp, and TGI. |
 | `--inference-baseline FILE` | Path to a model integrity manifest (JSON). Compares current model digests against this baseline to detect tampering, removal, or injection. Generate with --save-inference-baseline. |
@@ -139,7 +139,7 @@ Generated from the parser, so it cannot fall behind the code.
 ## Kubernetes
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--k8s-api-url URL` | Kubernetes API server URL for external scanning (e.g. http://localhost:8001 for kubectl proxy). Or set MCPNUKE_K8S_API_URL env var. |
 | `--k8s-discover` | Auto-discover MCP targets via K8s service discovery (requires running inside a pod with service list permissions) |
 | `--k8s-discover-namespaces NS [NS ...]` | Namespaces to scan for MCP services (default: current namespace). Use with --k8s-discover. |
@@ -155,14 +155,42 @@ Generated from the parser, so it cannot fall behind the code.
 ## Diagnostics
 
 | Option | Description |
-|--------|-------------|
+|---|---|
 | `--doctor` | Check installation health: core deps, optional extras, env vars, connectivity. |
+
+## Environment Variables
+
+Each variable supplies the default for one flag; passing the flag wins. Only names are listed here — a value is a credential.
+
+| Variable | Flag |
+|---|---|
+| `MCPNUKE_JWT_MAX_TTL` | `--jwt-max-ttl` |
+| `MCPNUKE_K8S_API_URL` | `--k8s-api-url` |
+| `MCPNUKE_K8S_TOKEN` | `--k8s-token` |
+| `MCP_AUTH_TOKEN` | `--auth-token` |
+| `MCP_CLIENT_ID` | `--client-id` |
+| `MCP_CLIENT_SECRET` | `--client-secret` |
+| `MCP_DPOP_PROOF` | `--dpop-proof` |
+| `MCP_INTROSPECT_CLIENT_ID` | `--token-introspect-client-id` |
+| `MCP_INTROSPECT_CLIENT_SECRET` | `--token-introspect-client-secret` |
+| `MCP_INTROSPECT_URL` | `--token-introspect-url` |
+| `MCP_JWKS_URL` | `--jwks-url` |
+| `MCP_OIDC_SCOPE` | `--oidc-scope` |
+| `MCP_OIDC_URL` | `--oidc-url` |
+| `NO_COLOR` | `--no-color` |
 
 ## Subcommand: `mcpnuke diff`
 
-Compares two saved scan reports. This subcommand is dispatched before the main
-parser runs and has its own options; see `mcpnuke diff --help`.
+Compares two saved scan reports. `diff` is dispatched off `sys.argv` before the main parser runs, so it takes its own arguments and none of the options above.
 
 ```bash
 mcpnuke diff OLD.json NEW.json
 ```
+
+| Argument | Description |
+|---|---|
+| `before` | Path to the baseline (older) scan JSON |
+| `after` | Path to the new scan JSON |
+| `--json FILE` | Write diff summary as JSON to FILE |
+
+Exits 1 when the newer report contains findings the baseline did not, so it can gate a CI job.

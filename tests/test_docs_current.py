@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
-from pathlib import Path
 
+from mcpnuke import _docsgen
+from mcpnuke.__main__ import _build_diff_parser
+from mcpnuke._docsgen import render_cli_reference
 from mcpnuke.cli import build_parser, parse_args
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class TestParserFactory:
@@ -129,31 +130,61 @@ class TestArgumentGroups:
         assert not unmatched, f"prefix rules matching no flag: {unmatched}"
 
 
+def _table_invocations(text: str) -> set[str]:
+    """Option strings appearing in the first cell of a rendered table row.
+
+    Substring matching over the whole document is too weak to test with: `-h`
+    is a substring of `--inference-host`, `--help` occurs in the prose, and
+    `--inference` occurs inside `--inference-host`'s own row.
+    """
+    found: set[str] = set()
+    for line in text.splitlines():
+        cell = re.match(r"^\| `([^`]+)` \|", line)
+        if not cell:
+            continue
+        for part in cell.group(1).split(","):
+            token = part.strip().split(" ")[0]
+            if token.startswith("-"):
+                found.add(token)
+    return found
+
+
 class TestGeneratedCLIReference:
     def test_file_exists(self):
-        assert (REPO_ROOT / "docs/cli-reference.md").is_file()
+        assert _docsgen.CLI_REFERENCE_PATH.is_file()
 
     def test_content_matches_the_parser(self):
-        from mcpnuke._docsgen import render_cli_reference
-
         expected = render_cli_reference(build_parser())
-        actual = (REPO_ROOT / "docs/cli-reference.md").read_text()
+        actual = _docsgen.CLI_REFERENCE_PATH.read_text()
         assert actual == expected, (
             "docs/cli-reference.md is stale. "
             "Regenerate with: uv run python -m mcpnuke._docsgen"
         )
 
-    def test_every_parser_flag_appears(self):
-        from mcpnuke._docsgen import render_cli_reference
+    def test_every_parser_flag_appears_in_a_table_row(self):
+        """Exact set equality against the rows, not substring containment.
 
-        rendered = render_cli_reference(build_parser())
-        for action in build_parser()._actions:
-            for opt in action.option_strings:
-                assert opt in rendered, f"{opt} missing from generated reference"
+        `-h`/`--help` are the only deliberate omissions: they live in the
+        argparse-owned group the renderer skips.
+        """
+        documented = _table_invocations(render_cli_reference(build_parser()))
+        declared = {o for a in build_parser()._actions for o in a.option_strings}
+        deliberately_absent = {"-h", "--help"}
+        assert documented == declared - deliberately_absent
+
+    def test_the_main_parser_has_no_positionals(self):
+        """The renderer skips argparse's `positional arguments` group and
+        filters on `option_strings`, so a positional added to the main parser
+        would vanish from the document. `mcpnuke diff` has positionals and is
+        rendered by a separate path that handles them.
+        """
+        positionals = [
+            a.dest for a in build_parser()._actions if not a.option_strings
+        ]
+        assert not positionals, f"main parser gained positionals: {positionals}"
 
     def test_carries_a_do_not_edit_banner(self):
-        text = (REPO_ROOT / "docs/cli-reference.md").read_text()
-        assert "GENERATED FILE" in text
+        assert "GENERATED FILE" in _docsgen.CLI_REFERENCE_PATH.read_text()
 
     def test_no_environment_value_leaks_into_the_doc(self, monkeypatch):
         """14 flags default to os.environ.get(...), several of them secrets.
@@ -161,19 +192,25 @@ class TestGeneratedCLIReference:
         The renderer must never emit a default, or running the generator on a
         machine with MCP_AUTH_TOKEN set would bake that token into a committed
         file. This is a security scanner; that file ends up in a public repo.
-        """
-        from mcpnuke._docsgen import render_cli_reference
 
+        The Environment Variables section names these variables, which makes
+        the distinction load-bearing: the name is documentation, the value is
+        a credential.
+        """
         canary = "s3cr3t-canary-value-do-not-emit"
-        for var in (
+        secret_vars = (
             "MCP_AUTH_TOKEN",
             "MCP_CLIENT_SECRET",
             "MCP_INTROSPECT_CLIENT_SECRET",
             "MCPNUKE_K8S_TOKEN",
-        ):
+        )
+        for var in secret_vars:
             monkeypatch.setenv(var, canary)
 
-        assert canary not in render_cli_reference(build_parser())
+        rendered = render_cli_reference(build_parser())
+        assert canary not in rendered
+        for var in secret_vars:
+            assert var in rendered, f"{var} should be named, just never valued"
 
     def test_no_help_string_interpolates_a_default(self):
         """The renderer deliberately never expands help strings, so a
@@ -192,8 +229,149 @@ class TestGeneratedCLIReference:
         """argparse %-formats help strings, so `--coverage` writes `%%` to get
         one `%` in --help. Rendered markdown must show what --help shows.
         """
-        from mcpnuke._docsgen import render_cli_reference
-
         rendered = render_cli_reference(build_parser())
         assert "~20% of a 100-tool server" in rendered
         assert "%%" not in rendered
+
+    def test_no_short_option_takes_an_argument(self):
+        """Guards render stability across the 3.11/3.12/3.13 CI matrix.
+
+        Python 3.13 changed HelpFormatter._format_action_invocation: 3.11 and
+        3.12 render `-f FOO, --foo FOO`, 3.13+ render `-f, --foo FOO`. Today
+        the document is byte-identical on all three only because `--verbose,
+        -v` is the sole flag with a short form and it takes no argument. Add
+        `-o, --output FILE` and test_content_matches_the_parser goes red on
+        part of the matrix while passing locally, telling whoever sees it to
+        regenerate a file that is not stale.
+
+        The fix is to keep short options argument-free, not to reimplement
+        argparse's formatter — nargs="+" and choices metavars would mean
+        reimplementing _format_args and _metavar_formatter too.
+        """
+        offenders = [
+            action.option_strings
+            for action in build_parser()._actions
+            if action.nargs != 0
+            and any(len(o) == 2 and not o.startswith("--") for o in action.option_strings)
+        ]
+        assert not offenders, (
+            f"short option strings that take an argument render differently on "
+            f"Python 3.13 than on 3.11/3.12: {offenders}"
+        )
+
+
+class TestRenderedDocumentStructure:
+    def test_headings_match_the_declared_group_order(self):
+        """EXPECTED_GROUP_ORDER claims to govern the document, but every other
+        assertion checks only the parser, and test_content_matches_the_parser
+        compares the renderer against itself — regenerating makes the file
+        agree with whatever came out. If a curated group emptied or its title
+        collided with the renderer's skip list, a whole section would vanish
+        with a green suite. Read the committed headings instead.
+        """
+        headings = tuple(
+            line.removeprefix("## ").strip()
+            for line in _docsgen.CLI_REFERENCE_PATH.read_text().splitlines()
+            if line.startswith("## ")
+        )
+        assert headings == (
+            *EXPECTED_GROUP_ORDER,
+            _docsgen.ENV_HEADING,
+            _docsgen.DIFF_HEADING,
+        )
+
+    def test_cell_escapes_pipes(self):
+        """No help string contains a `|` today, so an unescaped pipe would
+        break a table row silently the first time one does.
+        """
+        assert _docsgen._cell("a | b") == "a \\| b"
+
+    def test_cell_collapses_whitespace(self):
+        assert _docsgen._cell("a\n  b\tc") == "a b c"
+
+
+class TestDiffSubcommandSection:
+    """`mcpnuke diff` is dispatched on sys.argv before the main parser runs, so
+    build_parser() cannot see it. It gets its own parser and its own rendering
+    path; the first hand-written version of this section omitted --json.
+    """
+
+    def test_build_diff_parser_returns_a_parser(self):
+        assert isinstance(_build_diff_parser(), argparse.ArgumentParser)
+
+    def test_diff_parser_spec_is_unchanged_by_the_extraction(self):
+        actions = {
+            a.dest: a.option_strings for a in _build_diff_parser()._actions
+        }
+        assert actions == {
+            "help": ["-h", "--help"],
+            "before": [],
+            "after": [],
+            "json": ["--json"],
+        }
+
+    def test_diff_parser_still_parses(self):
+        args = _build_diff_parser().parse_args(["a.json", "b.json", "--json", "d.json"])
+        assert (args.before, args.after, args.json) == ("a.json", "b.json", "d.json")
+
+    def test_every_diff_argument_is_rendered(self):
+        """Including the positionals, which the main renderer filters out."""
+        rendered = render_cli_reference(build_parser())
+        section = rendered.split(f"## {_docsgen.DIFF_HEADING}")[1]
+        for expected in ("`before`", "`after`", "`--json FILE`"):
+            assert expected in section, f"{expected} missing from the diff section"
+
+    def test_diff_section_omits_the_help_action(self):
+        rendered = render_cli_reference(build_parser())
+        section = rendered.split(f"## {_docsgen.DIFF_HEADING}")[1]
+        assert "`-h" not in section
+
+    def test_diff_section_documents_the_exit_code(self):
+        rendered = render_cli_reference(build_parser())
+        section = rendered.split(f"## {_docsgen.DIFF_HEADING}")[1]
+        assert "exit" in section.lower()
+
+
+class TestEnvironmentVariableSection:
+    """Thirteen env-var defaults were reachable only where a help string
+    happened to mention one; seven were documented nowhere. The mapping is
+    AST-derived from cli.py so it cannot drift the way a hand-written list did.
+    """
+
+    def test_every_environ_get_in_cli_is_associated_with_a_flag(self):
+        pairs = _docsgen.env_var_flag_pairs()
+        assert len(pairs) == _docsgen.count_environ_reads()
+        assert all(var and flag.startswith("--") for var, flag in pairs)
+
+    def test_the_indirect_constant_resolves(self):
+        """--auth-token reads os.environ.get(AUTH_TOKEN_ENV), a module-level
+        constant rather than a literal. A literal-only AST walk finds 13 of
+        the 14 and silently drops the most important one.
+        """
+        assert ("MCP_AUTH_TOKEN", "--auth-token") in _docsgen.env_var_flag_pairs()
+
+    def test_previously_undocumented_variables_now_appear(self):
+        rendered = render_cli_reference(build_parser())
+        section = rendered.split(f"## {_docsgen.ENV_HEADING}")[1]
+        for var in (
+            "MCP_DPOP_PROOF",
+            "MCP_INTROSPECT_CLIENT_ID",
+            "MCP_INTROSPECT_CLIENT_SECRET",
+            "MCP_INTROSPECT_URL",
+            "MCP_JWKS_URL",
+            "MCP_OIDC_SCOPE",
+            "MCP_OIDC_URL",
+        ):
+            assert f"`{var}`" in section, f"{var} still undocumented"
+
+    def test_each_variable_names_the_flag_it_backs(self):
+        rendered = render_cli_reference(build_parser())
+        section = rendered.split(f"## {_docsgen.ENV_HEADING}")[1]
+        for var, flag in _docsgen.env_var_flag_pairs():
+            assert f"| `{var}` | `{flag}` |" in section
+
+    def test_the_flags_named_are_real_flags(self):
+        """A stale AST association would name a flag that no longer exists."""
+        declared = {o for a in build_parser()._actions for o in a.option_strings}
+        unknown = [f for _, f in _docsgen.env_var_flag_pairs() if f not in declared]
+        assert not unknown, f"env section names non-existent flags: {unknown}"
