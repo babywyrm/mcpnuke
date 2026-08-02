@@ -215,10 +215,15 @@ def _add_performance_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
         "--fast",
         action="store_true",
+        # The probe list must name exactly mcpnuke.checks.FAST_SKIP_CHECKS.
+        # Generating docs/cli-reference.md from this parser proves the document
+        # matches --help; it does not prove --help matches behaviour, which is
+        # how this list sat one probe behind the code. Guarded by
+        # tests/test_docs_current.py::TestFastSkipHelp.
         help="Fast scan: sample top 5 security-relevant tools, skip heavy "
         "probes (input_sanitization, error_leakage, temporal_consistency, "
-        "ssrf_probe), cap probe workers at 2. Cuts LLM-backed scan time "
-        "from ~30min to ~2min. Alias for --coverage 5.",
+        "ssrf_probe, sdk_cache_poisoning), cap probe workers at 2. Cuts "
+        "LLM-backed scan time from ~30min to ~2min. Alias for --coverage 5.",
     )
     group.add_argument(
         "--coverage",

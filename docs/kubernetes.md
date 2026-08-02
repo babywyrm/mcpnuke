@@ -70,7 +70,7 @@ Default schedule: every 6 hours. Edit the `spec.schedule` field to change.
 
 ## Customization
 
-Edit `k8s/manifests/job.yaml` args to target specific namespaces:
+Edit `mcpnuke/k8s/manifests/job.yaml` args to target specific namespaces:
 
 ```yaml
 args:

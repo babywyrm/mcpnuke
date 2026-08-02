@@ -87,7 +87,13 @@ Rating:
 ## Attack Chain Detection
 
 After all individual checks run, the scanner looks for **linked
-vulnerability pairs** that combine into compound attack paths:
+vulnerability pairs** that combine into compound attack paths.
+
+Every pair in `ATTACK_CHAIN_PATTERNS` (`mcpnuke/core/constants.py`) is listed
+below, in that list's own order.
+`tests/test_docs_current.py::TestAttackChainsDocumented` fails when the two
+sets diverge — this table sat sixteen chains behind the code before it had a
+guard. The risk column is prose and is not derived from anything.
 
 | Chain | Risk |
 |-------|------|
@@ -96,19 +102,35 @@ vulnerability pairs** that combine into compound attack paths:
 | `code_execution → token_theft` | RCE used to steal credentials |
 | `code_execution → remote_access` | RCE to persistent access |
 | `indirect_injection → token_theft` | Poisoned data exfils creds |
+| `indirect_injection → remote_access` | Poisoned data opens a persistent channel |
+| `tool_poisoning → token_theft` | Hidden tool instructions exfil creds |
 | `tool_response_injection → cross_tool_manipulation` | Output hijacks tool flow |
+| `tool_response_injection → token_theft` | Poisoned output exfils creds |
 | `deep_rug_pull → tool_poisoning` | Post-trust tool mutation |
+| `deep_rug_pull → tool_response_injection` | The mutated tool starts poisoning its own output |
 | `input_sanitization → code_execution` | Unsanitized input to RCE |
 | `resource_poisoning → tool_response_injection` | Poisoned resource feeds tool |
+| `state_mutation → deep_rug_pull` | Server-side state change drives the tool mutation |
+| `notification_abuse → token_theft` | Server-initiated request harvests credentials |
+| `cross_tool_manipulation → code_execution` | Tool chaining reaches an exec-capable tool |
 | `cross_tool_manipulation → token_theft` | Tool chaining steals creds |
-| `webhook_persistence → tool_response_injection` | Persistent callback feeds poisoned responses |
-| `webhook_persistence → token_theft` | Webhook exfils credentials |
-| `config_tampering → code_execution` | Config rewrite enables RCE |
-| `config_tampering → webhook_persistence` | Config rewrite installs persistent callback |
 | `response_credentials → token_theft` | Leaked creds enable further theft |
 | `response_credentials → remote_access` | Leaked creds enable lateral movement |
+| `config_tampering → code_execution` | Config rewrite enables RCE |
+| `config_tampering → tool_poisoning` | Config rewrite plants poisoned tool descriptions |
+| `webhook_persistence → tool_response_injection` | Persistent callback feeds poisoned responses |
+| `webhook_persistence → token_theft` | Webhook exfils credentials |
+| `credential_in_schema → token_theft` | A credential in the schema is stealable from `tools/list` alone |
+| `ssrf_probe → token_theft` | Server-side fetch reaches a metadata credential endpoint |
+| `ssrf_probe → remote_access` | Server-side fetch pivots into the internal network |
+| `actuator_probe → response_credentials` | Exposed actuator dumps config holding secrets |
+| `actuator_probe → token_theft` | Actuator-exposed secrets become stolen tokens |
 | `exfil_flow → token_theft` | Source→sink pipeline steals creds |
 | `exfil_flow → remote_access` | Source→sink pipeline enables remote access |
+| `config_tampering → webhook_persistence` | Config rewrite installs persistent callback |
+| `jwt_algorithm → token_theft` | A forgeable signature mints a token for any identity |
+| `jwt_weak_key → token_theft` | A guessable HMAC key mints a forged token |
+| `jwt_ttl → token_theft` | A long-lived token stays usable long after it is stolen |
 
 Chains are reported as CRITICAL with evidence-based tool names (e.g.
 `input_sanitization → code_execution (execute_command)`) and appear in the

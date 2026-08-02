@@ -61,7 +61,7 @@ Generated from the parser, so it cannot fall behind the code.
 
 | Option | Description |
 |---|---|
-| `--fast` | Fast scan: sample top 5 security-relevant tools, skip heavy probes (input_sanitization, error_leakage, temporal_consistency, ssrf_probe), cap probe workers at 2. Cuts LLM-backed scan time from ~30min to ~2min. Alias for --coverage 5. |
+| `--fast` | Fast scan: sample top 5 security-relevant tools, skip heavy probes (input_sanitization, error_leakage, temporal_consistency, ssrf_probe, sdk_cache_poisoning), cap probe workers at 2. Cuts LLM-backed scan time from ~30min to ~2min. Alias for --coverage 5. |
 | `--coverage N` | Sample the top N most security-relevant tools (by keyword risk score). 0 = scan all tools. --fast is an alias for --coverage 5. Example: --coverage 20 scans ~20% of a 100-tool server in fast-mode time. |
 | `--probe-workers N` | Parallel deep behavioral probe threads (default: 1). Higher values speed up deep probes but increase server load. |
 | `--deterministic` | Deterministic scan mode: enforce stable tool ordering and single-threaded AI Phase 2/probe execution for more repeatable benchmarking. |

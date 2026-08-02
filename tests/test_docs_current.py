@@ -11,8 +11,9 @@ from mcpnuke import _docsgen
 from mcpnuke import checks as checks_pkg
 from mcpnuke.__main__ import _build_diff_parser
 from mcpnuke._docsgen import render_cli_reference
-from mcpnuke.checks import _build_deep_checks
+from mcpnuke.checks import FAST_SKIP_CHECKS, _build_deep_checks
 from mcpnuke.cli import build_parser, parse_args
+from mcpnuke.core.constants import ATTACK_CHAIN_PATTERNS
 from mcpnuke.core.models import TargetResult
 
 
@@ -283,6 +284,91 @@ class TestGeneratedCLIReference:
         )
 
 
+def _fast_help() -> str:
+    action = next(a for a in build_parser()._actions if "--fast" in a.option_strings)
+    return action.help or ""
+
+
+# The parenthesised probe list inside --fast's help, e.g. "skip heavy probes
+# (a, b, c)". A reworded help string that loses the list yields no match, and
+# the empty set fails the comparison rather than passing vacuously.
+_FAST_PROBE_LIST = re.compile(r"probes \(([^)]*)\)")
+
+
+class TestFastSkipHelp:
+    """--help must match the code, not just the document match --help.
+
+    Generating docs/cli-reference.md from the parser closed the gap between the
+    document and `--help`. It says nothing about the gap between `--help` and
+    behaviour, and that one was open: the help string named four skipped probes
+    while FAST_SKIP_CHECKS held five, having gained sdk_cache_poisoning. The
+    generator reproduced the wrong four faithfully, and the generated document
+    contradicted the hand-written docs/checks.md, which had it right.
+    """
+
+    def _named_probes(self) -> set[str]:
+        match = _FAST_PROBE_LIST.search(_fast_help())
+        if not match:
+            return set()
+        return {part.strip() for part in match.group(1).split(",") if part.strip()}
+
+    def test_the_probe_list_is_parseable(self):
+        """An unparseable help string would make the comparison below vacuous
+        in the direction that matters least — say so separately."""
+        assert self._named_probes(), f"no probe list found in: {_fast_help()!r}"
+
+    def test_help_names_exactly_the_skipped_checks(self):
+        assert self._named_probes() == FAST_SKIP_CHECKS
+
+    def test_the_generated_document_carries_the_same_list(self):
+        """The rendered row is the copy operators read; assert on it directly
+        rather than trusting that regeneration happened."""
+        rendered = render_cli_reference(build_parser())
+        row = next(ln for ln in rendered.splitlines() if ln.startswith("| `--fast`"))
+        for name in FAST_SKIP_CHECKS:
+            assert name in row, f"{name} missing from the rendered --fast row"
+
+
+# A chain row, e.g. "| `ssrf_probe → token_theft` | ... |". Scoped to the
+# section below so the worked example in the surrounding prose cannot stand in
+# for a missing row.
+_CHAIN_ROW = re.compile(r"^\| `([a-z0-9_]+) → ([a-z0-9_]+)` \|", re.M)
+_CHAIN_HEADING = "## Attack Chain Detection"
+
+
+class TestAttackChainsDocumented:
+    """ATTACK_CHAIN_PATTERNS is a module-level list of tuples — machine
+    readable, and documented by hand anyway. The table sat at 18 of 34 entries,
+    missing all three JWT chains and both halves of ssrf_probe and
+    actuator_probe, with nothing to notice.
+    """
+
+    def _documented(self) -> set[tuple[str, str]]:
+        text = (_docsgen.REPO_ROOT / "docs" / "methodology.md").read_text()
+        section = text.split(_CHAIN_HEADING)[1].split("\n## ")[0]
+        return set(_CHAIN_ROW.findall(section))
+
+    def test_the_section_is_found(self):
+        """A renamed heading would empty the parse and fail the comparison for
+        the wrong reason."""
+        text = (_docsgen.REPO_ROOT / "docs" / "methodology.md").read_text()
+        assert text.count(_CHAIN_HEADING) == 1
+
+    def test_the_documented_chains_are_exactly_the_coded_ones(self):
+        documented = self._documented()
+        coded = set(ATTACK_CHAIN_PATTERNS)
+        assert documented == coded, (
+            f"undocumented chains: {sorted(coded - documented)}; "
+            f"documented but not detected: {sorted(documented - coded)}"
+        )
+
+    def test_the_constant_has_no_duplicate_pairs(self):
+        """The comparison above is set-to-set, so a duplicated tuple would be
+        invisible to it while inflating every count taken off the list."""
+        dupes = {p for p in ATTACK_CHAIN_PATTERNS if ATTACK_CHAIN_PATTERNS.count(p) > 1}
+        assert not dupes, f"duplicated in ATTACK_CHAIN_PATTERNS: {sorted(dupes)}"
+
+
 class TestRenderedDocumentStructure:
     def test_headings_match_the_declared_group_order(self):
         """EXPECTED_GROUP_ORDER claims to govern the document, but every other
@@ -426,6 +512,58 @@ def _deep_probe_names() -> set[str]:
     }
 
 
+def _registry_check_names() -> set[str]:
+    """Every name in the `*_CHECK_NAMES` inventory tables in mcpnuke.checks."""
+    names: set[str] = set()
+    for key, value in vars(checks_pkg).items():
+        if key.endswith("_CHECK_NAMES") and isinstance(value, tuple):
+            names.update(value)
+    return names
+
+
+def _documented_row_names() -> set[str]:
+    """The leading backticked token of every table row in docs/checks.md.
+
+    Row-scoped rather than a sweep for backticks, because the prose is full of
+    `--fast`, `tools/list`, `result.add(...)` and file paths. The rows are
+    where the doc makes a claim about a specific check.
+    """
+    return set(re.findall(r"^\| `([a-z0-9_]+)`", _docsgen.CHECKS_PATH.read_text(), re.M))
+
+
+# Row names in docs/checks.md that are deliberately not registered checks.
+# The doc names what a reader sees in a *report* as well as what the progress
+# counter shows, and those are two vocabularies: a check emits findings under
+# names of its own. Every entry here is one of those, or the one thing that is
+# not a check at all.
+_DOCUMENTED_NON_CHECKS: frozenset[str] = frozenset({
+    # Emitted by the enumerator while connecting, not by any check, so it
+    # reaches reports with no entry in the check inventory at all.
+    "auth",
+    # Emitted by tool_response_injection in the same pass, under its own name.
+    "cross_tool_manipulation",
+    # The three findings of the dpop_no_header / dpop_malformed /
+    # dpop_missing_binding probes. Documenting only the probe labels leaves
+    # whoever is reading a finding with nothing to search for.
+    "dpop_not_enforced",
+    "dpop_header_not_validated",
+    "dpop_binding_not_enforced",
+    # The four findings of the single `inference_backend` check.
+    "inference_model_enum",
+    "inference_no_auth",
+    "inference_mgmt_exposed",
+    "inference_network_exposed",
+    # The four findings of the single `model_integrity` check.
+    "model_tampered",
+    "model_removed",
+    "model_injected",
+    "model_size_drift",
+    # actuator_probe's second finding, emitted once discovery finds a live
+    # actuator and the write probes are attempted.
+    "actuator_exploitation",
+})
+
+
 class TestChecksDocumented:
     """docs/checks.md is written by hand, so only its completeness is testable.
 
@@ -438,13 +576,7 @@ class TestChecksDocumented:
     """
 
     def _registry_names(self) -> set[str]:
-        import mcpnuke.checks as checks
-
-        names: set[str] = set()
-        for key, value in vars(checks).items():
-            if key.endswith("_CHECK_NAMES") and isinstance(value, tuple):
-                names.update(value)
-        return names
+        return _registry_check_names()
 
     def test_registry_is_not_empty(self):
         """A renamed tuple suffix would empty the set and pass everything."""
@@ -484,6 +616,32 @@ class TestChecksDocumented:
             f"docs/checks.md: {missing}"
         )
 
+    def test_every_documented_row_is_something_that_exists(self):
+        """The converse of the two tests above, which only push names *in*.
+
+        Renaming a check adds a row for the new name and leaves the old row
+        behind forever: nothing reads it, nothing contradicts it, and the next
+        reader trusts it. This is the direction that catches that.
+        """
+        known = _registry_check_names() | _deep_probe_names() | _DOCUMENTED_NON_CHECKS
+        stale = sorted(_documented_row_names() - known)
+        assert not stale, (
+            f"{len(stale)} rows in docs/checks.md name nothing that runs: {stale}. "
+            "If one is a finding name rather than a check name, add it to "
+            "_DOCUMENTED_NON_CHECKS with the check that emits it."
+        )
+
+    def test_the_row_sweep_finds_the_tables(self):
+        """An over-tight row regex would empty the set and excuse everything."""
+        assert len(_documented_row_names()) > 50
+
+    def test_no_allowlist_entry_is_stale(self):
+        """An excused name that no longer appears is an excuse for nothing —
+        and after a rename it is the residue of exactly the row this guard
+        exists to catch."""
+        absent = sorted(_DOCUMENTED_NON_CHECKS - _documented_row_names())
+        assert not absent, f"_DOCUMENTED_NON_CHECKS excuses absent rows: {absent}"
+
     def test_dpop_findings_are_documented(self):
         """Probe labels and the finding names users actually see both appear.
 
@@ -498,6 +656,44 @@ class TestChecksDocumented:
             "dpop_binding_not_enforced",
         ):
             assert f"`{name}`" in doc
+
+
+class TestProseCounts:
+    """Three hardcoded totals, in two documents, both of them computable.
+
+    Adding a check is the most common change to this codebase, and it makes all
+    three wrong at once with a green suite. The sentences are matched by shape
+    rather than in full, so a rewording fails as "sentence not found" instead of
+    as a wrong number — re-pin it, do not delete the guard.
+    """
+
+    def _readme(self) -> str:
+        return (_docsgen.REPO_ROOT / "README.md").read_text()
+
+    def test_the_two_populations_do_not_overlap(self):
+        """The prose adds the registry to the deep plan. That is only the count
+        of distinct checks while nothing is in both."""
+        both = _registry_check_names() & _deep_probe_names()
+        assert not both, f"counted twice by the prose total: {sorted(both)}"
+
+    def test_readme_states_the_real_total(self):
+        expected = len(_registry_check_names() | _deep_probe_names())
+        match = re.search(r"runs (\d+) checks", self._readme())
+        assert match, "README no longer states a check total in the expected shape"
+        assert int(match.group(1)) == expected
+
+    def test_checks_doc_states_the_real_breakdown(self):
+        doc = _docsgen.CHECKS_PATH.read_text()
+        registry, deep = _registry_check_names(), _deep_probe_names()
+
+        totals = re.search(r"(\d+) checks in total: (\d+) in the check inventory", doc)
+        assert totals, "docs/checks.md no longer states the breakdown in the expected shape"
+        assert int(totals.group(1)) == len(registry | deep)
+        assert int(totals.group(2)) == len(registry)
+
+        probes = re.search(r"the (\d+) deep behavioral probes", doc)
+        assert probes, "docs/checks.md no longer states the deep probe count"
+        assert int(probes.group(1)) == len(deep)
 
 
 MD_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
@@ -539,6 +735,45 @@ class TestDocLinks:
                     broken.append(f"{path.relative_to(_docsgen.REPO_ROOT)} -> {target}")
         assert not broken, f"broken relative links: {broken}"
 
+    def _fragment_links(self) -> list[tuple[Path, str, Path, str]]:
+        """Every link carrying a `#fragment`, with the document it lands in.
+
+        A bare `#anchor` lands in the file that wrote it; `other.md#anchor`
+        lands in the other file. Targets that are not markdown have no headings
+        to name and are dropped — their existence is the other test's job.
+        """
+        found: list[tuple[Path, str, Path, str]] = []
+        for path in self._markdown_files():
+            for target in MD_LINK.findall(path.read_text()):
+                if target.startswith(("http://", "https://", "mailto:")):
+                    continue
+                file_part, _, fragment = target.partition("#")
+                if not fragment:
+                    continue
+                landing = (path.parent / file_part).resolve() if file_part else path
+                if landing.suffix == ".md" and landing.is_file():
+                    found.append((path, target, landing, fragment))
+        return found
+
+    def test_the_sweep_finds_fragment_links(self):
+        """Every table of contents is built out of these, so an empty sweep
+        means the extraction broke, not that nobody deep-links."""
+        assert len(self._fragment_links()) >= 10
+
+    def test_link_fragments_name_real_headings(self):
+        """The fragment used to be split off and discarded, so
+        `docs/checks.md#no-such-heading` passed on the strength of the file
+        existing. Splitting one document into six makes a deep link into
+        another document the natural thing to write, and the first one would
+        have gone unchecked.
+        """
+        broken = [
+            f"{path.relative_to(_docsgen.REPO_ROOT)} -> {target}"
+            for path, target, landing, fragment in self._fragment_links()
+            if fragment not in _heading_anchors(landing.read_text())
+        ]
+        assert not broken, f"links to headings that do not exist: {broken}"
+
     def test_expected_docs_exist(self):
         for name in (
             "cli-reference.md",
@@ -575,6 +810,18 @@ def _toc_anchors(text: str) -> list[str]:
     return re.findall(r"\]\(#([a-z0-9-]+)\)", toc)
 
 
+# Headings the README's Contents block deliberately does not list. The reverse
+# guard below was originally not applied here at all, on the reasoning that a
+# handoff section need not be indexed — and the two sections that fell out,
+# CLI Reference and Kubernetes Deployment, were handoffs. They are now listed;
+# an entry here is a decision someone recorded, not a section that slipped.
+_README_TOC_EXEMPT: frozenset[str] = frozenset({
+    # An h3 under How It Works, which is listed. Indexing a section's own
+    # subsections in a six-item Contents block costs more than it finds.
+    "scan-phases",
+})
+
+
 class TestReadmeShape:
     """Navigation and length, the two things that made the 1018-line README
     unusable. Anchors are derived from the headings rather than listed, so
@@ -605,6 +852,28 @@ class TestReadmeShape:
         text = self._readme()
         assert text.count("## Contents") == 1
         assert "## Documentation Hub" not in text
+
+    def test_the_toc_reaches_every_section(self):
+        """The forward check only proves every listed anchor exists. Two
+        sections were reachable only by scrolling, and one of them —
+        Exit Code's neighbour, CLI Reference — is where QUICKSTART.md sends
+        readers. An unlisted section is either a bug or an exemption.
+        """
+        text = self._readme()
+        listed = set(_toc_anchors(text))
+        unreachable = sorted(
+            _heading_anchors(text) - listed - {"contents"} - _README_TOC_EXEMPT
+        )
+        assert not unreachable, (
+            f"sections missing from the README's Contents: {unreachable}. "
+            "List them, or add them to _README_TOC_EXEMPT with a reason."
+        )
+
+    def test_no_toc_exemption_is_stale(self):
+        """An exemption for a heading that no longer exists excuses nothing
+        and hides the next rename."""
+        gone = sorted(_README_TOC_EXEMPT - _heading_anchors(self._readme()))
+        assert not gone, f"_README_TOC_EXEMPT names absent headings: {gone}"
 
     def test_stays_navigable(self):
         n = len(self._readme().splitlines())

@@ -94,6 +94,14 @@ def run_dpop_enforcement_checks(result: TargetResult, session: Any) -> None:
     individually through its ``_run`` helper so each one appears in the
     progress count. This remains the entry point for callers outside the
     orchestrator — do not add a second call to it from there.
+
+    A fourth probe must be added in both places. Nothing in production reads
+    this function, but every DPoP test enters through it, so a probe added
+    only here is fully tested and never runs;
+    tests/test_check_progress.py::TestDpopRunnerStaysInSync fails when the
+    chain below stops matching ``_DPOP_CHECK_NAMES``. The real fix is to delete
+    this function and have the orchestrator and the tests iterate one shared
+    table, leaving a single list to add to.
     """
     if not dpop_probeable(session):
         return

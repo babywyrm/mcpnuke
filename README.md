@@ -27,6 +27,8 @@ for training, or point at any MCP server in dev/staging/prod.
 - [How It Works](#how-it-works)
 - [Security Checks](#security-checks)
 - [Identity Lanes & Transports](#identity-lanes--transports)
+- [CLI Reference](#cli-reference)
+- [Kubernetes Deployment](#kubernetes-deployment)
 - [Exit Code](#exit-code)
 
 **Reference**
@@ -176,10 +178,11 @@ validation) and includes a safe claim summary in JSON output under
 If configured, token introspection and JWKS fetch summaries are also included
 under `auth_context` without affecting scan behavior when disabled.
 
-**Exit codes:** `0` — no findings (clean); `1` — findings at or above the
-`--fail-on` threshold (default: `high`); `2` — scan error (connection failure,
-invalid args, etc.). Use `1` vs `2` in CI to distinguish “vulns found” from
-“scanner failed.” Use `--fail-on none` to always exit 0 (informational scans).
+**Exit codes:** `0` — nothing at or above the `--fail-on` threshold
+(default: `high`); `1` — findings at or above it; `2` — scan error (connection
+failure, invalid args, etc.). Use `1` vs `2` in CI to distinguish “vulns found”
+from “scanner failed.” Use `--fail-on none` to always exit 0 (informational
+scans). Full table under [Exit Code](#exit-code).
 
 **SARIF output:** Use `--sarif results.sarif` to emit a SARIF 2.1.0 report
 for GitHub Code Scanning, VS Code, and IDE integration. Findings map as:
@@ -297,8 +300,14 @@ list and CronJob scheduling: **[docs/kubernetes.md](docs/kubernetes.md)**.
 
 ## Exit Code
 
+The exit code reports the `--fail-on` threshold, not the raw finding count.
+A scan that reports only LOW findings exits `0` under the default threshold.
+
 | Code | Meaning |
 |------|---------|
-| **0** | Clean — scan finished with no findings |
-| **1** | Findings — at least one finding was reported |
+| **0** | Clean — nothing at or above the `--fail-on` threshold (default: `high`) |
+| **1** | Findings — at least one finding at or above that threshold |
 | **2** | Error — scan did not complete successfully (e.g. unreachable target, bad flags) |
+
+`--fail-on any` exits `1` on any finding at all; `--fail-on none` always exits
+`0`, for informational scans.

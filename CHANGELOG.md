@@ -113,6 +113,35 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **`--fast`'s help text named four skipped probes where the code skips five**
+  (`cli.py`): `FAST_SKIP_CHECKS` gained `sdk_cache_poisoning`, which mutates
+  target state, and the help string was never updated. Generating
+  `docs/cli-reference.md` from the parser proves the document matches `--help`;
+  it does not prove `--help` matches behaviour, and this was a live instance —
+  the generated document reproduced the wrong four faithfully and contradicted
+  the hand-written `docs/checks.md`, which had it right. A test now asserts the
+  help string names exactly the members of `FAST_SKIP_CHECKS`.
+- **The README's exit-code table contradicted the README** (`README.md`): the
+  table said exit `1` meant "at least one finding was reported", while the
+  Quick Start section 120 lines earlier correctly described the `--fail-on`
+  threshold. `_should_fail` defaults to `high`, so a scan reporting only LOW
+  findings exits `0`; the table was the version `QUICKSTART.md` cited as
+  authoritative. Both places now describe the threshold.
+- **`docs/methodology.md` documented 18 of 34 attack chains** — missing all
+  three JWT chains and both halves of `ssrf_probe` and `actuator_probe`. The
+  table is now complete and pinned to `ATTACK_CHAIN_PATTERNS` by a test.
+- **`docs/kubernetes.md` named two different paths for the same manifest
+  directory**; only `mcpnuke/k8s/manifests/` exists on disk.
+- New guards, each verified by breaking what it guards: the README's table of
+  contents must reach every section (behind an explicit exemption list, since
+  the two sections that fell out were "handoffs" nobody had recorded a decision
+  about); every row in `docs/checks.md` must name something that runs, not just
+  the converse; the check totals in both documents' prose are computed from the
+  registry and the deep probe plan; the link checker validates `#fragments`
+  against real headings instead of discarding them; and the probes chained
+  inside the orphaned `run_dpop_enforcement_checks` must match
+  `_DPOP_CHECK_NAMES`, since that function has no production caller but is
+  where every DPoP test enters and so where a fourth probe would be added.
 - **DPoP probes now actually test DPoP** (`checks/dpop_enforcement.py`,
   `core/session.py`): the three probes were dead code with three independent
   defects. They called `session.post()`, which no session class defines; they
