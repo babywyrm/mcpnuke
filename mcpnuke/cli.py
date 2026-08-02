@@ -346,6 +346,12 @@ def _add_output_arguments(group: ArgumentGroup) -> None:
         help="Write JSON report to FILE",
     )
     group.add_argument(
+        "--sarif",
+        metavar="FILE",
+        dest="sarif_out",
+        help="Write SARIF 2.1.0 report to FILE (for GitHub Code Scanning, VS Code, and CI integration)",
+    )
+    group.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose output",
@@ -376,12 +382,9 @@ def _add_output_arguments(group: ArgumentGroup) -> None:
              "Choices: critical, high (default), medium, low, any, none. "
              "'none' always exits 0 (useful in CI for informational scans).",
     )
-    group.add_argument(
-        "--sarif",
-        metavar="FILE",
-        dest="sarif_out",
-        help="Write SARIF 2.1.0 report to FILE (for GitHub Code Scanning, VS Code, and CI integration)",
-    )
+
+
+def _add_policy_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
         "--generate-policy",
         metavar="FILE",
@@ -416,11 +419,6 @@ def _add_output_arguments(group: ArgumentGroup) -> None:
         help="spec.selector.matchLabels entry, repeatable. Without it, "
         "the selector matches every pod, which is typically too broad. "
         "Example: --policy-selector app=brain-gateway",
-    )
-    group.add_argument(
-        "--doctor",
-        action="store_true",
-        help="Check installation health: core deps, optional extras, env vars, connectivity.",
     )
 
 
@@ -582,6 +580,14 @@ def _add_k8s_arguments(group: ArgumentGroup) -> None:
     )
 
 
+def _add_diagnostics_arguments(group: ArgumentGroup) -> None:
+    group.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Check installation health: core deps, optional extras, env vars, connectivity.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Construct the CLI parser.
 
@@ -591,6 +597,9 @@ def build_parser() -> argparse.ArgumentParser:
     """
     p = argparse.ArgumentParser(
         prog="mcpnuke",
+        # argparse does not group the usage line, so the generated one lists all
+        # 76 flags and pushes the first group heading 31 lines down.
+        usage="mcpnuke [--targets URL ...] [options]",
         description="mcpnuke — MCP Red Teaming & Security Scanner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -603,10 +612,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_ai_arguments(p.add_argument_group("AI Analysis"))
     _add_tool_server_arguments(p.add_argument_group("Tool Server"))
     _add_output_arguments(p.add_argument_group("Output"))
+    _add_policy_arguments(p.add_argument_group("Policy Generation"))
     _add_lane_arguments(p.add_argument_group("Lane Reporting & Cross-Project Coverage"))
     _add_differential_arguments(p.add_argument_group("Differential"))
     _add_inference_arguments(p.add_argument_group("Inference Backend"))
     _add_k8s_arguments(p.add_argument_group("Kubernetes"))
+    _add_diagnostics_arguments(p.add_argument_group("Diagnostics"))
     return p
 
 
