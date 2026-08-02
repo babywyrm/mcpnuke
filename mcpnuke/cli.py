@@ -31,7 +31,12 @@ def expand_port_range(spec: str) -> list[str]:
     return [f"http://{host}:{p}" for p in range(start, end + 1)]
 
 
-def parse_args(args: list[str] | None = None) -> argparse.Namespace:
+def build_parser() -> argparse.ArgumentParser:
+    """Construct the CLI parser.
+
+    Split out from parse_args so documentation generation can introspect the
+    parser without consuming argv.
+    """
     p = argparse.ArgumentParser(
         description="mcpnuke — MCP Red Teaming & Security Scanner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -544,7 +549,11 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Check installation health: core deps, optional extras, env vars, connectivity.",
     )
-    return p.parse_args(args)
+    return p
+
+
+def parse_args(args: list[str] | None = None) -> argparse.Namespace:
+    return build_parser().parse_args(args)
 
 
 def _load_urls_from_file(path: Path) -> list[str]:
