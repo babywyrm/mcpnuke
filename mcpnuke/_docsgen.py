@@ -27,6 +27,11 @@ from mcpnuke.cli import build_parser
 REPO_ROOT: Path = Path(__file__).resolve().parent.parent
 CLI_REFERENCE_PATH: Path = REPO_ROOT / "docs" / "cli-reference.md"
 
+# Hand-written, unlike the CLI reference: severity and detection prose cannot be
+# derived from source. Named here so the completeness test that guards it does
+# not have to rebuild a repo-root path of its own.
+CHECKS_PATH: Path = REPO_ROOT / "docs" / "checks.md"
+
 # Read as text, not imported: the association between an env var and the flag
 # it backs exists only in the source, since argparse keeps the resolved value
 # and throws the variable name away.

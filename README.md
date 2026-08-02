@@ -186,92 +186,11 @@ The scanner runs checks in a deliberate order:
 
 ---
 
-## Security Checks Reference
+## Security Checks
 
-### Static Checks (metadata only)
-
-| Check | Severity | What It Detects |
-|-------|----------|----------------|
-| `prompt_injection` | CRITICAL | Injection payloads in tool/resource/prompt descriptions |
-| `tool_poisoning` | CRITICAL | Hidden instructions, invisible Unicode in tool descriptions |
-| `excessive_permissions` | CRITICAL–MEDIUM | Dangerous capabilities (shell, filesystem, network, DB, cloud) |
-| `code_execution` | CRITICAL–HIGH | Tools with exec/eval/shell parameters or descriptions |
-| `remote_access` | CRITICAL–HIGH | Reverse shells, C2 beacons, port forwarding, data exfil |
-| `token_theft` | CRITICAL–HIGH | Tools that accept or forward credentials as parameters |
-| `supply_chain` | CRITICAL | Dynamic package install from user-controlled URLs |
-| `schema_risk` | CRITICAL–MEDIUM | Command params, unbounded strings, freeform objects |
-| `tool_shadowing` | HIGH–MEDIUM | Tool names that collide with common tools or other servers |
-| `prompt_leakage` | HIGH | Tools that may echo, log, or expose internal prompts |
-| `rate_limit` | MEDIUM | Descriptions suggesting unbounded/unthrottled usage |
-| `webhook_persistence` | HIGH–MEDIUM | Callback/webhook params or tool names enabling persistent re-injection |
-| `credential_in_schema` | CRITICAL–HIGH | Hardcoded credentials (API keys, JWTs, connection strings) in tool schemas |
-| `config_tampering` | HIGH | Tools that can modify agent config, system prompt, or tool registry |
-| `exfil_flow` | CRITICAL | Data flow from sensitive source tools to communication/network sinks |
-| `jwt_algorithm` | CRITICAL–HIGH | JWT `alg:none` (signature bypass) or symmetric HMAC algorithms |
-| `jwt_issuer` | MEDIUM | JWT missing `iss` (issuer) claim |
-| `jwt_audience` | MEDIUM | JWT missing `aud` (audience) claim — enables cross-service replay |
-| `jwt_audience_target_match` | HIGH | Lane 1 / MCP-T04. Decodes the bearer token, derives expected audiences from the target URL (full URL, scheme://netloc, host, host:port), and flags when `aud` does not intersect any expected form. Catches cross-tool token replay where a token issued for service A is silently accepted by service B (audience validation disabled or trusted-aud overlap). |
-| `jwt_cross_role_replay` | HIGH | Lane 1 / MCP-T04. Reads `scope` / `role` / `roles` claims; when all values are read-class (read, viewer, list, get, ...) but the server still exposes write/admin/delete tools to the token via `tools/list`, flags broken role isolation in the same OIDC realm. Static check — does not invoke the write tools. |
-| `jwt_token_id` | LOW | JWT missing `jti` — replay detection not possible |
-| `jwt_ttl` | HIGH–MEDIUM | JWT with no `exp` or TTL exceeding threshold (default 4h) |
-| `jwt_weak_key` | CRITICAL | JWT signed with a known weak/default HMAC key |
-
-### Behavioral Checks (active server interaction)
-
-| Check | Severity | What It Detects |
-|-------|----------|----------------|
-| `rug_pull` | CRITICAL–HIGH | Tool list changes between two `tools/list` calls |
-| `deep_rug_pull` | CRITICAL | Tool list/schema changes **after invoking tools** — catches state-dependent rug pulls, injection pattern drift (clean → poisoned after N calls) |
-| `tool_response_injection` | CRITICAL–HIGH | Injection payloads, exfil URLs, hidden content, invisible Unicode, or base64-encoded attacks in tool **responses** |
-| `cross_tool_manipulation` | HIGH | Tool output that directs the LLM to invoke a different tool |
-| `input_sanitization` | CRITICAL–HIGH | Path traversal, command injection, template injection, SQL injection probes reflected unsanitized. **LLM-aware SSTI:** confirmed engine fingerprints (Jinja2/Mako/ERB/EL) stay CRITICAL; math-style template probes evaluated by the LLM (e.g. `{{7*7}}` → `49`) are downgraded to MEDIUM so LLM-backed MCP servers are not false-flagged as code SSTI. |
-| `error_leakage` | HIGH–MEDIUM | Stack traces, internal paths, connection strings, or secrets in error responses |
-| `temporal_consistency` | CRITICAL–MEDIUM | Escalating injection, wildly inconsistent responses, or new threats across repeated identical calls |
-| `resource_poisoning` | CRITICAL–HIGH | Base64-encoded injection, data URIs, steganographic Unicode, CSS-hidden HTML, or markdown image exfiltration in resource content |
-| `state_mutation` | HIGH–MEDIUM | Resources that appear, disappear, or change content after tool invocations |
-| `notification_abuse` | CRITICAL–MEDIUM | Unsolicited `sampling/createMessage`, `roots/list`, or other server-initiated requests |
-| `indirect_injection` | CRITICAL–HIGH | Injection/poison patterns in resource content; probes content-processing tools with embedded injection payloads |
-| `active_prompt_injection` | CRITICAL | Sends injection payloads as tool inputs — detects instruction following, system prompt leaks, and role overrides |
-| `response_credentials` | CRITICAL–HIGH | Credentials (API keys, passwords, private keys, connection strings) in tool responses |
-
-### Infrastructure Checks (opt-in)
-
-| Check | Severity | What It Detects |
-|-------|----------|----------------|
-| `inference_model_enum` | HIGH | Unauthenticated model enumeration on LLM backends (Ollama, vLLM, LocalAI, TGI, llama.cpp) — MCP-T54 |
-| `inference_no_auth` | CRITICAL | Unauthenticated text generation possible on exposed inference backend |
-| `inference_mgmt_exposed` | HIGH | Management/destructive endpoints (model pull/delete/create) exposed without auth |
-| `inference_network_exposed` | HIGH | Inference backend reachable over the network, bypassing MCP-layer controls |
-| `model_tampered` | CRITICAL | Model digest changed since baseline — possible backdoor replacement (MCP-T55) |
-| `model_removed` | HIGH | Model present in baseline is missing — unauthorized deletion |
-| `model_injected` | MEDIUM | New model appeared that wasn't in the baseline — unauthorized pull |
-| `model_size_drift` | HIGH | Digest matches but file size changed — partial corruption or metadata tampering |
-| `inference_guardrail_variance` | HIGH–MEDIUM | Guardrail strength differs across the models a backend serves, so an attacker can pick the weakest one — MCP-T56 |
-
-Enable with `--inference` (auto-detect from MCP context) or `--inference-host URL` (explicit target).
-
-`inference_guardrail_variance` sends the same refusal-baiting prompt to each
-model the backend exposes (capped at 6 to bound scan time) and compares
-resistance. HIGH means the spread is wide enough that model choice alone
-defeats the guardrail; MEDIUM means every model is weak.
-
-**Model Integrity Verification** (MCP-T55): Snapshot known-good model digests with `--save-inference-baseline FILE`, then detect tampering on later scans with `--inference-baseline FILE`.
-
-### Transport & Aggregate Checks
-
-| Check | Severity | What It Detects |
-|-------|----------|----------------|
-| `auth` | HIGH | Unauthenticated MCP/tool-server initialize accepted |
-| `sse_security` | HIGH–MEDIUM | Unauthenticated SSE stream, CORS misconfiguration, cross-origin POST |
-| `dpop_not_enforced` | HIGH | Request accepted with no DPoP proof — a stolen bearer token replays without the paired key (RFC 9449 §7) |
-| `dpop_header_not_validated` | HIGH | A malformed DPoP header is accepted, so the proof is decorative (RFC 9449 §7.1) |
-| `dpop_binding_not_enforced` | HIGH | Proof accepted without `htm`/`htu`, so it replays against any endpoint (RFC 9449 §4.2) |
-| `multi_vector` | CRITICAL | 2+ dangerous vulnerability categories active on one server |
-| `attack_chain` | CRITICAL | Linked vulnerability pairs (e.g. `input_sanitization → code_execution`) |
-
-The DPoP probes run only on HTTP-family transports and target the resolved MCP
-endpoint using the session's own auth headers, so a finding means the live,
-authenticated path is unprotected. Stdio is skipped — it has no header layer.
+mcpnuke runs 83 checks across static, behavioral, infrastructure and aggregate
+phases. See **[docs/checks.md](docs/checks.md)** for the full inventory with
+severities and detection notes.
 
 ---
 

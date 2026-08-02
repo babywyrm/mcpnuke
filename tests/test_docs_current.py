@@ -375,3 +375,47 @@ class TestEnvironmentVariableSection:
         declared = {o for a in build_parser()._actions for o in a.option_strings}
         unknown = [f for _, f in _docsgen.env_var_flag_pairs() if f not in declared]
         assert not unknown, f"env section names non-existent flags: {unknown}"
+
+
+class TestChecksDocumented:
+    """docs/checks.md is written by hand, so only its completeness is testable.
+
+    That is the property worth guarding: inference_guardrail_variance and the
+    three DPoP findings all ran in production scans while appearing in no
+    document, which is the failure this test makes loud.
+    """
+
+    def _registry_names(self) -> set[str]:
+        import mcpnuke.checks as checks
+
+        names: set[str] = set()
+        for key, value in vars(checks).items():
+            if key.endswith("_CHECK_NAMES") and isinstance(value, tuple):
+                names.update(value)
+        return names
+
+    def test_registry_is_not_empty(self):
+        """A renamed tuple suffix would empty the set and pass everything."""
+        assert len(self._registry_names()) > 50
+
+    def test_every_registered_check_is_documented(self):
+        doc = _docsgen.CHECKS_PATH.read_text()
+        missing = sorted(n for n in self._registry_names() if f"`{n}`" not in doc)
+        assert not missing, (
+            f"{len(missing)} checks run but are undocumented in docs/checks.md: {missing}"
+        )
+
+    def test_dpop_findings_are_documented(self):
+        """Probe labels and the finding names users actually see both appear.
+
+        The registry holds the time_check labels (dpop_no_header, ...); a report
+        shows the finding names. Documenting only one half leaves whoever is
+        reading a finding with nothing to search for.
+        """
+        doc = _docsgen.CHECKS_PATH.read_text()
+        for name in (
+            "dpop_not_enforced",
+            "dpop_header_not_validated",
+            "dpop_binding_not_enforced",
+        ):
+            assert f"`{name}`" in doc
