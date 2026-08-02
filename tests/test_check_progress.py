@@ -14,6 +14,7 @@ from unittest.mock import patch
 from mcpnuke import checks as checks_pkg
 from mcpnuke.checks import (
     _AGGREGATE_CHECK_NAMES,
+    _DPOP_CHECK_NAMES,
     _INFERENCE_BASELINE_CHECK_NAMES,
     _INFERENCE_CHECK_NAMES,
     _JWT_CHECK_NAMES,
@@ -40,11 +41,11 @@ def _tools(n: int = 1) -> list[dict]:
     ]
 
 
-def _run_and_collect(result: TargetResult, **kwargs) -> list[str]:
+def _run_and_collect(result: TargetResult, session=None, **kwargs) -> list[str]:
     """Run all checks verbosely and return the emitted log lines."""
     lines: list[str] = []
     run_all_checks(
-        None, result, [result], verbose=True, log=lines.append, **kwargs,
+        session, result, [result], verbose=True, log=lines.append, **kwargs,
     )
     return lines
 
@@ -201,6 +202,7 @@ class TestCheckNameTables:
         tabled = set(
             _STATIC_CHECK_NAMES
             + _JWT_CHECK_NAMES
+            + _DPOP_CHECK_NAMES
             + _LIGHT_BEHAVIORAL_CHECK_NAMES
             + _TRANSPORT_CHECK_NAMES
             + _TARGET_SURFACE_CHECK_NAMES
@@ -218,6 +220,7 @@ class TestCheckNameTables:
         all_names = (
             _STATIC_CHECK_NAMES
             + _JWT_CHECK_NAMES
+            + _DPOP_CHECK_NAMES
             + _LIGHT_BEHAVIORAL_CHECK_NAMES
             + _TRANSPORT_CHECK_NAMES
             + _TARGET_SURFACE_CHECK_NAMES
@@ -326,3 +329,88 @@ class TestDurationEstimate:
             probe_workers=2, n_deep=0, _log=lines.append,
         )
         assert lines
+
+
+# ── DPoP probes ────────────────────────────────────────────────────────
+
+
+class _HTTPish:
+    """Minimal stand-in for an HTTP-family session: has post_raw and a post_url."""
+
+    post_url = "http://t/mcp"
+
+    def post_raw(self, *a, **kw):  # pragma: no cover - never called, probes are stubbed
+        raise AssertionError("probe should not reach the network in this test")
+
+
+def _stub_probes(monkeypatch) -> list[str]:
+    """Replace the three probes with recorders; return the call log."""
+    called: list[str] = []
+    for probe, label in zip(
+        ("_probe_no_dpop_header", "_probe_malformed_dpop", "_probe_missing_htm_htu"),
+        _DPOP_CHECK_NAMES,
+        strict=True,
+    ):
+        def _record(result, session, _label=label):
+            called.append(_label)
+
+        monkeypatch.setattr(checks_pkg, probe, _record)
+    return called
+
+
+class TestDpopCounted:
+    def test_dpop_names_are_registered(self):
+        assert _DPOP_CHECK_NAMES == (
+            "dpop_no_header",
+            "dpop_malformed",
+            "dpop_missing_binding",
+        )
+
+    def test_http_jwt_scan_counts_the_dpop_probes(self, monkeypatch):
+        # Stub the probes so the denominator is what is under test, not the
+        # network. The probes swallow every exception into result.error, so a
+        # stub that failed to bind would be invisible — hence `stubbed`.
+        stubbed = _stub_probes(monkeypatch)
+
+        jwt_only = TargetResult(url="http://t/mcp")
+        jwt_only.tools = _tools()
+        jwt_only.auth_context = {"_raw_token": "a.b.c"}
+
+        jwt_http = TargetResult(url="http://t/mcp")
+        jwt_http.tools = _tools()
+        jwt_http.auth_context = {"_raw_token": "a.b.c"}
+
+        n_plain = _progress_pairs(
+            _run_and_collect(jwt_only, probe_opts={"no_invoke": True})
+        )[0][1]
+        n_http = _progress_pairs(
+            _run_and_collect(
+                jwt_http, session=_HTTPish(), probe_opts={"no_invoke": True}
+            )
+        )[0][1]
+
+        assert n_http == n_plain + len(_DPOP_CHECK_NAMES)
+        assert stubbed == list(_DPOP_CHECK_NAMES), "the stubs did not take effect"
+
+    def test_http_jwt_scan_lands_exactly(self, monkeypatch):
+        """The numerator must reach the inflated denominator, not fall short."""
+        _stub_probes(monkeypatch)
+
+        result = TargetResult(url="http://t/mcp")
+        result.tools = _tools()
+        result.auth_context = {"_raw_token": "a.b.c"}
+
+        pairs = _progress_pairs(_run_and_collect(
+            result, session=_HTTPish(), probe_opts={"no_invoke": True},
+        ))
+        assert max(n for n, _ in pairs) == pairs[0][1]
+
+    def test_non_http_session_does_not_count_them(self):
+        """Stdio has no header layer, so the probes must not inflate the denominator."""
+        stdio_like = TargetResult(url="http://t/mcp")
+        stdio_like.tools = _tools()
+        stdio_like.auth_context = {"_raw_token": "a.b.c"}
+
+        lines = _run_and_collect(stdio_like, probe_opts={"no_invoke": True})
+        numerator, denominator = _progress_pairs(lines)[-1]
+        assert numerator == denominator

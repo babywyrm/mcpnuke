@@ -29,7 +29,11 @@ from mcpnuke.checks.command_injection_broad import check_command_injection_broad
 from mcpnuke.checks.config_dump import check_config_dump
 from mcpnuke.checks.config_tampering import check_config_tampering
 from mcpnuke.checks.credential_in_schema import check_credential_in_schema
-from mcpnuke.checks.dpop_enforcement import run_dpop_enforcement_checks
+from mcpnuke.checks.dpop_enforcement import (
+    _probe_malformed_dpop,
+    _probe_missing_htm_htu,
+    _probe_no_dpop_header,
+)
 from mcpnuke.checks.execution import (
     check_code_execution,
     check_remote_access,
@@ -204,6 +208,16 @@ _JWT_CHECK_NAMES: tuple[str, ...] = (
     "jwt_weak_key",
     "jwt_audience_target_match",
     "jwt_cross_role_replay",
+)
+
+# The DPoP probes only run on HTTP-family transports with a resolved post_url,
+# so they are counted conditionally. These are the time_check labels; the
+# findings they emit are dpop_not_enforced, dpop_header_not_validated and
+# dpop_binding_not_enforced.
+_DPOP_CHECK_NAMES: tuple[str, ...] = (
+    "dpop_no_header",
+    "dpop_malformed",
+    "dpop_missing_binding",
 )
 
 _LIGHT_BEHAVIORAL_CHECK_NAMES: tuple[str, ...] = (
@@ -441,9 +455,16 @@ def run_all_checks(
     # Progress denominator, derived from the check inventory rather than
     # hardcoded. See the tables above _build_deep_checks().
     has_jwt = bool(result.auth_context.get("_raw_token") or result.auth_context.get("jwt_claims_summary"))
+    dpop_capable = bool(
+        has_jwt
+        and hasattr(session, "post_raw")
+        and getattr(session, "post_url", "")
+    )
     total_checks = len(_STATIC_CHECK_NAMES)
     if has_jwt:
         total_checks += len(_JWT_CHECK_NAMES)
+    if dpop_capable:
+        total_checks += len(_DPOP_CHECK_NAMES)
     if not no_invoke:
         total_checks += len(_LIGHT_BEHAVIORAL_CHECK_NAMES) + len(deep_checks)
     if base and sse_path:
@@ -506,8 +527,13 @@ def run_all_checks(
         _run("jwt_weak_key", check_jwt_weak_key, result)
         _run("jwt_audience_target_match", check_jwt_audience_target_match, result)
         _run("jwt_cross_role_replay", check_jwt_cross_role_replay, result)
-        # DPoP enforcement probes (RFC 9449 — Lane 3 / Machine Identity)
-        run_dpop_enforcement_checks(result, session=session)
+        # DPoP enforcement probes (RFC 9449 — Lane 3 / Machine Identity).
+        # Routed through _run so they appear in progress; gated on the same
+        # capability check run_dpop_enforcement_checks used to make internally.
+        if dpop_capable:
+            _run("dpop_no_header", _probe_no_dpop_header, result, session)
+            _run("dpop_malformed", _probe_malformed_dpop, result, session)
+            _run("dpop_missing_binding", _probe_missing_htm_htu, result, session)
 
     static_count = len(result.findings)
     if verbose:
