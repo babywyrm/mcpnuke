@@ -205,16 +205,11 @@ mcpnuke --targets http://localhost:8080/mcp \
 Scan the Damn Vulnerable MCP Server (10 challenge servers):
 
 ```bash
+# Terminal 1: start challenge servers
 ./tests/dvmcp_reset.sh --setup-only
 
-mcpnuke --targets \
-  http://localhost:9001/sse http://localhost:9002/sse \
-  http://localhost:9003/sse http://localhost:9004/sse \
-  http://localhost:9005/sse http://localhost:9006/sse \
-  http://localhost:9007/sse http://localhost:9008/sse \
-  http://localhost:9009/sse http://localhost:9010/sse \
-  --fast --deterministic --verbose \
-  --json dvmcp-scan.json
+# Terminal 2: scan
+./scan --port-range localhost:9001-9010 --verbose
 ```
 
 ## 9) Static-Only Safety Pass (Production)
@@ -375,3 +370,92 @@ mcpnuke --targets https://server.example.com/mcp --protocol-mode stateless --ver
 # Force legacy-only (never send Mcp-Method/Mcp-Name routing headers)
 mcpnuke --targets http://localhost:8080/mcp --protocol-mode legacy --verbose
 ```
+
+---
+
+## 15) Custom tool server (non-MCP /execute API)
+
+```bash
+# Servers that use POST /execute with {"tool": "...", "query": "..."} instead of MCP
+./scan --targets http://localhost:5000/execute --verbose
+
+# With custom tool names wordlist for a specific engagement
+./scan --targets http://localhost:5000/execute --tool-names-file my_tools.txt
+```
+
+The scanner auto-detects non-MCP tool servers by probing 20+ common
+execute/invoke paths and fingerprints the framework (Flask, FastAPI, Express,
+Spring Boot, etc.) from response headers. Tools are enumerated from a
+built-in wordlist (`data/tool_names.txt`, 84 names) supplemented by any
+custom wordlist. All static + behavioral checks run against discovered tools.
+
+## 16) Authenticated endpoint (GitHub MCP)
+
+```bash
+./scan --targets https://api.githubcopilot.com/mcp/ --auth-token ghp_xxx
+
+# Or via env var
+export MCP_AUTH_TOKEN=ghp_xxx
+./scan --targets https://api.githubcopilot.com/mcp/
+```
+
+## 17) Remote public MCP (DeepWiki)
+
+```bash
+./scan --targets https://mcp.deepwiki.com/mcp
+```
+
+Use `/mcp` (Streamable HTTP), not `/sse`.
+
+## 18) Differential scan
+
+```bash
+# Save baseline
+./scan --targets http://localhost:9001 --save-baseline baseline.json
+
+# Later: detect regressions
+./scan --targets http://localhost:9001 --baseline baseline.json
+```
+
+Reports added/removed/modified tools, resources, prompts. New tools
+flagged as MEDIUM for review.
+
+## 19) JSON report for CI
+
+```bash
+./scan --port-range localhost:9001-9010 --json report.json
+```
+
+Exit code is `1` if the scan completes and reports findings, `0` if clean,
+and `2` on scan errors. Use in CI pipelines to gate deployments and to
+separate “findings” from “scanner failure.”
+
+## 20) Run tests
+
+```bash
+# Full suite
+uv run pytest tests/ -v
+
+# DVMCP challenges only
+uv run pytest tests/test_dvmcp.py -v
+
+# Stop on first failure
+uv run pytest tests/ -v -x
+```
+
+CI runs three gates on every push and pull request, and a change has to clear
+all of them:
+
+```bash
+uv run ruff check .      # must be zero
+uv run mypy mcpnuke/     # must stay at or below the ceiling in the workflow
+uv run pytest tests/     # 900+ passed, 0 failed, on Python 3.12 and 3.13
+```
+
+The mypy ceiling is a ratchet: it only ever moves down, so new code cannot add
+untyped surface. `mcpnuke/core/` is stricter still — `disallow_untyped_defs` is
+enforced there, so every function in it needs annotations.
+
+Dependencies are pinned in `uv.lock` and CI installs with `--frozen`. If you
+change `pyproject.toml`, run `uv lock` and commit the result, or the
+`uv lock --check` step will fail on the drift.

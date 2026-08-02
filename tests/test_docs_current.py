@@ -498,3 +498,54 @@ class TestChecksDocumented:
             "dpop_binding_not_enforced",
         ):
             assert f"`{name}`" in doc
+
+
+MD_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+
+# Vendored, generated and tool-owned trees. `1/` is a stray virtualenv created
+# by a mistyped redirect; DVMCP is a third-party checkout under tests/.
+_SKIPPED_PARTS = frozenset(
+    {"test_targets", "superpowers", ".venv", "1", ".pytest_cache", ".cursor"}
+)
+
+
+class TestDocLinks:
+    """Splitting one document into six turns every relative link into a
+    liability: `(docs/checks.md)` is correct in the README and wrong the moment
+    the line holding it moves into docs/. Nothing else in the suite reads a
+    link, so a move that silently breaks navigation stays green.
+    """
+
+    def _markdown_files(self) -> list[Path]:
+        return [
+            p
+            for p in _docsgen.REPO_ROOT.rglob("*.md")
+            if _SKIPPED_PARTS.isdisjoint(p.parts)
+        ]
+
+    def test_the_file_sweep_finds_the_project_documents(self):
+        """An over-broad exclusion would empty the sweep and pass vacuously."""
+        swept = {p.name for p in self._markdown_files()}
+        assert {"README.md", "QUICKSTART.md", "checks.md"} <= swept
+
+    def test_relative_links_resolve(self):
+        broken: list[str] = []
+        for path in self._markdown_files():
+            for target in MD_LINK.findall(path.read_text()):
+                if target.startswith(("http://", "https://", "#", "mailto:")):
+                    continue
+                resolved = (path.parent / target.split("#")[0]).resolve()
+                if not resolved.exists():
+                    broken.append(f"{path.relative_to(_docsgen.REPO_ROOT)} -> {target}")
+        assert not broken, f"broken relative links: {broken}"
+
+    def test_expected_docs_exist(self):
+        for name in (
+            "cli-reference.md",
+            "checks.md",
+            "scan-modes.md",
+            "ai-analysis.md",
+            "kubernetes.md",
+            "methodology.md",
+        ):
+            assert (_docsgen.REPO_ROOT / "docs" / name).is_file(), f"docs/{name} missing"
