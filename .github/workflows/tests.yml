@@ -1,7 +1,7 @@
 name: Tests
 
 # Per-repo CI for mcpnuke. Gates lint first, then runs the unit-test suite
-# verbose against Python 3.12 + 3.13 on every push and PR. Includes a one-shot
+# verbose against Python 3.11, 3.12 and 3.13 on every push and PR. Includes a one-shot
 # policy round-trip lint that confirms `--generate-policy` still emits YAML the
 # nullfield v1alpha1 controller can load (catches schema drift early).
 #
