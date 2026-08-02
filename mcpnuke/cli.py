@@ -221,6 +221,15 @@ def _add_performance_arguments(group: ArgumentGroup) -> None:
         "from ~30min to ~2min. Alias for --coverage 5.",
     )
     group.add_argument(
+        "--coverage",
+        type=lambda v: _positive_int_or_zero(v),
+        default=None,
+        metavar="N",
+        help="Sample the top N most security-relevant tools (by keyword risk "
+             "score). 0 = scan all tools. --fast is an alias for --coverage 5. "
+             "Example: --coverage 20 scans ~20%% of a 100-tool server in fast-mode time.",
+    )
+    group.add_argument(
         "--probe-workers",
         type=int,
         default=1,
@@ -423,15 +432,6 @@ def _add_lane_arguments(group: ArgumentGroup) -> None:
         "a per-lane severity tally. Also emitted to --json when both are set.",
     )
     group.add_argument(
-        "--coverage",
-        type=lambda v: _positive_int_or_zero(v),
-        default=None,
-        metavar="N",
-        help="Sample the top N most security-relevant tools (by keyword risk "
-             "score). 0 = scan all tools. --fast is an alias for --coverage 5. "
-             "Example: --coverage 20 scans ~20%% of a 100-tool server in fast-mode time.",
-    )
-    group.add_argument(
         "--coverage-report",
         metavar="CAMAZOTZ_URL",
         help="Fetch camazotz /api/lanes (schema v1) from CAMAZOTZ_URL, "
@@ -446,6 +446,14 @@ def _add_lane_arguments(group: ArgumentGroup) -> None:
         "(mcpnuke/data/taxonomy/lanes.yaml). Accepts a filesystem path or "
         "http(s) URL. Used to validate finding threat_ids and to surface "
         "lane/transport metadata. The vendored copy is used when not set.",
+    )
+    group.add_argument(
+        "--profile",
+        metavar="FILE",
+        default=None,
+        help="Path to a target profile JSON (maps tool names to lane, transport, "
+             "threat ID, and notes). Enriches AI prompts and finding attribution. "
+             "Bundled profiles: profiles/camazotz.json, profiles/dvmcp.json.",
     )
 
 
@@ -467,14 +475,6 @@ def _add_differential_arguments(group: ArgumentGroup) -> None:
         "--save-baseline",
         metavar="FILE",
         help="Save current scan as baseline for future differential scans",
-    )
-    group.add_argument(
-        "--profile",
-        metavar="FILE",
-        default=None,
-        help="Path to a target profile JSON (maps tool names to lane, transport, "
-             "threat ID, and notes). Enriches AI prompts and finding attribution. "
-             "Bundled profiles: profiles/camazotz.json, profiles/dvmcp.json.",
     )
 
 
