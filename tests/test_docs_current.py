@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from mcpnuke.cli import build_parser, parse_args
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class TestParserFactory:
@@ -124,3 +127,73 @@ class TestArgumentGroups:
             if not any(f.startswith(prefix) for f in flags)
         ]
         assert not unmatched, f"prefix rules matching no flag: {unmatched}"
+
+
+class TestGeneratedCLIReference:
+    def test_file_exists(self):
+        assert (REPO_ROOT / "docs/cli-reference.md").is_file()
+
+    def test_content_matches_the_parser(self):
+        from mcpnuke._docsgen import render_cli_reference
+
+        expected = render_cli_reference(build_parser())
+        actual = (REPO_ROOT / "docs/cli-reference.md").read_text()
+        assert actual == expected, (
+            "docs/cli-reference.md is stale. "
+            "Regenerate with: uv run python -m mcpnuke._docsgen"
+        )
+
+    def test_every_parser_flag_appears(self):
+        from mcpnuke._docsgen import render_cli_reference
+
+        rendered = render_cli_reference(build_parser())
+        for action in build_parser()._actions:
+            for opt in action.option_strings:
+                assert opt in rendered, f"{opt} missing from generated reference"
+
+    def test_carries_a_do_not_edit_banner(self):
+        text = (REPO_ROOT / "docs/cli-reference.md").read_text()
+        assert "GENERATED FILE" in text
+
+    def test_no_environment_value_leaks_into_the_doc(self, monkeypatch):
+        """14 flags default to os.environ.get(...), several of them secrets.
+
+        The renderer must never emit a default, or running the generator on a
+        machine with MCP_AUTH_TOKEN set would bake that token into a committed
+        file. This is a security scanner; that file ends up in a public repo.
+        """
+        from mcpnuke._docsgen import render_cli_reference
+
+        canary = "s3cr3t-canary-value-do-not-emit"
+        for var in (
+            "MCP_AUTH_TOKEN",
+            "MCP_CLIENT_SECRET",
+            "MCP_INTROSPECT_CLIENT_SECRET",
+            "MCPNUKE_K8S_TOKEN",
+        ):
+            monkeypatch.setenv(var, canary)
+
+        assert canary not in render_cli_reference(build_parser())
+
+    def test_no_help_string_interpolates_a_default(self):
+        """The renderer deliberately never expands help strings, so a
+        `%(default)s` would print literally in the doc — and any code that
+        "fixed" that by expanding would write env-var defaults, several of
+        them secrets, into a committed file. Keep help strings literal.
+        """
+        offenders = [
+            action.option_strings
+            for action in build_parser()._actions
+            if "%(" in (action.help or "")
+        ]
+        assert not offenders, f"help strings interpolating a value: {offenders}"
+
+    def test_argparse_percent_escapes_are_unescaped(self):
+        """argparse %-formats help strings, so `--coverage` writes `%%` to get
+        one `%` in --help. Rendered markdown must show what --help shows.
+        """
+        from mcpnuke._docsgen import render_cli_reference
+
+        rendered = render_cli_reference(build_parser())
+        assert "~20% of a 100-tool server" in rendered
+        assert "%%" not in rendered
