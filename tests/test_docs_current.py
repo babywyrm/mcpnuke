@@ -2,13 +2,18 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import sys
+from pathlib import Path
 
 from mcpnuke import _docsgen
+from mcpnuke import checks as checks_pkg
 from mcpnuke.__main__ import _build_diff_parser
 from mcpnuke._docsgen import render_cli_reference
+from mcpnuke.checks import _build_deep_checks
 from mcpnuke.cli import build_parser, parse_args
+from mcpnuke.core.models import TargetResult
 
 
 class TestParserFactory:
@@ -185,6 +190,24 @@ class TestGeneratedCLIReference:
 
     def test_carries_a_do_not_edit_banner(self):
         assert "GENERATED FILE" in _docsgen.CLI_REFERENCE_PATH.read_text()
+
+    def test_generator_never_writes_the_hand_written_doc(self):
+        """_docsgen names two documents and may only ever write one.
+
+        docs/checks.md is hand-written and cannot be regenerated. Wiring
+        CHECKS_PATH into main() for symmetry with CLI_REFERENCE_PATH would
+        destroy it on a command whose contract is "safe to re-run".
+        """
+        source = Path(_docsgen.__file__).read_text()
+        main_fn = next(
+            node
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.FunctionDef) and node.name == "main"
+        )
+        assert "CHECKS_PATH" not in ast.unparse(main_fn), (
+            "_docsgen.main() references CHECKS_PATH — it would overwrite a "
+            "hand-written document. Read the module docstring."
+        )
 
     def test_no_environment_value_leaks_into_the_doc(self, monkeypatch):
         """14 flags default to os.environ.get(...), several of them secrets.
@@ -377,12 +400,41 @@ class TestEnvironmentVariableSection:
         assert not unknown, f"env section names non-existent flags: {unknown}"
 
 
+def _deep_probe_names() -> set[str]:
+    """The probe names in `_build_deep_checks`'s plan, read from its source.
+
+    Read statically rather than by calling the builder, because the builder
+    returns the plan for one particular input. A probe added behind a condition
+    would be missing from a stub call's plan, and a missing probe is precisely
+    what the guard below exists to catch.
+    """
+    tree = ast.parse(Path(checks_pkg.__file__).read_text())
+    builder = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "_build_deep_checks"
+    )
+    return {
+        entry.elts[0].value
+        for node in ast.walk(builder)
+        if isinstance(node, ast.List)
+        for entry in node.elts
+        if isinstance(entry, ast.Tuple)
+        and entry.elts
+        and isinstance(entry.elts[0], ast.Constant)
+        and isinstance(entry.elts[0].value, str)
+    }
+
+
 class TestChecksDocumented:
     """docs/checks.md is written by hand, so only its completeness is testable.
 
     That is the property worth guarding: inference_guardrail_variance and the
     three DPoP findings all ran in production scans while appearing in no
     document, which is the failure this test makes loud.
+
+    Severities and detection prose cannot be derived from source and are not
+    tested — they are verified by hand against the emitting `result.add(...)`.
     """
 
     def _registry_names(self) -> set[str]:
@@ -403,6 +455,33 @@ class TestChecksDocumented:
         missing = sorted(n for n in self._registry_names() if f"`{n}`" not in doc)
         assert not missing, (
             f"{len(missing)} checks run but are undocumented in docs/checks.md: {missing}"
+        )
+
+    def test_deep_probe_parse_agrees_with_the_built_plan(self):
+        """The AST walk must lose nothing the builder actually emits.
+
+        A reshaped plan — entries built by a helper call, or names composed at
+        runtime — would quietly shrink the parsed set and let the guard below
+        pass vacuously. Comparing against a real plan makes that loud.
+        """
+        result = TargetResult(url="http://t/mcp")
+        plan, _ = _build_deep_checks(None, result, {}, fast_mode=False)
+        built = {name for name, *_ in plan}
+
+        assert len(built) > 20, f"expected the full deep suite, got {len(built)}"
+        assert _deep_probe_names() == built
+
+    def test_every_deep_probe_is_documented(self):
+        """Deep probes are a plan, not a registry, so the tuple walk misses them.
+
+        They are two thirds of what a default scan actually does, including
+        ssrf_probe and sdk_cache_poisoning.
+        """
+        doc = _docsgen.CHECKS_PATH.read_text()
+        missing = sorted(n for n in _deep_probe_names() if f"`{n}`" not in doc)
+        assert not missing, (
+            f"{len(missing)} deep probes run but are undocumented in "
+            f"docs/checks.md: {missing}"
         )
 
     def test_dpop_findings_are_documented(self):

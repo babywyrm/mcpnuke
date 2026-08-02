@@ -15,11 +15,24 @@ Three conventions worth knowing before reading the tables:
   they differ the row gives both, so either one is searchable.
 - **Most checks are conditional.** See [When each check runs](#when-each-check-runs).
 
-`tests/test_docs_current.py::TestChecksDocumented` fails when a check in the
-inventory is absent from this file, which is how `inference_guardrail_variance`
-and the three DPoP findings stayed invisible after being made functional. Deep
-probes are built as a plan rather than registered in the inventory, so they are
-documented here but not covered by that guard.
+An `MCP-T##` tag is a threat ID in the agentic-sec taxonomy vendored at
+`mcpnuke/data/taxonomy/lanes.yaml`, which maps each ID to a title, category,
+identity lane, transport, OWASP MCP entry and Camazotz lab; `--taxonomy` points
+at a different copy.
+
+**What is enforced and what is not.**
+`tests/test_docs_current.py::TestChecksDocumented` fails when a check that runs
+is absent from this file — that is how `inference_guardrail_variance` and the
+three DPoP findings stayed invisible after being made functional. It covers
+both the registered checks and the deep probe plan, so every check named here
+is guarded against disappearing.
+
+Nothing checks the other two columns. Severities and detection prose cannot be
+derived from source, so each one was read by hand off the `result.add(...)` call
+that emits it. A severity that changes in code will not fail a test — and of the
+rows inherited from the README, seven named the wrong severity and three
+described more than the code does. Treat a row that contradicts the code as a
+bug in this file, and fix it here.
 
 ## When each check runs
 
@@ -110,16 +123,16 @@ back. All of them are skipped by `--no-invoke`.
 |-------|----------|----------------|
 | `rug_pull` | CRITICAL–HIGH | Tool list changes between two `tools/list` calls |
 | `deep_rug_pull` | CRITICAL | Tool list/schema changes **after invoking tools** — catches state-dependent rug pulls, injection pattern drift (clean → poisoned after N calls) |
-| `tool_response_injection` | CRITICAL–HIGH | Injection payloads, exfil URLs, hidden content, invisible Unicode, or base64-encoded attacks in tool **responses** |
+| `tool_response_injection` | CRITICAL–HIGH | Calls every invocable tool with safe arguments and runs the **broad** response scan over the reply: injection payloads, exfil URLs, hidden content, invisible Unicode, semantic injection and base64-encoded attacks. The widest of the response-scanning checks |
 | `cross_tool_manipulation` | HIGH | Tool output that directs the LLM to invoke a different tool. Emitted by `tool_response_injection`, in the same pass |
-| `input_sanitization` | CRITICAL–MEDIUM | Path traversal, command injection, template injection, SQL injection probes reflected unsanitized. **LLM-aware SSTI:** confirmed engine fingerprints (Jinja2/Mako/ERB/EL) stay CRITICAL; math-style template probes evaluated by the LLM (e.g. `{{7*7}}` → `49`) are downgraded to MEDIUM so LLM-backed MCP servers are not false-flagged as code SSTI. |
+| `input_sanitization` | CRITICAL–MEDIUM | Path traversal and command injection probes reflected back unsanitized. SQL probes are sent to `query`/`sql` parameters but the reflection finding excludes them, so SQL only ever surfaces through `error_leakage`. **LLM-aware SSTI:** confirmed engine fingerprints (Jinja2/Mako/ERB/EL) stay CRITICAL; math-style template probes evaluated by the LLM (e.g. `{{7*7}}` → `49`) are downgraded to MEDIUM so LLM-backed MCP servers are not false-flagged as code SSTI. |
 | `error_leakage` | HIGH–MEDIUM | Stack traces, internal paths, connection strings, or secrets in error responses |
 | `temporal_consistency` | CRITICAL–MEDIUM | Escalating injection, wildly inconsistent responses, or new threats across repeated identical calls |
 | `resource_poisoning` | CRITICAL–HIGH | Base64-encoded injection, data URIs, steganographic Unicode, CSS-hidden HTML, or markdown image exfiltration in resource content |
 | `state_mutation` | HIGH–MEDIUM | Resources that appear, disappear, or change content after tool invocations |
 | `notification_abuse` | CRITICAL–MEDIUM | Unsolicited `sampling/createMessage`, `roots/list`, or other server-initiated requests |
 | `indirect_injection` | CRITICAL–HIGH | Injection/poison patterns in resource content; probes content-processing tools with embedded injection payloads |
-| `active_prompt_injection` | CRITICAL | Sends injection payloads as tool inputs — detects instruction following, system prompt leaks, and role overrides |
+| `active_prompt_injection` | CRITICAL | Sends injection payloads into the first string parameter of **every** invocable tool and flags only a confirmed effect: the canary echoed back, or a system-prompt indicator in the reply |
 | `response_credentials` | CRITICAL | Credentials (API keys, passwords, private keys, connection strings) in tool responses |
 | `protocol_robustness` | MEDIUM | Server answers an unknown JSON-RPC method with success instead of `-32601`, or returns a result for `tools/call` with no params |
 | `ssrf_probe` | CRITICAL–MEDIUM | Sends IMDS and loopback URLs through URL-shaped parameters. Cloud metadata content in the response is CRITICAL; an internal-service indicator absent from the safe-URL baseline is HIGH; a large response-size differential, or a fetching tool that merely exposes URL parameters, is MEDIUM. MCP-T06 |
@@ -129,8 +142,8 @@ back. All of them are skipped by `--no-invoke`.
 | `shell_injection` | CRITICAL–HIGH | Shell metacharacter and base-command probes against subprocess-wrapping tools |
 | `sdk_cache_poisoning` | CRITICAL–HIGH | Writes a forged JWT to the target's token cache, then invokes a tool that reads it. Sensitive content in the reply is CRITICAL; an accepted call with no denial is HIGH. **Mutates target state** — skipped by `--fast`. MCP-T33 |
 | `ai_guardrail_probe` (finding: `ai_guardrail_bypass`) | CRITICAL–HIGH | Social-engineering strategies against AI-gated tools. Leaking under three or more strategies is CRITICAL, one or two is HIGH |
-| `prompt_injection_t01` | CRITICAL–HIGH | Probes tools for prompt injection through unsanitized arguments; severity comes from the matched probe. MCP-T01 |
-| `tool_output_poisoning_t02` (finding: `tool_output_poisoning`) | HIGH | Instruction-injection patterns in tool responses. MCP-T02 |
+| `prompt_injection_t01` | CRITICAL–HIGH | The same idea as `active_prompt_injection` aimed at a narrower target: only tools whose name, description or parameter names suggest the argument reaches an LLM, and the most prompt-like parameter rather than the first string one. Four canary payloads — direct override, maintenance mode, template evaluation (HIGH), system-role injection — each flagged only when its marker comes back. MCP-T01 |
+| `tool_output_poisoning_t02` (finding: `tool_output_poisoning`) | HIGH | Calls every invocable tool with safe arguments like `tool_response_injection`, but matches only the shared instruction-injection regexes, catching a tool whose *output* carries commands for whichever agent reads it. Narrower surface, one severity, tagged to the taxonomy. MCP-T02 |
 | `command_injection_broad_t05` (finding: `command_injection_broad`) | CRITICAL–HIGH | Command injection through any string parameter, not just command-named ones. MCP-T05 |
 | `agentic_loop_behavioral_t10` (finding: `agentic_loop_behavioral`) | HIGH | Tool-call directives embedded in a tool's response, which drive the agent into a loop. MCP-T10 |
 
@@ -172,7 +185,7 @@ findings and runs only when a baseline is being read or written.
 | Check | Severity | What It Detects |
 |-------|----------|----------------|
 | `actuator_probe` | CRITICAL–MEDIUM | Exposed debug and admin endpoints on the target's base URL (Spring Boot actuators, Werkzeug console, Go pprof/expvar, Swagger, `/.env`). Severity is per endpoint, escalated to CRITICAL when the response body itself contains credentials |
-| `actuator_exploitation` | CRITICAL–MEDIUM | Emitted by the same check once passive discovery finds a live actuator. Downloads a heap dump (CRITICAL) and POSTs write probes: an accepted write takes the probe's own severity — CRITICAL for env write and shutdown, HIGH for logger override, refresh and restart — and MEDIUM when the method is allowed but the parameter is rejected. Shutdown is only attempted after another write has already succeeded |
+| `actuator_exploitation` | CRITICAL–MEDIUM | Emitted by the same check once passive discovery finds a live actuator. Downloads a heap dump (CRITICAL) and POSTs write probes: any status but 405 counts as accepted and takes the probe's own severity — CRITICAL for env write and shutdown, HIGH for logger override, refresh and restart. A 405 is the only MEDIUM: the endpoint exists but refuses the method. Shutdown is only attempted after another write has already succeeded |
 
 ### Teleport / Machine Identity
 
@@ -182,7 +195,7 @@ findings and runs only when a baseline is being read or written.
 | `teleport_cert_validation` | HIGH | Teleport proxy serving a self-signed certificate |
 | `teleport_app_enumeration` | HIGH | MCP applications registered in Teleport, enumerable from outside |
 | `tbot_credential_exposure` | HIGH | tbot output secrets (`tbot-out`, `tbot-kube`) mounted into non-tbot pods. In-cluster only — returns immediately without a service-account token |
-| `teleport_bot_overprivilege` | HIGH | ClusterRoleBindings giving a tbot service account more than `view`. In-cluster only, same precondition |
+| `teleport_bot_overprivilege` | HIGH | ClusterRoleBindings that bind a `tbot`/`teleport` service account to `cluster-admin`, `admin` or `edit`. Only those three role names are matched, so a custom role with equivalent privilege is not flagged. In-cluster only, same precondition |
 | `teleport_lab_bot_theft` | CRITICAL–INFO | Deep probe. Chains read-tbot-secret → replay stolen identity → check session binding against the Camazotz lab tools; self-skips unless those tools are present |
 | `teleport_lab_role_escalation` | CRITICAL–INFO | Deep probe. Chains read-roles → request escalation → attempt a privileged operation |
 | `teleport_lab_cert_replay` | CRITICAL–INFO | Deep probe. Chains fetch-expired-cert → replay → check replay detection. MEDIUM when the replay is only reported as first use |

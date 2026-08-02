@@ -1,9 +1,22 @@
-"""Render reference documentation from source.
+"""Paths to the reference documents, and the renderer for the generated ones.
+
+Two kinds of document are named here and only one of them is generated.
 
 The CLI reference is derived from the argparse parser rather than maintained by
 hand, because the hand-maintained copy drifted 14 flags behind before anyone
 noticed. tests/test_docs_current.py fails the build if the committed output
 stops matching the parser.
+
+docs/checks.md is the other kind: hand-written, because a check's severity and
+what it detects cannot be derived from its source. Its path lives here so that
+the test guarding it can reference one place where doc paths are declared,
+which is the only thing the two have in common.
+
+DANGER: main() must never write CHECKS_PATH. Adding it there for symmetry with
+CLI_REFERENCE_PATH would overwrite a document nothing can regenerate, and would
+do it silently, on a command whose whole contract is "safe to re-run".
+test_generator_never_writes_the_hand_written_doc fails if main() so much as
+names it.
 
 Regenerate: uv run python -m mcpnuke._docsgen
 
@@ -29,7 +42,8 @@ CLI_REFERENCE_PATH: Path = REPO_ROOT / "docs" / "cli-reference.md"
 
 # Hand-written, unlike the CLI reference: severity and detection prose cannot be
 # derived from source. Named here so the completeness test that guards it does
-# not have to rebuild a repo-root path of its own.
+# not have to rebuild a repo-root path of its own. Read-only to this module —
+# see the warning in the module docstring before using it anywhere that writes.
 CHECKS_PATH: Path = REPO_ROOT / "docs" / "checks.md"
 
 # Read as text, not imported: the association between an env var and the flag

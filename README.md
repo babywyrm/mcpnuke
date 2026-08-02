@@ -175,14 +175,17 @@ and mcpnuke-runner setup.
 
 The scanner runs checks in a deliberate order:
 
-| Phase | Checks | What Happens |
-|-------|--------|-------------|
-| **Static** | prompt_injection, tool_poisoning, excessive_permissions, token_theft, code_execution, remote_access, schema_risks, rate_limit, prompt_leakage, supply_chain, tool_shadowing, webhook_persistence, credential_in_schema, config_tampering, exfil_flow | Pattern-match on tool names, descriptions, schemas. No server interaction beyond enumeration. |
-| **Behavioral** | rug_pull, indirect_injection, protocol_robustness | Light interaction: re-list tools, read resources, send invalid methods. |
-| **Deep Probes** | deep_rug_pull, tool_response_injection, input_sanitization, error_leakage, temporal_consistency, resource_poisoning, response_credentials, state_mutation, notification_abuse | Active tool invocation with safe payloads. Analyze responses for threats. |
-| **Transport** | sse_security | CORS, unauthenticated SSE, cross-origin POST. |
-| **Aggregate** | multi_vector, attack_chains | Cross-reference all prior findings to detect compound threats. |
-| **AI** (optional) | llm_tool_analysis, llm_response_analysis, llm_chain_reasoning | Claude reads definitions, tool output, and all findings to identify subtle risks and multi-step attack chains. Requires `--claude`. |
+| Phase | What Happens |
+|-------|-------------|
+| **Static** | Pattern-match on tool names, descriptions, schemas. No server interaction beyond enumeration. |
+| **Behavioral** | Light interaction: re-list tools, read resources, send invalid methods. |
+| **Deep Probes** | Active tool invocation with safe payloads. Analyze responses for threats. |
+| **Transport** | CORS, unauthenticated SSE, cross-origin POST. |
+| **Aggregate** | Cross-reference all prior findings to detect compound threats. |
+| **AI** (optional) | Claude reads definitions, tool output, and all findings to identify subtle risks and multi-step attack chains. Requires `--claude`. |
+
+Which checks run in each phase, and under what conditions, is in
+**[docs/checks.md](docs/checks.md)**.
 
 ---
 
@@ -781,7 +784,7 @@ args:
 │   │   ├── response_credentials.py # response_credentials (cached response reuse)
 │   │   ├── dpop_enforcement.py     # RFC 9449 proof enforcement, validation, binding
 │   │   ├── inference_backend.py    # Backend fingerprint, model integrity, guardrail variance
-│   │   └── ...                     # See "Security Checks Reference" for the full list
+│   │   └── ...                     # See docs/checks.md for the full inventory
 │   ├── data/
 │   │   ├── public_targets.txt # Built-in target URLs (DVMCP, public MCP servers)
 │   │   └── tool_names.txt     # Wordlist for ToolServer tool enumeration
