@@ -75,7 +75,7 @@ Generated from the parser, so it cannot fall behind the code.
 | `--claude-model MODEL` | Claude model to use for AI analysis (default: claude-sonnet-5). Use an opus model for deepest analysis. |
 | `--claude-phase2-workers N` | Parallel Claude workers for Phase 2 response analysis (default: 1). Use 2-4 to reduce wall time on fast targets. |
 | `--bedrock` | Use AWS Bedrock runtime for Claude API calls instead of direct Anthropic API. Requires boto3 and AWS credentials. |
-| `--bedrock-model MODEL_ID` | Bedrock model ID to invoke when --bedrock is enabled (default: anthropic.claude-3-5-sonnet-20241022-v2:0). |
+| `--bedrock-model MODEL_ID` | Bedrock inference profile to invoke when --bedrock is enabled (default: us.anthropic.claude-sonnet-4-5-20250929-v1:0). Current Anthropic models on Bedrock are inference-profile only; outside the US substitute the eu./apac./global. prefix for your region. |
 | `--bedrock-profile PROFILE` | AWS profile name for Bedrock credentials resolution. |
 | `--bedrock-region REGION` | AWS region for Bedrock Runtime (e.g. us-east-1). Defaults to AWS_REGION/AWS_DEFAULT_REGION if unset. |
 | `--ollama-analysis URL` | Use a local/networked Ollama instance as the AI analysis backend instead of Claude. No API key required. Example: --ollama-analysis http://<ollama-host>:11434. Enables the same 3-phase analysis (tool schemas, responses, chain reasoning) at zero cloud cost. Compare results with --claude to benchmark local vs cloud quality. |

@@ -91,3 +91,13 @@ SHADOW_TARGETS: set[str] = {
 # default lives so a retirement is a one-line change rather than a hunt
 # through the CLI, the scanner and six llm call sites.
 DEFAULT_CLAUDE_MODEL: str = "claude-sonnet-5"
+
+# Bedrock is a separate catalog with separate rot. The previous default
+# (anthropic.claude-3-5-sonnet-20241022-v2:0) had reached end of life and was
+# gone from list-foundation-models entirely, so --bedrock answered
+# ResourceNotFoundException. Two constraints shape the replacement: current
+# Anthropic models on Bedrock are INFERENCE_PROFILE only, so the id needs a
+# geography prefix, and the undated alias (anthropic.claude-sonnet-5) returns
+# AccessDenied on ordinary accounts. Hence a dated, generally available
+# profile. Non-US callers substitute eu./apac./global. via --bedrock-model.
+DEFAULT_BEDROCK_MODEL: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"

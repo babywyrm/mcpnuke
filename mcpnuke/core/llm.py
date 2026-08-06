@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
+from mcpnuke.core.constants import DEFAULT_BEDROCK_MODEL, DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.taxonomy import threat_ids
 
 _client = None
@@ -16,7 +16,7 @@ _bedrock_config: dict[str, Any] = {
     "enabled": False,
     "region": None,
     "profile": None,
-    "model": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "model": DEFAULT_BEDROCK_MODEL,
 }
 
 _MCP_TAXONOMY_RE = _re.compile(r'\[MCP-T(\d+)\]')

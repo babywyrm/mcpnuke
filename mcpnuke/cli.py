@@ -6,7 +6,7 @@ import re
 import sys
 from pathlib import Path
 
-from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
+from mcpnuke.core.constants import DEFAULT_BEDROCK_MODEL, DEFAULT_CLAUDE_MODEL
 
 # argparse exposes no public name for the object add_argument_group returns,
 # so alias the real one here rather than weakening the helpers to Any.
@@ -291,9 +291,11 @@ def _add_ai_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
         "--bedrock-model",
         metavar="MODEL_ID",
-        default="anthropic.claude-3-5-sonnet-20241022-v2:0",
-        help="Bedrock model ID to invoke when --bedrock is enabled "
-        "(default: anthropic.claude-3-5-sonnet-20241022-v2:0).",
+        default=DEFAULT_BEDROCK_MODEL,
+        help=f"Bedrock inference profile to invoke when --bedrock is enabled "
+        f"(default: {DEFAULT_BEDROCK_MODEL}). Current Anthropic models on "
+        "Bedrock are inference-profile only; outside the US substitute the "
+        "eu./apac./global. prefix for your region.",
     )
     group.add_argument(
         "--bedrock-profile",

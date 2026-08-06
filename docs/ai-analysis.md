@@ -16,6 +16,16 @@ export ANTHROPIC_API_KEY=sk-ant-...
 For Bedrock mode, the same `ai` extra includes `boto3`; configure AWS credentials
 and pass `--bedrock` (plus optional region/profile/model flags).
 
+**Bedrock uses inference profiles, not bare model ids.** Current Anthropic
+models on Bedrock advertise `INFERENCE_PROFILE` as their only inference type,
+so the id carries a geography prefix — the default is
+`us.anthropic.claude-sonnet-4-5-20250929-v1:0`. Outside the US, pass the
+matching `eu.`, `apac.` or `global.` profile via `--bedrock-model`; a bare
+`anthropic.*` id will fail on invoke. Bedrock also has no generally available
+undated alias: `anthropic.claude-sonnet-5` exists in the catalog but returns
+`AccessDenied` without a specific entitlement, which is why this default names
+a dated version where the direct API default does not.
+
 **`--claude` fails loud — no key, no run.** If `--claude` is set but the
 `anthropic` package is missing or `ANTHROPIC_API_KEY` is unset, mcpnuke
 exits immediately (exit code `2`) with a clear error message *before* any
