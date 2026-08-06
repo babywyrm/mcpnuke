@@ -113,6 +113,44 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **`--claude` failed on every invocation** (`core/constants.py`): the default
+  model `claude-sonnet-4-20250514` was retired upstream, so the API answered
+  `not_found_error` and all three AI phases produced nothing. The id was copied
+  across eight call sites in five modules, which is why the rot went unnoticed;
+  it now lives once as `DEFAULT_CLAUDE_MODEL` and is an undated alias
+  (`claude-sonnet-5`), since dated snapshots are the ones that get retired. A
+  test asserts the default is alias-shaped and that no module hardcodes the
+  retired id, matching on string literals so the explanatory comment does not
+  trip it.
+- **Extended thinking silently voided every AI finding** (`core/llm.py`): both
+  the SDK and Bedrock paths read `content[0].text`, but current models return a
+  `thinking` block first and the answer in a later `text` block. Against
+  `claude-sonnet-5` this raised `AttributeError: 'ThinkingBlock' object has no
+  attribute 'text'` per phase; the handlers log at verbose level and continue,
+  so a default-verbosity scan spent 35s of billed API calls and reported zero
+  AI findings with no visible error. A shared `_response_text()` now joins the
+  text blocks, excluding known non-text kinds by type rather than admitting
+  only exact `type == "text"`, so a payload still counts when the type field is
+  absent.
+- **AI findings invented threat identifiers** (`core/llm.py`): the chain
+  reasoning prompt asked for a "MCP threat taxonomy ID if applicable" without
+  naming the vocabulary, and against a live DVMCP target the model returned
+  `MCP-2024-AUTH-001` and similar — ids that map to nothing in the 57-entry
+  taxonomy. Both prompts now share `taxonomy_id_clause()`, derived from
+  `threat_ids()` so it tracks the taxonomy instead of drifting the way the
+  hardcoded "MCP-T01 through MCP-T55" had. Parsing drops out-of-taxonomy ids
+  while keeping the finding, and normalizes case and zero-padding.
+- **Confusable tool names went undetected** (`checks/chaining.py`,
+  [MCP-T25]): `check_tool_shadowing` only matched a fixed list of common names
+  or exact collisions across *different* targets, so DVMCP challenge 5 — which
+  serves `get_user_role` beside a `get_user_roles` that returns admin for
+  everyone — produced nine findings, none about shadowing. Same-server pairs are
+  now compared by name similarity, calibrated on real tool vocabularies where
+  legitimate neighbours peak near 0.71 (`read_file`/`write_file`) and the decoy
+  pair scores 0.96. A near-identical description raises the finding to HIGH,
+  since that turns name ambiguity into a deliberate trap. Live re-scan of
+  challenge 5 now reports it at HIGH with 96% name and 100% description
+  similarity.
 - **`--fast`'s help text named four skipped probes where the code skips five**
   (`cli.py`): `FAST_SKIP_CHECKS` gained `sdk_cache_poisoning`, which mutates
   target state, and the help string was never updated. Generating
