@@ -74,6 +74,11 @@ addopts = "-v --tb=short --ignore=tests/test_targets"
 [tool.ruff]
 target-version = "py311"
 line-length = 120
+# Vendored lab servers, checked out as nested repos for live testing. They are
+# deliberately bad code and not ours to fix, and linting them buries our own
+# findings: a checked-out DVMCP contributes ~500 errors to a clean tree. CI only
+# escapes this because it does not check the gitlinks out.
+extend-exclude = ["tests/test_targets"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
