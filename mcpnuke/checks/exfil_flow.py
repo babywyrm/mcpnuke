@@ -8,10 +8,12 @@ reachability of theoretical exfiltration paths.
 """
 
 import re
+import time
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.oast import Callback, CanaryListener
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 # All findings in this module are scoped to Lane 2 / Transport "B"
@@ -45,7 +47,11 @@ def _classify_tool(tool: dict) -> tuple[bool, bool, bool]:
     name = tool.get("name", "").lower()
     desc = tool.get("description", "").lower()
     combined = f"{name} {desc}"
-    name_parts = set(re.split(r"[_\-\s]+", name))
+    # The dot is a separator too. MCP tools are conventionally namespaced —
+    # every tool on the Camazotz target is — and without it `vault.read_secret`
+    # splits to {'vault.read', 'secret'}, the verb never appears, and the tool
+    # is not seen as a source at all.
+    name_parts = set(re.split(r"[_\-\s.]+", name))
 
     is_source = bool(name_parts & SOURCE_KEYWORDS) or any(
         kw in combined for kw in ("return", "retrieve", "output", "result")
@@ -61,6 +67,24 @@ def _classify_tool(tool: dict) -> tuple[bool, bool, bool]:
 
 
 EXFIL_CANARY = "MCPV_EXFIL_CANARY_7x9k2"
+
+# A sink may queue rather than send, so the callback can trail the response it
+# already returned. Short enough not to add minutes across a large tool matrix.
+_CALLBACK_WAIT_SECONDS: float = 2.0
+_CALLBACK_POLL_SECONDS: float = 0.05
+
+
+def _await_callback(
+    oast: CanaryListener, token: str, wait: float = _CALLBACK_WAIT_SECONDS
+) -> list[Callback]:
+    """Wait briefly for the target to call the address planted in the payload."""
+    deadline = time.monotonic() + wait
+    while time.monotonic() < deadline:
+        hits = oast.hits(token)
+        if hits:
+            return hits
+        time.sleep(_CALLBACK_POLL_SECONDS)
+    return oast.hits(token)
 
 
 def _try_source_read(session: MCPSessionProtocol, tool: dict) -> str | None:
@@ -174,6 +198,8 @@ def check_exfil_flow(
                     )
 
         # Live verification: attempt source→sink canary transfer
+        oast = opts.get("oast")
+        callback_wait = float(opts.get("oast_wait", _CALLBACK_WAIT_SECONDS))
         if session and not opts.get("no_invoke") and sources and sinks:
             _log(f"    [dim]    live exfil verification: {len(sources[:3])} source(s) × {len(sinks[:3])} sink(s)[/dim]")
             for source in sources[:3]:
@@ -182,22 +208,51 @@ def check_exfil_flow(
                 if not source_text:
                     continue
 
-                canary = f"{EXFIL_CANARY}:{source_name[:20]}:{source_text[:30]}"
                 for sink in sinks[:3]:
                     sink_name = sink.get("name", "")
                     if sink_name == source_name:
                         continue
                     _log(f"    [dim]      {source_name} → {sink_name}[/dim]")
+
+                    # A token minted for this one pair. If a request for it ever
+                    # arrives, the target reached an address that existed
+                    # nowhere else, which no tool response can counterfeit.
+                    token = oast.issue() if oast else ""
+                    canary = f"{EXFIL_CANARY}:{source_name[:20]}:{source_text[:30]}"
+                    if oast:
+                        canary = f"{canary} {oast.url_for(token)}"
+
                     accepted, resp_text = _try_sink_send(session, sink, canary)
-                    if accepted:
+                    if not accepted:
+                        continue
+
+                    callbacks = (
+                        _await_callback(oast, token, callback_wait) if oast else []
+                    )
+                    if callbacks:
+                        first = callbacks[0]
+                        _add(result,
+                            "exfil_flow",
+                            "CRITICAL",
+                            f"Live exfil confirmed: '{source_name}' → '{sink_name}'",
+                            f"The payload routed through the sink carried a URL minted "
+                            f"for this pair alone, and the target requested it. Egress is "
+                            f"observed out of band, not inferred from the sink's reply: "
+                            f"data read by '{source_name}' left the target.",
+                            evidence=(
+                                f"Callback: {first.method} {first.path} from {first.peer}\n"
+                                f"Body: {first.body[:200]}"
+                            ),
+                        )
+                    else:
                         _add(result,
                             "exfil_flow",
                             "CRITICAL",
                             f"Live exfil path: '{source_name}' → '{sink_name}'",
                             f"Sink accepted a payload carrying {len(source_text)} chars "
                             f"read from the source, without reporting an error. "
-                            f"Delivery is not observed — no out-of-band oracle — so this "
-                            f"establishes the path is callable end to end, not that data "
-                            f"reached a third party.",
+                            f"Delivery is not observed — no callback was received — so "
+                            f"this establishes the path is callable end to end, not that "
+                            f"data reached a third party.",
                             evidence=f"Canary: {canary[:80]}\nSink response: {resp_text[:200]}",
                         )

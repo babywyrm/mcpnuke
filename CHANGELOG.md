@@ -122,6 +122,22 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **Out-of-band egress verification** (`core/oast.py`, `--oast`): a callback
+  listener the scanner controls, so exfiltration can be proven rather than
+  inferred. Every signal the scanner had was in band — it asked a tool
+  something and read the reply — which shows a path is *callable* but cannot
+  show the payload went anywhere; a sink answering `{"status": "sent"}` and one
+  answering it while discarding the data are the same conversation.
+  `exfil_flow` now mints a token per source-sink pair and plants its URL in the
+  canary alongside the source data. A request for that token means the target
+  reached an address that existed nowhere else, which no tool response can
+  counterfeit, and the finding becomes "Live exfil confirmed" with the callback
+  as evidence. With no callback the wording stays at the weaker, honest claim,
+  because a target with no outbound network is indistinguishable from one that
+  dropped the payload. `--oast-host` sets the address advertised to the target,
+  which a container or remote host needs; `--oast-port` fixes the port for a
+  firewall rule. Off by default: it opens a socket and induces the target to
+  send data outward.
 - **Credentials written into description prose** (`patterns/credentials.py`):
   a new `PROSE_CREDENTIALS` tier, folded into `SCHEMA_CREDENTIALS`, matching a
   quoted literal assigned to a credential noun. Camazotz publishes "service API
@@ -185,6 +201,15 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Namespaced tools were never classified as exfiltration sources**
+  (`checks/exfil_flow.py`): `_classify_tool` split the tool name on
+  `[_\-\s]+` to match its parts against keyword sets, and a dot is not in that
+  class, so `vault.read_secret` split to `{'vault.read', 'secret'}`, `read`
+  never appeared, and the tool was not a source. Namespacing is the norm — all
+  139 tools on the Camazotz target carry a dot — and sinks sometimes survived
+  by accident where the trailing segment was itself a keyword
+  (`notify.send_message` matched on `message`), which hid the gap. Adding the
+  dot as a separator takes that target from 48 recognised sources to 72.
 - **Truncated AI responses read as clean targets** (`core/llm.py`): the two
   phases that reason across a whole target asked for at most 2000 output
   tokens, and `_parse_findings` answers `[]` on `JSONDecodeError`, so a

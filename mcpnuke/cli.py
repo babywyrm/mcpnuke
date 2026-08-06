@@ -193,6 +193,32 @@ def _add_stdio_arguments(group: ArgumentGroup) -> None:
 
 def _add_safety_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
+        "--oast",
+        action="store_true",
+        help="Run a callback listener and plant a per-probe URL in exfiltration "
+        "payloads. A request for that URL proves egress: data left the target, "
+        "rather than the sink merely accepting it. Off by default because it "
+        "opens a listening socket and induces the target to send data outward.",
+    )
+    group.add_argument(
+        "--oast-host",
+        metavar="HOST",
+        default=None,
+        help="Host to advertise in callback URLs, when the address the target "
+        "can reach differs from the one bound. A container cannot reach the "
+        "scanner's loopback (try host.docker.internal), and a remote target "
+        "cannot route to a private address. Defaults to this machine's "
+        "outbound address.",
+    )
+    group.add_argument(
+        "--oast-port",
+        metavar="PORT",
+        type=int,
+        default=0,
+        help="Port for the callback listener (default: an ephemeral port). Set "
+        "a fixed port when the callback has to traverse a firewall rule.",
+    )
+    group.add_argument(
         "--no-invoke",
         action="store_true",
         help="Static-only mode: skip all behavioral probes that call tools. "

@@ -238,6 +238,34 @@ def _run_diff_subcommand(argv: list[str]) -> None:
         sys.exit(1)
 
 
+def _start_oast(args: argparse.Namespace, console: Console):
+    """Bring up the callback listener when --oast is set.
+
+    Returns None when the flag is off or the socket cannot be bound. A listener
+    that fails to start must not abort the scan: every other check still works,
+    and the exfil finding simply keeps its weaker, honest wording.
+    """
+    if not getattr(args, "oast", False):
+        return None
+
+    from mcpnuke.core.oast import CanaryListener
+
+    try:
+        listener = CanaryListener(
+            port=int(getattr(args, "oast_port", 0) or 0),
+            advertised_host=getattr(args, "oast_host", None),
+        ).start()
+    except OSError as exc:
+        console.print(f"  [red]--oast: could not bind listener: {exc}[/red]")
+        return None
+
+    console.print(
+        f"  [yellow]--oast: callback listener on {listener.base_url} — "
+        "the target must be able to reach this address[/yellow]"
+    )
+    return listener
+
+
 def _main_inner() -> None:
     # Handle `mcpnuke diff a.json b.json` before full arg parse
     if len(sys.argv) >= 2 and sys.argv[1] == "diff":
@@ -589,6 +617,10 @@ def _main_inner() -> None:
         "save_inference_baseline": getattr(args, "save_inference_baseline", None),
         "profile": profile_data,
     }
+
+    oast_listener = _start_oast(args, console)
+    if oast_listener is not None:
+        probe_opts["oast"] = oast_listener
 
     if args.no_invoke:
         console.print("  [yellow]--no-invoke: behavioral probes disabled (static-only)[/yellow]")
