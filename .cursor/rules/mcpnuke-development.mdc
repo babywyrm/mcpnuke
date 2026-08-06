@@ -36,7 +36,7 @@ All development on mcpnuke follows the superpowers skills framework:
 - Every new check needs a dedicated `tests/test_<check_name>.py`
 - Minimum 3 tests per check: positive detection, clean/negative, timing recorded
 - Use `conftest.py` fixtures: `result_with_tools([{...}])`
-- Full suite must pass before any commit: 900+ passed, 37 skipped, 0 failed
+- Full suite must pass before any commit: 1040+ passed, 37 skipped, 0 failed
 - Also green before committing: `ruff check .` at zero, `mypy mcpnuke/` at or below the CI ceiling. `mcpnuke.core.*` additionally enforces `disallow_untyped_defs`
 - DVMCP live tests gated behind `DVMCP_LIVE=1`
 

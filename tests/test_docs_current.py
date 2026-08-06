@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import ast
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -706,8 +707,17 @@ class TestNoRetiredModelIds:
     a provider drops one.
     """
 
-    # Prose that documents a retirement has to be able to name it.
-    _HISTORY = frozenset({"CHANGELOG.md"})
+    # Files whose job is to describe the retirement, and so must name it.
+    _MAY_NAME_RETIRED = frozenset({
+        "CHANGELOG.md",              # history
+        "constants.py",              # comment explaining why the default moved
+        "test_claude_model_default.py",
+        "test_docs_current.py",      # this file
+    })
+
+    # Prose is not the only place an id hides: demo_ai.sh sets MODEL= and
+    # workflows pin flags, and a markdown-only sweep would never see either.
+    _SWEPT_SUFFIXES = frozenset({".md", ".py", ".sh", ".yml", ".yaml", ".json", ".toml"})
 
     RETIRED: frozenset[str] = frozenset({
         "claude-sonnet-4-20250514",
@@ -716,22 +726,37 @@ class TestNoRetiredModelIds:
         "claude-3-5-sonnet-20241022",
     })
 
-    def _docs(self) -> list[Path]:
+    def _swept(self) -> list[Path]:
+        """Tracked files only.
+
+        Scoping by directory instead would mean chasing every tool cache:
+        .mypy_cache alone vendors the Anthropic SDK's type stubs, which name
+        every model the SDK has ever known.
+        """
+        out = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=_docsgen.REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         return [
-            p
-            for p in _docsgen.REPO_ROOT.rglob("*.md")
-            if not (_SKIPPED_PARTS & set(p.relative_to(_docsgen.REPO_ROOT).parts))
-            and p.name not in self._HISTORY
+            _docsgen.REPO_ROOT / rel
+            for rel in out.stdout.split("\0")
+            if rel
+            and Path(rel).suffix in self._SWEPT_SUFFIXES
+            and not (_SKIPPED_PARTS & set(Path(rel).parts))
+            and Path(rel).name not in self._MAY_NAME_RETIRED
         ]
 
-    def test_no_document_names_a_retired_model(self) -> None:
+    def test_nothing_names_a_retired_model(self) -> None:
         offenders: list[str] = []
-        for path in self._docs():
-            text = path.read_text()
+        for path in self._swept():
+            text = path.read_text(errors="ignore")
             for dead in self.RETIRED:
                 if dead in text:
                     offenders.append(f"{path.relative_to(_docsgen.REPO_ROOT)}: {dead}")
-        assert not offenders, f"retired model ids in prose: {offenders}"
+        assert not offenders, f"retired model ids still present: {offenders}"
 
     def test_the_shipped_defaults_are_not_retired(self) -> None:
         from mcpnuke.core.constants import DEFAULT_BEDROCK_MODEL, DEFAULT_CLAUDE_MODEL
@@ -739,10 +764,18 @@ class TestNoRetiredModelIds:
         assert DEFAULT_CLAUDE_MODEL not in self.RETIRED
         assert DEFAULT_BEDROCK_MODEL not in self.RETIRED
 
-    def test_the_sweep_actually_reads_documents(self) -> None:
-        """Vacuity guard: an over-broad skip list would pass trivially."""
-        names = {p.name for p in self._docs()}
+    def test_the_sweep_reaches_prose_code_and_harnesses(self) -> None:
+        """Vacuity guard: an over-broad skip list would pass trivially, and a
+        markdown-only sweep is how demo_ai.sh went unwatched."""
+        names = {p.name for p in self._swept()}
         assert {"README.md", "ai-analysis.md", "cli-reference.md"} <= names
+        assert "demo_ai.sh" in names, "shell harnesses are not being swept"
+        assert "cli.py" in names, "source is not being swept"
+
+    def test_the_exemptions_are_all_real_files(self) -> None:
+        """A renamed exemption silently widens into a hole."""
+        present = {p.name for p in _docsgen.REPO_ROOT.rglob("*") if p.is_file()}
+        assert present >= self._MAY_NAME_RETIRED
 
 
 MD_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
