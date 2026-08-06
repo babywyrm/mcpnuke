@@ -182,7 +182,7 @@ pattern would ever flag.
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-./scan --targets http://localhost:9004/sse --safe-mode --claude --claude-model claude-opus-4-20250514 --verbose
+./scan --targets http://localhost:9004/sse --safe-mode --claude --claude-model claude-opus-5 --verbose
 ```
 
 ### The three analysis layers
@@ -399,7 +399,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ./scan --targets http://localhost:9002/sse --no-invoke --claude --verbose
 
 # Opus (deepest reasoning — catches lateral movement, privilege escalation chains)
-./scan --targets http://localhost:9009/sse --no-invoke --claude --claude-model claude-opus-4-20250514 --verbose
+./scan --targets http://localhost:9009/sse --no-invoke --claude --claude-model claude-opus-5 --verbose
 ```
 
 AI findings are prefixed with `[AI]` in the output. In our testing against
@@ -414,7 +414,7 @@ Install the AI dependency: `uv pip install -e ".[ai]"`
 ## Next Steps
 
 - **Scan your own MCP servers**: `./scan --targets http://your-server:port/mcp -v`
-- **AI-powered deep scan**: `./scan --targets URL --claude --claude-model claude-opus-4-20250514`
+- **AI-powered deep scan**: `./scan --targets URL --claude --claude-model claude-opus-5`
 - **Authenticated targets**: `./scan --targets URL --oidc-url KEYCLOAK_URL --client-id ID --client-secret SECRET`
 - **Add to CI**: `./scan --targets URL --json report.json` (exits 1 on CRITICAL/HIGH)
 - **Run the test suite**: `uv run pytest tests/ -v`

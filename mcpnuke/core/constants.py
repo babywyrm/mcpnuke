@@ -84,3 +84,10 @@ SHADOW_TARGETS: set[str] = {
     "web_search", "browser", "calculator", "send_email", "send_message",
     "think", "plan", "act", "observe", "reflect",
 }
+
+# Anthropic retires dated snapshot ids, which is how the previous default
+# (claude-sonnet-4-20250514) came to fail every --claude run with
+# not_found_error. Prefer the undated alias, and keep this the only place the
+# default lives so a retirement is a one-line change rather than a hunt
+# through the CLI, the scanner and six llm call sites.
+DEFAULT_CLAUDE_MODEL: str = "claude-sonnet-5"

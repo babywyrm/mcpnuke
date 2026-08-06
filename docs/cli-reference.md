@@ -72,7 +72,7 @@ Generated from the parser, so it cannot fall behind the code.
 |---|---|
 | `--claude` | Enable AI-powered analysis using Claude. Requires ANTHROPIC_API_KEY env var. Layers LLM reasoning on top of deterministic checks to catch subtle issues. |
 | `--claude-max-tools N` | Max tools for Claude AI response analysis (default: 10). Higher = more thorough but slower and costs more. |
-| `--claude-model MODEL` | Claude model to use for AI analysis (default: claude-sonnet-4-20250514). Use claude-opus-4-20250514 for deepest analysis. |
+| `--claude-model MODEL` | Claude model to use for AI analysis (default: claude-sonnet-5). Use an opus model for deepest analysis. |
 | `--claude-phase2-workers N` | Parallel Claude workers for Phase 2 response analysis (default: 1). Use 2-4 to reduce wall time on fast targets. |
 | `--bedrock` | Use AWS Bedrock runtime for Claude API calls instead of direct Anthropic API. Requires boto3 and AWS credentials. |
 | `--bedrock-model MODEL_ID` | Bedrock model ID to invoke when --bedrock is enabled (default: anthropic.claude-3-5-sonnet-20241022-v2:0). |

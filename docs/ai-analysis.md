@@ -32,7 +32,7 @@ but unsafe for security tooling.)
 ./scan --targets http://localhost:9002/sse --claude --verbose
 
 # Opus (deepest reasoning)
-./scan --targets http://localhost:9002/sse --claude --claude-model claude-opus-4-20250514
+./scan --targets http://localhost:9002/sse --claude --claude-model claude-opus-5
 
 # Fast mode + Claude (deterministic fast scan, then AI analysis)
 ./scan --targets http://localhost:9090 --fast --claude --verbose

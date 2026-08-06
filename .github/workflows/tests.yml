@@ -58,7 +58,7 @@ jobs:
       # what CI always has — a warm cache under-reports.
       - name: Mypy
         env:
-          MYPY_CEILING: '48'
+          MYPY_CEILING: '47'
         run: |
           out="$(uv run mypy mcpnuke/ 2>&1 || true)"
           echo "$out" | tail -20

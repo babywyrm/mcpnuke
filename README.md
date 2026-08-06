@@ -155,7 +155,7 @@ Bedrock variations, see **[QUICKSTART.md](QUICKSTART.md)**.
 
 # AI-powered analysis (requires ANTHROPIC_API_KEY)
 ./scan --targets http://localhost:9002/sse --claude --verbose
-./scan --targets http://localhost:9002/sse --claude --claude-model claude-opus-4-20250514
+./scan --targets http://localhost:9002/sse --claude --claude-model claude-opus-5
 ./scan --targets http://localhost:9002/sse --claude --claude-max-tools 25 --claude-phase2-workers 3
 
 # AI-powered analysis via AWS Bedrock Claude (optional)

@@ -6,6 +6,8 @@ import re
 import sys
 from pathlib import Path
 
+from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
+
 # argparse exposes no public name for the object add_argument_group returns,
 # so alias the real one here rather than weakening the helpers to Any.
 ArgumentGroup = argparse._ArgumentGroup
@@ -268,9 +270,9 @@ def _add_ai_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
         "--claude-model",
         metavar="MODEL",
-        default="claude-sonnet-4-20250514",
-        help="Claude model to use for AI analysis (default: claude-sonnet-4-20250514). "
-        "Use claude-opus-4-20250514 for deepest analysis.",
+        default=DEFAULT_CLAUDE_MODEL,
+        help=f"Claude model to use for AI analysis (default: {DEFAULT_CLAUDE_MODEL}). "
+        "Use an opus model for deepest analysis.",
     )
     group.add_argument(
         "--claude-phase2-workers",

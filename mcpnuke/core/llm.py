@@ -8,6 +8,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
+from mcpnuke.core.taxonomy import threat_ids
+
 _client = None
 _bedrock_config: dict[str, Any] = {
     "enabled": False,
@@ -20,6 +23,25 @@ _MCP_TAXONOMY_RE = _re.compile(r'\[MCP-T(\d+)\]')
 _MITRE_RE = _re.compile(r'\[T(\d{4})\]')
 
 
+def taxonomy_id_clause() -> str:
+    """The prompt line that pins taxonomy_id to ids that actually exist.
+
+    Derived from the taxonomy so adding a threat moves the prompt with it.
+    """
+    ids = sorted(threat_ids())
+    return (
+        f"  taxonomy_id: an id from the MCP threat taxonomy ({ids[0]}-{ids[-1]}). "
+        "Use only ids from that taxonomy; do not invent your own identifiers. "
+        "Omit the field when no id fits."
+    )
+
+
+def _known_taxonomy_id(raw: str) -> str:
+    """Normalize a model-supplied id, or return '' if it is not in the taxonomy."""
+    candidate = raw.strip().upper()
+    return candidate if candidate in threat_ids() else ""
+
+
 def _extract_taxonomy(title: str, raw_taxonomy: str, raw_mitre: str = "") -> tuple[str, str]:
     """Return (taxonomy_id, mitre_id).
 
@@ -29,13 +51,13 @@ def _extract_taxonomy(title: str, raw_taxonomy: str, raw_mitre: str = "") -> tup
     def _clean(v: str) -> str:
         return "" if (not v or v == "None") else v
 
-    mcp_id = _clean(raw_taxonomy)
+    mcp_id = _known_taxonomy_id(_clean(raw_taxonomy))
     mitre_id = _clean(raw_mitre)
 
     if not mcp_id:
         m = _MCP_TAXONOMY_RE.search(title)
         if m:
-            mcp_id = f"MCP-T{m.group(1)}"
+            mcp_id = _known_taxonomy_id(f"MCP-T{int(m.group(1)):02d}")
     if not mitre_id:
         m = _MITRE_RE.search(title)
         if m:
@@ -82,6 +104,37 @@ class LLMFinding:
     mitre_id: str = ""
 
 
+_NON_TEXT_BLOCKS: frozenset[str] = frozenset(
+    {"thinking", "redacted_thinking", "tool_use", "server_tool_use"}
+)
+
+
+def _response_text(content: Any) -> str:
+    """Join the text blocks of a Claude response, ignoring the rest.
+
+    Models with extended thinking put a `thinking` block first and the answer
+    in a later `text` block, so indexing `content[0]` drops the answer (or
+    raises, since a thinking block has no `.text`).
+
+    Blocks are excluded by known non-text type rather than admitted by an
+    exact `type == "text"`, so a block that carries the payload still counts
+    when the type field is absent.
+    """
+    if not isinstance(content, list):
+        return ""
+    parts: list[str] = []
+    for block in content:
+        if isinstance(block, dict):
+            kind, text = block.get("type"), block.get("text")
+        else:
+            kind, text = getattr(block, "type", None), getattr(block, "text", None)
+        if isinstance(kind, str) and kind in _NON_TEXT_BLOCKS:
+            continue
+        if isinstance(text, str):
+            parts.append(text)
+    return "".join(parts)
+
+
 def _call_claude(
     system: str,
     user_content: str,
@@ -114,7 +167,7 @@ def _call_claude(
     )
     elapsed = time.time() - t0
 
-    text = resp.content[0].text
+    text = _response_text(resp.content)
     usage = resp.usage
     _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
     _log(f"  [dim]  │ Tokens: input={usage.input_tokens} output={usage.output_tokens}[/dim]")
@@ -172,12 +225,7 @@ def _call_bedrock_claude(
     parsed = json.loads(body_str or "{}")
     elapsed = time.time() - t0
 
-    content = parsed.get("content", [])
-    text = ""
-    if isinstance(content, list) and content:
-        first = content[0]
-        if isinstance(first, dict):
-            text = first.get("text", "") or ""
+    text = _response_text(parsed.get("content", []))
 
     usage = parsed.get("usage", {})
     in_tokens = usage.get("input_tokens", 0)
@@ -196,7 +244,7 @@ def _call_bedrock_claude(
 
 def analyze_tools(
     tools: list[dict],
-    model: str = "claude-sonnet-4-20250514",
+    model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
 ) -> list[LLMFinding]:
     """Use Claude to analyze tool definitions for subtle security issues."""
@@ -219,7 +267,7 @@ def analyze_tools(
         '  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"\n'
         "  title: short finding title\n"
         "  detail: explanation of the risk and attack scenario\n"
-        "  taxonomy_id: MCP threat taxonomy ID (MCP-T01 through MCP-T55) if applicable\n\n"
+        f"{taxonomy_id_clause()}\n\n"
         "Only report genuine security concerns. No false positives. "
         "Respond with ONLY the JSON array, no markdown."
     )
@@ -232,7 +280,7 @@ def analyze_tools(
 def analyze_findings(
     tools: list[dict],
     findings: list[dict],
-    model: str = "claude-sonnet-4-20250514",
+    model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
 ) -> list[LLMFinding]:
     """Use Claude to reason about findings and discover attack chains."""
@@ -257,7 +305,7 @@ def analyze_findings(
         '  severity: "CRITICAL" | "HIGH" | "MEDIUM"\n'
         "  title: short title\n"
         "  detail: the attack chain or scenario explained step by step\n"
-        "  taxonomy_id: MCP threat taxonomy ID if applicable\n\n"
+        f"{taxonomy_id_clause()}\n\n"
         "Only report actionable insights. Respond with ONLY the JSON array, no markdown."
     )
     user_content = (
@@ -273,7 +321,7 @@ def analyze_response(
     tool_name: str,
     tool_description: str,
     response_text: str,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
 ) -> list[LLMFinding]:
     """Use Claude to analyze a tool response for embedded threats."""
@@ -308,7 +356,7 @@ def classify_probe_response(
     tool_name: str,
     probe_type: str,
     response_text: str,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
 ) -> str | None:
     """Classify an ambiguous probe response as malicious, benign, or unclear.

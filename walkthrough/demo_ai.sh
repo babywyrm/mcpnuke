@@ -9,7 +9,7 @@ set -euo pipefail
 
 SKIP_SETUP=false
 NO_CLEANUP=false
-MODEL="claude-sonnet-4-20250514"
+MODEL="claude-sonnet-5"
 MODEL_LABEL="Sonnet"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -19,7 +19,7 @@ for arg in "$@"; do
     case "$arg" in
         --skip-setup) SKIP_SETUP=true ;;
         --no-cleanup) NO_CLEANUP=true ;;
-        --opus) MODEL="claude-opus-4-20250514"; MODEL_LABEL="Opus" ;;
+        --opus) MODEL="claude-opus-5"; MODEL_LABEL="Opus" ;;
         -h|--help)
             echo "Usage: ./walkthrough/demo_ai.sh [--skip-setup] [--opus] [--no-cleanup]"
             echo ""

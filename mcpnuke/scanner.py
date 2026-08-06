@@ -16,6 +16,7 @@ from rich.progress import (
 )
 
 from mcpnuke.checks import run_all_checks
+from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.enumerator import enumerate_server
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.session import StdioSession, ToolServerSession, detect_transport
@@ -116,7 +117,7 @@ def scan_stdio_target(
         run_llm_analysis(
             session, result,
             probe_opts=opts,
-            model=opts.get("claude_model", "claude-sonnet-4-20250514"),
+            model=opts.get("claude_model", DEFAULT_CLAUDE_MODEL),
             console=console,
         )
     elif opts.get("ollama_analysis"):
@@ -279,7 +280,7 @@ def scan_target(
     # AI-powered analysis (optional, runs after deterministic checks)
     if opts.get("claude"):
         from mcpnuke.checks.llm_analysis import run_llm_analysis
-        claude_model = opts.get("claude_model", "claude-sonnet-4-20250514")
+        claude_model = opts.get("claude_model", DEFAULT_CLAUDE_MODEL)
         run_llm_analysis(
             session, result,
             probe_opts=probe_opts or {},
