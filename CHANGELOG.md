@@ -120,6 +120,22 @@ All notable changes to this submodule are documented here.
   target's* advertised models and was confirmed still served; mcpnuke itself
   has no OpenAI call path, so there is no OpenAI default to rot.
 
+### Added
+
+- **Credentials written into description prose** (`patterns/credentials.py`):
+  a new `PROSE_CREDENTIALS` tier, folded into `SCHEMA_CREDENTIALS`, matching a
+  quoted literal assigned to a credential noun. Camazotz publishes "service API
+  key is 'svc-internal-abc123'" in a tool description, so the key reaches every
+  client that calls `tools/list`; the deterministic scan raised twenty findings
+  against that tool and none was the key. `STRUCTURAL` had no shape to match on
+  and `KEYWORD` is barred from tool definitions because its value clause is
+  satisfied by a property declaration. The discriminator neither used is
+  quoting: a leaked value is a quoted literal, a declared property is a type
+  object opening with a brace. Requiring a quote after the separator admits the
+  leak and rejects the declaration. Verified against the live 139-tool surface:
+  one hit, the true positive, and no false positives among the 108 tools that
+  publish schemas.
+
 ### Changed
 
 - **Chain reasoning is given the evidence it is asked to reason from**

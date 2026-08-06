@@ -123,6 +123,45 @@ KEYWORD_CREDENTIALS: tuple[PatternSpec, ...] = (
 )
 
 
+# ── Prose: a quoted literal assigned to a credential noun ─────────────
+#
+# Shape-based matching cannot see a credential with no distinctive shape.
+# Camazotz publishes "service API key is 'svc-internal-abc123'" in a tool
+# description; STRUCTURAL has nothing to match, KEYWORD is barred from tool
+# definitions, and so the key reached every client that called tools/list
+# without the scan mentioning it.
+#
+# The discriminator KEYWORD lacks is quoting. A leaked value is a quoted
+# literal — `key is 'svc-internal-abc123'`, `"api_key":"a8f3c91b7d2e4f60"` — but
+# a declared property is a type object, `{"api_key": {"type": "string"}}`, whose
+# value clause opens with a brace. Requiring a quote immediately after the
+# separator admits the first two and rejects the third, which is what makes
+# this tier safe on tool definitions where KEYWORD is not.
+
+# Values that name a secret rather than being one. No trailing \b: the common
+# form is YOUR_API_KEY_HERE, and `_` is a word character, so a boundary would
+# never fire there.
+_NOT_A_PLACEHOLDER: str = (
+    r"(?!(?:your|my|our|example|sample|specimen|placeholder|change[_-]?me|"
+    r"redacted|masked|hidden|insert|replace|todo|dummy|fake|"
+    r"test[_-]?key|string|number|integer|boolean)[_\-]?)"
+)
+
+PROSE_CREDENTIALS: tuple[PatternSpec, ...] = (
+    (
+        r"(?i)[\"']?\b(?:api[\s_-]?key|access[\s_-]?key|secret|token|password"
+        r"|passphrase|credential)\b[\"']?"
+        r"\s*(?:is|are|[=:])\s*"
+        r"[\"']"
+        + _NOT_A_PLACEHOLDER +
+        # A leading alphanumeric rejects '****' and '<your-key>' outright, and
+        # the length floor rejects the JSON type names a schema would carry.
+        r"[A-Za-z0-9][A-Za-z0-9._\-]{7,}[\"']",
+        "credential_in_prose",
+    ),
+)
+
+
 # ── Vendor: lab-specific formats ──────────────────────────────────────
 
 VENDOR_CREDENTIALS: tuple[PatternSpec, ...] = (
@@ -153,8 +192,12 @@ CONTENT_CREDENTIALS: tuple[PatternSpec, ...] = (
     STRUCTURAL_CREDENTIALS + KEYWORD_CREDENTIALS + REFERENCE_PATTERNS
 )
 
-# What a check scanning tool definitions should use: shape-based only.
-SCHEMA_CREDENTIALS: tuple[PatternSpec, ...] = STRUCTURAL_CREDENTIALS
+# What a check scanning tool definitions should use: shapes, plus quoted
+# literals assigned to a credential noun. Both are safe against a serialized
+# tool definition; the keyword tier is not.
+SCHEMA_CREDENTIALS: tuple[PatternSpec, ...] = (
+    STRUCTURAL_CREDENTIALS + PROSE_CREDENTIALS
+)
 
 # Anonymous-recon surface, which also cares about lab tokens.
 RECON_CREDENTIALS: tuple[PatternSpec, ...] = (
