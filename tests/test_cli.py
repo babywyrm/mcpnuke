@@ -149,14 +149,14 @@ def test_parse_args_bedrock_options():
             "--bedrock-profile",
             "security",
             "--bedrock-model",
-            "anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
         ]
     )
     assert args.claude is True
     assert args.bedrock is True
     assert args.bedrock_region == "us-east-1"
     assert args.bedrock_profile == "security"
-    assert args.bedrock_model == "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    assert args.bedrock_model == "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
 
 def test_parse_args_deterministic():

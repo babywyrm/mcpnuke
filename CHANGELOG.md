@@ -110,6 +110,15 @@ All notable changes to this submodule are documented here.
 - Repo slimmed: nine scan reports (1.3 MB) untracked from `profiles/`, which now
   holds only the three hand-written target profiles. `pytest-asyncio` dropped as
   an unused dev dependency.
+- Model ids audited against both provider catalogs (`GET /v1/models`,
+  `bedrock list-foundation-models`) rather than assumed. Retired ids were still
+  named in five test fixtures, where they were harmless — the calls are mocked —
+  but advertised dead models to anyone reading them for a working example; they
+  now name current ones. A guard test fails if any tracked document mentions a
+  known-retired id, with the changelog exempted so it can keep describing the
+  retirements. `gpt-4` appears only as fixture data standing in for a *scanned
+  target's* advertised models and was confirmed still served; mcpnuke itself
+  has no OpenAI call path, so there is no OpenAI default to rot.
 
 ### Fixed
 
@@ -122,6 +131,23 @@ All notable changes to this submodule are documented here.
   test asserts the default is alias-shaped and that no module hardcodes the
   retired id, matching on string literals so the explanatory comment does not
   trip it.
+- **`--bedrock` invoked a model that no longer exists** (`core/constants.py`):
+  the default `anthropic.claude-3-5-sonnet-20241022-v2:0` had reached end of
+  life and was absent from `list-foundation-models` altogether, so the runtime
+  answered `ResourceNotFoundException`. The replacement is a
+  `DEFAULT_BEDROCK_MODEL` constant set to
+  `us.anthropic.claude-sonnet-4-5-20250929-v1:0`, chosen against two
+  constraints the direct API does not have: current Anthropic models on
+  Bedrock are `INFERENCE_PROFILE` only, so a bare `anthropic.*` id cannot be
+  invoked, and the undated alias `anthropic.claude-sonnet-5` returns
+  `AccessDenied` without a specific entitlement — picking it would have
+  reproduced the same out-of-the-box failure. This is why the Bedrock default
+  names a dated version where the direct API default deliberately does not.
+  `docs/ai-analysis.md` now documents the profile prefix so non-US callers
+  know to substitute `eu.`/`apac.`/`global.`. Verified end to end: a
+  `--claude --bedrock` scan with no `ANTHROPIC_API_KEY` produced 11 AI
+  findings including five reasoned attack chains, where the same command
+  previously produced none.
 - **Extended thinking silently voided every AI finding** (`core/llm.py`): both
   the SDK and Bedrock paths read `content[0].text`, but current models return a
   `thinking` block first and the answer in a later `text` block. Against

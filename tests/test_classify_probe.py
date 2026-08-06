@@ -106,7 +106,7 @@ class TestLLMAugmentedResponseInjection:
         }]
 
         mock_classify = MagicMock(return_value="malicious")
-        opts = {"claude": True, "claude_model": "claude-sonnet-4-20250514"}
+        opts = {"claude": True, "claude_model": "claude-sonnet-5"}
 
         with patch("mcpnuke.core.llm.classify_probe_response", mock_classify):
             check_tool_response_injection(session, result, probe_opts=opts)

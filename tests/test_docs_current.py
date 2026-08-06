@@ -696,6 +696,55 @@ class TestProseCounts:
         assert int(probes.group(1)) == len(deep)
 
 
+class TestNoRetiredModelIds:
+    """Model ids rot on the provider's schedule, not ours.
+
+    `claude-sonnet-4-20250514` was retired and
+    `anthropic.claude-3-5-sonnet-20241022-v2:0` reached end of life while both
+    were still named as defaults across code and prose. Verified against
+    `GET /v1/models` and `bedrock list-foundation-models`; add an id here when
+    a provider drops one.
+    """
+
+    # Prose that documents a retirement has to be able to name it.
+    _HISTORY = frozenset({"CHANGELOG.md"})
+
+    RETIRED: frozenset[str] = frozenset({
+        "claude-sonnet-4-20250514",
+        "claude-opus-4-20250514",
+        "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "claude-3-5-sonnet-20241022",
+    })
+
+    def _docs(self) -> list[Path]:
+        return [
+            p
+            for p in _docsgen.REPO_ROOT.rglob("*.md")
+            if not (_SKIPPED_PARTS & set(p.relative_to(_docsgen.REPO_ROOT).parts))
+            and p.name not in self._HISTORY
+        ]
+
+    def test_no_document_names_a_retired_model(self) -> None:
+        offenders: list[str] = []
+        for path in self._docs():
+            text = path.read_text()
+            for dead in self.RETIRED:
+                if dead in text:
+                    offenders.append(f"{path.relative_to(_docsgen.REPO_ROOT)}: {dead}")
+        assert not offenders, f"retired model ids in prose: {offenders}"
+
+    def test_the_shipped_defaults_are_not_retired(self) -> None:
+        from mcpnuke.core.constants import DEFAULT_BEDROCK_MODEL, DEFAULT_CLAUDE_MODEL
+
+        assert DEFAULT_CLAUDE_MODEL not in self.RETIRED
+        assert DEFAULT_BEDROCK_MODEL not in self.RETIRED
+
+    def test_the_sweep_actually_reads_documents(self) -> None:
+        """Vacuity guard: an over-broad skip list would pass trivially."""
+        names = {p.name for p in self._docs()}
+        assert {"README.md", "ai-analysis.md", "cli-reference.md"} <= names
+
+
 MD_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
 # Vendored, generated and tool-owned trees. `1/` is a stray virtualenv created

@@ -18,9 +18,9 @@ def test_configure_bedrock_toggle() -> None:
 def test_call_claude_routes_to_bedrock_when_enabled() -> None:
     from mcpnuke.core.llm import _call_claude, configure_bedrock
 
-    configure_bedrock(enabled=True, model="anthropic.claude-3-5-sonnet-20241022-v2:0")
+    configure_bedrock(enabled=True, model="us.anthropic.claude-sonnet-4-5-20250929-v1:0")
     with patch("mcpnuke.core.llm._call_bedrock_claude", return_value="bedrock-ok") as mock_bedrock:
-        text = _call_claude("sys", "user", "claude-sonnet-4-20250514", 100)
+        text = _call_claude("sys", "user", "claude-sonnet-5", 100)
     assert text == "bedrock-ok"
     mock_bedrock.assert_called_once()
     configure_bedrock(enabled=False)
@@ -41,5 +41,5 @@ def test_call_claude_uses_direct_client_when_bedrock_disabled() -> None:
     configure_bedrock(enabled=False)
     with patch("mcpnuke.core.llm._get_client") as mock_client:
         mock_client.return_value.messages.create.return_value = _Resp()
-        text = _call_claude("sys", "user", "claude-sonnet-4-20250514", 100)
+        text = _call_claude("sys", "user", "claude-sonnet-5", 100)
     assert text == "direct-ok"

@@ -93,19 +93,19 @@ class TestCallClaudeForArgs:
         payload = {"title": "Test ticket"}
         with patch("mcpnuke.checks.tool_probes._call_claude") as mock_claude:
             mock_claude.return_value = json.dumps(payload)
-            result = _call_claude_for_args(tool, model="claude-3-5-sonnet-20241022")
+            result = _call_claude_for_args(tool, model="claude-sonnet-5")
         assert result == payload
 
     def test_returns_none_on_api_error(self):
         from mcpnuke.checks.tool_probes import _call_claude_for_args
         tool = {"name": "test", "inputSchema": {}}
         with patch("mcpnuke.checks.tool_probes._call_claude", side_effect=Exception("timeout")):
-            result = _call_claude_for_args(tool, model="claude-3-5-sonnet-20241022")
+            result = _call_claude_for_args(tool, model="claude-sonnet-5")
         assert result is None
 
     def test_returns_none_on_non_dict_response(self):
         from mcpnuke.checks.tool_probes import _call_claude_for_args
         tool = {"name": "test", "inputSchema": {}}
         with patch("mcpnuke.checks.tool_probes._call_claude", return_value='["not", "a", "dict"]'):
-            result = _call_claude_for_args(tool, model="claude-3-5-sonnet-20241022")
+            result = _call_claude_for_args(tool, model="claude-sonnet-5")
         assert result is None
