@@ -120,6 +120,31 @@ All notable changes to this submodule are documented here.
   target's* advertised models and was confirmed still served; mcpnuke itself
   has no OpenAI call path, so there is no OpenAI default to rot.
 
+### Changed
+
+- **Chain reasoning is given the evidence it is asked to reason from**
+  (`core/llm.py`, `checks/llm_analysis.py`): phase 3 asks for multi-step
+  exploitation paths, then received finding titles with no detail, evidence or
+  tool attribution, and tools as a name plus 100 characters of description with
+  no parameters — so it could not say how data moves between two tools because
+  it was never told what either accepts or returns. The payload was also cut
+  with a blunt slice of already-serialized JSON, so the prompt carried a
+  document that ended mid-string.
+  - Findings now carry `detail`, `evidence`, `taxonomy_id` and the `tool` named
+    in their title; tools now carry their parameter names and types.
+  - `_fit()` budgets by whole items, so the prompt is always valid JSON.
+  - `_diverse_findings()` round-robins across checks, worst instance first.
+    Volume and importance are unrelated — Camazotz reports 233 instances of one
+    check and exactly one of eight others — so a prefix spent the budget on
+    repeats and dropped every rare class.
+  - Budgets raised to 40k characters of tools and 60k of findings, sized so a
+    139-tool target with 47 vulnerability classes fits whole (~25k input
+    tokens, an eighth of the context window).
+  - Measured on Camazotz: tools shown went from 18 of 139 in malformed JSON to
+    139 of 139 valid, vulnerability classes represented from roughly 6 of 47 to
+    47 of 47, with 208 parameters, 116 details and 96 tool attributions now
+    present where there had been none.
+
 ### Fixed
 
 - **Truncated AI responses read as clean targets** (`core/llm.py`): the two

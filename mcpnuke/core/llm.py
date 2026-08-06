@@ -29,6 +29,30 @@ _MITRE_RE = _re.compile(r'\[T(\d{4})\]')
 # found, so the ceiling bites hardest exactly where the analysis is worth most.
 _ANALYSIS_MAX_TOKENS: int = 8000
 
+# Input budgets for the chain-reasoning prompt, in characters. The former 3000
+# and 4000 were applied as blunt slices of an already-serialized document, so on
+# a 138-tool target the model received 24 tools in JSON that ended mid-string.
+# Sized against Camazotz: its 139 tool digests are 35k characters, and one
+# representative of each of its 47 vulnerability classes is 47k at the maximum
+# detail and evidence lengths. Both fit, so no class is dropped for length on a
+# target of that size. Together about 25k input tokens — an eighth of the
+# context window and a few cents a scan, cheap next to reasoning over a target
+# the model can only partly see.
+_TOOLS_BUDGET_CHARS: int = 40000
+_FINDINGS_BUDGET_CHARS: int = 60000
+
+_SEVERITY_ORDER: dict[str, int] = {
+    "CRITICAL": 0,
+    "HIGH": 1,
+    "MEDIUM": 2,
+    "LOW": 3,
+    "INFO": 4,
+}
+
+# A description is where an injection or a "send this to" instruction hides, and
+# 100 characters rarely reaches it.
+_TOOL_DESCRIPTION_CHARS: int = 300
+
 
 def taxonomy_id_clause() -> str:
     """The prompt line that pins taxonomy_id to ids that actually exist.
@@ -298,6 +322,95 @@ def analyze_tools(
     return _parse_findings(text)
 
 
+def _tool_digest(tool: dict) -> dict:
+    """The parts of a tool definition a chain argument depends on.
+
+    Parameters are what make a chain traceable: without them the model can see
+    that two tools exist but not that one accepts the URL the other returns.
+    """
+    schema = tool.get("inputSchema") or {}
+    props = schema.get("properties") if isinstance(schema, dict) else None
+    params: list[str] = []
+    if isinstance(props, dict):
+        for name, spec in props.items():
+            kind = spec.get("type", "any") if isinstance(spec, dict) else "any"
+            params.append(f"{name}:{kind}")
+    return {
+        "name": str(tool.get("name") or ""),
+        "description": str(tool.get("description") or "")[:_TOOL_DESCRIPTION_CHARS],
+        "params": params,
+    }
+
+
+def _fit(items: list[dict], limit: int) -> list[dict]:
+    """The longest prefix of *items* that serializes within *limit* characters.
+
+    Binary search over the prefix length, since serialized size grows with it.
+    """
+    def size(count: int) -> int:
+        return len(json.dumps(items[:count], indent=2, default=str))
+
+    if not items or size(len(items)) <= limit:
+        return items
+
+    low, high = 0, len(items)
+    while low < high:
+        mid = (low + high + 1) // 2
+        if size(mid) <= limit:
+            low = mid
+        else:
+            high = mid - 1
+    return items[:low]
+
+
+def _budgeted_json(items: list[dict], limit: int) -> str:
+    """Serialize whole items up to a budget, never cutting one in half."""
+    return json.dumps(_fit(items, limit), indent=2, default=str)
+
+
+def _diverse_findings(findings: list[dict]) -> list[dict]:
+    """Order findings so every check is represented before any check repeats.
+
+    Volume and importance are unrelated: Camazotz reports 233 instances of one
+    check and exactly one of eight others. Taking a prefix therefore spends the
+    budget on repeats and drops the rare classes entirely, which are the ones a
+    chain argument is most likely to hinge on. Round-robin across checks —
+    worst instance of each first, then second-worst, and so on — means a trim
+    removes extra evidence for a class already shown rather than the only
+    evidence for a class not shown at all.
+    """
+    grouped: dict[str, list[dict]] = {}
+    for finding in sorted(
+        findings, key=lambda f: _SEVERITY_ORDER.get(str(f.get("severity") or "").upper(), 9)
+    ):
+        grouped.setdefault(str(finding.get("check") or ""), []).append(finding)
+
+    ordered: list[dict] = []
+    for tier in range(max((len(g) for g in grouped.values()), default=0)):
+        for group in grouped.values():
+            if tier < len(group):
+                ordered.append(group[tier])
+    return ordered
+
+
+def _prioritized_tools(tools: list[dict], findings: list[dict]) -> list[dict]:
+    """Tools already implicated by a finding first, so a trim cannot drop them."""
+    named = {str(f.get("tool") or "") for f in findings}
+    named.discard("")
+    if not named:
+        return tools
+    implicated = [t for t in tools if str(t.get("name") or "") in named]
+    rest = [t for t in tools if str(t.get("name") or "") not in named]
+    return implicated + rest
+
+
+def _shown_of(shown: int, total: int, noun: str) -> str:
+    """Label a possibly-trimmed list so the model knows the surface is partial."""
+    if shown >= total:
+        return f"{total} {noun}"
+    return f"{shown} of {total} {noun}; the rest were omitted for length"
+
+
 def analyze_findings(
     tools: list[dict],
     findings: list[dict],
@@ -308,12 +421,12 @@ def analyze_findings(
     if not findings:
         return []
 
-    tools_summary = json.dumps(
-        [{"name": t.get("name"), "description": t.get("description", "")[:100]} for t in tools],
-        indent=2,
-    )[:3000]
+    digests = [_tool_digest(t) for t in _prioritized_tools(tools, findings)]
+    shown_tools = _fit(digests, _TOOLS_BUDGET_CHARS)
+    tools_summary = json.dumps(shown_tools, indent=2, default=str)
 
-    findings_summary = json.dumps(findings[:30], indent=2, default=str)[:4000]
+    shown_findings = _fit(_diverse_findings(findings), _FINDINGS_BUDGET_CHARS)
+    findings_summary = json.dumps(shown_findings, indent=2, default=str)
 
     system = (
         "You are an MCP security analyst. Given the tool definitions and existing "
@@ -322,6 +435,11 @@ def analyze_findings(
         "2. Combinations of findings that are more dangerous together\n"
         "3. Realistic attack scenarios an adversary would attempt\n"
         "4. Risk prioritization advice\n\n"
+        "Each tool lists its `params`, and each finding carries the `detail` and "
+        "`evidence` the scanner recorded plus the `tool` it implicates. Ground "
+        "every chain in that material: name the tools in order and say which "
+        "parameter or returned value carries data from one step to the next. Do "
+        "not propose a chain whose steps you cannot name.\n\n"
         "For each insight, respond with a JSON array of objects with fields:\n"
         '  severity: "CRITICAL" | "HIGH" | "MEDIUM"\n'
         "  title: short title\n"
@@ -330,8 +448,10 @@ def analyze_findings(
         "Only report actionable insights. Respond with ONLY the JSON array, no markdown."
     )
     user_content = (
-        f"Tool definitions:\n{tools_summary}\n\n"
-        f"Existing findings:\n{findings_summary}"
+        f"Tool definitions ({_shown_of(len(shown_tools), len(digests), 'tools')}):\n"
+        f"{tools_summary}\n\n"
+        f"Existing findings ({_shown_of(len(shown_findings), len(findings), 'findings')}):\n"
+        f"{findings_summary}"
     )
 
     text = _call_claude(system, user_content, model, _ANALYSIS_MAX_TOKENS, log=log)

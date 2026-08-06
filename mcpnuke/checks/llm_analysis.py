@@ -13,10 +13,16 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from mcpnuke.checks.base import time_check
+from mcpnuke.checks.chaining import _TOOL_NAME_RE
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
+
+# Enough of each field to carry the substance without letting one verbose
+# finding crowd the rest of the target out of the prompt.
+_FINDING_DETAIL_CHARS: int = 600
+_FINDING_EVIDENCE_CHARS: int = 300
 
 
 class LLMBackend(Protocol):
@@ -56,6 +62,36 @@ class _Phase2Candidate:
 class _Phase2Output:
     tool_name: str
     findings: list
+
+
+def _implicated_tool(title: str) -> str:
+    """The tool a finding names in its title, or '' if it names none.
+
+    Findings record their subject in prose rather than a field, so chain
+    reasoning had no way to tell which tools two findings have in common.
+    """
+    for match in _TOOL_NAME_RE.finditer(title):
+        raw = match.group(1) or match.group(2)
+        if raw and raw.lower() not in ("tool", "param"):
+            return raw
+    return ""
+
+
+def _finding_digest(finding) -> dict:
+    """What chain reasoning needs from a finding to argue about a data path.
+
+    The title alone says a class of problem exists somewhere; the detail,
+    evidence and implicated tool say where and with what.
+    """
+    return {
+        "check": finding.check,
+        "severity": finding.severity,
+        "title": finding.title,
+        "detail": (finding.detail or "")[:_FINDING_DETAIL_CHARS],
+        "evidence": (finding.evidence or "")[:_FINDING_EVIDENCE_CHARS],
+        "tool": _implicated_tool(finding.title),
+        "taxonomy_id": finding.taxonomy_id,
+    }
 
 
 def _resolve_phase2_workers(opts: dict) -> int:
@@ -267,7 +303,7 @@ def run_llm_analysis(
         _log("  [cyan]AI Phase 3: Reasoning about attack chains...[/cyan]")
         try:
             existing = [
-                {"check": f.check, "severity": f.severity, "title": f.title}
+                _finding_digest(f)
                 for f in result.findings
                 if not f.check.startswith("llm_")
             ]
