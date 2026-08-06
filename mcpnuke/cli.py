@@ -193,6 +193,15 @@ def _add_stdio_arguments(group: ArgumentGroup) -> None:
 
 def _add_safety_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
+        "--chain-replay",
+        action="store_true",
+        help="After AI chain reasoning, ask the model for executable multi-step "
+        "chains and replay them against the target. A chain that completes with "
+        "data moving between steps is reported CRITICAL with the transcript as "
+        "evidence. Implies tool invocation; ignored under --no-invoke. Requires "
+        "--claude (or another AI backend).",
+    )
+    group.add_argument(
         "--oast",
         action="store_true",
         help="Run a callback listener and plant a per-probe URL in exfiltration "

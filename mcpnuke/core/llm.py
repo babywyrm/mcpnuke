@@ -456,6 +456,26 @@ def _shown_of(shown: int, total: int, noun: str) -> str:
     return f"{shown} of {total} {noun}; the rest were omitted for length"
 
 
+def _chain_context(
+    tools: list[dict], findings: list[dict]
+) -> tuple[str, str, int, int, int, int]:
+    """Shared tool/finding digests for the two phase-3 prompts."""
+    digests = [_tool_digest(t) for t in _prioritized_tools(tools, findings)]
+    shown_tools = _fit(digests, _TOOLS_BUDGET_CHARS)
+    tools_summary = json.dumps(shown_tools, indent=2, default=str)
+
+    shown_findings = _fit(_diverse_findings(findings), _FINDINGS_BUDGET_CHARS)
+    findings_summary = json.dumps(shown_findings, indent=2, default=str)
+    return (
+        tools_summary,
+        findings_summary,
+        len(shown_tools),
+        len(digests),
+        len(shown_findings),
+        len(findings),
+    )
+
+
 def analyze_findings(
     tools: list[dict],
     findings: list[dict],
@@ -466,12 +486,9 @@ def analyze_findings(
     if not findings:
         return []
 
-    digests = [_tool_digest(t) for t in _prioritized_tools(tools, findings)]
-    shown_tools = _fit(digests, _TOOLS_BUDGET_CHARS)
-    tools_summary = json.dumps(shown_tools, indent=2, default=str)
-
-    shown_findings = _fit(_diverse_findings(findings), _FINDINGS_BUDGET_CHARS)
-    findings_summary = json.dumps(shown_findings, indent=2, default=str)
+    tools_summary, findings_summary, n_t, total_t, n_f, total_f = _chain_context(
+        tools, findings
+    )
 
     system = (
         "You are an MCP security analyst. Given the tool definitions and existing "
@@ -493,14 +510,68 @@ def analyze_findings(
         "Only report actionable insights. Respond with ONLY the JSON array, no markdown."
     )
     user_content = (
-        f"Tool definitions ({_shown_of(len(shown_tools), len(digests), 'tools')}):\n"
+        f"Tool definitions ({_shown_of(n_t, total_t, 'tools')}):\n"
         f"{tools_summary}\n\n"
-        f"Existing findings ({_shown_of(len(shown_findings), len(findings), 'findings')}):\n"
+        f"Existing findings ({_shown_of(n_f, total_f, 'findings')}):\n"
         f"{findings_summary}"
     )
 
     text = _call_claude(system, user_content, model, _ANALYSIS_MAX_TOKENS, log=log)
     return _parse_findings(text)
+
+
+def propose_chains(
+    tools: list[dict],
+    findings: list[dict],
+    model: str = DEFAULT_CLAUDE_MODEL,
+    log: Callable[[str], None] | None = None,
+) -> list:
+    """Ask for chains as executable steps the prober can replay.
+
+    Differs from `analyze_findings` in what it asks for: not prose about a
+    path, but the steps of the path — tool name, argument template, and
+    `{{stepN.output}}` placeholders so the executor can thread data. A chain
+    without steps is rejected by the parser, so the model cannot answer with
+    an argument and have it treated as a program.
+    """
+    from mcpnuke.core.chain_replay import parse_proposed_chains
+
+    if not findings:
+        return []
+
+    tools_summary, findings_summary, n_t, total_t, n_f, total_f = _chain_context(
+        tools, findings
+    )
+
+    system = (
+        "You are an MCP red team operator. Given the tool definitions and "
+        "existing scanner findings below, propose multi-step attack chains that "
+        "can be executed against the target.\n\n"
+        "Each tool lists its `params`. Ground every chain in that material: "
+        "only name tools that exist, only set arguments those tools accept, "
+        "and use `{{stepN.output}}` (zero-based) wherever a later step should "
+        "receive the text returned by an earlier one.\n\n"
+        "Respond with a JSON array of objects. Every object MUST include a "
+        "`steps` array of at least two entries. Objects without steps are "
+        "discarded — do not omit the field and describe the chain in prose "
+        "instead. Fields:\n"
+        '  severity: "CRITICAL" | "HIGH" | "MEDIUM"\n'
+        "  title: short title\n"
+        "  detail: what the chain demonstrates if it succeeds\n"
+        f"{taxonomy_id_clause()}\n"
+        "  steps: [{\"tool\": \"name\", \"args\": {\"param\": \"value or "
+        "{{step0.output}}\"}}, ...]\n\n"
+        "Respond with ONLY the JSON array, no markdown."
+    )
+    user_content = (
+        f"Tool definitions ({_shown_of(n_t, total_t, 'tools')}):\n"
+        f"{tools_summary}\n\n"
+        f"Existing findings ({_shown_of(n_f, total_f, 'findings')}):\n"
+        f"{findings_summary}"
+    )
+
+    text = _call_claude(system, user_content, model, _ANALYSIS_MAX_TOKENS, log=log)
+    return parse_proposed_chains(text)
 
 
 def analyze_response(

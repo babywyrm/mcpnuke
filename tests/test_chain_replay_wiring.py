@@ -1,0 +1,230 @@
+"""The propose-execute-judge loop only runs when asked, and only reports what ran.
+
+Replaying a chain calls tools on the target in sequence, so it is opt-in and
+respects `--no-invoke`. A chain that completes with data moving between steps
+becomes a CRITICAL finding carrying the transcript; a chain that fails or
+threads nothing stays silent — the prose insight from phase 3 already covers
+the hypothesis, and a failed replay is not a finding.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from mcpnuke.checks.llm_analysis import run_llm_analysis
+from mcpnuke.core.chain_replay import ChainStep, ProposedChain
+from mcpnuke.core.models import TargetResult
+
+
+class _DummyConsole:
+    def print(self, _msg: str) -> None:
+        return
+
+
+class _Session:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def call(self, method: str, params: dict, timeout: float = 10.0) -> dict | None:
+        if method != "tools/call":
+            return None
+        name = params.get("name", "")
+        self.calls.append(name)
+        if name == "vault.read":
+            return {"result": {"content": [{"type": "text", "text": "AKIA-secret"}]}}
+        if name == "net.send":
+            return {"result": {"content": [{"type": "text", "text": "queued"}]}}
+        return {"result": {"isError": True, "content": [{"type": "text", "text": "no"}]}}
+
+
+@dataclass
+class _FakeFinding:
+    severity: str
+    title: str
+    detail: str
+    taxonomy_id: str = ""
+
+
+class _Backend:
+    def __init__(self, chains: list[ProposedChain] | None = None) -> None:
+        self.chains = chains or []
+        self.propose_calls = 0
+
+    def analyze_tools(self, tools, model, log, known_findings=None) -> list:
+        return []
+
+    def analyze_findings(self, tools, findings, model, log) -> list:
+        return []
+
+    def analyze_response(self, tool_name, tool_description, response_text, model, log) -> list:
+        return []
+
+    def propose_chains(self, tools, findings, model, log) -> list[ProposedChain]:
+        self.propose_calls += 1
+        return self.chains
+
+
+def _result() -> TargetResult:
+    result = TargetResult(url="http://localhost:8080/mcp")
+    result.tools = [
+        {
+            "name": "vault.read",
+            "description": "Read a secret",
+            "inputSchema": {"properties": {}},
+        },
+        {
+            "name": "net.send",
+            "description": "Send outbound",
+            "inputSchema": {"properties": {"body": {"type": "string"}}},
+        },
+    ]
+    result.add("token_theft", "HIGH", "Credential returned by tool 'vault.read'")
+    return result
+
+
+def _chain() -> ProposedChain:
+    return ProposedChain(
+        title="read then send",
+        detail="Exfiltrate a secret",
+        taxonomy_id="MCP-T12",
+        steps=[
+            ChainStep("vault.read", {}),
+            ChainStep("net.send", {"body": "{{step0.output}}"}),
+        ],
+    )
+
+
+class TestItIsOptIn:
+    def test_off_by_default(self):
+        backend = _Backend([_chain()])
+
+        run_llm_analysis(
+            _Session(),
+            _result(),
+            probe_opts={"claude_max_tools": 0},
+            console=_DummyConsole(),
+            llm_backend=backend,
+        )
+
+        assert backend.propose_calls == 0
+
+    def test_enabled_by_flag(self):
+        backend = _Backend([_chain()])
+
+        run_llm_analysis(
+            _Session(),
+            _result(),
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=backend,
+        )
+
+        assert backend.propose_calls == 1
+
+    def test_no_invoke_suppresses_it(self):
+        backend = _Backend([_chain()])
+
+        run_llm_analysis(
+            _Session(),
+            _result(),
+            probe_opts={"claude_max_tools": 0, "chain_replay": True, "no_invoke": True},
+            console=_DummyConsole(),
+            llm_backend=backend,
+        )
+
+        assert backend.propose_calls == 0
+
+
+class TestAReproducedChainIsReported:
+    def test_a_successful_replay_is_critical(self):
+        result = _result()
+
+        run_llm_analysis(
+            _Session(),
+            result,
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=_Backend([_chain()]),
+        )
+
+        reproduced = [f for f in result.findings if f.check == "llm_chain_replay"]
+        assert reproduced and all(f.severity == "CRITICAL" for f in reproduced)
+
+    def test_the_title_names_the_chain(self):
+        result = _result()
+
+        run_llm_analysis(
+            _Session(),
+            result,
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=_Backend([_chain()]),
+        )
+
+        reproduced = [f for f in result.findings if f.check == "llm_chain_replay"]
+        assert any("read then send" in f.title for f in reproduced)
+
+    def test_the_transcript_is_evidence(self):
+        result = _result()
+
+        run_llm_analysis(
+            _Session(),
+            result,
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=_Backend([_chain()]),
+        )
+
+        reproduced = [f for f in result.findings if f.check == "llm_chain_replay"]
+        assert any("AKIA-secret" in f.evidence for f in reproduced)
+
+    def test_the_tools_were_actually_called(self):
+        session = _Session()
+
+        run_llm_analysis(
+            session,
+            _result(),
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=_Backend([_chain()]),
+        )
+
+        assert session.calls == ["vault.read", "net.send"]
+
+
+class TestAFailedChainIsSilent:
+    def test_a_halted_chain_produces_no_finding(self):
+        result = _result()
+        broken = ProposedChain(
+            title="broken",
+            steps=[ChainStep("vault.read", {}), ChainStep("does.not.exist", {})],
+        )
+
+        run_llm_analysis(
+            _Session(),
+            result,
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=_Backend([broken]),
+        )
+
+        assert not any(f.check == "llm_chain_replay" for f in result.findings)
+
+    def test_a_backend_without_propose_chains_is_tolerated(self):
+        class _Old:
+            def analyze_tools(self, tools, model, log, known_findings=None) -> list:
+                return []
+
+            def analyze_findings(self, tools, findings, model, log) -> list:
+                return []
+
+            def analyze_response(self, *a, **k) -> list:
+                return []
+
+        run_llm_analysis(
+            _Session(),
+            _result(),
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=_Old(),
+        )

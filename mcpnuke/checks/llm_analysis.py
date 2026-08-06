@@ -15,6 +15,7 @@ from typing import Any, Protocol
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.chaining import _TOOL_NAME_RE
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
+from mcpnuke.core.chain_replay import ChainRun, ChainVerdict, replay_chain, summarize_run
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
@@ -94,6 +95,32 @@ def _known_finding_lines(result: TargetResult) -> list[str]:
         for f in result.findings
         if not f.check.startswith("llm_")
     ]
+
+
+def _propose_chains(
+    backend: Any,
+    tools: list[dict],
+    findings: list[dict],
+    model: str,
+    log: Callable[[str], None],
+) -> list:
+    """Ask the backend for executable chains, or return [] if it cannot."""
+    propose = getattr(backend, "propose_chains", None)
+    if propose is None:
+        return []
+    return list(propose(tools, findings, model=model, log=log) or [])
+
+
+def _transcript(run: ChainRun, verdict: ChainVerdict) -> str:
+    """A short, reportable record of what the replay actually did."""
+    lines = [verdict.evidence] if verdict.evidence else []
+    for index, step in enumerate(run.results):
+        status = "FAIL" if step.failed else "ok"
+        lines.append(
+            f"[{status}] step{index} {step.tool} args={step.request_args!r} "
+            f"→ {step.response_text[:200]!r}"
+        )
+    return "\n".join(lines)
 
 
 def _analyze_tools(
@@ -198,6 +225,8 @@ def run_llm_analysis(
     Phase 1: Analyze tool definitions for subtle issues
     Phase 2: Analyze tool responses for embedded threats
     Phase 3: Reason about all findings to discover attack chains
+    Phase 4 (opt-in via `--chain-replay`): propose executable chains and
+    replay them against the target, reporting only those that reproduce
     """
     opts = probe_opts or {}
     _log = console.print if console else lambda msg: None
@@ -361,3 +390,48 @@ def run_llm_analysis(
             _log("  [yellow]  Phase 3 interrupted[/yellow]")
         except Exception as e:
             _log(f"  [yellow]  Phase 3 failed: {type(e).__name__}: {e}[/yellow]")
+
+    # Phase 4: Propose executable chains and replay them against the target.
+    # Opt-in: it calls tools in sequence, so it inherits the same safety gate
+    # as phase 2 and stays off unless --chain-replay is set.
+    if opts.get("chain_replay") and not opts.get("no_invoke") and session is not None:
+        with time_check("llm_chain_replay", result):
+            _log("  [cyan]AI Phase 4: Proposing and replaying attack chains...[/cyan]")
+            try:
+                existing = [
+                    _finding_digest(f)
+                    for f in result.findings
+                    if not f.check.startswith("llm_")
+                ]
+                proposed = _propose_chains(backend, result.tools, existing, model, _log)
+                tools_by_name = {
+                    str(t.get("name") or ""): t for t in result.tools if t.get("name")
+                }
+                reproduced = 0
+                for chain in proposed:
+                    run = replay_chain(session, chain, tools_by_name)
+                    verdict = summarize_run(run)
+                    if not verdict.reproduced:
+                        continue
+                    tax = f" [{chain.taxonomy_id}]" if chain.taxonomy_id else ""
+                    evidence = _transcript(run, verdict)
+                    finding = result.add(
+                        "llm_chain_replay",
+                        "CRITICAL",
+                        f"[AI]{tax} Chain reproduced: {chain.title}",
+                        f"{verdict.detail} {chain.detail}".strip(),
+                        evidence=evidence,
+                    )
+                    if finding and chain.taxonomy_id:
+                        finding.taxonomy_id = chain.taxonomy_id
+                    reproduced += 1
+                _log(
+                    f"  [green]  Phase 4 complete: {reproduced} of "
+                    f"{len(proposed)} proposed chain(s) reproduced[/green]"
+                )
+            except KeyboardInterrupt:
+                _log("  [yellow]  Phase 4 interrupted[/yellow]")
+            except Exception as e:
+                _log(f"  [yellow]  Phase 4 failed: {type(e).__name__}: {e}[/yellow]")
+    elif opts.get("chain_replay") and opts.get("no_invoke"):
+        _log("  [dim]  Phase 4 skipped (--no-invoke)[/dim]")

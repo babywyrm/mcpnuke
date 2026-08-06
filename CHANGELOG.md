@@ -122,6 +122,17 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **Propose-execute-judge chain replay** (`core/chain_replay.py`,
+  `--chain-replay`): phase 3's chains were arguments — "these tools compose" —
+  with nothing to show they would. A new opt-in phase asks the model for
+  chains as executable steps (`tool` + `args` with `{{stepN.output}}`
+  placeholders), runs them against the live session, and reports CRITICAL only
+  when an earlier step's output appears in a later request. Three verdicts,
+  not two: halted, callable end-to-end without data movement, or reproduced
+  with a transcript. Verified against Camazotz: a four-step chain
+  (`subchain.spawn_agent` → `run_task` → `read_env_inheritance` →
+  `comms.send_message`) completed with `AGENT_TOKEN: user-session-token-123`
+  as the moved fragment. Off by default; ignored under `--no-invoke`.
 - **Out-of-band egress verification** (`core/oast.py`, `--oast`): a callback
   listener the scanner controls, so exfiltration can be proven rather than
   inferred. Every signal the scanner had was in band — it asked a tool
