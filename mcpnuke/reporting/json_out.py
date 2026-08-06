@@ -47,6 +47,8 @@ def _build_target_dict(r: TargetResult) -> dict:
                 "source": c.source,
                 "target": c.target,
                 "evidence_tools": c.evidence_tools,
+                "shared_tools": c.shared_tools,
+                "linkage": c.linkage,
             }
             for c in r.attack_chains
         ],

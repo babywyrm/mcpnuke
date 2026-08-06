@@ -122,6 +122,30 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **"Live exfil confirmed" fired on refusals** (`checks/exfil_flow.py`):
+  `_try_sink_send` decided success with `sent = resp is not None`, but
+  `_call_tool` returns the response whenever the JSON-RPC round trip completes,
+  so `{"error": ...}` and `{"result": {"isError": true}}` both counted. A sink
+  answering "permission denied" produced a CRITICAL finding claiming the canary
+  was "successfully routed" and the payload "accepted". A new `_is_failure()`
+  rejects transport failures, JSON-RPC errors and `isError` results, and the
+  wording now claims only what is observable in band: the sink accepted a
+  payload carrying source data without erroring. Delivery is explicitly *not*
+  asserted, because the scanner has no out-of-band oracle to observe egress.
+- **Attack chains claimed linkage they had not established**
+  (`checks/chaining.py`): `check_attack_chains` intersects the set of checks
+  that fired against a 34-pair table and emitted CRITICAL regardless of whether
+  the two findings could reach each other, so two unrelated tools with
+  unrelated flaws scored the same as a real source-to-sink path. Chains are now
+  graded by the evidence available. A shared tool between both ends stays
+  CRITICAL and names it. Two tool-scoped findings with disjoint tool sets are
+  positive evidence of no shared entry point and grade to HIGH, labelled as
+  unproven. A target-scoped finding (auth, transport) names no tool and could
+  reach anything, so silence is not treated as evidence and the severity
+  stands, with the basis stated as co-occurrence rather than implied.
+  `AttackChain` carries `shared_tools` and `linkage`, both surfaced in JSON —
+  the chain dict is hand-built, so a test now asserts every dataclass field is
+  serialized, which is how `shared_tools` was caught going missing.
 - **`--claude` failed on every invocation** (`core/constants.py`): the default
   model `claude-sonnet-4-20250514` was retired upstream, so the API answered
   `not_found_error` and all three AI phases produced nothing. The id was copied

@@ -185,6 +185,40 @@ def _extract_tool_names(
     return names
 
 
+def _grade_linkage(
+    tools_a: list[str], tools_b: list[str], shared: list[str]
+) -> tuple[str, str, str]:
+    """Return (severity, linkage, basis) for a matched check pair.
+
+    The pair table says two vulnerability classes compose; it says nothing
+    about whether these two instances can reach each other. Only a shared tool
+    shows they meet. Disjoint tool sets are positive evidence that they do not,
+    and are graded down. A finding that names no tool is target-scoped (auth,
+    transport) and could reach anything, so silence is not evidence and the
+    severity stands.
+    """
+    if shared:
+        return (
+            "CRITICAL",
+            "shared-tool",
+            f"Both classes implicate the same tool ({', '.join(shared[:5])}), "
+            "so one exposure is reachable from the other.",
+        )
+    if tools_a and tools_b:
+        return (
+            "HIGH",
+            "disjoint-tools",
+            "Both classes are tool-scoped with no shared tool, so the link is "
+            "unproven: an operator must confirm data can flow between them.",
+        )
+    return (
+        "CRITICAL",
+        "co-occurrence",
+        "Reported on co-occurrence: at least one class is target-scoped and "
+        "names no tool, so it is not attributable to a single entry point.",
+    )
+
+
 def check_attack_chains(result: TargetResult):
     with time_check("attack_chains", result):
         checks = {f.check for f in result.findings}
@@ -196,15 +230,24 @@ def check_attack_chains(result: TargetResult):
                 tools_a = _extract_tool_names(result.findings, a, valid)
                 tools_b = _extract_tool_names(result.findings, b, valid)
                 evidence_tools = sorted(set(tools_a + tools_b))
+                shared = sorted(set(tools_a) & set(tools_b))
+
+                severity, linkage, basis = _grade_linkage(tools_a, tools_b, shared)
 
                 result.attack_chains.append(
-                    AttackChain(source=a, target=b, evidence_tools=evidence_tools)
+                    AttackChain(
+                        source=a,
+                        target=b,
+                        evidence_tools=evidence_tools,
+                        shared_tools=shared,
+                        linkage=linkage,
+                    )
                 )
 
                 detail = f"{a} → {b} ({', '.join(evidence_tools[:5])})" if evidence_tools else f"{a} → {b}"
                 _add(result,
                     "attack_chain",
-                    "CRITICAL",
+                    severity,
                     f"Attack chain: {detail}",
-                    "Two linked vulnerability classes detected in sequence",
+                    basis,
                 )

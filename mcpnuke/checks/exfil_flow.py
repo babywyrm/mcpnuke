@@ -73,11 +73,28 @@ def _try_source_read(session: MCPSessionProtocol, tool: dict) -> str | None:
     return text if text and len(text) > 5 else None
 
 
+def _is_failure(resp: dict | None) -> bool:
+    """True when the sink refused the payload.
+
+    `_call_tool` returns the response whenever the JSON-RPC round trip
+    completes, so a refusal arrives as a value, not an exception. Treating any
+    non-None response as success turned "permission denied" into confirmed
+    exfiltration.
+    """
+    if resp is None:
+        return True
+    if resp.get("error"):
+        return True
+    result = resp.get("result")
+    return isinstance(result, dict) and bool(result.get("isError"))
+
+
 def _try_sink_send(session: MCPSessionProtocol, tool: dict, data: str) -> tuple[bool, str]:
     """Attempt to route canary data through a sink tool.
 
-    Returns (sent, response_text). 'sent' is True if the call succeeded
-    (any non-None response), indicating the sink is reachable.
+    Returns (accepted, response_text). 'accepted' means the sink took the
+    payload without reporting an error — not that the data was observed
+    leaving, which needs an out-of-band oracle the scanner does not have.
     """
     from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text
     name = tool.get("name", "")
@@ -103,7 +120,7 @@ def _try_sink_send(session: MCPSessionProtocol, tool: dict, data: str) -> tuple[
 
     resp = _call_tool(session, name, args, timeout=10)
     text = _response_text(resp)
-    return resp is not None, text or ""
+    return not _is_failure(resp), text or ""
 
 
 def check_exfil_flow(
@@ -171,13 +188,16 @@ def check_exfil_flow(
                     if sink_name == source_name:
                         continue
                     _log(f"    [dim]      {source_name} → {sink_name}[/dim]")
-                    sent, resp_text = _try_sink_send(session, sink, canary)
-                    if sent:
+                    accepted, resp_text = _try_sink_send(session, sink, canary)
+                    if accepted:
                         _add(result,
                             "exfil_flow",
                             "CRITICAL",
-                            f"Live exfil confirmed: '{source_name}' → '{sink_name}'",
-                            f"Canary data from source successfully routed to sink. "
-                            f"Source returned {len(source_text)} chars; sink accepted payload.",
+                            f"Live exfil path: '{source_name}' → '{sink_name}'",
+                            f"Sink accepted a payload carrying {len(source_text)} chars "
+                            f"read from the source, without reporting an error. "
+                            f"Delivery is not observed — no out-of-band oracle — so this "
+                            f"establishes the path is callable end to end, not that data "
+                            f"reached a third party.",
                             evidence=f"Canary: {canary[:80]}\nSink response: {resp_text[:200]}",
                         )

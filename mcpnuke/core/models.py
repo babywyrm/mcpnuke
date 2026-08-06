@@ -35,6 +35,11 @@ class AttackChain:
     source: str
     target: str
     evidence_tools: list[str] = field(default_factory=list)
+    # Tools implicated by both ends. Non-empty is the one case where the two
+    # findings are known to meet; empty means either no shared tool or a
+    # target-scoped finding that names none, which `linkage` distinguishes.
+    shared_tools: list[str] = field(default_factory=list)
+    linkage: str = "co-occurrence"
 
 
 @dataclass
