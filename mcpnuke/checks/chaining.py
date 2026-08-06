@@ -1,6 +1,8 @@
 """Tool shadowing, multi-vector, attack chain checks."""
 
 import re
+from difflib import SequenceMatcher
+from itertools import combinations
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
@@ -12,6 +14,43 @@ from mcpnuke.core.models import AttackChain, TargetResult
 _add = lane_tagged(lane=4, transport="A")
 
 _TOOL_NAME_RE = re.compile(r"'([\w.]+)'|tool\s+'?([\w.]+)'?", re.IGNORECASE)
+
+# Two tools on one server whose names differ by a plural or a character are
+# indistinguishable to an agent selecting by name. Calibrated against real
+# tool vocabularies: legitimate neighbours peak around 0.71
+# (read_file/write_file), while a shadow pair like
+# get_user_role/get_user_roles scores 0.96.
+_CONFUSABLE_RATIO: float = 0.86
+# Ratios are unstable on short strings; those names are covered by
+# SHADOW_TARGETS instead.
+_MIN_CONFUSABLE_LEN: int = 6
+# A near-identical description turns name ambiguity into a deliberate decoy.
+_DESCRIPTION_ECHO_RATIO: float = 0.80
+_MAX_CONFUSABLE_PAIRS: int = 8
+
+
+def _normalize_tool_name(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def _similar(a: str, b: str) -> float:
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def _confusable_pairs(tools: list[dict]) -> list[tuple[dict, dict, float]]:
+    """Same-server tool pairs whose names are near-duplicates."""
+    pairs: list[tuple[dict, dict, float]] = []
+    for first, second in combinations(tools, 2):
+        left = _normalize_tool_name(str(first.get("name", "")))
+        right = _normalize_tool_name(str(second.get("name", "")))
+        if not left or not right or left == right:
+            continue
+        if min(len(left), len(right)) < _MIN_CONFUSABLE_LEN:
+            continue
+        ratio = _similar(left, right)
+        if ratio >= _CONFUSABLE_RATIO:
+            pairs.append((first, second, ratio))
+    return sorted(pairs, key=lambda p: p[2], reverse=True)
 
 
 def check_tool_shadowing(
@@ -39,6 +78,46 @@ def check_tool_shadowing(
                     "MEDIUM",
                     f"Name collision with {other.url}: {sorted(dupes)}",
                 )
+
+        _flag_confusable_names(result)
+
+
+def _flag_confusable_names(result: TargetResult) -> None:
+    """Report near-duplicate tool names served side by side (MCP-T25).
+
+    An agent routes by name, so a decoy that differs by one character can be
+    selected in place of the tool the user asked for.
+    """
+    for first, second, ratio in _confusable_pairs(result.tools)[:_MAX_CONFUSABLE_PAIRS]:
+        left, right = str(first.get("name", "")), str(second.get("name", ""))
+        desc_ratio = _similar(
+            str(first.get("description", "") or "").lower(),
+            str(second.get("description", "") or "").lower(),
+        )
+        echoed = desc_ratio >= _DESCRIPTION_ECHO_RATIO
+        detail = (
+            f"'{left}' and '{right}' differ by too little to distinguish "
+            f"(name similarity {ratio:.0%}). An agent selecting a tool by name "
+            "may invoke either one."
+        )
+        if echoed:
+            detail += (
+                f" Their descriptions are also near-identical "
+                f"({desc_ratio:.0%}), so the pair reads as a deliberate decoy "
+                "rather than two distinct operations."
+            )
+        _add(result,
+            "tool_shadowing",
+            "HIGH" if echoed else "MEDIUM",
+            f"Confusable tool names: '{left}' vs '{right}'",
+            detail,
+            evidence={
+                "tools": [left, right],
+                "name_similarity": round(ratio, 3),
+                "description_similarity": round(desc_ratio, 3),
+            },
+            taxonomy_id="MCP-T25",
+        )
 
 
 def check_multi_vector(result: TargetResult):
