@@ -38,7 +38,7 @@ from typing import Any
 
 import httpx
 
-from mcpnuke.core.llm import LLMFinding, _parse_findings
+from mcpnuke.core.llm import LLMFinding, _parse_findings, tool_analysis_system_prompt
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
@@ -204,29 +204,13 @@ class OllamaBackend:
         tools: list[dict],
         model: str | None = None,
         log: Callable[[str], None] | None = None,
+        known_findings: list[str] | None = None,
     ) -> list[LLMFinding]:
         """Phase 1: analyze tool schemas for subtle security issues."""
         if not tools:
             return []
         tools_json = json.dumps(tools, indent=2, default=str)[:8000]
-        system = (
-            "You are an MCP security auditor. Analyze the following MCP tool definitions "
-            "for security vulnerabilities. Focus on:\n"
-            "1. Hidden instructions or social engineering in descriptions\n"
-            "2. Tools that could be misused for data exfiltration\n"
-            "3. Overly permissive input schemas\n"
-            "4. Tools that accept credentials, tokens, or secrets as parameters\n"
-            "5. Tools that could enable code execution, file access, or network requests\n"
-            "6. Subtle prompt injection payloads embedded in descriptions\n"
-            "7. Tool combinations that create attack chains\n\n"
-            "For each finding, respond with a JSON array of objects with fields:\n"
-            '  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"\n'
-            "  title: short finding title\n"
-            "  detail: explanation of the risk and attack scenario\n"
-            "  taxonomy_id: MCP threat taxonomy ID (MCP-T01 through MCP-T55) if applicable\n\n"
-            "Only report genuine security concerns. No false positives. "
-            "Respond with ONLY the JSON array, no markdown, no explanation."
-        )
+        system = tool_analysis_system_prompt(known_findings)
         text = self._call(system, f"Analyze these MCP tool definitions:\n\n{tools_json}", 2000, log)
         return _parse_findings(text)
 

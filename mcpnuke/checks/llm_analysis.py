@@ -10,7 +10,7 @@ import json
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.chaining import _TOOL_NAME_RE
@@ -28,7 +28,13 @@ _FINDING_EVIDENCE_CHARS: int = 300
 class LLMBackend(Protocol):
     """Typed protocol for pluggable LLM analysis backends."""
 
-    def analyze_tools(self, tools: list[dict], model: str, log: Callable[[str], None]) -> list:
+    def analyze_tools(
+        self,
+        tools: list[dict],
+        model: str,
+        log: Callable[[str], None],
+        known_findings: list[str] | None = None,
+    ) -> list:
         ...
 
     def analyze_findings(
@@ -75,6 +81,37 @@ def _implicated_tool(title: str) -> str:
         if raw and raw.lower() not in ("tool", "param"):
             return raw
     return ""
+
+
+def _known_finding_lines(result: TargetResult) -> list[str]:
+    """One line per deterministic finding, for grounding phase 1.
+
+    AI findings are excluded: feeding the model its own prior output back as
+    established fact would let a mistake harden across phases.
+    """
+    return [
+        f"{f.severity} {f.check}: {f.title}"
+        for f in result.findings
+        if not f.check.startswith("llm_")
+    ]
+
+
+def _analyze_tools(
+    backend: LLMBackend, result: TargetResult, model: str, log: Callable[[str], None]
+) -> list[Any]:
+    """Call phase 1, grounded in what the checks already found.
+
+    `known_findings` is passed positionally-optionally so an out-of-tree backend
+    written against the older three-argument protocol keeps working rather than
+    failing the whole phase with a TypeError.
+    """
+    known = _known_finding_lines(result)
+    try:
+        return backend.analyze_tools(
+            result.tools, model=model, log=log, known_findings=known
+        )
+    except TypeError:
+        return backend.analyze_tools(result.tools, model=model, log=log)
 
 
 def _finding_digest(finding) -> dict:
@@ -195,7 +232,7 @@ def run_llm_analysis(
     with time_check("llm_tool_analysis", result):
         _log("  [cyan]AI Phase 1: Analyzing tool definitions...[/cyan]")
         try:
-            llm_findings = backend.analyze_tools(result.tools, model=model, log=_log)
+            llm_findings = _analyze_tools(backend, result, model, _log)
             for f in llm_findings:
                 tax = f" [{f.taxonomy_id}]" if f.taxonomy_id else ""
                 finding = result.add(

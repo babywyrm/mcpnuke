@@ -138,6 +138,28 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
+- **Phase 1 is grounded in what the deterministic scan already found**
+  (`core/llm.py`, `checks/llm_analysis.py`): it runs after the checks but was
+  never given their findings, so it re-derived them less precisely and filed
+  the result at its own severity. On DVMCP challenge 5 the scanner reported
+  HIGH "Confusable tool names: 'get_user_role' vs 'get_user_roles' ...
+  similarity 96%" and phase 1 reported LOW "Redundant/duplicate tool surface"
+  about the same pair — one issue, two entries, contradicting each other. The
+  prompt now lists the deterministic findings, tells the model not to restate
+  them, and invites explicit disagreement instead of a quieter duplicate.
+  Measured on that challenge: the duplicate is gone, the model instead argues
+  the severity directly, and it surfaces a real coverage gap — the scanner
+  flagged the unconstrained parameter on `get_user_role` but not on its
+  identical sibling. AI findings are excluded from the grounding so a mistake
+  cannot harden across phases.
+- **Tool shadowing named as a phase 1 threat class**: unprompted, the model
+  read two near-identical tool names as redundancy rather than as an attack on
+  agent tool selection.
+- **The phase 1 prompt is shared by every backend** (`core/llm_ollama.py`): it
+  existed twice and the copies had drifted, with the Ollama one still pinning
+  the taxonomy to a hardcoded `MCP-T01 through MCP-T55` range — exactly the
+  drift `taxonomy_id_clause()` was added to prevent. The Ollama backend also
+  gains the grounding.
 - **Chain reasoning is given the evidence it is asked to reason from**
   (`core/llm.py`, `checks/llm_analysis.py`): phase 3 asks for multi-step
   exploitation paths, then received finding titles with no detail, evidence or
