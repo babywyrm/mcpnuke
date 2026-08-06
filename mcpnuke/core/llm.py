@@ -22,6 +22,13 @@ _bedrock_config: dict[str, Any] = {
 _MCP_TAXONOMY_RE = _re.compile(r'\[MCP-T(\d+)\]')
 _MITRE_RE = _re.compile(r'\[T(\d{4})\]')
 
+# Output budget for the two phases that reason over a whole target. The former
+# 2000 was below what a rich target needs: a finding costs roughly 120 output
+# tokens once the step-by-step detail is written, so a thirty-finding array runs
+# past the ceiling and arrives cut mid-object. Length tracks how much the model
+# found, so the ceiling bites hardest exactly where the analysis is worth most.
+_ANALYSIS_MAX_TOKENS: int = 8000
+
 
 def taxonomy_id_clause() -> str:
     """The prompt line that pins taxonomy_id to ids that actually exist.
@@ -135,6 +142,18 @@ def _response_text(content: Any) -> str:
     return "".join(parts)
 
 
+def _warn_if_truncated(
+    stop_reason: str | None, max_tokens: int, log: Callable[[str], None]
+) -> None:
+    """Say so when the answer was cut, since the parse can only salvage a prefix."""
+    if stop_reason != "max_tokens":
+        return
+    log(
+        f"  [yellow]  │ Response truncated at the {max_tokens}-token ceiling; "
+        "only the findings completed before the cut are parsed.[/yellow]"
+    )
+
+
 def _call_claude(
     system: str,
     user_content: str,
@@ -172,6 +191,7 @@ def _call_claude(
     _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
     _log(f"  [dim]  │ Tokens: input={usage.input_tokens} output={usage.output_tokens}[/dim]")
     _log(f"  [dim]  │ Stop reason: {resp.stop_reason}[/dim]")
+    _warn_if_truncated(resp.stop_reason, max_tokens, _log)
     _log("  [dim]  └─ Response body:[/dim]")
     for line in text.strip().split("\n"):
         _log(f"  [dim]    {line}[/dim]")
@@ -235,6 +255,7 @@ def _call_bedrock_claude(
     _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
     _log(f"  [dim]  │ Tokens: input={in_tokens} output={out_tokens}[/dim]")
     _log(f"  [dim]  │ Stop reason: {stop_reason}[/dim]")
+    _warn_if_truncated(stop_reason, max_tokens, _log)
     _log("  [dim]  └─ Response body:[/dim]")
     for line in text.strip().split("\n"):
         _log(f"  [dim]    {line}[/dim]")
@@ -273,7 +294,7 @@ def analyze_tools(
     )
     user_content = f"Analyze these MCP tool definitions:\n\n{tools_json}"
 
-    text = _call_claude(system, user_content, model, 2000, log=log)
+    text = _call_claude(system, user_content, model, _ANALYSIS_MAX_TOKENS, log=log)
     return _parse_findings(text)
 
 
@@ -313,7 +334,7 @@ def analyze_findings(
         f"Existing findings:\n{findings_summary}"
     )
 
-    text = _call_claude(system, user_content, model, 2000, log=log)
+    text = _call_claude(system, user_content, model, _ANALYSIS_MAX_TOKENS, log=log)
     return _parse_findings(text)
 
 
@@ -392,6 +413,51 @@ def classify_probe_response(
     return None
 
 
+def _complete_objects(text: str) -> list[dict]:
+    """Recover the top-level objects of an array that was cut off mid-flight.
+
+    Walks the text tracking string state and brace depth so that a brace inside
+    a detail string does not read as structure, and decodes each balanced
+    `{...}` span on its own. Anything after the cut is simply absent, which
+    turns a truncated response into the findings that did arrive rather than
+    none of them.
+    """
+    objects: list[dict] = []
+    depth = 0
+    start = -1
+    in_string = False
+    escaped = False
+
+    for i, ch in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            if depth == 0:
+                continue
+            depth -= 1
+            if depth == 0 and start >= 0:
+                try:
+                    decoded = json.loads(text[start : i + 1])
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(decoded, dict):
+                    objects.append(decoded)
+
+    return objects
+
+
 def _parse_findings(text: str) -> list[LLMFinding]:
     """Parse Claude's JSON response into LLMFinding objects."""
     text = text.strip()
@@ -399,26 +465,27 @@ def _parse_findings(text: str) -> list[LLMFinding]:
         text = text.split("\n", 1)[-1].rsplit("```", 1)[0]
 
     try:
-        items = json.loads(text)
+        items: list[Any] = json.loads(text)
         if not isinstance(items, list):
             return []
-        results = []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            title = item.get("title", "LLM finding")
-            tax_id, mitre_id = _extract_taxonomy(
-                title,
-                item.get("taxonomy_id") or "",
-                item.get("mitre_id") or "",
-            )
-            results.append(LLMFinding(
-                severity=item.get("severity", "MEDIUM"),
-                title=title,
-                detail=item.get("detail", ""),
-                taxonomy_id=tax_id,
-                mitre_id=mitre_id,
-            ))
-        return results
     except json.JSONDecodeError:
-        return []
+        items = list(_complete_objects(text))
+
+    results = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        title = item.get("title", "LLM finding")
+        tax_id, mitre_id = _extract_taxonomy(
+            title,
+            item.get("taxonomy_id") or "",
+            item.get("mitre_id") or "",
+        )
+        results.append(LLMFinding(
+            severity=item.get("severity", "MEDIUM"),
+            title=title,
+            detail=item.get("detail", ""),
+            taxonomy_id=tax_id,
+            mitre_id=mitre_id,
+        ))
+    return results

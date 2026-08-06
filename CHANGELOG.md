@@ -122,6 +122,20 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Truncated AI responses read as clean targets** (`core/llm.py`): the two
+  phases that reason across a whole target asked for at most 2000 output
+  tokens, and `_parse_findings` answers `[]` on `JSONDecodeError`, so a
+  response cut mid-array was indistinguishable from "nothing found". The
+  failure is inverted — output length tracks how much the model found, so the
+  ceiling bit hardest where the analysis was worth most. Measured against a
+  synthetic finding set, every call from 5 findings upward stopped on
+  `max_tokens` and yielded zero parsed findings; this is why a live Camazotz
+  scan reported four findings from phase 2, whose per-response prompts stay
+  small, and zero from phases 1 and 3. Three changes: `_ANALYSIS_MAX_TOKENS`
+  raises the budget to 8000 (observed use is 2770–3792, so there is real
+  headroom), `_complete_objects()` salvages the objects that completed before
+  any future cut instead of discarding the response, and a truncated stop
+  reason is now logged rather than passing in silence.
 - **"Live exfil confirmed" fired on refusals** (`checks/exfil_flow.py`):
   `_try_sink_send` decided success with `sent = resp is not None`, but
   `_call_tool` returns the response whenever the JSON-RPC round trip completes,
