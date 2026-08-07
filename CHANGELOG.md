@@ -16,7 +16,10 @@ All notable changes to this submodule are documented here.
   - **Out-of-band chain confirmation**: when `--oast` is also set, chains may
     plant `{{oast.url}}` in a sending step; a callback proves a multi-step
     chain moved data off the target (egress-confirmed CRITICAL), not merely
-    that the sink accepted it.
+    that the sink accepted it. `CanaryListener.await_hits` gives sinks a short
+    grace period before the verdict (shared with `exfil_flow`), and
+    `propose_chains` steers toward fetch/send-now sinks so register-only
+    webhooks are not the end of the chain.
   - **Graded verdicts**: callable-but-unproven chains (ran end-to-end with no
     proven data movement) are reported MEDIUM instead of being discarded;
     halted chains stay silent.
