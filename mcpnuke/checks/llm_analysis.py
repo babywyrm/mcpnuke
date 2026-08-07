@@ -407,6 +407,7 @@ def run_llm_analysis(
                 tools_by_name = {
                     str(t.get("name") or ""): t for t in result.tools if t.get("name")
                 }
+                oast = opts.get("oast")
                 reproduced = 0
                 for chain in proposed:
                     run = replay_chain(
@@ -414,8 +415,9 @@ def run_llm_analysis(
                         chain,
                         tools_by_name,
                         safe_mode=opts.get("safe_mode", False),
+                        oast=oast,
                     )
-                    verdict = summarize_run(run)
+                    verdict = summarize_run(run, oast=oast)
                     if not verdict.reproduced:
                         continue
                     tax = f" [{chain.taxonomy_id}]" if chain.taxonomy_id else ""

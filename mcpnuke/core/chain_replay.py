@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from mcpnuke.checks.tool_probes import (
     _build_safe_args,
@@ -25,10 +26,18 @@ from mcpnuke.checks.tool_probes import (
 )
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
+if TYPE_CHECKING:
+    from mcpnuke.core.oast import CanaryListener
+
 # {{stepN.output}} — the only placeholder form the executor understands. Kept
 # narrow on purpose: a richer templating language would let a prompt smuggle
 # arbitrary Python into the runner.
 _PLACEHOLDER_RE = re.compile(r"\{\{step(\d+)\.output\}\}")
+
+# {{oast.url}} — replaced with a per-run canary URL when a listener is active.
+# A request for that URL is out-of-band proof the sink reached an address that
+# appeared nowhere except this one replay.
+_OAST_RE = re.compile(r"\{\{oast\.url\}\}")
 
 # Cap the evidence a verdict carries so a chatty tool cannot flood the report.
 _EVIDENCE_CHARS: int = 400
@@ -69,6 +78,7 @@ class ChainRun:
 
     chain: ProposedChain
     results: list[StepResult] = field(default_factory=list)
+    oast_token: str = ""
 
     @property
     def completed(self) -> bool:
@@ -83,6 +93,7 @@ class ChainVerdict:
     callable_end_to_end: bool
     detail: str
     evidence: str = ""
+    egress_confirmed: bool = False
 
 
 def parse_proposed_chains(text: str) -> list[ProposedChain]:
@@ -151,11 +162,14 @@ def _substitute(value: str, prior: list[StepResult]) -> str:
     return _PLACEHOLDER_RE.sub(replace, value)
 
 
-def _resolve_args(template: dict, prior: list[StepResult]) -> dict:
+def _resolve_args(template: dict, prior: list[StepResult], oast_url: str = "") -> dict:
     resolved: dict = {}
     for key, value in template.items():
         if isinstance(value, str):
-            resolved[key] = _substitute(value, prior)
+            substituted = _substitute(value, prior)
+            if oast_url:
+                substituted = _OAST_RE.sub(oast_url, substituted)
+            resolved[key] = substituted
         else:
             resolved[key] = value
     return resolved
@@ -176,6 +190,7 @@ def replay_chain(
     tools: dict[str, dict],
     *,
     safe_mode: bool = False,
+    oast: CanaryListener | None = None,
 ) -> ChainRun:
     """Execute *chain* against *session*, threading outputs into later args.
 
@@ -184,8 +199,15 @@ def replay_chain(
     Under *safe_mode* a step whose tool is classified dangerous is refused
     before the call — the same gate single-tool probes use — and the chain
     halts, because a chain missing its middle link did not run.
+    When *oast* is set, ``{{oast.url}}`` in step args is replaced with a
+    fresh canary URL so a later callback can confirm egress.
     """
     run = ChainRun(chain=chain)
+    oast_url = ""
+    if oast is not None:
+        run.oast_token = oast.issue()
+        oast_url = oast.url_for(run.oast_token)
+
     for step in chain.steps:
         tool = tools.get(step.tool)
         if tool is None:
@@ -213,7 +235,7 @@ def replay_chain(
             break
 
         args = _build_safe_args(tool)
-        args.update(_resolve_args(step.args, run.results))
+        args.update(_resolve_args(step.args, run.results, oast_url))
         resp = _call_tool(session, step.tool, args)
         text = _response_text(resp)
         failed = _is_failure(resp)
@@ -246,14 +268,16 @@ def _data_moved(run: ChainRun) -> list[tuple[int, int, str]]:
     return moves
 
 
-def summarize_run(run: ChainRun) -> ChainVerdict:
+def summarize_run(
+    run: ChainRun, oast: CanaryListener | None = None
+) -> ChainVerdict:
     """Decide whether the transcript reproduces the proposed chain.
 
-    Three outcomes, not two: a chain can be halted (not reproduced), callable
-    end-to-end without any data actually moving between steps (reachable but
-    unproven), or completed with an earlier output appearing in a later
-    request (reproduced). A single-step "chain" is never reproduced — that is
-    just a tool call.
+    Four outcomes: halted (not reproduced), callable end-to-end without
+    proven data movement, completed with an earlier output appearing in a
+    later request (reproduced), or completed with an out-of-band callback
+    to a planted canary (egress confirmed — strongest tier). A single-step
+    "chain" is never reproduced — that is just a tool call.
     """
     if len(run.chain.steps) < 2:
         return ChainVerdict(
@@ -271,6 +295,23 @@ def summarize_run(run: ChainRun) -> ChainVerdict:
             detail=f"Halted: {reason}.",
             evidence=(failed.response_text[:_EVIDENCE_CHARS] if failed else ""),
         )
+
+    if oast is not None and run.oast_token:
+        callbacks = oast.hits(run.oast_token)
+        if callbacks:
+            tools_named = " → ".join(r.tool for r in run.results)
+            cb = callbacks[0]
+            return ChainVerdict(
+                reproduced=True,
+                callable_end_to_end=True,
+                egress_confirmed=True,
+                detail=(
+                    f"Chain exfiltrated data out-of-band ({tools_named}). "
+                    f"The target reached the canary URL from {cb.peer}, which "
+                    "appeared nowhere except this replay."
+                ),
+                evidence=f"{cb.method} {cb.path}\n{cb.body[:_EVIDENCE_CHARS]}",
+            )
 
     moves = _data_moved(run)
     if not moves:
