@@ -69,8 +69,6 @@ _READ_ONLY_TOOL_KEYWORDS = {
 
 def _is_dangerous_tool(tool: dict) -> bool:
     """Classify a tool as dangerous based on name and description."""
-    import re
-
     name = tool.get("name", "").lower()
     desc = tool.get("description", "").lower()
     combined = f"{name} {desc}"
