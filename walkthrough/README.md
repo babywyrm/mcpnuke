@@ -62,7 +62,7 @@ progresses to more active probing.
 | Mode | Flag | What it does | When to use |
 |------|------|-------------|-------------|
 | **Static** | `--no-invoke` | Analyzes tool metadata only. Never calls tools. | Production, first look |
-| **Safe** | `--safe-mode` | Calls read-only tools, skips dangerous ones | Staging, dev |
+| **Safe** | `--safe-mode` | Calls read-only tools; skips dangerous ones (delete/exec/send/write/webhook/egress/exfil, including dotted names) | Staging, dev |
 | **Full** | (default) | Calls all tools with safe payloads | DVMCP, lab environments |
 
 ---

@@ -98,6 +98,12 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
+- **Docs synced to chain-replay / OAST / safe-mode hardening**: CLI
+  help (and generated `docs/cli-reference.md`), `docs/ai-analysis.md`,
+  `docs/checks.md`, and `docs/scan-modes.md` now describe graded chain
+  verdicts, `await_hits` grace period, fetch-now propose guidance, revise
+  logging, and webhook/egress/exfil dangerous keywords. Guarded by
+  `TestChainReplayDocsCurrency`.
 - **README restructured from 1018 lines to 304, with a table of contents.**
   Reference material moved into `docs/`, and the parts with a machine-readable
   source are now generated rather than transcribed: `docs/cli-reference.md` is

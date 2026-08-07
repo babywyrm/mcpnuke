@@ -195,11 +195,11 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
         "--chain-replay",
         action="store_true",
-        help="After AI chain reasoning, ask the model for executable multi-step "
-        "chains and replay them against the target. A chain that completes with "
-        "data moving between steps is reported CRITICAL with the transcript as "
-        "evidence. Implies tool invocation; ignored under --no-invoke. Requires "
-        "--claude (or another AI backend).",
+        help="After AI chain reasoning, propose executable multi-step chains and "
+        "replay them against the target. Graded: out-of-band egress or proven "
+        "data movement is CRITICAL; callable-but-unproven is MEDIUM; halted "
+        "chains stay silent. Implies tool invocation; ignored under "
+        "--no-invoke. Requires --claude (or another AI backend).",
     )
     group.add_argument(
         "--chain-replay-retries",
@@ -207,15 +207,18 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
         type=int,
         default=1,
         help="When a replayed chain halts, feed the failing transcript back to "
-        "the model and retry up to N times (default: 1). 0 disables revision.",
+        "the model and retry up to N times (default: 1). 0 disables revision. "
+        "Each revise/retry attempt is logged under --verbose.",
     )
     group.add_argument(
         "--oast",
         action="store_true",
         help="Run a callback listener and plant a per-probe URL in exfiltration "
-        "payloads. A request for that URL proves egress: data left the target, "
-        "rather than the sink merely accepting it. Off by default because it "
-        "opens a listening socket and induces the target to send data outward.",
+        "payloads (and in chain-replay {{oast.url}} steps). A request for that "
+        "URL proves egress: data left the target, rather than the sink merely "
+        "accepting it. Chain replay awaits a short grace period for queued "
+        "callbacks before grading. Off by default because it opens a listening "
+        "socket and induces the target to send data outward.",
     )
     group.add_argument(
         "--oast-host",
@@ -244,8 +247,10 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
         "--safe-mode",
         action="store_true",
-        help="Skip invoking tools classified as dangerous (delete, send, exec, write). "
-        "Behavioral probes still run on read-only / low-risk tools.",
+        help="Skip invoking tools classified as dangerous (delete, send, exec, "
+        "write, webhook, egress, exfil, …). Namespaced names like "
+        "shellwrap.exec and shadow.register_webhook count too. Behavioral "
+        "probes still run on read-only / low-risk tools.",
     )
     group.add_argument(
         "--probe-calls",

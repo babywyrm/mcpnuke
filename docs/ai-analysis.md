@@ -88,12 +88,18 @@ Claude runs four phases after deterministic + behavioral checks:
 
 **Phase 4 (`--chain-replay`) in brief:**
 - Honours `--safe-mode` and `--no-invoke` (dangerous steps refused before call).
-  Namespaced tools count: `shellwrap.exec` / `sdk.write_cache` are refused the
-  same way as `delete_record` — the danger classifier splits on `.` as well as
-  `_` and `-`.
-- With `--oast`, may plant `{{oast.url}}`; a callback is out-of-band proof of egress.
+  Namespaced tools count: `shellwrap.exec` / `sdk.write_cache` /
+  `shadow.register_webhook` / `egress.fetch_url` are refused the same way as
+  `delete_record` — the danger classifier splits on `.` as well as `_` / `-`,
+  and treats webhook / callback / egress / exfil name tokens as dangerous.
+- With `--oast`, may plant `{{oast.url}}`; a callback is out-of-band proof of
+  egress. Verdicts await a short grace period (`CanaryListener.await_hits`) so
+  a sink that queues its outbound request is not raced. `propose_chains` steers
+  toward fetch/send-now sinks (or register **plus** a follow-up that fires the
+  webhook) so register-only chains are not the end of the path.
 - Under `--claude`, an optional judge can upgrade transformed data movement to HIGH.
-- `--chain-replay-retries N` (default 1) revises a halted chain from its transcript and retries.
+- `--chain-replay-retries N` (default 1) revises a halted chain from its
+  transcript and retries. Each revise/retry attempt is logged under `--verbose`.
 
 Real example from DVMCP Challenge 4 (Rug Pull):
 
@@ -107,6 +113,7 @@ AI findings are prefixed with `[AI]` and include taxonomy IDs (e.g. `[AI] [MCP-T
 They appear alongside deterministic findings in the same report.
 
 Tools are classified as **dangerous** if their name contains keywords like
-`delete`, `execute`, `send`, `write`, `deploy`, `kill`, `transfer`, etc.
+`delete`, `execute`, `send`, `write`, `deploy`, `kill`, `transfer`,
+`webhook`, `callback`, `egress`, `exfil`, etc.
 In `--safe-mode`, these are skipped while read-only tools (`get`, `list`,
 `search`, `check`, `verify`, etc.) are still probed.

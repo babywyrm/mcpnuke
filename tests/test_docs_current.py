@@ -986,3 +986,48 @@ class TestChecksDocShape:
         listed = set(_toc_anchors(text))
         unreachable = sorted(_heading_anchors(text) - listed - {"contents"})
         assert not unreachable, f"sections missing from the TOC: {unreachable}"
+
+
+class TestChainReplayDocsCurrency:
+    """Prose for Phase 4 / OAST / safe-mode must name the behaviours we ship.
+
+    cli-reference.md is generated from argparse help; ai-analysis.md is curated.
+    Both drifted once already when await_hits and webhook sinks landed.
+    """
+
+    def test_cli_help_describes_graded_chain_replay(self) -> None:
+        help_text = " ".join(
+            a.help or ""
+            for a in build_parser()._actions
+            if "--chain-replay" in (a.option_strings or [])
+            and a.option_strings == ["--chain-replay"]
+        )
+        lowered = help_text.lower()
+        assert "medium" in lowered
+        assert "critical" in lowered
+        assert "out-of-band" in lowered or "oast" in lowered or "egress" in lowered
+
+    def test_cli_help_names_webhook_and_egress_under_safe_mode(self) -> None:
+        help_text = next(
+            a.help or ""
+            for a in build_parser()._actions
+            if "--safe-mode" in (a.option_strings or [])
+        ).lower()
+        assert "webhook" in help_text
+        assert "egress" in help_text or "exfil" in help_text
+
+    def test_ai_analysis_documents_oast_await_and_fetch_guidance(self) -> None:
+        text = (_docsgen.REPO_ROOT / "docs" / "ai-analysis.md").read_text().lower()
+        assert "await" in text or "grace" in text
+        assert "{{oast.url}}" in text or "oast.url" in text
+        assert "fetch" in text or "send-now" in text or "immediate" in text
+        assert "revis" in text  # revise / retry visibility
+
+    def test_checks_doc_mentions_oast_for_exfil_flow(self) -> None:
+        text = (_docsgen.REPO_ROOT / "docs" / "checks.md").read_text().lower()
+        row = next(
+            (line for line in text.splitlines() if "| `exfil_flow`" in line or "| exfil_flow |" in line),
+            "",
+        )
+        assert row, "exfil_flow row missing from docs/checks.md"
+        assert "oast" in row or "out-of-band" in row

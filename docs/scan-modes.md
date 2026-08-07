@@ -7,7 +7,7 @@ five modes.
 |------|------|-----------|----------|
 | **Full** | (default) | Static + all behavioral probes | Dev/staging, DVMCP, CTFs |
 | **Fast** | `--fast` | Static + top-5 tools (tiered scoring), skip heavy probes (risk-aware: retains `input_sanitization` when dangerous params detected), cap workers at 2 | Quick triage, large tool sets |
-| **Safe** | `--safe-mode` | Static + probes on read-only tools only | Prod servers with mixed tool risk |
+| **Safe** | `--safe-mode` | Static + probes on read-only tools only; skips delete/exec/send/write and outbound sinks (webhook, egress, exfil), including dotted names like `shellwrap.exec` / `shadow.register_webhook` | Prod servers with mixed tool risk |
 | **Static** | `--no-invoke` | Static checks only, no tool calls | Prod servers, zero side-effect risk |
 | **AI** | `--claude` | All checks + Claude analysis | Deep analysis, subtle vuln hunting |
 

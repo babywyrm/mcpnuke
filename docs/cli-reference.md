@@ -53,13 +53,13 @@ Generated from the parser, so it cannot fall behind the code.
 
 | Option | Description |
 |---|---|
-| `--chain-replay` | After AI chain reasoning, ask the model for executable multi-step chains and replay them against the target. A chain that completes with data moving between steps is reported CRITICAL with the transcript as evidence. Implies tool invocation; ignored under --no-invoke. Requires --claude (or another AI backend). |
-| `--chain-replay-retries N` | When a replayed chain halts, feed the failing transcript back to the model and retry up to N times (default: 1). 0 disables revision. |
-| `--oast` | Run a callback listener and plant a per-probe URL in exfiltration payloads. A request for that URL proves egress: data left the target, rather than the sink merely accepting it. Off by default because it opens a listening socket and induces the target to send data outward. |
+| `--chain-replay` | After AI chain reasoning, propose executable multi-step chains and replay them against the target. Graded: out-of-band egress or proven data movement is CRITICAL; callable-but-unproven is MEDIUM; halted chains stay silent. Implies tool invocation; ignored under --no-invoke. Requires --claude (or another AI backend). |
+| `--chain-replay-retries N` | When a replayed chain halts, feed the failing transcript back to the model and retry up to N times (default: 1). 0 disables revision. Each revise/retry attempt is logged under --verbose. |
+| `--oast` | Run a callback listener and plant a per-probe URL in exfiltration payloads (and in chain-replay {{oast.url}} steps). A request for that URL proves egress: data left the target, rather than the sink merely accepting it. Chain replay awaits a short grace period for queued callbacks before grading. Off by default because it opens a listening socket and induces the target to send data outward. |
 | `--oast-host HOST` | Host to advertise in callback URLs, when the address the target can reach differs from the one bound. A container cannot reach the scanner's loopback (try host.docker.internal), and a remote target cannot route to a private address. Defaults to this machine's outbound address. |
 | `--oast-port PORT` | Port for the callback listener (default: an ephemeral port). Set a fixed port when the callback has to traverse a firewall rule. |
 | `--no-invoke` | Static-only mode: skip all behavioral probes that call tools. Safe for production servers where tool invocation could have side effects. |
-| `--safe-mode` | Skip invoking tools classified as dangerous (delete, send, exec, write). Behavioral probes still run on read-only / low-risk tools. |
+| `--safe-mode` | Skip invoking tools classified as dangerous (delete, send, exec, write, webhook, egress, exfil, …). Namespaced names like shellwrap.exec and shadow.register_webhook count too. Behavioral probes still run on read-only / low-risk tools. |
 | `--probe-calls N` | Number of tool invocations per tool for deep rug pull detection (default: 10) |
 
 ## Performance
