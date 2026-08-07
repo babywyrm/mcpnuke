@@ -88,6 +88,9 @@ Claude runs four phases after deterministic + behavioral checks:
 
 **Phase 4 (`--chain-replay`) in brief:**
 - Honours `--safe-mode` and `--no-invoke` (dangerous steps refused before call).
+  Namespaced tools count: `shellwrap.exec` / `sdk.write_cache` are refused the
+  same way as `delete_record` — the danger classifier splits on `.` as well as
+  `_` and `-`.
 - With `--oast`, may plant `{{oast.url}}`; a callback is out-of-band proof of egress.
 - Under `--claude`, an optional judge can upgrade transformed data movement to HIGH.
 - `--chain-replay-retries N` (default 1) revises a halted chain from its transcript and retries.

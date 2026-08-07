@@ -78,6 +78,18 @@ All notable changes to this submodule are documented here.
   the same set, which is what stops the drift recurring.
 - **ROADMAP.md**: Full taxonomy gap map (56 IDs), tiered priority, live test targets.
 
+### Fixed
+
+- **Phase 3/4 crash on structured finding evidence**: `tool_shadowing` stores a
+  dict in `Finding.evidence`. Digesting it for the LLM used to raise
+  `KeyError(slice(...))` and abort chain reasoning/replay on DVMCP challenge 5.
+  Non-string evidence/detail is now serialized before clipping.
+- **`--safe-mode` missed namespaced dangerous tools**: the danger classifier
+  only split tool names on `_` and `-`, so Camazotz tools like `shellwrap.exec`
+  and `sdk.write_cache` were still invoked under `--safe-mode` / chain replay.
+  `.` is now a name separator (same class of bug as the earlier exfil dotted-name
+  fix). Live re-run: 12 proposed chains → 2 MEDIUM reported, 0 CRITICAL.
+
 ### Changed
 
 - **README restructured from 1018 lines to 304, with a table of contents.**
