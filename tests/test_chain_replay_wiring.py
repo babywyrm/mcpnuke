@@ -1,18 +1,18 @@
-"""The propose-execute-judge loop only runs when asked, and only reports what ran.
+"""The propose-execute-judge loop only runs when asked, and reports graded outcomes.
 
 Replaying a chain calls tools on the target in sequence, so it is opt-in and
 respects `--no-invoke`. A chain that completes with data moving between steps
-becomes a CRITICAL finding carrying the transcript; a chain that fails or
-threads nothing stays silent — the prose insight from phase 3 already covers
-the hypothesis, and a failed replay is not a finding.
+(or with an out-of-band callback) becomes a CRITICAL finding; a chain that
+runs end-to-end without proven composition is MEDIUM; a halted chain stays
+silent.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mcpnuke.checks.llm_analysis import run_llm_analysis
-from mcpnuke.core.chain_replay import ChainStep, ProposedChain
+from mcpnuke.checks.llm_analysis import _chain_finding, run_llm_analysis
+from mcpnuke.core.chain_replay import ChainStep, ChainVerdict, ProposedChain
 from mcpnuke.core.models import TargetResult
 
 
@@ -228,3 +228,63 @@ class TestAFailedChainIsSilent:
             console=_DummyConsole(),
             llm_backend=_Old(),
         )
+
+
+def _grading_chain() -> ProposedChain:
+    return ProposedChain(
+        title="c",
+        steps=[ChainStep("a"), ChainStep("b")],
+        detail="d",
+    )
+
+
+def test_egress_confirmed_is_critical():
+    sev, title = _chain_finding(
+        _grading_chain(),
+        ChainVerdict(True, True, "moved out", egress_confirmed=True),
+    )
+    assert sev == "CRITICAL"
+    assert "exfiltrat" in title.lower()
+
+
+def test_reproduced_inband_is_critical():
+    sev, title = _chain_finding(_grading_chain(), ChainVerdict(True, True, "moved"))
+    assert sev == "CRITICAL"
+    assert "reproduced" in title.lower()
+
+
+def test_callable_unproven_is_medium():
+    sev, title = _chain_finding(
+        _grading_chain(), ChainVerdict(False, True, "unproven")
+    )
+    assert sev == "MEDIUM"
+    assert "callable" in title.lower()
+
+
+def test_halted_returns_none():
+    assert _chain_finding(_grading_chain(), ChainVerdict(False, False, "halted")) is None
+
+
+def test_callable_unproven_chain_is_reported_as_medium():
+    """A chain that runs end-to-end without data movement is no longer silent."""
+    result = _result()
+    unproven = ProposedChain(
+        title="no data move",
+        steps=[
+            ChainStep("vault.read", {}),
+            ChainStep("net.send", {"body": "static"}),
+        ],
+    )
+
+    run_llm_analysis(
+        _Session(),
+        result,
+        probe_opts={"claude_max_tools": 0, "chain_replay": True},
+        console=_DummyConsole(),
+        llm_backend=_Backend([unproven]),
+    )
+
+    findings = [f for f in result.findings if f.check == "llm_chain_replay"]
+    assert len(findings) == 1
+    assert findings[0].severity == "MEDIUM"
+    assert "unproven" in findings[0].title.lower() or "callable" in findings[0].title.lower()

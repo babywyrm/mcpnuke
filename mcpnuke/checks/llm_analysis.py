@@ -123,6 +123,29 @@ def _transcript(run: ChainRun, verdict: ChainVerdict) -> str:
     return "\n".join(lines)
 
 
+def _chain_finding(chain, verdict) -> tuple[str, str] | None:
+    """Severity and title for a replayed chain, or None to skip a halted one.
+
+    Three reportable tiers, worst first: an out-of-band callback (data left
+    the target), an in-band data move (composition proven), and a chain that
+    ran end to end without provable movement (reachable, unproven). A halted
+    chain is not a result — nothing composed — so it is dropped as noise.
+    """
+    if verdict.egress_confirmed:
+        return (
+            "CRITICAL",
+            f"Chain exfiltrated data (out-of-band confirmed): {chain.title}",
+        )
+    if verdict.reproduced:
+        return "CRITICAL", f"Chain reproduced: {chain.title}"
+    if verdict.callable_end_to_end:
+        return (
+            "MEDIUM",
+            f"Chain callable end-to-end (composition unproven): {chain.title}",
+        )
+    return None
+
+
 def _analyze_tools(
     backend: LLMBackend, result: TargetResult, model: str, log: Callable[[str], None]
 ) -> list[Any]:
@@ -408,7 +431,7 @@ def run_llm_analysis(
                     str(t.get("name") or ""): t for t in result.tools if t.get("name")
                 }
                 oast = opts.get("oast")
-                reproduced = 0
+                reported = 0
                 for chain in proposed:
                     run = replay_chain(
                         session,
@@ -418,23 +441,25 @@ def run_llm_analysis(
                         oast=oast,
                     )
                     verdict = summarize_run(run, oast=oast)
-                    if not verdict.reproduced:
+                    graded = _chain_finding(chain, verdict)
+                    if graded is None:
                         continue
+                    severity, title = graded
                     tax = f" [{chain.taxonomy_id}]" if chain.taxonomy_id else ""
                     evidence = _transcript(run, verdict)
                     finding = result.add(
                         "llm_chain_replay",
-                        "CRITICAL",
-                        f"[AI]{tax} Chain reproduced: {chain.title}",
+                        severity,
+                        f"[AI]{tax} {title}",
                         f"{verdict.detail} {chain.detail}".strip(),
                         evidence=evidence,
                     )
                     if finding and chain.taxonomy_id:
                         finding.taxonomy_id = chain.taxonomy_id
-                    reproduced += 1
+                    reported += 1
                 _log(
-                    f"  [green]  Phase 4 complete: {reproduced} of "
-                    f"{len(proposed)} proposed chain(s) reproduced[/green]"
+                    f"  [green]  Phase 4 complete: {reported} of "
+                    f"{len(proposed)} proposed chain(s) reported[/green]"
                 )
             except KeyboardInterrupt:
                 _log("  [yellow]  Phase 4 interrupted[/yellow]")
