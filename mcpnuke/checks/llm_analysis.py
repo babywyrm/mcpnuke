@@ -234,6 +234,25 @@ def _analyze_tools(
         return backend.analyze_tools(result.tools, model=model, log=log)
 
 
+def _clip_text(value: object, limit: int) -> str:
+    """Coerce finding fields to a sliceable string.
+
+    Most findings store evidence as text, but a few (tool_shadowing) stash a
+    structured dict. Slicing a dict raises ``KeyError: slice(...)`` and used
+    to abort Phase 3/4 on DVMCP challenge 5.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        text = value
+    else:
+        try:
+            text = json.dumps(value, default=str)
+        except (TypeError, ValueError):
+            text = str(value)
+    return text[:limit]
+
+
 def _finding_digest(finding) -> dict:
     """What chain reasoning needs from a finding to argue about a data path.
 
@@ -244,8 +263,8 @@ def _finding_digest(finding) -> dict:
         "check": finding.check,
         "severity": finding.severity,
         "title": finding.title,
-        "detail": (finding.detail or "")[:_FINDING_DETAIL_CHARS],
-        "evidence": (finding.evidence or "")[:_FINDING_EVIDENCE_CHARS],
+        "detail": _clip_text(finding.detail, _FINDING_DETAIL_CHARS),
+        "evidence": _clip_text(finding.evidence, _FINDING_EVIDENCE_CHARS),
         "tool": _implicated_tool(finding.title),
         "taxonomy_id": finding.taxonomy_id,
     }
