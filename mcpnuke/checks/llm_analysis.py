@@ -9,7 +9,7 @@ context-dependent risks.
 import json
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 from mcpnuke.checks.base import time_check
@@ -109,6 +109,24 @@ def _propose_chains(
     if propose is None:
         return []
     return list(propose(tools, findings, model=model, log=log) or [])
+
+
+def _judge_chain(
+    backend: Any,
+    title: str,
+    transcript: str,
+    model: str,
+    log: Callable[[str], None],
+) -> tuple[bool, str]:
+    """Ask the backend to judge semantic data movement, or (False, '')."""
+    judge = getattr(backend, "judge_chain_run", None)
+    if judge is None:
+        return False, ""
+    try:
+        moved, why = judge(title, transcript, model=model, log=log)
+        return bool(moved), str(why or "")
+    except Exception:
+        return False, ""
 
 
 def _transcript(run: ChainRun, verdict: ChainVerdict) -> str:
@@ -445,8 +463,25 @@ def run_llm_analysis(
                     if graded is None:
                         continue
                     severity, title = graded
-                    tax = f" [{chain.taxonomy_id}]" if chain.taxonomy_id else ""
                     evidence = _transcript(run, verdict)
+                    if (
+                        not verdict.reproduced
+                        and verdict.callable_end_to_end
+                        and opts.get("claude")
+                    ):
+                        moved, why = _judge_chain(
+                            backend, chain.title, evidence, model, _log
+                        )
+                        if moved:
+                            severity = "HIGH"
+                            title = (
+                                f"[AI-judged] Chain moved data (transformed): "
+                                f"{chain.title}"
+                            )
+                            verdict = replace(
+                                verdict, detail=f"{verdict.detail} Judge: {why}"
+                            )
+                    tax = f" [{chain.taxonomy_id}]" if chain.taxonomy_id else ""
                     finding = result.add(
                         "llm_chain_replay",
                         severity,

@@ -579,6 +579,42 @@ def propose_chains(
     return parse_proposed_chains(text)
 
 
+def judge_chain_run(
+    title: str,
+    transcript: str,
+    model: str = DEFAULT_CLAUDE_MODEL,
+    log: Callable[[str], None] | None = None,
+) -> tuple[bool, str]:
+    """Judge whether a replay transcript shows transformed data movement.
+
+    Substring matching already ran and found nothing, so only answer YES if an
+    earlier step's output reaches a later step's input after a transformation
+    that can be named (base64, JSON field extraction, truncation, concatenation).
+    Returns ``(moved, one-line rationale)``.
+    """
+    system = (
+        "You judge whether a replayed tool chain actually moved data between "
+        "steps. Substring matching already ran and found nothing, so only "
+        "answer YES if an earlier step's output reaches a later step's input "
+        "after a transformation you can name (base64, JSON field extraction, "
+        "truncation, concatenation). If you cannot name the transformation, "
+        "answer NO. Respond with a single JSON object: "
+        '{"moved": true|false, "why": "one sentence"}.'
+    )
+    text = _call_claude(
+        system,
+        f"Chain: {title}\n\nTranscript:\n{transcript[:4000]}",
+        model,
+        300,
+        log=log,
+    )
+    try:
+        obj = json.loads((text or "").strip())
+        return bool(obj.get("moved")), str(obj.get("why") or "")
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        return False, ""
+
+
 def analyze_response(
     tool_name: str,
     tool_description: str,
