@@ -6,6 +6,27 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **Chain-replay hardening** (`core/chain_replay.py`, `checks/llm_analysis.py`):
+  the propose-execute-judge loop is now a full red-team cycle, not just a
+  single pass.
+  - **`--safe-mode` gate**: each replay step is refused before the call when
+    the tool is classified dangerous — the same classifier single-tool probes
+    use — so a proposed chain cannot widen blast radius past what `--safe-mode`
+    already forbids.
+  - **Out-of-band chain confirmation**: when `--oast` is also set, chains may
+    plant `{{oast.url}}` in a sending step; a callback proves a multi-step
+    chain moved data off the target (egress-confirmed CRITICAL), not merely
+    that the sink accepted it.
+  - **Graded verdicts**: callable-but-unproven chains (ran end-to-end with no
+    proven data movement) are reported MEDIUM instead of being discarded;
+    halted chains stay silent.
+  - **LLM judge for transformed movement**: under `--claude`, a callable-
+    unproven transcript can be upgraded to HIGH when the model can name the
+    transformation (base64, field extraction) that substring matching missed.
+    Deterministic CRITICAL claims are untouched.
+  - **`--chain-replay-retries N`** (default 1): a halted chain feeds its
+    failing transcript back to the model for one bounded repair-and-retry;
+    0 disables revision. Safe-mode still applies to every revision.
 - **MCP 2026-07-28 stateless protocol support** (`core/protocol.py`): mcpnuke now
   scans servers speaking the stateless spec alongside legacy handshake servers.
   - `--protocol-mode {auto,legacy,stateless}` — `auto` (default) probes for

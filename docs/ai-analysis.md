@@ -77,13 +77,20 @@ Layer 2: Behavioral (call tools, probe)     — what tools DO
 Layer 3: Claude AI (read, reason, chain)    — what tools MEAN
 ```
 
-Claude runs three phases after deterministic + behavioral checks:
+Claude runs four phases after deterministic + behavioral checks:
 
 | Phase | What it does | Example finding |
 |-------|-------------|----------------|
 | **Tool analysis** | Reads definitions for subtle poisoning, social engineering, logical risks | "These tools chain into a privilege escalation path" |
 | **Response analysis** | Reads actual tool output for manipulation, hidden intent, credential leakage | "Tool response is a fake paywall — social engineering the LLM" |
 | **Chain reasoning** | Connects all findings into multi-step attack scenarios | "Unauthenticated access → command injection → lateral movement → persistence" |
+| **Chain replay** (`--chain-replay`) | Proposes executable steps, runs them on the target, and grades the transcript | "Chain reproduced" / "exfiltrated out-of-band" CRITICAL; callable-but-unproven MEDIUM |
+
+**Phase 4 (`--chain-replay`) in brief:**
+- Honours `--safe-mode` and `--no-invoke` (dangerous steps refused before call).
+- With `--oast`, may plant `{{oast.url}}`; a callback is out-of-band proof of egress.
+- Under `--claude`, an optional judge can upgrade transformed data movement to HIGH.
+- `--chain-replay-retries N` (default 1) revises a halted chain from its transcript and retries.
 
 Real example from DVMCP Challenge 4 (Rug Pull):
 
