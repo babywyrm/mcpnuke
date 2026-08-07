@@ -129,6 +129,58 @@ def _judge_chain(
         return False, ""
 
 
+def _revise_chain(
+    backend: Any,
+    chain: Any,
+    transcript: str,
+    tools: list[dict],
+    model: str,
+    log: Callable[[str], None],
+) -> Any:
+    """Ask the backend to revise a halted chain, or None."""
+    revise = getattr(backend, "revise_chain", None)
+    if revise is None:
+        return None
+    try:
+        return revise(chain, transcript, tools, model=model, log=log)
+    except Exception:
+        return None
+
+
+def _replay_with_retries(
+    session: MCPSessionProtocol,
+    chain: Any,
+    tools_by_name: dict[str, dict],
+    backend: Any,
+    *,
+    model: str,
+    log: Callable[[str], None],
+    retries: int,
+    safe_mode: bool,
+    oast: Any,
+) -> tuple[ChainRun, ChainVerdict]:
+    """Replay a chain; on a halt, revise and retry up to *retries* times."""
+    run = replay_chain(
+        session, chain, tools_by_name, safe_mode=safe_mode, oast=oast
+    )
+    verdict = summarize_run(run, oast=oast)
+    attempts = 0
+    tools_list = list(tools_by_name.values())
+    while attempts < retries and not run.completed:
+        revised = _revise_chain(
+            backend, chain, _transcript(run, verdict), tools_list, model, log
+        )
+        if revised is None:
+            break
+        chain = revised
+        run = replay_chain(
+            session, chain, tools_by_name, safe_mode=safe_mode, oast=oast
+        )
+        verdict = summarize_run(run, oast=oast)
+        attempts += 1
+    return run, verdict
+
+
 def _transcript(run: ChainRun, verdict: ChainVerdict) -> str:
     """A short, reportable record of what the replay actually did."""
     lines = [verdict.evidence] if verdict.evidence else []
@@ -451,14 +503,17 @@ def run_llm_analysis(
                 oast = opts.get("oast")
                 reported = 0
                 for chain in proposed:
-                    run = replay_chain(
+                    run, verdict = _replay_with_retries(
                         session,
                         chain,
                         tools_by_name,
+                        backend,
+                        model=model,
+                        log=_log,
+                        retries=int(opts.get("chain_replay_retries", 1)),
                         safe_mode=opts.get("safe_mode", False),
                         oast=oast,
                     )
-                    verdict = summarize_run(run, oast=oast)
                     graded = _chain_finding(chain, verdict)
                     if graded is None:
                         continue

@@ -615,6 +615,36 @@ def judge_chain_run(
         return False, ""
 
 
+def revise_chain(
+    chain: Any,
+    transcript: str,
+    tools: list[dict],
+    model: str = DEFAULT_CLAUDE_MODEL,
+    log: Callable[[str], None] | None = None,
+) -> Any:
+    """Given a chain that halted and the transcript of why, propose one revision.
+
+    Returns a single ProposedChain (or None). The model is shown the failing
+    step and asked to fix only what broke — a wrong tool name, an argument the
+    tool rejected — not to invent a different attack.
+    """
+    from mcpnuke.core.chain_replay import parse_proposed_chains
+
+    tools_summary, _, _, _, _, _ = _chain_context(tools, [{"title": chain.title}])
+    system = (
+        "A proposed attack chain halted. Given the transcript and the available "
+        "tools, propose ONE corrected chain that fixes the step that failed — a "
+        "wrong tool name, a rejected argument, a missing {{stepN.output}} link. "
+        "Do not change the goal. Same schema as before: a JSON array with one "
+        "object carrying a `steps` array of at least two entries. Respond with "
+        "ONLY the JSON array."
+    )
+    user = f"Tools:\n{tools_summary}\n\nFailed transcript:\n{transcript[:4000]}"
+    text = _call_claude(system, user, model, _ANALYSIS_MAX_TOKENS, log=log)
+    revised = parse_proposed_chains(text)
+    return revised[0] if revised else None
+
+
 def analyze_response(
     tool_name: str,
     tool_description: str,

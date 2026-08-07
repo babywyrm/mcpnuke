@@ -202,6 +202,14 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
         "--claude (or another AI backend).",
     )
     group.add_argument(
+        "--chain-replay-retries",
+        metavar="N",
+        type=int,
+        default=1,
+        help="When a replayed chain halts, feed the failing transcript back to "
+        "the model and retry up to N times (default: 1). 0 disables revision.",
+    )
+    group.add_argument(
         "--oast",
         action="store_true",
         help="Run a callback listener and plant a per-probe URL in exfiltration "
