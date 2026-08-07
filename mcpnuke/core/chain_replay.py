@@ -269,7 +269,10 @@ def _data_moved(run: ChainRun) -> list[tuple[int, int, str]]:
 
 
 def summarize_run(
-    run: ChainRun, oast: CanaryListener | None = None
+    run: ChainRun,
+    oast: CanaryListener | None = None,
+    *,
+    oast_wait: float = 2.0,
 ) -> ChainVerdict:
     """Decide whether the transcript reproduces the proposed chain.
 
@@ -278,6 +281,10 @@ def summarize_run(
     later request (reproduced), or completed with an out-of-band callback
     to a planted canary (egress confirmed — strongest tier). A single-step
     "chain" is never reproduced — that is just a tool call.
+
+    When *oast* is set, wait up to *oast_wait* seconds for a callback before
+    falling through to the weaker in-band tiers — a sink that queues its
+    outbound request would otherwise lose the race.
     """
     if len(run.chain.steps) < 2:
         return ChainVerdict(
@@ -297,7 +304,7 @@ def summarize_run(
         )
 
     if oast is not None and run.oast_token:
-        callbacks = oast.hits(run.oast_token)
+        callbacks = oast.await_hits(run.oast_token, wait=oast_wait)
         if callbacks:
             tools_named = " → ".join(r.tool for r in run.results)
             cb = callbacks[0]

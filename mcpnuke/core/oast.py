@@ -39,6 +39,11 @@ _TOKEN_PREFIX: str = "mcpnuke"
 # opens, which is once per probe.
 _SHUTDOWN_POLL_SECONDS: float = 0.02
 
+# A sink may queue rather than send, so the callback can trail the response it
+# already returned. Short enough not to add minutes across a large tool matrix.
+_DEFAULT_AWAIT_SECONDS: float = 2.0
+_AWAIT_POLL_SECONDS: float = 0.05
+
 
 @dataclass(frozen=True)
 class Callback:
@@ -210,6 +215,22 @@ class CanaryListener:
     def hits(self, token: str) -> list[Callback]:
         with self._lock:
             return [c for c in self._callbacks if c.token == token]
+
+    def await_hits(
+        self, token: str, wait: float = _DEFAULT_AWAIT_SECONDS
+    ) -> list[Callback]:
+        """Poll until a callback for *token* arrives, or *wait* seconds elapse.
+
+        Shared by exfil_flow and chain replay: both plant a canary and need the
+        same brief grace period for a sink that queues before it sends.
+        """
+        deadline = time.monotonic() + max(0.0, wait)
+        while time.monotonic() < deadline:
+            hits = self.hits(token)
+            if hits:
+                return hits
+            time.sleep(_AWAIT_POLL_SECONDS)
+        return self.hits(token)
 
     def any_hit(self) -> bool:
         with self._lock:

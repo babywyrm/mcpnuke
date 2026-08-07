@@ -158,12 +158,13 @@ def _replay_with_retries(
     retries: int,
     safe_mode: bool,
     oast: Any,
+    oast_wait: float = 2.0,
 ) -> tuple[ChainRun, ChainVerdict]:
     """Replay a chain; on a halt, revise and retry up to *retries* times."""
     run = replay_chain(
         session, chain, tools_by_name, safe_mode=safe_mode, oast=oast
     )
-    verdict = summarize_run(run, oast=oast)
+    verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
     attempts = 0
     tools_list = list(tools_by_name.values())
     while attempts < retries and not run.completed:
@@ -176,7 +177,7 @@ def _replay_with_retries(
         run = replay_chain(
             session, chain, tools_by_name, safe_mode=safe_mode, oast=oast
         )
-        verdict = summarize_run(run, oast=oast)
+        verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
         attempts += 1
     return run, verdict
 
@@ -532,6 +533,7 @@ def run_llm_analysis(
                         retries=int(opts.get("chain_replay_retries", 1)),
                         safe_mode=opts.get("safe_mode", False),
                         oast=oast,
+                        oast_wait=float(opts.get("oast_wait", 2.0)),
                     )
                     graded = _chain_finding(chain, verdict)
                     if graded is None:

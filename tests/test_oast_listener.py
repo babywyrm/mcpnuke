@@ -175,3 +175,20 @@ class TestLifecycle:
         _get(listener.url_for(token))
 
         assert listener.any_hit()
+
+    def test_await_hits_waits_for_a_delayed_callback(self, listener):
+        import threading
+        import time
+
+        token = listener.issue()
+        url = listener.url_for(token)
+
+        def _later() -> None:
+            time.sleep(0.2)
+            _get(url)
+
+        threading.Thread(target=_later, daemon=True).start()
+        assert listener.hits(token) == []
+        hits = listener.await_hits(token, wait=1.0)
+        assert len(hits) == 1
+        assert hits[0].token == token

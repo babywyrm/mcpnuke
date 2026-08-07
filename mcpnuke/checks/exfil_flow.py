@@ -8,12 +8,10 @@ reachability of theoretical exfiltration paths.
 """
 
 import re
-import time
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
-from mcpnuke.core.oast import Callback, CanaryListener
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 # All findings in this module are scoped to Lane 2 / Transport "B"
@@ -68,23 +66,8 @@ def _classify_tool(tool: dict) -> tuple[bool, bool, bool]:
 
 EXFIL_CANARY = "MCPV_EXFIL_CANARY_7x9k2"
 
-# A sink may queue rather than send, so the callback can trail the response it
-# already returned. Short enough not to add minutes across a large tool matrix.
+# Default grace period for a queued sink callback (CanaryListener.await_hits).
 _CALLBACK_WAIT_SECONDS: float = 2.0
-_CALLBACK_POLL_SECONDS: float = 0.05
-
-
-def _await_callback(
-    oast: CanaryListener, token: str, wait: float = _CALLBACK_WAIT_SECONDS
-) -> list[Callback]:
-    """Wait briefly for the target to call the address planted in the payload."""
-    deadline = time.monotonic() + wait
-    while time.monotonic() < deadline:
-        hits = oast.hits(token)
-        if hits:
-            return hits
-        time.sleep(_CALLBACK_POLL_SECONDS)
-    return oast.hits(token)
 
 
 def _try_source_read(session: MCPSessionProtocol, tool: dict) -> str | None:
@@ -227,7 +210,7 @@ def check_exfil_flow(
                         continue
 
                     callbacks = (
-                        _await_callback(oast, token, callback_wait) if oast else []
+                        oast.await_hits(token, wait=callback_wait) if oast else []
                     )
                     if callbacks:
                         first = callbacks[0]

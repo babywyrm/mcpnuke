@@ -152,6 +152,15 @@ class TestTheProposePromptAsksForSteps:
 
         assert "without steps" in system or "omit" in system
 
+    def test_the_prompt_requires_immediate_oast_egress(self, monkeypatch):
+        """Register-only webhook chains never call out; the prompt must say so."""
+        system = self._system(monkeypatch).lower()
+
+        assert "{{oast.url}}" in self._system(monkeypatch)
+        assert "registration" in system or "register" in system
+        assert "fetch" in system or "send" in system
+        assert "follow-up" in system or "follow up" in system
+
 
 class TestProposeChainsReturnsProposedChains:
     def test_the_return_type_is_a_list_of_proposed_chains(self, monkeypatch):

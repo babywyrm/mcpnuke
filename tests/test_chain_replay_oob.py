@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+import time
 import urllib.request
 
 from mcpnuke.core.chain_replay import ChainStep, ProposedChain, replay_chain, summarize_run
@@ -62,6 +64,42 @@ def test_no_callback_falls_back_to_weaker_verdict():
 
     with CanaryListener(advertised_host="127.0.0.1") as oast:
         run = replay_chain(_Quiet(), _chain(), _tools(), oast=oast)
-        verdict = summarize_run(run, oast=oast)
+        verdict = summarize_run(run, oast=oast, oast_wait=0.2)
     assert not verdict.egress_confirmed
     assert run.completed
+
+
+def test_delayed_callback_is_awaited_before_verdict():
+    """A sink that queues the fetch must still confirm egress.
+
+    Without a wait, summarize_run would race the callback and fall through to
+    the weaker in-band tier even though the target did call out.
+    """
+
+    class _Delayed(_ExfilSession):
+        def call(self, method, params, timeout=10.0):
+            name = params["name"]
+            if name == "read_secret":
+                return {
+                    "result": {"content": [{"type": "text", "text": "SECRET-abc123"}]}
+                }
+            if name == "post_webhook":
+                url = params["arguments"].get("url", "")
+
+                def _later() -> None:
+                    time.sleep(0.25)
+                    if url.startswith("http"):
+                        with urllib.request.urlopen(url, timeout=3):  # noqa: S310
+                            pass
+
+                threading.Thread(target=_later, daemon=True).start()
+                return {"result": {"content": [{"type": "text", "text": "queued"}]}}
+            return {"result": {"content": []}}
+
+    with CanaryListener(advertised_host="127.0.0.1") as oast:
+        run = replay_chain(_Delayed(), _chain(), _tools(), oast=oast)
+        # Immediate check would miss the queued hit.
+        assert not oast.hits(run.oast_token)
+        verdict = summarize_run(run, oast=oast, oast_wait=1.0)
+    assert verdict.egress_confirmed
+    assert verdict.reproduced
