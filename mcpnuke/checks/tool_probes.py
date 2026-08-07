@@ -57,6 +57,9 @@ _DANGEROUS_TOOL_KEYWORDS = {
     "write", "overwrite", "truncate", "format", "wipe",
     "deploy", "restart", "shutdown", "reboot",
     "transfer", "pay", "charge", "invoice",
+    # Outbound / beacon sinks: register-only webhooks and SSRF fetch helpers
+    # still move data off-host when invoked under --safe-mode.
+    "webhook", "callback", "egress", "exfil", "exfiltrate",
 }
 
 _READ_ONLY_TOOL_KEYWORDS = {

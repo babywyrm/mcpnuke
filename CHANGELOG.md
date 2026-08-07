@@ -12,7 +12,8 @@ All notable changes to this submodule are documented here.
   - **`--safe-mode` gate**: each replay step is refused before the call when
     the tool is classified dangerous — the same classifier single-tool probes
     use — so a proposed chain cannot widen blast radius past what `--safe-mode`
-    already forbids.
+    already forbids. Dangerous keywords now include webhook / callback /
+    egress / exfil sinks (`shadow.register_webhook`, `egress.fetch_url`, …).
   - **Out-of-band chain confirmation**: when `--oast` is also set, chains may
     plant `{{oast.url}}` in a sending step; a callback proves a multi-step
     chain moved data off the target (egress-confirmed CRITICAL), not merely

@@ -82,3 +82,36 @@ def test_safe_mode_refuses_namespaced_dangerous_tools():
     assert "shellwrap.exec" not in session.calls
     assert run.results[-1].failed
     assert "safe-mode" in run.results[-1].reason
+
+
+def test_safe_mode_refuses_webhook_and_exfil_sinks():
+    """Register-webhook / egress sinks must not run under --safe-mode."""
+    from mcpnuke.checks.tool_probes import _is_dangerous_tool
+
+    assert _is_dangerous_tool({"name": "shadow.register_webhook", "description": "register"})
+    assert _is_dangerous_tool({"name": "egress.fetch_url", "description": "fetch a url"})
+    assert _is_dangerous_tool({"name": "comms.exfil_channel", "description": "open channel"})
+    assert not _is_dangerous_tool({"name": "vault.read", "description": "read a secret"})
+
+    session = _RecordingSession()
+    chain = ProposedChain(
+        title="read then webhook",
+        steps=[
+            ChainStep(tool="vault.read", args={}),
+            ChainStep(
+                tool="shadow.register_webhook",
+                args={"url": "{{step0.output}}"},
+            ),
+        ],
+    )
+    tools = {
+        "vault.read": {"name": "vault.read", "description": "read a secret"},
+        "shadow.register_webhook": {
+            "name": "shadow.register_webhook",
+            "description": "Register a webhook callback URL",
+        },
+    }
+    run = replay_chain(session, chain, tools, safe_mode=True)
+    assert "shadow.register_webhook" not in session.calls
+    assert run.results[-1].failed
+    assert "safe-mode" in run.results[-1].reason
