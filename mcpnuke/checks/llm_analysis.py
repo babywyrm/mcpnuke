@@ -168,10 +168,15 @@ def _replay_with_retries(
     attempts = 0
     tools_list = list(tools_by_name.values())
     while attempts < retries and not run.completed:
+        log(
+            f"  [dim]  Chain halted — revising and retrying "
+            f"(attempt {attempts + 1}/{retries})…[/dim]"
+        )
         revised = _revise_chain(
             backend, chain, _transcript(run, verdict), tools_list, model, log
         )
         if revised is None:
+            log("  [dim]  No revision produced; keeping halted result[/dim]")
             break
         chain = revised
         run = replay_chain(
@@ -179,6 +184,8 @@ def _replay_with_retries(
         )
         verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
         attempts += 1
+        if run.completed:
+            log("  [dim]  Revised chain completed on retry[/dim]")
     return run, verdict
 
 

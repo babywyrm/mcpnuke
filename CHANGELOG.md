@@ -30,7 +30,9 @@ All notable changes to this submodule are documented here.
     Deterministic CRITICAL claims are untouched.
   - **`--chain-replay-retries N`** (default 1): a halted chain feeds its
     failing transcript back to the model for one bounded repair-and-retry;
-    0 disables revision. Safe-mode still applies to every revision.
+    0 disables revision. Safe-mode still applies to every revision. Phase 4
+    logs each revise/retry attempt so halt→repair is visible in `--verbose`
+    output.
 - **MCP 2026-07-28 stateless protocol support** (`core/protocol.py`): mcpnuke now
   scans servers speaking the stateless spec alongside legacy handshake servers.
   - `--protocol-mode {auto,legacy,stateless}` — `auto` (default) probes for

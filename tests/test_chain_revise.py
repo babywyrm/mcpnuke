@@ -82,3 +82,19 @@ def test_zero_retries_does_not_revise():
     )
     assert backend.revise_calls == 0
     assert not run.completed
+
+
+def test_retry_logs_the_repair_attempt():
+    logs: list[str] = []
+    _replay_with_retries(
+        _Session(),
+        _halting_chain(),
+        TOOLS,
+        _Backend(),
+        model="m",
+        log=logs.append,
+        retries=1,
+        safe_mode=False,
+        oast=None,
+    )
+    assert any("revis" in m.lower() or "repair" in m.lower() for m in logs)
