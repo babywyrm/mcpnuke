@@ -69,12 +69,18 @@ _READ_ONLY_TOOL_KEYWORDS = {
 
 def _is_dangerous_tool(tool: dict) -> bool:
     """Classify a tool as dangerous based on name and description."""
+    import re
+
     name = tool.get("name", "").lower()
     desc = tool.get("description", "").lower()
     combined = f"{name} {desc}"
 
+    # Split on _, -, ., and whitespace. MCP tools are often namespaced
+    # (shellwrap.exec, shadow.register_webhook); without the dot, `exec`
+    # never appears as a token and --safe-mode silently invokes them.
+    name_parts = set(re.split(r"[_\-\s.]+", name))
     for kw in _DANGEROUS_TOOL_KEYWORDS:
-        if kw in name.split("_") or kw in name.split("-"):
+        if kw in name_parts:
             return True
 
     return bool(any(kw in combined for kw in ("side effect", "irreversible", "destructive", "permanent")))

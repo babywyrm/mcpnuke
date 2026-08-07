@@ -62,3 +62,23 @@ def test_safe_mode_allows_read_only_chain():
     run = replay_chain(session, chain, tools, safe_mode=True)
     assert session.calls == ["get_record", "list_records"]
     assert run.completed
+
+
+def test_safe_mode_refuses_namespaced_dangerous_tools():
+    """Camazotz-style shellwrap.exec must be refused; the dot is a separator."""
+    session = _RecordingSession()
+    chain = ProposedChain(
+        title="read then exec",
+        steps=[
+            ChainStep(tool="vault.read", args={}),
+            ChainStep(tool="shellwrap.exec", args={"cmd": "{{step0.output}}"}),
+        ],
+    )
+    tools = {
+        "vault.read": {"name": "vault.read", "description": "read a secret"},
+        "shellwrap.exec": {"name": "shellwrap.exec", "description": "run a command"},
+    }
+    run = replay_chain(session, chain, tools, safe_mode=True)
+    assert "shellwrap.exec" not in session.calls
+    assert run.results[-1].failed
+    assert "safe-mode" in run.results[-1].reason
