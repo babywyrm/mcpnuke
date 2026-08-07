@@ -409,7 +409,12 @@ def run_llm_analysis(
                 }
                 reproduced = 0
                 for chain in proposed:
-                    run = replay_chain(session, chain, tools_by_name)
+                    run = replay_chain(
+                        session,
+                        chain,
+                        tools_by_name,
+                        safe_mode=opts.get("safe_mode", False),
+                    )
                     verdict = summarize_run(run)
                     if not verdict.reproduced:
                         continue

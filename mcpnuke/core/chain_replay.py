@@ -17,7 +17,12 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text
+from mcpnuke.checks.tool_probes import (
+    _build_safe_args,
+    _call_tool,
+    _is_dangerous_tool,
+    _response_text,
+)
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 # {{stepN.output}} — the only placeholder form the executor understands. Kept
@@ -169,11 +174,16 @@ def replay_chain(
     session: MCPSessionProtocol,
     chain: ProposedChain,
     tools: dict[str, dict],
+    *,
+    safe_mode: bool = False,
 ) -> ChainRun:
     """Execute *chain* against *session*, threading outputs into later args.
 
     Stops at the first failing step: a chain whose middle link refuses is not
     a chain that worked, and continuing would invent a path that isn't there.
+    Under *safe_mode* a step whose tool is classified dangerous is refused
+    before the call — the same gate single-tool probes use — and the chain
+    halts, because a chain missing its middle link did not run.
     """
     run = ChainRun(chain=chain)
     for step in chain.steps:
@@ -186,6 +196,18 @@ def replay_chain(
                     response_text="",
                     failed=True,
                     reason=f"unknown tool '{step.tool}'",
+                )
+            )
+            break
+
+        if safe_mode and _is_dangerous_tool(tool):
+            run.results.append(
+                StepResult(
+                    tool=step.tool,
+                    request_args={},
+                    response_text="",
+                    failed=True,
+                    reason="refused under safe-mode: dangerous tool",
                 )
             )
             break
