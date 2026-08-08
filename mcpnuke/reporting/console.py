@@ -13,6 +13,7 @@ from rich.text import Text
 from mcpnuke.core.constants import SEV_COLOR
 from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
+from mcpnuke.reporting.priority import rank_priority_actions
 
 _default_console = Console()
 
@@ -164,6 +165,19 @@ def print_report(
         f"[yellow]MEDIUM: {counts.get('MEDIUM', 0)}[/yellow]  |  "
         f"[cyan]LOW: {counts.get('LOW', 0)}[/cyan]"
     )
+
+    priority = rank_priority_actions(all_findings)
+    if priority:
+        console.print("\n[bold]Priority actions (fix these first)[/bold]")
+        for action in priority:
+            color = SEV_COLOR.get(action.severity, "white")
+            console.print(
+                f"  {action.rank}. [{color}]{action.severity}[/{color}] "
+                f"{action.title}  [dim]— {action.reason}[/dim]"
+            )
+            console.print(f"       [dim]Impact:[/dim] {action.impact}")
+            console.print(f"       [dim]Fix:[/dim] {action.fix}")
+            console.print(f"       [dim]Verify:[/dim] {action.verify}")
 
     chain_findings = [f for f in all_findings if f.check == "attack_chain"]
     if chain_findings:

@@ -6,6 +6,12 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **Priority actions** (`reporting/priority.py`): every console and JSON report
+  includes a proof-ranked "fix these first" list. Out-of-band / reproduced
+  chains outrank capability inventory noise (`excessive_permissions` collapsed).
+  Each action carries deterministic **impact / fix / verify** guidance for
+  operators. Target-agnostic — ranks finding shapes only, not lab-specific names.
+
 - **Chain-replay hardening** (`core/chain_replay.py`, `checks/llm_analysis.py`):
   the propose-execute-judge loop is now a full red-team cycle, not just a
   single pass.

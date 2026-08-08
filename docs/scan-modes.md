@@ -11,6 +11,12 @@ five modes.
 | **Static** | `--no-invoke` | Static checks only, no tool calls | Prod servers, zero side-effect risk |
 | **AI** | `--claude` | All checks + Claude analysis | Deep analysis, subtle vuln hunting |
 
+Every mode that produces findings also emits **Priority actions** (console +
+JSON): a proof-ranked top-N fix list. Deep AI modes (`--claude --chain-replay`,
+optionally `--oast`) feed the strongest ranks when chains reproduce or egress
+is confirmed; static/safe modes still get an honest priority list from whatever
+was found.
+
 ## Fast Mode Scoring
 
 In `--fast` mode, mcpnuke ranks all discovered tools using a tiered weighted

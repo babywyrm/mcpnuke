@@ -101,6 +101,15 @@ Claude runs four phases after deterministic + behavioral checks:
 - `--chain-replay-retries N` (default 1) revises a halted chain from its
   transcript and retries. Each revise/retry attempt is logged under `--verbose`.
 
+**Priority actions (every report):** after the severity counts, mcpnuke prints
+a short **Priority actions (fix these first)** list and writes matching
+`priority_actions` on each JSON target. Ranking is by *proof* (out-of-band
+egress → chain reproduced → attack chains → AI-judged → …), not by raw
+CRITICAL volume — so capability inventory spam is collapsed and does not bury
+proved paths. Each action includes **Impact / Fix / Verify** guidance so red
+and blue teams get a next step, not only a severity. The ranker is
+target-agnostic: it only reads finding shapes mcpnuke itself emits.
+
 Real example from DVMCP Challenge 4 (Rug Pull):
 
 | Layer | Findings | Score |

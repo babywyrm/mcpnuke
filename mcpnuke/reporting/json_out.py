@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
+from mcpnuke.reporting.priority import priority_actions_as_dicts
 
 _REDACTED_KEYS: frozenset[str] = frozenset({"_raw_token"})
 
@@ -52,6 +53,7 @@ def _build_target_dict(r: TargetResult) -> dict:
             }
             for c in r.attack_chains
         ],
+        "priority_actions": priority_actions_as_dicts(r.findings),
     }
     if r.scan_diff is not None:
         diff = r.scan_diff
