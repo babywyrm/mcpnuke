@@ -446,7 +446,11 @@ def _add_policy_arguments(group: ArgumentGroup) -> None:
         "--generate-policy",
         metavar="FILE",
         dest="policy_out",
-        help="Generate nullfield policy YAML from findings and write to FILE",
+        help=(
+            "Generate nullfield policy YAML from findings and write to FILE. "
+            "Proved chains (OOB / reproduced / live exfil) become DENY(sink) "
+            "+ HOLD(source*)"
+        ),
     )
     group.add_argument(
         "--policy-name",

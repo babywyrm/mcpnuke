@@ -1022,6 +1022,7 @@ class TestChainReplayDocsCurrency:
         assert "{{oast.url}}" in text or "oast.url" in text
         assert "fetch" in text or "send-now" in text or "immediate" in text
         assert "revis" in text  # revise / retry visibility
+        assert "priority actions" in text
 
     def test_checks_doc_mentions_oast_for_exfil_flow(self) -> None:
         text = (_docsgen.REPO_ROOT / "docs" / "checks.md").read_text().lower()
@@ -1031,3 +1032,8 @@ class TestChainReplayDocsCurrency:
         )
         assert row, "exfil_flow row missing from docs/checks.md"
         assert "oast" in row or "out-of-band" in row
+
+    def test_quickstart_documents_proved_chain_policy_hops(self) -> None:
+        text = (_docsgen.REPO_ROOT / "QUICKSTART.md").read_text().lower()
+        assert "proved chain sink" in text or "deny on the sink" in text
+        assert "hold" in text and "source" in text

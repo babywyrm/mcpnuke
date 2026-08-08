@@ -57,6 +57,11 @@ still finds findings in registered tools' schemas and metadata.
 
 **This is the feedback loop.** Scan → generate policy → apply → re-scan.
 
+Proved multi-hop findings (out-of-band / chain reproduced / live exfil
+confirmed) become **DENY on the sink** and **HOLD on earlier sources** so you
+can cut egress without hard-blocking every reader. Edit the YAML before apply
+if you want stricter or looser rules.
+
 ```bash
 # Step 1: Scan and generate policy
 mcpnuke --targets http://localhost:8080/mcp \
@@ -79,6 +84,17 @@ spec:
   selector:
     matchLabels: {}
   rules:
+    - action: DENY
+      mcpMethod: tools/call
+      toolNames: ["net.send"]
+      reason: "mcpnuke: proved chain sink (out-of-band)"
+    - action: HOLD
+      mcpMethod: tools/call
+      toolNames: ["vault.read"]
+      reason: "mcpnuke: proved chain source (out-of-band)"
+      hold:
+        timeout: 5m
+        onTimeout: DENY
     - action: DENY
       mcpMethod: tools/call
       toolNames: ["hallucination.execute_plan"]

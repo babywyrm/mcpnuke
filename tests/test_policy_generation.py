@@ -2,23 +2,45 @@
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.policy.generator import generate_policy
 from mcpnuke.policy.nullfield import serialize_policy
 from mcpnuke.policy.rules import ACTION_PRIORITY, PolicyRule
 
+_POLICY_DIR = Path(__file__).resolve().parents[1] / "mcpnuke" / "policy"
+_LAB_BANNED = ("camazotz", "dvmcp", "localhost:9001", "challenge-")
 
-def _result_with_findings(findings: list[tuple[str, str, str]]) -> TargetResult:
-    """Create a TargetResult with findings: [(check, severity, title)]."""
+
+def _result_with_findings(
+    findings: list[tuple[str, str, str] | tuple[str, str, str, str]],
+) -> TargetResult:
+    """Create a TargetResult with findings: (check, severity, title[, detail])."""
     r = TargetResult(url="http://test:8080/mcp")
-    for check, severity, title in findings:
+    for item in findings:
+        check, severity, title = item[0], item[1], item[2]
+        detail = item[3] if len(item) > 3 else ""
         r.findings.append(Finding(
             target=r.url,
             check=check,
             severity=severity,
             title=title,
+            detail=detail,
         ))
     return r
+
+
+def _tool_actions(rules: list[PolicyRule]) -> dict[str, str]:
+    """Map tool name → action for non-default rules."""
+    out: dict[str, str] = {}
+    for rule in rules:
+        for name in rule.tool_names:
+            if name == "*":
+                continue
+            out[name] = rule.action
+    return out
 
 
 class TestPolicyGeneration:
@@ -229,3 +251,111 @@ class TestActionPriority:
         assert ACTION_PRIORITY["DENY"] > ACTION_PRIORITY["HOLD"]
         assert ACTION_PRIORITY["HOLD"] > ACTION_PRIORITY["SCOPE"]
         assert ACTION_PRIORITY["SCOPE"] > ACTION_PRIORITY["ALLOW"]
+
+
+class TestProvedChainPolicy:
+    """Slice B: DENY sink + HOLD source from proved multi-hop findings."""
+
+    def test_oob_chain_denies_sink_holds_source(self):
+        result = _result_with_findings([
+            (
+                "llm_chain_replay",
+                "CRITICAL",
+                "Chain exfiltrated data (out-of-band confirmed): read then send",
+                "Chain exfiltrated data out-of-band (vault.read → net.send). "
+                "The target reached the canary URL.",
+            ),
+        ])
+        actions = _tool_actions(generate_policy([result]))
+        assert actions.get("net.send") == "DENY"
+        assert actions.get("vault.read") == "HOLD"
+        yaml_str = serialize_policy(generate_policy([result]))
+        assert "proved chain sink (out-of-band)" in yaml_str
+        assert "proved chain source (out-of-band)" in yaml_str
+
+    def test_reproduced_chain_denies_sink_holds_source(self):
+        result = _result_with_findings([
+            (
+                "llm_chain_replay",
+                "CRITICAL",
+                "Chain reproduced: compose secrets",
+                "Chain reproduced end to end (secrets.get → http.post). "
+                "Output of step 0 appeared in the request to step 1.",
+            ),
+        ])
+        actions = _tool_actions(generate_policy([result]))
+        assert actions.get("http.post") == "DENY"
+        assert actions.get("secrets.get") == "HOLD"
+        reasons = " ".join(r.reason for r in generate_policy([result]))
+        assert "proved chain sink (reproduced)" in reasons
+        assert "proved chain source (reproduced)" in reasons
+
+    def test_live_exfil_confirmed_hop_aware(self):
+        result = _result_with_findings([
+            (
+                "exfil_flow",
+                "CRITICAL",
+                "Live exfil confirmed: 'docs.read' → 'webhook.push'",
+                "Canary transferred docs.read → webhook.push",
+            ),
+        ])
+        actions = _tool_actions(generate_policy([result]))
+        assert actions.get("webhook.push") == "DENY"
+        assert actions.get("docs.read") == "HOLD"
+        reasons = " ".join(r.reason for r in generate_policy([result]))
+        assert "proved live exfil sink" in reasons
+        assert "proved live exfil source" in reasons
+
+    def test_unproven_callable_chain_emits_no_hop_rules(self):
+        result = _result_with_findings([
+            (
+                "llm_chain_replay",
+                "MEDIUM",
+                "Chain callable end-to-end (composition unproven): maybe later",
+                "Every step completed (a.read → b.send) without proven movement.",
+            ),
+        ])
+        actions = _tool_actions(generate_policy([result]))
+        assert actions == {}
+
+    def test_single_tool_proved_finding_denies_only(self):
+        result = _result_with_findings([
+            (
+                "llm_chain_replay",
+                "CRITICAL",
+                "Chain reproduced: lonely hop",
+                "Chain reproduced end to end but only Tool 'lonely.sink' named.",
+            ),
+        ])
+        rules = generate_policy([result])
+        actions = _tool_actions(rules)
+        assert actions.get("lonely.sink") == "DENY"
+        assert not any(r.action == "HOLD" and "lonely.sink" in r.tool_names for r in rules)
+        assert any("single-tool proved finding" in r.reason for r in rules)
+
+    def test_webhook_deny_on_sink_stays_deny_with_proved_chain(self):
+        result = _result_with_findings([
+            (
+                "webhook_persistence",
+                "HIGH",
+                "Webhook/callback tool 'net.send' accepts URL",
+            ),
+            (
+                "llm_chain_replay",
+                "CRITICAL",
+                "Chain exfiltrated data (out-of-band confirmed): path",
+                "Chain exfiltrated data out-of-band (vault.read → net.send).",
+            ),
+        ])
+        actions = _tool_actions(generate_policy([result]))
+        assert actions.get("net.send") == "DENY"
+        assert actions.get("vault.read") == "HOLD"
+
+    def test_policy_package_has_no_lab_host_special_cases(self):
+        for path in _POLICY_DIR.rglob("*.py"):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    low = node.value.lower()
+                    for banned in _LAB_BANNED:
+                        assert banned not in low, f"{path}: banned {banned!r}"

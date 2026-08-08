@@ -4,6 +4,11 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **ROADMAP / README** — document Priority Actions, hop-aware `--generate-policy`,
+  and lab baseline fixtures; mark nullfield policy generation as shipped.
+
 ### Added
 
 - **Priority actions** (`reporting/priority.py`): every console and JSON report
@@ -11,7 +16,16 @@ All notable changes to this submodule are documented here.
   chains outrank capability inventory noise (`excessive_permissions` collapsed).
   Each action carries deterministic **impact / fix / verify** guidance for
   operators. Target-agnostic — ranks finding shapes only, not lab-specific names.
-
+- **`--generate-policy` from proved chains** (`policy/generator.py`): out-of-band
+  / reproduced `llm_chain_replay` and live-confirmed `exfil_flow` findings emit
+  hop-aware NullfieldPolicy rules — **DENY** the sink, **HOLD** earlier sources
+  (timeout → DENY). Unproven “callable end-to-end” chains stay out of policy.
+  Operators can still edit the YAML; no new CLI flag.
+- **Lab baseline harness** (`tests/test_lab_baselines.py`, `tests/fixtures/scans/`):
+  offline Camazotz/DVMCP-shaped fixtures assert Priority Actions still rank
+  proved chains above capability spam, guidance stays non-empty, and hop-aware
+  policy DENY/HOLD still fires. Optional `CAMAZOTZ_LIVE=1` soft oracle. Golden
+  VMs are out of scope (not MCP-facing).
 - **Chain-replay hardening** (`core/chain_replay.py`, `checks/llm_analysis.py`):
   the propose-execute-judge loop is now a full red-team cycle, not just a
   single pass.

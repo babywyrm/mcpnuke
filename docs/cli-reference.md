@@ -109,7 +109,7 @@ Generated from the parser, so it cannot fall behind the code.
 
 | Option | Description |
 |---|---|
-| `--generate-policy FILE` | Generate nullfield policy YAML from findings and write to FILE |
+| `--generate-policy FILE` | Generate nullfield policy YAML from findings and write to FILE. Proved chains (OOB / reproduced / live exfil) become DENY(sink) + HOLD(source*) |
 | `--policy-name NAME` | metadata.name for the generated NullfieldPolicy |
 | `--policy-namespace NAMESPACE` | metadata.namespace for the generated NullfieldPolicy |
 | `--policy-labels KEY=VALUE` | metadata.labels entry, repeatable. Example: --policy-labels nullfield.io/lane=machine |
