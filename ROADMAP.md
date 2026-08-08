@@ -19,8 +19,9 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | Lane coverage (5 identity lanes) | **All 5 represented** |
 | Taxonomy coverage | **22/56 IDs (39%)** — Tier 1 complete, see gap map below |
 | CI integration (SARIF, --fail-on) | **Done** |
+| Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
 | Distribution (PyPI, install script) | **Gap** — source-only |
-| CI/CD workflow for the tool itself | **Gap** — no GHA |
+| CI/CD workflow for the tool itself | **Partial** — `tests.yml` + reusable scan workflow; dogfood CI still thin |
 
 ---
 
@@ -115,11 +116,22 @@ from 22 → ~33 IDs (59%) with zero new check code.
 
 ---
 
+## Reporting & remediation (done 2026-08-08)
+
+Target-agnostic operator loop — labs (Camazotz / DVMCP) are oracles only:
+
+| Piece | What shipped |
+|-------|----------------|
+| **Priority actions** | Proof-ranked “fix these first” list on every console/JSON report |
+| **Impact / fix / verify** | Deterministic guidance on each priority action |
+| **`--generate-policy`** | NullfieldPolicy YAML; proved chains → DENY(sink) + HOLD(source*) |
+| **Lab baselines** | Offline fixtures in `tests/fixtures/scans/` guard A/C/B contracts in CI |
+
 ## Infrastructure roadmap
 
 ### Near-term
 
-- **CI workflow** (`.github/workflows/ci.yml`) — test matrix, lint, self-scan dogfood
+- **CI dogfood** — broaden `.github/workflows/tests.yml` / scan workflow (matrix, self-scan)
 - **Publish workflow** — PyPI via OIDC trusted publishing on tag push
 - **`install.sh`** — one-liner macOS/Linux installer (same pattern as skillseraph)
 - **PyPI package** — `pip install mcpnuke` / `uvx mcpnuke`
@@ -134,8 +146,7 @@ from 22 → ~33 IDs (59%) with zero new check code.
 ### Horizon
 
 - **OWASP MCP Top 10 alignment report** — map every finding to OWASP MCP01–MCP15
-- **Remediation guidance** — per-finding fix suggestions in SARIF output
-- **Integration with nullfield** — auto-generate policy from scan findings
+- **SARIF remediation** — carry Priority Action impact/fix/verify into SARIF `fixes` / help text
 - **Camazotz lab coverage tracking** — which labs exercise which checks
 
 ---

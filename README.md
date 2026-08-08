@@ -135,8 +135,11 @@ Bedrock variations, see **[QUICKSTART.md](QUICKSTART.md)**.
   --tls-verify \
   --json auth-flow-report.json
 
-# JSON report for CI
+# JSON report for CI (includes proof-ranked priority_actions + impact/fix/verify)
 ./scan --port-range localhost:9001-9010 --json report.json
+
+# Suggest a NullfieldPolicy from findings (proved chains → DENY sink + HOLD sources)
+./scan --targets http://localhost:8080/mcp --generate-policy fix.yaml
 
 # Differential scan (compare to baseline)
 ./scan --targets http://localhost:9001 --baseline baseline.json
@@ -203,7 +206,7 @@ and mcpnuke-runner setup.
 4. PROBE          Call tools with safe payloads, read resources
 5. ANALYZE        Scan responses for injection, exfil, leakage, drift
 6. AGGREGATE      Detect attack chains across findings
-7. REPORT         Console table (or --group-findings) + optional JSON
+7. REPORT         Priority actions (fix first) + console/JSON (+ optional policy)
 ```
 
 ### Scan Phases
