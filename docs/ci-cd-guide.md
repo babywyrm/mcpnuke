@@ -168,6 +168,15 @@ mcpnuke --targets $TARGET --fast --no-invoke \
 
 Store `baseline.json` as a CI artifact or commit it to the repo.
 
+### Priority-action / policy goldens (Slice D)
+
+Unit CI also runs offline fixtures under `tests/fixtures/scans/` via
+`tests/test_lab_baselines.py`. These are **not** differential baselines —
+they freeze the contracts that proved chains outrank capability spam and that
+`--generate-policy` still emits DENY(sink)+HOLD(source*). Regenerate fixtures
+from Camazotz/DVMCP scans when intentionally changing those contracts; do not
+point them at golden-image VMs.
+
 ---
 
 ## Environment Variables

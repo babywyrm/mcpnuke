@@ -30,6 +30,8 @@ htmlcov/
 !profiles/*.json
 profiles/*-scan.json
 profiles/*-fast.json
+# Slice D offline goldens (minimal findings-only fixtures)
+!tests/fixtures/scans/*.json
 
 .mypy_cache/
 .ruff_cache/

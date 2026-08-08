@@ -1,0 +1,14 @@
+{
+  "name": "proved_multihop_policy",
+  "description": "Single OOB chain finding with arrow path for DENY sink / HOLD source",
+  "oracle": "camazotz",
+  "findings": [
+    {
+      "check": "llm_chain_replay",
+      "severity": "CRITICAL",
+      "title": "[AI] [MCP-T51] Chain exfiltrated data (out-of-band confirmed): Direct SSRF/data exfiltration via egress.fetch_url",
+      "detail": "Chain exfiltrated data out-of-band (chain.get_service_manifest \u2192 egress.fetch_url). The target reached the canary URL from 127.0.0.1, which appeared nowhere except this replay. The AI-gated egress proxy is asked to fetch a URL under attacker control; if it resolves, sensitive context can be smuggled in the URL/query and a callback confirms data left the target.",
+      "taxonomy_id": "MCP-T51"
+    }
+  ]
+}

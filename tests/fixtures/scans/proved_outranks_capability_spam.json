@@ -1,0 +1,322 @@
+{
+  "name": "proved_outranks_capability_spam",
+  "description": "Trimmed Camazotz-shaped scan: OOB/reproduced vs excessive_permissions pile",
+  "oracle": "camazotz",
+  "findings": [
+    {
+      "check": "llm_chain_replay",
+      "severity": "CRITICAL",
+      "title": "[AI] [MCP-T51] Chain exfiltrated data (out-of-band confirmed): Direct SSRF/data exfiltration via egress.fetch_url",
+      "detail": "Chain exfiltrated data out-of-band (chain.get_service_manifest \u2192 egress.fetch_url). The target reached the canary URL from 127.0.0.1, which appeared nowhere except this replay. The AI-gated egress proxy is asked to fetch a URL under attacker control; if it resolves, sensitive context can be smuggled in the URL/query and a callback confirms data left the target.",
+      "taxonomy_id": "MCP-T51"
+    },
+    {
+      "check": "llm_chain_replay",
+      "severity": "CRITICAL",
+      "title": "[AI] [MCP-T14] Chain exfiltrated data (out-of-band confirmed): Webhook registration + trigger to exfiltrate secrets out-of-band",
+      "detail": "Chain exfiltrated data out-of-band (secrets.leak_config \u2192 shadow.register_webhook \u2192 notification.trigger_event). The target reached the canary URL from 127.0.0.1, which appeared nowhere except this replay. A webhook is registered against attacker infrastructure, and a subsequent event trigger causes the server to call out and deliver secret-bearing notification payloads to the listener.",
+      "taxonomy_id": "MCP-T14"
+    },
+    {
+      "check": "llm_chain_replay",
+      "severity": "CRITICAL",
+      "title": "[AI] [MCP-T21] Chain reproduced: Credential forwarding across agent hops via chain.call_downstream",
+      "detail": "Chain reproduced end to end (chain.get_service_manifest \u2192 chain.call_downstream \u2192 chain.inspect_audit_log). Output of step 0 appeared in the request to step 1. Agent A forwards a caller-supplied credential directly to Agent B's REST API. Agent B trusts the forwarded token's claims with no re-authentication, enabling privilege escalation across the trust boundary.",
+      "taxonomy_id": "MCP-T21"
+    },
+    {
+      "check": "llm_chain_replay",
+      "severity": "CRITICAL",
+      "title": "[AI] [MCP-T51] Chain reproduced: SSRF via CDN asset registration to internal/OOB endpoint",
+      "detail": "Chain reproduced end to end (gateway.register_asset \u2192 gateway.fetch_content). Output of step 0 appeared in the request to step 1. gateway.register_asset accepts any URL with no AI review, minting a cdn.internal token; fetch_content then resolves it, proving an SSRF path that can be pointed at an out-of-band listener to confirm egress.",
+      "taxonomy_id": "MCP-T51"
+    },
+    {
+      "check": "llm_chain_replay",
+      "severity": "CRITICAL",
+      "title": "[AI] [MCP-T12] Chain reproduced: Exfiltration of internal manifest via unsigned comms relay",
+      "detail": "Chain reproduced end to end (chain.get_service_manifest \u2192 relay.store_context \u2192 comms.send_message). Output of step 0 appeared in the request to step 1. Chain manifest data (agent topology, identity/credential forwarding rules) is stored in the shared context buffer and then composed into an outbound message with no verification, proving a live exfil path.",
+      "taxonomy_id": "MCP-T12"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'chain.get_service_manifest' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'chain.inspect_audit_log' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'agent_http_bypass.get_access_log' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'agent_http_bypass.get_rejected_log' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'llmchain.register_function'",
+      "detail": "Register Agent B as a callable function in the LLM's function-calling interface. The system_context (including any embedded credential) is stored and will be passed verbatim as function arguments when",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'llmchain.register_function'",
+      "detail": "Register Agent B as a callable function in the LLM's function-calling interface. The system_context (including any embedded credential) is stored and will be passed verbatim as function arguments when",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'llmchain.call_with_context'",
+      "detail": "Invoke Agent B via the LLM's function-calling mechanism. The stored system_context (including any embedded credential) is passed in the function arguments \u2014 Agent B receives the full context. On easy,",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'llmchain.call_with_context'",
+      "detail": "Invoke Agent B via the LLM's function-calling mechanism. The stored system_context (including any embedded credential) is passed in the function arguments \u2014 Agent B receives the full context. On easy,",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'llmchain.inspect_context'",
+      "detail": "Inspect the full system_context that was passed in the last function-calling invocation. This reveals any credentials that were embedded in the context, even on hard difficulty where call_with_context",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'llmchain.inspect_context'",
+      "detail": "Inspect the full system_context that was passed in the last function-calling invocation. This reveals any credentials that were embedded in the context, even on hard difficulty where call_with_context",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'llmchain.inspect_context' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'chain.load_agent'",
+      "detail": "Load a sub-agent (Agent B) into the in-process SDK registry. The caller's token is stored and will be forwarded to the sub-agent when tasks are delegated \u2014 no fresh token is issued.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'chain.load_agent'",
+      "detail": "Load a sub-agent (Agent B) into the in-process SDK registry. The caller's token is stored and will be forwarded to the sub-agent when tasks are delegated \u2014 no fresh token is issued.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Dangerous capability [process_mgmt]: 'chain.load_agent'",
+      "detail": "Load a sub-agent (Agent B) into the in-process SDK registry. The caller's token is stored and will be forwarded to the sub-agent when tasks are delegated \u2014 no fresh token is issued.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'chain.delegate_task'",
+      "detail": "Delegate a task to a previously loaded sub-agent. The task is dispatched in-process using the forwarded credential. Audit log entries attribute the action to the original caller.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Dangerous capability [process_mgmt]: 'chain.delegate_task'",
+      "detail": "Delegate a task to a previously loaded sub-agent. The task is dispatched in-process using the forwarded credential. Audit log entries attribute the action to the original caller.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'chain.read_audit_log' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Dangerous capability [process_mgmt]: 'subchain.spawn_agent'",
+      "detail": "Spawn Agent B as a child subprocess with the caller's credential injected into the subprocess environment via AGENT_TOKEN env var. Agent B inherits the credential without explicit re-authentication.",
+      "taxonomy_id": "MCP-T20"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [code_eval]: 'subchain.spawn_agent'",
+      "detail": "Spawn Agent B as a child subprocess with the caller's credential injected into the subprocess environment via AGENT_TOKEN env var. Agent B inherits the credential without explicit re-authentication.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'subchain.spawn_agent'",
+      "detail": "Spawn Agent B as a child subprocess with the caller's credential injected into the subprocess environment via AGENT_TOKEN env var. Agent B inherits the credential without explicit re-authentication.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'subchain.run_task'",
+      "detail": "Send a task to a previously spawned subprocess agent. The subprocess reads AGENT_TOKEN from its inherited env and uses it to authenticate the task \u2014 no explicit token passing required. On easy/medium,",
+      "taxonomy_id": "MCP-T20"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [code_eval]: 'subchain.run_task'",
+      "detail": "Send a task to a previously spawned subprocess agent. The subprocess reads AGENT_TOKEN from its inherited env and uses it to authenticate the task \u2014 no explicit token passing required. On easy/medium,",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'subchain.run_task'",
+      "detail": "Send a task to a previously spawned subprocess agent. The subprocess reads AGENT_TOKEN from its inherited env and uses it to authenticate the task \u2014 no explicit token passing required. On easy/medium,",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Dangerous capability [process_mgmt]: 'subchain.run_task'",
+      "detail": "Send a task to a previously spawned subprocess agent. The subprocess reads AGENT_TOKEN from its inherited env and uses it to authenticate the task \u2014 no explicit token passing required. On easy/medium,",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [code_eval]: 'subchain.read_env_inheritance'",
+      "detail": "Diagnostic tool: return the environment variables inherited by a spawned subprocess, including AGENT_TOKEN. On hard, AGENT_TOKEN value is masked as '****' but the key is listed, confirming the credent",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'subchain.read_env_inheritance'",
+      "detail": "Diagnostic tool: return the environment variables inherited by a spawned subprocess, including AGENT_TOKEN. On hard, AGENT_TOKEN value is masked as '****' but the key is listed, confirming the credent",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Dangerous capability [process_mgmt]: 'subchain.read_env_inheritance'",
+      "detail": "Diagnostic tool: return the environment variables inherited by a spawned subprocess, including AGENT_TOKEN. On hard, AGENT_TOKEN value is masked as '****' but the key is listed, confirming the credent",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'gateway.list_resources' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'gateway.register_asset'",
+      "detail": "Register any URL with the internal CDN proxy. Returns a cdn.internal token URL that can be shared or fetched. No AI review on registration \u2014 the proxy accepts any source URL.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [network]: 'gateway.register_asset'",
+      "detail": "Register any URL with the internal CDN proxy. Returns a cdn.internal token URL that can be shared or fetched. No AI review on registration \u2014 the proxy accepts any source URL.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'gateway.register_asset'",
+      "detail": "Register any URL with the internal CDN proxy. Returns a cdn.internal token URL that can be shared or fetched. No AI review on registration \u2014 the proxy accepts any source URL.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [network]: 'gateway.fetch_content'",
+      "detail": "Fetch content from a CDN URL. An AI gate validates the hostname against the trusted allowlist (cdn.internal, *.internal.corp) before resolving. Direct fetches of internal paths are denied.",
+      "taxonomy_id": "MCP-T20"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'ratelimit.check_budget'",
+      "detail": "Return the current global rate-limit budget state. Shows whether per-caller accounting is enabled.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [filesystem]: 'ratelimit.check_budget'",
+      "detail": "Return the current global rate-limit budget state. Shows whether per-caller accounting is enabled.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'ratelimit.check_budget' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'ratelimit.flood_calls'",
+      "detail": "Simulate N anonymous calls that each draw one unit from the global budget. Used to exhaust the shared pool.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [filesystem]: 'ratelimit.flood_calls'",
+      "detail": "Simulate N anonymous calls that each draw one unit from the global budget. Used to exhaust the shared pool.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'schema.list_surface' has no input schema",
+      "detail": "Accepts arbitrary input with no validation",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'schema.extract_credentials'",
+      "detail": "Scan a tool description string for credential patterns: bearer tokens, API keys, internal URIs, or cztz-/CZTZ_ prefixed strings.",
+      "taxonomy_id": "MCP-T20"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'attribution.submit_action'",
+      "detail": "Perform an action with attribution metadata. The execution context (principal, team, execution_id) is embedded in the action record.",
+      "taxonomy_id": ""
+    }
+  ]
+}

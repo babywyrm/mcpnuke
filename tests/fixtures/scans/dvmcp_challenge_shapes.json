@@ -1,0 +1,287 @@
+{
+  "name": "dvmcp_challenge_shapes",
+  "description": "Trimmed DVMCP-shaped findings (no OOB required); guidance must still be non-empty",
+  "oracle": "dvmcp",
+  "findings": [
+    {
+      "check": "auth",
+      "severity": "HIGH",
+      "title": "Unauthenticated MCP initialize accepted",
+      "detail": "Server 'Challenge 9 - Remote Access Control' v1.19.0 accepted initialize with no credentials",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'remote_access'",
+      "detail": "Execute a command on a remote system\n            \n            Args:\n                system: The remote system to access (e.g., \"database\", \"webserver\", \"fileserver\")\n                command: The comma",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [database]: 'remote_access'",
+      "detail": "Execute a command on a remote system\n            \n            Args:\n                system: The remote system to access (e.g., \"database\", \"webserver\", \"fileserver\")\n                command: The comma",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [code_eval]: 'remote_access'",
+      "detail": "Execute a command on a remote system\n            \n            Args:\n                system: The remote system to access (e.g., \"database\", \"webserver\", \"fileserver\")\n                command: The comma",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [secrets_access]: 'remote_access'",
+      "detail": "Execute a command on a remote system\n            \n            Args:\n                system: The remote system to access (e.g., \"database\", \"webserver\", \"fileserver\")\n                command: The comma",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "token_theft",
+      "severity": "HIGH",
+      "title": "Tool 'remote_access' accepts credential param: 'auth_token'",
+      "detail": "",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "code_execution",
+      "severity": "HIGH",
+      "title": "Tool 'remote_access' has execution-like param: 'command'",
+      "detail": "",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'system' in tool 'remote_access'",
+      "detail": "No maxLength constraint \u2014 injection surface",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "schema_risk",
+      "severity": "CRITICAL",
+      "title": "Command parameter 'command' in tool 'remote_access'",
+      "detail": "",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'command' in tool 'remote_access'",
+      "detail": "No maxLength constraint \u2014 injection surface",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'auth_token' in tool 'remote_access'",
+      "detail": "No maxLength constraint \u2014 injection surface",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'user' in tool 'manage_permissions'",
+      "detail": "No maxLength constraint \u2014 injection surface",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'resource' in tool 'manage_permissions'",
+      "detail": "No maxLength constraint \u2014 injection surface",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'permission' in tool 'manage_permissions'",
+      "detail": "No maxLength constraint \u2014 injection surface",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "tool_description_injection",
+      "severity": "CRITICAL",
+      "title": "Injection pattern in tool description: 'remote_access'",
+      "detail": "Tool description contains instruction-override language that would manipulate an agent loading this manifest",
+      "taxonomy_id": "MCP-T36"
+    },
+    {
+      "check": "pre_auth_injection",
+      "severity": "HIGH",
+      "title": "Pre-auth tool access: 2 tools available without authentication",
+      "detail": "The MCP server accepted initialize and listed tools without any auth token. All tool invocations are pre-authentication \u2014 no identity binding.",
+      "taxonomy_id": "MCP-T52"
+    },
+    {
+      "check": "native_function_identity_erasure",
+      "severity": "MEDIUM",
+      "title": "No caller identity in tool calls (2 tools)",
+      "detail": "Tools do not accept caller identity parameters and no auth token is present \u2014 function calls have no attribution to the invoking agent or user",
+      "taxonomy_id": "MCP-T35"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'remote_access' response: exfiltration_url",
+      "detail": "Exfiltration URL in response: http://169.254.169.254/",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'remote_access' reflects input via param 'system'",
+      "detail": "User-controlled text appears verbatim in tool output \u2014 indirect injection vector: attacker content can reach the LLM through this tool's response",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "behavioral_rate_limit",
+      "severity": "MEDIUM",
+      "title": "No rate limiting: 10/10 rapid calls succeeded in 0.0s",
+      "detail": "Tool 'remote_access' accepted all burst calls with no throttling or 429 response",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "anon_budget_exhaust",
+      "severity": "HIGH",
+      "title": "Anonymous flood pattern: 25 unauthenticated calls succeeded",
+      "detail": "Tool 'remote_access' accepted all 25 anonymous calls in 0.1s with no 429, throttle text, or rate-limit signal. No per-caller accounting language was found anywhere in the tool catalog \u2014 anonymous traffic can plausibly exhaust any global quota shared with authenticated users (MCP-T51, Lane 5).",
+      "taxonomy_id": "MCP-T51"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'remote_access'",
+      "detail": "Category: instruction_following, param: system",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "command_injection_broad",
+      "severity": "CRITICAL",
+      "title": "Command injection in 'remote_access' via param 'system' (semicolon_chain)",
+      "detail": "Tool 'remote_access' passes parameter 'system' through a shell or subprocess without sanitization. The metacharacter payload 'semicolon_chain' successfully injected and the canary marker appeared in the response.",
+      "taxonomy_id": "MCP-T05"
+    },
+    {
+      "check": "sse_security",
+      "severity": "HIGH",
+      "title": "SSE stream accessible without authentication",
+      "detail": "GET /sse returned event-stream with no credentials",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "sse_security",
+      "severity": "MEDIUM",
+      "title": "MCP messages endpoint accepts cross-origin POST",
+      "detail": "Status 307 with evil Origin header",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "actuator_probe",
+      "severity": "MEDIUM",
+      "title": "Exposed endpoint: /openapi.json",
+      "detail": "OpenAPI spec. ",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "multi_vector",
+      "severity": "CRITICAL",
+      "title": "Multi-vector attack: 4 categories active",
+      "detail": "Vectors: ['active_prompt_injection', 'code_execution', 'token_theft', 'tool_response_injection']",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "multi_vector",
+      "severity": "CRITICAL",
+      "title": "Attack chain: injection + exfiltration vector present",
+      "detail": "",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "attack_chain",
+      "severity": "CRITICAL",
+      "title": "Attack chain: code_execution \u2192 token_theft (remote_access)",
+      "detail": "Both classes implicate the same tool (remote_access), so one exposure is reachable from the other.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "attack_chain",
+      "severity": "CRITICAL",
+      "title": "Attack chain: tool_response_injection \u2192 token_theft (remote_access)",
+      "detail": "Both classes implicate the same tool (remote_access), so one exposure is reachable from the other.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "attack_chain",
+      "severity": "CRITICAL",
+      "title": "Attack chain: actuator_probe \u2192 token_theft (remote_access)",
+      "detail": "Reported on co-occurrence: at least one class is target-scoped and names no tool, so it is not attributable to a single entry point.",
+      "taxonomy_id": ""
+    },
+    {
+      "check": "llm_tool_analysis",
+      "severity": "CRITICAL",
+      "title": "[AI] [MCP-T12] Unaudited privilege-escalation chain: manage_permissions \u2192 remote_access",
+      "detail": "manage_permissions lets any caller (unauthenticated, per pre_auth_injection finding) grant arbitrary 'permission' strings to arbitrary 'user' on arbitrary 'resource' with no validation, ownership check, or approval workflow. Because remote_access treats 'auth_token' as merely optional, an attacker can first call manage_permissions to self-grant an admin/privileged permission record (even if the backend doesn't strictly enforce it, many downstream systems key authorization off exactly this kind of permission table), then call remote_access against 'database' or 'fileserver' using the newly granted context. This two-tool chain was not captured by the existing attack_chain findings (which only pair remote_access with itself) and represents a distinct privilege-escalation-then-exfiltration path.",
+      "taxonomy_id": "MCP-T12"
+    },
+    {
+      "check": "llm_tool_analysis",
+      "severity": "HIGH",
+      "title": "[AI] [MCP-T02] Authorization bypass by design: auth_token is optional on a privileged command-execution tool",
+      "detail": "The schema marks 'auth_token' as optional (default null) while the description states it is required only for 'privileged operations.' This implies remote_access will execute attacker-supplied commands on named backend systems even with no token at all \u2014 i.e., the tool's own contract admits that unauthenticated command execution is a supported, intended path, not merely a theft target. This is a distinct issue from the reported token_theft finding: the risk isn't just that a token could be stolen, it's that the tool functions perfectly well without one, meaning 'privileged' is not actually enforced server-side.",
+      "taxonomy_id": "MCP-T02"
+    },
+    {
+      "check": "llm_tool_analysis",
+      "severity": "MEDIUM",
+      "title": "[AI] [MCP-T22] manage_permissions 'permission' parameter lacks enum/allow-list validation",
+      "detail": "The docstring implies only 'grant' or 'revoke' are valid values for 'permission', but the schema accepts any unbounded string. This allows malformed or injected values (e.g. multi-value strings, delimiters, or payloads intended for a downstream permission-parsing engine) to be passed through unchecked, which is a schema design flaw distinct from the already-reported unbounded-string findings \u2014 the missing constraint is semantic (business-logic enum), not just length.",
+      "taxonomy_id": "MCP-T22"
+    },
+    {
+      "check": "llm_tool_analysis",
+      "severity": "MEDIUM",
+      "title": "[AI] [MCP-T31] 'system' parameter functions as an unrestricted internal target selector (lateral movement / SSRF-like primitive)",
+      "detail": "Beyond enabling command injection (already flagged), the 'system' argument itself is a free-text pointer to internal infrastructure ('database', 'webserver', 'fileserver'). Combined with no allow-list, this turns remote_access into a generic internal-network pivot primitive: an attacker with any access to this tool can address arbitrary named internal hosts/services, independent of the command-injection payload mechanics. This is a network-boundary/lateral-movement issue, not merely a command-injection issue, and should be tracked separately from the semicolon_chain finding.",
+      "taxonomy_id": "MCP-T31"
+    },
+    {
+      "check": "llm_tool_analysis",
+      "severity": "MEDIUM",
+      "title": "[AI] [MCP-T41] Unbounded 'result' output field creates a staging channel for bulk exfiltration or secondary injection",
+      "detail": "outputSchema for both tools defines 'result' as an unbounded string with no length cap or content sanitization. Given remote_access's demonstrated exfiltration_url leakage and command execution capability, this output channel can carry arbitrarily large data back through the MCP transport (bulk data staging) or return attacker-crafted text designed to re-inject instructions into the calling LLM session on subsequent turns. This is distinct from the already-reported tool_response_injection finding, which focuses on reflection of the 'system' input rather than the absence of output constraints.",
+      "taxonomy_id": "MCP-T41"
+    },
+    {
+      "check": "llm_tool_analysis",
+      "severity": "HIGH",
+      "title": "[AI] [MCP-T44] Disagreement: native_function_identity_erasure should be rated higher than MEDIUM given the toolset's capabilities",
+      "detail": "The deterministic scan rates 'No caller identity in tool calls' as MEDIUM. Given that this server exposes both an unauthenticated shell/database/secrets execution primitive (remote_access) and an unauthenticated permission-management primitive (manage_permissions) in the same pre-auth surface, the absence of caller identity is not a moderate hygiene gap \u2014 it removes any possibility of attributing who executed commands or who granted/revoked permissions on sensitive systems. Combined with the CRITICAL excessive_permissions and CRITICAL command_injection findings already reported, this identity gap should be elevated to HIGH: it is a force-multiplier for every other finding on this server, not an independent, lower-severity issue.",
+      "taxonomy_id": "MCP-T44"
+    },
+    {
+      "check": "llm_tool_analysis",
+      "severity": "MEDIUM",
+      "title": "[AI] [MCP-T12] No cross-tool consistency check between manage_permissions grants and remote_access enforcement",
+      "detail": "There is no evidence the server actually consults permissions set via manage_permissions when remote_access is invoked (no shared 'resource'/'system' correlation in the schemas). This means manage_permissions may create a false sense of access control while providing no real gate on remote_access, misleading an operator or downstream automation into believing least-privilege is enforced when it is not \u2014 a governance/traceability gap that compounds the excessive_permissions findings already reported.",
+      "taxonomy_id": "MCP-T12"
+    },
+    {
+      "check": "llm_response_analysis",
+      "severity": "MEDIUM",
+      "title": "[AI] [MCP-T08] Unsolicited disclosure of privileged system name (tool 'remote_access')",
+      "detail": "The error response reveals 'admin-console' as an available remote system, which was not mentioned in the tool's documented examples (database, webserver, fileserver). This unsolicited enumeration could encourage the LLM or user to target a privileged/administrative endpoint that may not have been intended for exposure, potentially aiding reconnaissance for further exploitation.",
+      "taxonomy_id": "MCP-T08"
+    },
+    {
+      "check": "llm_chain_reasoning",
+      "severity": "CRITICAL",
+      "title": "[AI] [MCP-T05] Unauthenticated privilege escalation via manage_permissions chained into remote_access RCE",
+      "detail": "1) Attacker connects with no credentials (finding: 'Unauthenticated MCP initialize accepted' / 'Pre-auth tool access: 2 tools available without authentication'). 2) Attacker calls manage_permissions(user='attacker', resource='admin-console', permission='grant') \u2014 the tool has no auth_token param and no identity binding (native_function_identity_erasure), so the grant succeeds with no authorization check. 3) Attacker then calls remote_access(system='admin-console', command='<payload>', auth_token='') using the resource name granted in step 2 as the 'system' value; the confirmed command-injection primitive (semicolon_chain, evidence: 'test; echo MCPNUKE_T05_SEMICOLON') lets the attacker execute arbitrary shell commands on the now-'authorized' admin-console target. The scanner flagged manage_permissions only for schema issues and never connected it to remote_access despite it being the actual privilege-escalation gate.",
+      "taxonomy_id": "MCP-T05"
+    }
+  ]
+}
