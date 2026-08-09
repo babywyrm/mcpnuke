@@ -62,6 +62,19 @@ class TargetResult:
     # could not confirm existed.
     scan_diff: ScanDiffResult | None = None
 
+    def scanned_anonymously(self) -> bool:
+        """True when this scan carried no credential of any kind.
+
+        Any finding phrased as "unauthenticated X succeeded" must gate on this.
+        Reporting that a server accepts anonymous access when the scanner in
+        fact authenticated tells an operator their access control is broken when
+        it is working, and the report gives them no way to tell otherwise.
+        """
+        auth = self.auth_context or {}
+        if auth.get("_raw_token") or auth.get("jwt_claims_summary"):
+            return False
+        return not (auth.get("oidc_url") or auth.get("introspection_active"))
+
     def add(
         self,
         check: str,

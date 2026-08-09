@@ -50,11 +50,12 @@ PER_CALLER_SIGNALS = re.compile(
 
 
 def _session_is_anonymous(result: TargetResult) -> bool:
-    """Return True if the scanner's session has no auth credential attached."""
-    auth = result.auth_context or {}
-    if auth.get("_raw_token") or auth.get("jwt_claims_summary"):
-        return False
-    return not (auth.get("oidc_url") or auth.get("introspection_active"))
+    """Return True if the scanner's session has no auth credential attached.
+
+    One definition, on TargetResult, shared with the enumerator's
+    "unauthenticated initialize" finding. Two copies drifted once already.
+    """
+    return result.scanned_anonymously()
 
 
 def _tools_advertise_per_caller_accounting(tools: list[dict]) -> bool:

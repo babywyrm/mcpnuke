@@ -160,20 +160,26 @@ def enumerate_server(
         _log(f"  [dim]Capabilities: {', '.join(cap_list)}[/dim]")
 
     if mode == LEGACY:
-        result.add(
-            "auth",
-            "HIGH",
-            "Unauthenticated MCP initialize accepted",
-            f"Server '{info.get('name','?')}' v{info.get('version','?')} "
-            f"accepted initialize with no credentials",
-            evidence=json.dumps(r, indent=2)[:500],
-            skip_transports=["stdio"],
-            # The "anybody can initialize" failure is a Lane 5 (anonymous)
-            # finding: it describes what a pre-auth caller can do.
-            lane=5,
-            transport="A",
-        )
+        # A successful handshake only proves the handshake works. It says
+        # nothing about anonymous access when the scan supplied a credential,
+        # so the finding is limited to scans that went in without one.
+        if result.scanned_anonymously():
+            result.add(
+                "auth",
+                "HIGH",
+                "Unauthenticated MCP initialize accepted",
+                f"Server '{info.get('name','?')}' v{info.get('version','?')} "
+                f"accepted initialize with no credentials",
+                evidence=json.dumps(r, indent=2)[:500],
+                skip_transports=["stdio"],
+                # The "anybody can initialize" failure is a Lane 5 (anonymous)
+                # finding: it describes what a pre-auth caller can do.
+                lane=5,
+                transport="A",
+            )
 
+        # Part of the handshake, not of the finding: it must be sent whether or
+        # not the scan was anonymous.
         session.notify("notifications/initialized")
         time.sleep(0.5)
 
