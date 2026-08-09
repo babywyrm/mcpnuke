@@ -82,6 +82,26 @@ park false positives and the number stops meaning anything.
 
 `_FP_CEILING` ratchets down only, the same convention as `MYPY_CEILING`.
 
+## What the gate does and does not cover
+
+Seventy checks execute against the reference target, including all the static
+checks and the full JWT set. Three lanes are **not** measured:
+
+- **The AI lane.** `--claude`, chain replay and OAST are never exercised, so
+  the loudest findings mcpnuke can produce have no false-positive measurement.
+- **SSE.** The target speaks HTTP POST, so `sse_security` never runs.
+- **Environment-specific checks** that need infrastructure a stdlib fixture
+  cannot simulate: `actuator_probe`, the three `teleport_*` checks, and the
+  inference checks.
+
+`dpop_malformed` and `dpop_missing_binding` also never run, which is the
+redundancy fix working as intended rather than a gap.
+
+The allowance in `_EXPECTED` is keyed on **check name and a title substring**,
+so an allowance for one true finding cannot become a blanket pass for anything
+else that check might emit. A stale entry that no longer matches any finding
+fails the suite and should be deleted.
+
 ## Open questions
 
 - **Is `dpop_not_enforced` really HIGH?** It fires on every plain-bearer server,
