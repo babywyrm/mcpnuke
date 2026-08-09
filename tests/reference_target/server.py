@@ -19,6 +19,7 @@ PROTOCOL_VERSION = "2025-06-18"
 
 _PARSE_ERROR = -32700
 _METHOD_NOT_FOUND = -32601
+_INVALID_PARAMS = -32602
 _UNAUTHORIZED = -32001
 
 
@@ -95,9 +96,19 @@ class _Handler(BaseHTTPRequestHandler):
         if method == "tools/call":
             from tests.reference_target.tools_runtime import call_tool
 
+            tool_name = params.get("name")
+            if not isinstance(tool_name, str) or not tool_name:
+                # A missing tool name is a malformed request, not a failed tool
+                # call, so it belongs in `error`. Answering with a success
+                # envelope tells a client the call was understood.
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": _INVALID_PARAMS, "message": "Invalid params"},
+                }
             return self._ok(
                 req_id,
-                call_tool(params.get("name", ""), params.get("arguments") or {}),
+                call_tool(tool_name, params.get("arguments") or {}),
             )
         return {
             "jsonrpc": "2.0",

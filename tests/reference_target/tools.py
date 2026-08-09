@@ -18,7 +18,11 @@ TOOL_DEFINITIONS: list[dict] = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Text to search for."},
+                "query": {
+                    "type": "string",
+                    "description": "Text to search for.",
+                    "maxLength": 200,
+                },
             },
             "required": ["query"],
         },
@@ -32,6 +36,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "name": {
                     "type": "string",
                     "description": "File name within the documentation directory.",
+                    "maxLength": 128,
                 },
             },
             "required": ["name"],
@@ -43,7 +48,11 @@ TOOL_DEFINITIONS: list[dict] = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "url": {"type": "string", "description": "Absolute https URL."},
+                "url": {
+                    "type": "string",
+                    "description": "Absolute https URL.",
+                    "maxLength": 2048,
+                },
             },
             "required": ["url"],
         },

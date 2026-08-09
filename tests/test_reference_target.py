@@ -128,3 +128,47 @@ class TestToolHardening:
         assert out["isError"] is True
         blob = json.dumps(out)
         assert "Traceback" not in blob and ".py" not in blob
+
+
+class TestProtocolHygiene:
+    """Malformed requests get JSON-RPC errors, not success envelopes."""
+
+    def _post(self, server, payload: dict) -> dict:
+        r = httpx.post(
+            server.url,
+            json=payload,
+            headers={"Authorization": f"Bearer {server.token}"},
+            timeout=5,
+        )
+        return r.json()
+
+    def test_tools_call_with_no_params_is_a_protocol_error(self, reference_server):
+        """A missing tool name is a malformed request, not a failed tool call,
+        so it belongs in `error` rather than a `result` with isError set."""
+        out = self._post(
+            reference_server, {"jsonrpc": "2.0", "id": 1, "method": "tools/call"}
+        )
+        assert "result" not in out
+        assert out["error"]["code"] == -32602
+
+    def test_unknown_method_is_method_not_found(self, reference_server):
+        out = self._post(
+            reference_server,
+            {"jsonrpc": "2.0", "id": 1, "method": "nonexistent/method/xyz"},
+        )
+        assert out["error"]["code"] == -32601
+
+
+class TestSchemaHygiene:
+    def test_every_string_param_declares_a_max_length(self):
+        """Unbounded string inputs are a real weakness, and mcpnuke is right to
+        say so. The reference target has to actually be well-built."""
+        from tests.reference_target.tools import TOOL_DEFINITIONS
+
+        unbounded = [
+            f"{tool['name']}.{pname}"
+            for tool in TOOL_DEFINITIONS
+            for pname, pdef in tool["inputSchema"]["properties"].items()
+            if pdef.get("type") == "string" and not pdef.get("maxLength")
+        ]
+        assert unbounded == []
