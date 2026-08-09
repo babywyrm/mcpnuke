@@ -57,10 +57,18 @@ something.
 ### Reference target (`tests/reference_target/server.py`)
 
 Speaks **Streamable HTTP**: a single `POST /mcp` endpoint accepting JSON-RPC
-(`initialize`, `tools/list`, `tools/call`), on the FastAPI/Starlette stack
-already in the dependency tree for `mcpnuke/server/app.py`. Streamable HTTP is
-chosen over SSE because it avoids event-stream and endpoint negotiation; the
-server is a test fixture and should be boring.
+(`initialize`, `tools/list`, `tools/call`), built on the Python standard
+library's `http.server`. Streamable HTTP is chosen over SSE because it avoids
+event-stream and endpoint negotiation; the server is a test fixture and should
+be boring.
+
+Stdlib rather than FastAPI, despite FastAPI being present for
+`mcpnuke/server/app.py`: FastAPI lives in the optional `server` extra, and both
+CI jobs install only `--extra dev`. A FastAPI target would be unimportable in
+CI, the test would skip, and the harness would measure nothing — the exact
+failure it exists to prevent. The stdlib handler also matches the pattern
+already used by `tests/test_teleport_checks.py`, and works unchanged on
+Python 3.11–3.13.
 
 `detect_transport` probes SSE paths before POST paths. Serving at `/mcp` and
 handing the test `http://127.0.0.1:<port>/mcp` puts that path first in both
