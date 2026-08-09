@@ -6,6 +6,7 @@ import re
 import sys
 from pathlib import Path
 
+from mcpnuke import __version__
 from mcpnuke.core.constants import DEFAULT_BEDROCK_MODEL, DEFAULT_CLAUDE_MODEL
 
 # argparse exposes no public name for the object add_argument_group returns,
@@ -646,6 +647,15 @@ def _add_diagnostics_arguments(group: ArgumentGroup) -> None:
         "--doctor",
         action="store_true",
         help="Check installation health: core deps, optional extras, env vars, connectivity.",
+    )
+    group.add_argument(
+        "--version",
+        action="version",
+        version=f"mcpnuke {__version__}",
+        # Which build produced a report decides whether a given check was still
+        # emitting a known false positive when it ran. Without this there is no
+        # way to ask.
+        help="Print the mcpnuke version and exit.",
     )
 
 

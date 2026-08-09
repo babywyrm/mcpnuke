@@ -4,6 +4,23 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.14.0] - 2026-08-09
+
+First tagged release since 6.13.0 (2026-05-19). Three months of work, and the
+first release cut as an actual git tag and GitHub release rather than a
+changelog heading alone.
+
+**Findings change in this release.** Three checks stopped producing false
+positives, so a scan of an unchanged server will report fewer findings than it
+did on 6.13.0 — `--diff` against an older baseline will show them as resolved.
+That is the fix landing, not the server changing.
+
+### Added
+
+- **`--version`** — there had been no way to ask an install which build it was.
+  For a scanner that matters: the answer decides whether a report came from a
+  build where a given check was still emitting a known false positive.
+
 ### Fixed
 
 - **`auth` no longer claims unauthenticated access on authenticated scans.** The

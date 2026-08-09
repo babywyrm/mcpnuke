@@ -162,6 +162,7 @@ Generated from the parser, so it cannot fall behind the code.
 | Option | Description |
 |---|---|
 | `--doctor` | Check installation health: core deps, optional extras, env vars, connectivity. |
+| `--version` | Print the mcpnuke version and exit. |
 
 ## Environment Variables
 
