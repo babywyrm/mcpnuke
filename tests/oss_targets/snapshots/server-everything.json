@@ -1,0 +1,200 @@
+{
+  "version": "2026.7.4",
+  "findings": [
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'echo'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'gzip-file-as-resource'"
+    },
+    {
+      "check": "anon_budget_exhaust",
+      "severity": "HIGH",
+      "title": "Anonymous flood pattern: 25 unauthenticated calls succeeded"
+    },
+    {
+      "check": "attack_chain",
+      "severity": "CRITICAL",
+      "title": "Attack chain: deep_rug_pull \u2192 tool_response_injection (echo)"
+    },
+    {
+      "check": "attack_chain",
+      "severity": "CRITICAL",
+      "title": "Attack chain: exfil_flow \u2192 remote_access"
+    },
+    {
+      "check": "attack_chain",
+      "severity": "CRITICAL",
+      "title": "Attack chain: indirect_injection \u2192 remote_access"
+    },
+    {
+      "check": "attack_chain",
+      "severity": "CRITICAL",
+      "title": "Attack chain: response_credentials \u2192 remote_access"
+    },
+    {
+      "check": "attack_chain",
+      "severity": "CRITICAL",
+      "title": "Attack chain: state_mutation \u2192 deep_rug_pull"
+    },
+    {
+      "check": "behavioral_rate_limit",
+      "severity": "MEDIUM",
+      "title": "No rate limiting: 10/10 rapid calls succeeded in 0.0s"
+    },
+    {
+      "check": "command_injection_broad",
+      "severity": "CRITICAL",
+      "title": "Command injection in 'echo' via param 'message' (semicolon_chain)"
+    },
+    {
+      "check": "deep_rug_pull",
+      "severity": "CRITICAL",
+      "title": "Response rug pull: tool 'toggle-simulated-logging' output changed after repeated calls"
+    },
+    {
+      "check": "error_leakage",
+      "severity": "MEDIUM",
+      "title": "Tool 'get-env' leaks info on empty input"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "CRITICAL",
+      "title": "Dangerous capability [shell_exec]: 'trigger-long-running-operation'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [database]: 'simulate-research-query'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'get-env' has no input schema"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'get-tiny-image' has no input schema"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'toggle-simulated-logging' has no input schema"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'toggle-subscriber-updates' has no input schema"
+    },
+    {
+      "check": "exfil_flow",
+      "severity": "CRITICAL",
+      "title": "Exfiltration path: sensitive data \u2192 'get-annotated-message'"
+    },
+    {
+      "check": "indirect_injection",
+      "severity": "CRITICAL",
+      "title": "Indirect prompt injection in resource 'demo://resource/static/document/startup.md'"
+    },
+    {
+      "check": "multi_vector",
+      "severity": "CRITICAL",
+      "title": "Attack chain: injection + exfiltration vector present"
+    },
+    {
+      "check": "multi_vector",
+      "severity": "CRITICAL",
+      "title": "Multi-vector attack: 6 categories active"
+    },
+    {
+      "check": "native_function_identity_erasure",
+      "severity": "MEDIUM",
+      "title": "No caller identity in tool calls (13 tools)"
+    },
+    {
+      "check": "pre_auth_injection",
+      "severity": "HIGH",
+      "title": "Pre-auth tool access: 13 tools available without authentication"
+    },
+    {
+      "check": "prompt_injection_t01",
+      "severity": "CRITICAL",
+      "title": "Prompt injection via tool 'echo' param 'message' (direct_override)"
+    },
+    {
+      "check": "remote_access",
+      "severity": "CRITICAL",
+      "title": "Remote access [reverse_shell]: 'get-resource-links'"
+    },
+    {
+      "check": "remote_access",
+      "severity": "CRITICAL",
+      "title": "Remote access [reverse_shell]: 'get-resource-reference'"
+    },
+    {
+      "check": "response_credentials",
+      "severity": "CRITICAL",
+      "title": "Credential leak in tool 'get-env' response: password"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'data' in tool 'gzip-file-as-resource'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'location' in tool 'get-structured-content'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'message' in tool 'echo'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'messageType' in tool 'get-annotated-message'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'name' in tool 'gzip-file-as-resource'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'outputType' in tool 'gzip-file-as-resource'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'resourceType' in tool 'get-resource-reference'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'topic' in tool 'simulate-research-query'"
+    },
+    {
+      "check": "state_mutation",
+      "severity": "HIGH",
+      "title": "New resource(s) appeared after tool invocations"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'echo' reflects input via param 'message'"
+    },
+    {
+      "check": "tool_shadowing",
+      "severity": "HIGH",
+      "title": "Tool shadowing: redefines common name(s): ['echo']"
+    }
+  ]
+}
