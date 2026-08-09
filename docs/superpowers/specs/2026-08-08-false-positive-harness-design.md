@@ -1,7 +1,8 @@
 # False-Positive Harness Design
 
 **Date:** 2026-08-08
-**Status:** Approved — not yet implemented
+**Status:** Implemented (2026-08-09) — see
+[docs/false-positive-baseline.md](../../false-positive-baseline.md)
 
 **Depends on:** `checks/__init__.py` (`run_all_checks`), `core/session.py`
 (`detect_transport`), `core/enumerator.py` (`enumerate_server`)

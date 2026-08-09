@@ -4,6 +4,30 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`auth` no longer claims unauthenticated access on authenticated scans.** The
+  finding fired on a successful legacy handshake alone, so a scan run with
+  `--auth-token` against a server requiring it was reported as "accepted
+  initialize with no credentials" — telling operators their access control was
+  missing while it worked.
+- **`code_execution` matches parameter names by token, not substring.** `query`
+  on any search tool, plus `country_code`, `zipcode` and `status_code`, were all
+  reported HIGH as execution-like. Ambiguous names now require execution context
+  in the tool text. This also cleared a CRITICAL `multi_vector` finding derived
+  from it.
+- **`.trufflehog.yaml` never worked.** Every key in it — `exclude_detectors`
+  and `exclude_paths` — is absent from TruffleHog's config schema, so the tool
+  aborted with "unknown field" on each run and none of the exclusions it
+  appeared to declare had ever been applied. Replaced by
+  `./scripts/secret-scan.sh`, which passes both on the command line and gates
+  on verified findings only, since the repo intentionally ships fake
+  credentials as scanner fixtures.
+- **DPoP reports an absent implementation once, not three times.** A server
+  without DPoP returns 200 to all three probes by construction, so probes 2 and
+  3 restated probe 1 and called the proof header "decorative" on a server that
+  never claimed to support it.
+
 ### Changed
 
 - **ROADMAP / README** — document Priority Actions, hop-aware `--generate-policy`,
@@ -21,6 +45,15 @@ All notable changes to this submodule are documented here.
   CONTRIBUTING.md and the real `result.add` / `time_check` contract.
 
 ### Added
+
+- **False-positive gate** (`tests/test_false_positives.py`,
+  `tests/reference_target/`): a hardened stdlib MCP server scanned by the real
+  pipeline in default CI. Fails on any unexpected CRITICAL or HIGH and caps
+  total findings with a ceiling that ratchets down. The first true end-to-end
+  test in the default suite — DVMCP and Camazotz are both env-gated and both
+  deliberately vulnerable, so neither could measure quiet. First run: 13
+  findings on a clean server, 4 after triage. See
+  `docs/false-positive-baseline.md`.
 
 - **Project governance** — `SECURITY.md` (private vulnerability reporting, what
   counts as a scanner-side vulnerability vs a detection bug, authorized-use

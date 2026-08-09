@@ -29,6 +29,19 @@ uv run mypy mcpnuke/         # must not exceed the CI ceiling
 change lowers the count, lower the ceiling in the same PR to lock the win in.
 `mcpnuke.core.*` additionally enforces `disallow_untyped_defs`.
 
+Before pushing, also run the secret scan:
+
+```bash
+./scripts/secret-scan.sh
+```
+
+Use the script rather than calling `trufflehog` directly. It carries the
+detector exclusions, which cannot be expressed in a config file, and it gates
+on *verified* findings only — the repo intentionally ships fake credentials as
+scanner fixtures, so a scan that failed on unverified results would fail every
+time and be ignored. One exclusion worth knowing about: Lob API keys begin with
+`test_`, so that detector matches pytest function names.
+
 ## Reporting detection bugs
 
 False positives and false negatives are **normal issues**, not security
@@ -117,6 +130,26 @@ TDD, please: write the failing test first. Every check needs
 
 The negative case is the one that protects users. Use a realistic clean tool,
 not an empty dict. `tests/conftest.py` provides `result_with_tools([{...}])`.
+
+### The false-positive gate
+
+`tests/test_false_positives.py` scans a hardened reference server
+(`tests/reference_target/`) with the real pipeline and fails if your check fires
+on it. It runs in the normal suite — no Docker, no lab, no env gate.
+
+If it fails, **the expectation is that you fix the check.** Adding an entry to
+`_EXPECTED` requires a written reason a reviewer can disagree with, and
+`_FP_CEILING` ratchets down only, the same rule as `MYPY_CEILING`. Otherwise the
+ceiling becomes somewhere to park false positives and the number stops meaning
+anything.
+
+```bash
+uv run pytest tests/test_false_positives.py -v
+```
+
+The first run of this gate found three real bugs, including a check that told
+authenticated scans their server accepted anonymous access. See
+[docs/false-positive-baseline.md](docs/false-positive-baseline.md).
 
 ### Choosing a severity
 
