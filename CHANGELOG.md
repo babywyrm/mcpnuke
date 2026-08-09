@@ -7,10 +7,22 @@ All notable changes to this submodule are documented here.
 ### Changed
 
 - **ROADMAP / README** — document Priority Actions, hop-aware `--generate-policy`,
-  and lab baseline fixtures; mark nullfield policy generation as shipped.
+  and lab baseline fixtures; mark nullfield policy generation as shipped. README
+  gains Authorized Use, Contributing, and License sections.
+- **Packaging** — `pyproject.toml` moves to PEP 639 (`license = "MIT"` plus
+  `license-files`), so built wheels carry `License-Expression` and bundle the
+  LICENSE file. Redundant OSI classifier removed.
+- **ROADMAP contributor snippet corrected** — the previous example used
+  `async def check_x(session, findings)`, a `Severity` enum, and
+  `findings.append(...)`, none of which match the codebase. It now points at
+  CONTRIBUTING.md and the real `result.add` / `time_check` contract.
 
 ### Added
 
+- **Project governance** — `SECURITY.md` (private vulnerability reporting, what
+  counts as a scanner-side vulnerability vs a detection bug, authorized-use
+  guidance) and `CONTRIBUTING.md` (setup, real check-authoring signatures,
+  severity calibration, guarded invariants).
 - **Priority actions** (`reporting/priority.py`): every console and JSON report
   includes a proof-ranked "fix these first" list. Out-of-band / reproduced
   chains outrank capability inventory noise (`excessive_permissions` collapsed).

@@ -30,6 +30,9 @@ for training, or point at any MCP server in dev/staging/prod.
 - [CLI Reference](#cli-reference)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [Exit Code](#exit-code)
+- [Authorized Use](#authorized-use)
+- [Contributing](#contributing)
+- [License](#license)
 
 **Reference**
 
@@ -44,6 +47,8 @@ for training, or point at any MCP server in dev/staging/prod.
 | [QUICKSTART.md](QUICKSTART.md) | End-to-end scenarios |
 | [docs/ci-cd-guide.md](docs/ci-cd-guide.md) | Integrating scans into your pipeline |
 | [walkthrough/README.md](walkthrough/README.md) | Guided DVMCP scan, finding by finding |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, check-authoring recipe, test invariants |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting and authorized-use guidance |
 
 **Ecosystem**
 
@@ -314,3 +319,38 @@ A scan that reports only LOW findings exits `0` under the default threshold.
 
 `--fail-on any` exits `1` on any finding at all; `--fail-on none` always exits
 `0`, for informational scans.
+
+---
+
+## Authorized Use
+
+mcpnuke actively probes targets. By default it calls tools, sends injection and
+SSRF payloads, and attempts multi-step chains — which on a real server can
+create data, trigger outbound requests, or move data between systems.
+
+**Only scan systems you own or have written authorization to test.**
+
+Against anything you do not control, start with `--no-invoke` (static-only, never
+calls a tool), then `--safe-mode` (skips tools classified dangerous) once you
+know the blast radius. Full guidance, plus how to handle the sensitive output a
+scan produces, is in **[SECURITY.md](SECURITY.md)**.
+
+---
+
+## Contributing
+
+Bug reports about **detection quality — false positives and false negatives —
+are the most valuable contribution**, because operator trust in the output is
+what makes the tool worth running.
+
+Setup, the check-authoring recipe, severity calibration, and the invariants the
+test suite guards: **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+To report a vulnerability *in mcpnuke itself*, use private reporting as described
+in [SECURITY.md](SECURITY.md) rather than a public issue.
+
+---
+
+## License
+
+[MIT](LICENSE) © babywyrm

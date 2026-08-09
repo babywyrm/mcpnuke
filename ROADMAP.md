@@ -153,31 +153,22 @@ Target-agnostic operator loop — labs (Camazotz / DVMCP) are oracles only:
 
 ## Contributing checks
 
-Each check lives in `mcpnuke/checks/<name>.py` and implements:
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the check-authoring recipe,
+the static vs behavioral signatures, severity calibration, and the invariants
+guarded by tests.
 
-```python
-async def check_<name>(session: McpSession, findings: list[Finding]) -> None:
-    """One-line description of what this checks."""
-    # ... probe logic ...
-    findings.append(Finding(
-        title="...",
-        severity=Severity.HIGH,
-        taxonomy_id="MCP-T##",
-        lane=2,
-        transport="A",
-        detail="...",
-    ))
-```
+In brief, a new check must:
 
-Requirements:
 1. Map to a taxonomy ID from the Atlas (MCP-T01–T58)
 2. Assign a lane (1–5) and transport (A–E)
-3. Add tests in `tests/test_<name>.py` (mock the session, assert findings)
-4. Add to `mcpnuke/checks/__init__.py` (static or behavioral phase)
-5. Update this ROADMAP's coverage table
+3. Wrap its body in `with time_check("<name>", result):`
+4. Add `tests/test_<name>.py` covering positive, negative, and timing
+5. Register in `mcpnuke/checks/__init__.py` (static or behavioral phase)
+6. Update this ROADMAP's coverage table
 
 Every check should be safe to run against production (no destructive operations)
-unless explicitly gated behind `--deep` or `--destructive` flags.
+unless explicitly gated behind `--deep` or `--destructive` flags, and behavioral
+checks must honor `--no-invoke` and `--safe-mode`.
 
 ---
 
