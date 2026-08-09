@@ -52,13 +52,13 @@ jobs:
       - name: Ruff
         run: uv run ruff check .
 
-      # Ratchet rather than strict, because 63 pre-existing errors are being
-      # paid down in a dedicated typing pass. The count may fall, never rise;
+      # Ratchet rather than strict, because pre-existing errors are being paid
+      # down in a dedicated typing pass. The count may fall, never rise;
       # lower MYPY_CEILING as it does. Measured with a cold cache, which is
       # what CI always has — a warm cache under-reports.
       - name: Mypy
         env:
-          MYPY_CEILING: '47'
+          MYPY_CEILING: '42'
         run: |
           out="$(uv run mypy mcpnuke/ 2>&1 || true)"
           echo "$out" | tail -20

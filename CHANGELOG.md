@@ -12,6 +12,9 @@ All notable changes to this submodule are documented here.
 - **Packaging** — `pyproject.toml` moves to PEP 639 (`license = "MIT"` plus
   `license-files`), so built wheels carry `License-Expression` and bundle the
   LICENSE file. Redundant OSI classifier removed.
+- **`MYPY_CEILING` lowered 47 → 42** to the current cold-cache count, applying
+  the ratchet rule CONTRIBUTING.md documents. CI had been emitting its "mypy
+  improved; lower the ceiling to lock it in" notice unheeded.
 - **ROADMAP contributor snippet corrected** — the previous example used
   `async def check_x(session, findings)`, a `Severity` enum, and
   `findings.append(...)`, none of which match the codebase. It now points at
