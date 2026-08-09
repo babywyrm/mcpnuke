@@ -1,0 +1,335 @@
+{
+  "version": "2026.7.10",
+  "findings": [
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_add'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_branch'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_checkout'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_commit'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_create_branch'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_diff'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_diff_staged'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_diff_unstaged'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_log'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_reset'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_show'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "CRITICAL",
+      "title": "Active injection: server follows injected instructions via 'git_status'"
+    },
+    {
+      "check": "anon_budget_exhaust",
+      "severity": "HIGH",
+      "title": "Anonymous flood pattern: 25 unauthenticated calls succeeded"
+    },
+    {
+      "check": "behavioral_rate_limit",
+      "severity": "MEDIUM",
+      "title": "No rate limiting: 10/10 rapid calls succeeded in <duration>"
+    },
+    {
+      "check": "command_injection_broad",
+      "severity": "CRITICAL",
+      "title": "Command injection in 'git_status' via param 'repo_path' (semicolon_chain)"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "LOW",
+      "title": "Untyped param 'base_branch' in 'git_create_branch'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "LOW",
+      "title": "Untyped param 'contains' in 'git_branch'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "LOW",
+      "title": "Untyped param 'end_timestamp' in 'git_log'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "LOW",
+      "title": "Untyped param 'not_contains' in 'git_branch'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "LOW",
+      "title": "Untyped param 'start_timestamp' in 'git_log'"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_add' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_branch' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_checkout' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_commit' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_create_branch' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_diff' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_diff_staged' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_diff_unstaged' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_log' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_reset' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_show' reflects probe canary unsanitized"
+    },
+    {
+      "check": "input_sanitization",
+      "severity": "HIGH",
+      "title": "Tool 'git_status' reflects probe canary unsanitized"
+    },
+    {
+      "check": "multi_vector",
+      "severity": "CRITICAL",
+      "title": "Multi-vector attack: 2 categories active"
+    },
+    {
+      "check": "native_function_identity_erasure",
+      "severity": "MEDIUM",
+      "title": "No caller identity in tool calls (12 tools)"
+    },
+    {
+      "check": "pre_auth_injection",
+      "severity": "HIGH",
+      "title": "Pre-auth tool access: 12 tools available without authentication"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'branch_name' in tool 'git_checkout'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'branch_name' in tool 'git_create_branch'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'branch_type' in tool 'git_branch'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'message' in tool 'git_commit'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_add'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_branch'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_checkout'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_commit'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_create_branch'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_diff'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_diff_staged'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_diff_unstaged'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_log'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_reset'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_show'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'repo_path' in tool 'git_status'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'revision' in tool 'git_show'"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'target' in tool 'git_diff'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_add' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_branch' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_checkout' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_commit' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_create_branch' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_diff' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_diff_staged' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_diff_unstaged' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_log' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_reset' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_show' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'git_status' reflects input via param 'repo_path'"
+    },
+    {
+      "check": "tool_shadowing",
+      "severity": "MEDIUM",
+      "title": "Confusable tool names: 'git_diff_unstaged' vs 'git_diff_staged'"
+    }
+  ]
+}

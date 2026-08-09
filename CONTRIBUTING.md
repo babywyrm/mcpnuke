@@ -151,6 +151,36 @@ The first run of this gate found three real bugs, including a check that told
 authenticated scans their server accepted anonymous access. See
 [docs/false-positive-baseline.md](docs/false-positive-baseline.md).
 
+### The open-source target snapshots
+
+The gate above measures a server *we* wrote to be quiet. This one measures five
+pinned servers written by other people, launched locally over stdio, and diffs
+the findings against committed snapshots. It is off by default:
+
+```bash
+MCPNUKE_OSS_TARGETS=1 uv run pytest tests/test_oss_targets.py -v
+```
+
+A drifted snapshot means your change altered what mcpnuke reports about a real
+server. That is not automatically wrong — but re-triage it in
+[docs/oss-target-baseline.md](docs/oss-target-baseline.md), then update
+deliberately with `MCPNUKE_OSS_UPDATE=1`. It also runs weekly in CI, because an
+opt-in check nobody runs stops being true.
+
+Two rules when adding to `tests/oss_targets/targets.py`:
+
+- **Pin everything.** An unpinned target makes a diff ambiguous between "we
+  changed" and "they changed". Both `uvx` targets also pin the `mcp` SDK, since
+  the 2.0 release crashes them at startup.
+- **Only servers you run yourself.** Never point this at a hosted third-party
+  endpoint. A default scan sends injection and SSRF payloads and bursts 25
+  anonymous calls, and [SECURITY.md](SECURITY.md) is explicit that we scan only
+  what we control.
+
+The first run of this harness removed 22 CRITICAL false positives caused by
+dangerous-capability patterns matching substrings — `git_show` was flagged for
+shell execution because "show" contains `sh`.
+
 ### Choosing a severity
 
 Severity drives the operator's day, so calibrate against evidence, not vibes:

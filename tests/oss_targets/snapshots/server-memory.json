@@ -1,0 +1,50 @@
+{
+  "version": "2026.7.4",
+  "findings": [
+    {
+      "check": "anon_budget_exhaust",
+      "severity": "HIGH",
+      "title": "Anonymous flood pattern: 25 unauthenticated calls succeeded"
+    },
+    {
+      "check": "behavioral_rate_limit",
+      "severity": "MEDIUM",
+      "title": "No rate limiting: 10/10 rapid calls succeeded in <duration>"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [filesystem]: 'delete_entities'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [filesystem]: 'delete_observations'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [filesystem]: 'delete_relations'"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "MEDIUM",
+      "title": "Tool 'read_graph' has no input schema"
+    },
+    {
+      "check": "native_function_identity_erasure",
+      "severity": "MEDIUM",
+      "title": "No caller identity in tool calls (9 tools)"
+    },
+    {
+      "check": "pre_auth_injection",
+      "severity": "HIGH",
+      "title": "Pre-auth tool access: 9 tools available without authentication"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'query' in tool 'search_nodes'"
+    }
+  ]
+}

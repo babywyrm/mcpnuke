@@ -46,39 +46,47 @@ POISON_PATTERNS = [
     r"javascript:",
 ]
 
+# Anchored, and matched against the normalized identifier (patterns/tokens.py),
+# so `run_command` matches and `trigger-long-running-operation` does not.
+# Unanchored, `run` matched "running", `sh` matched "show" and "push", and
+# `key` matched "monkey" — CRITICAL findings on real open-source servers for
+# tools with no such capability. See docs/oss-target-baseline.md.
+# Multi-word alternatives use [ _] so they match both a normalized name
+# ("read file") and a raw description ("read_file").
 DANGEROUS_TOOL_PATTERNS = {
     "shell_exec": (
-        r"(shell|exec|run|execute|cmd|bash|sh|powershell|eval|system)",
+        r"\b(shell|exec|run|execute|cmd|bash|sh|powershell|eval|system)\b",
         "CRITICAL",
     ),
     "filesystem": (
-        r"(read_file|write_file|delete|remove|mkdir|listdir|readdir|glob"
-        r"|file_read|file_write)",
+        r"\b(read[ _]file|write[ _]file|delete|remove|mkdir|listdir|readdir"
+        r"|glob|file[ _]read|file[ _]write)\b",
         "HIGH",
     ),
     "network": (
-        r"(fetch|curl|wget|http_get|http_post|request|socket|connect"
-        r"|http_request)",
+        r"\b(fetch|curl|wget|http[ _]get|http[ _]post|request|socket|connect"
+        r"|http[ _]request)\b",
         "HIGH",
     ),
     "database": (
-        r"(sql|query|database|db_exec|mongo|redis|execute_query|db_query)",
+        r"\b(sql|query|database|db[ _]exec|mongo|redis|execute[ _]query"
+        r"|db[ _]query)\b",
         "HIGH",
     ),
     "code_eval": (
-        r"(eval|exec|compile|__import__|subprocess|popen|code_exec)",
+        r"\b(eval|exec|compile|__import__|subprocess|popen|code[ _]exec)\b",
         "CRITICAL",
     ),
     "secrets_access": (
-        r"(secret|credential|password|token|key|vault|ssm|aws_secret)",
+        r"\b(secret|credential|password|token|key|vault|ssm|aws[ _]secret)\b",
         "HIGH",
     ),
     "cloud_api": (
-        r"(iam|s3|ec2|gcp|azure|k8s|kubectl|terraform|cloud_exec)",
+        r"\b(iam|s3|ec2|gcp|azure|k8s|kubectl|terraform|cloud[ _]exec)\b",
         "HIGH",
     ),
     "process_mgmt": (
-        r"(kill|signal|fork|spawn|process|proc_exec)",
+        r"\b(kill|signal|fork|spawn|process(es)?|proc[ _]exec)\b",
         "MEDIUM",
     ),
 }
@@ -140,28 +148,34 @@ SUPPLY_CHAIN_PATTERNS = [
 ]
 
 RAC_PATTERNS = {
+    # Anchored for the same reason as DANGEROUS_TOOL_PATTERNS above: `nc`
+    # unanchored matched "reference", "branch" and "encoding", making CRITICAL
+    # reverse-shell findings out of `git branch` and `read_text_file`.
     "reverse_shell": (
-        r"(nc|ncat|socat|netcat|bash\s+-i|/dev/tcp|reverse.?shell)",
+        r"\b(nc|ncat|socat|netcat|bash\s+-i|/dev/tcp|reverse.?shell)\b",
         "CRITICAL",
     ),
     "port_forward": (
-        r"(port.?forward|tunnel|socks|proxy\s+port)",
+        r"\b(port.?forward|tunnel|socks|proxy\s+port)\b",
         "HIGH",
     ),
     "remote_desktop": (
-        r"(vnc|rdp|teamviewer|anydesk|screenshare)",
+        r"\b(vnc|rdp|teamviewer|anydesk|screenshare)\b",
         "HIGH",
     ),
     "c2_beacon": (
-        r"(beacon|c2|command.and.control|meterpreter|cobalt.?strike|sliver|havoc)",
+        r"\b(beacon|c2|command.and.control|meterpreter|cobalt.?strike|sliver"
+        r"|havoc)\b",
         "CRITICAL",
     ),
     "network_scan": (
-        r"(nmap|masscan|zmap|shodan|port.?scan|host.?discovery)",
+        r"\b(nmap|masscan|zmap|shodan|port.?scan|host.?discovery)\b",
         "HIGH",
     ),
+    # `exfiltrat\w*` keeps the stem working: \bexfiltrat\b would never match
+    # "exfiltration".
     "data_exfil": (
-        r"(exfil|exfiltrat|data.?transfer|upload.{0,20}(s3|ftp|http))",
+        r"\b(exfil|exfiltrat\w*|data.?transfer|upload.{0,20}(s3|ftp|http))\b",
         "HIGH",
     ),
 }

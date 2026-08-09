@@ -6,6 +6,7 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.rules import CODE_EXEC_PATTERNS, RAC_PATTERNS
+from mcpnuke.patterns.tokens import identifier_tokens, normalize_identifier
 
 # All findings in this module are scoped to Lane 4 / Transport "A"
 # (2026-04-26 by-lane reporting spec).
@@ -29,18 +30,10 @@ _EXECUTION_CONTEXT = re.compile(
     re.IGNORECASE,
 )
 
-_TOKEN_SPLIT = re.compile(r"[^a-z0-9]+|(?<=[a-z0-9])(?=[A-Z])")
-
-
-def _name_tokens(param_name: str) -> frozenset[str]:
-    """Split a parameter name into words.
-
-    Token equality rather than substring containment, so `zipcode` is not
-    `code` and `executive` is not `exec`. `country_code` and `sourceCode` both
-    yield a `code` token and are then gated on execution context.
-    """
-    parts = _TOKEN_SPLIT.split(param_name)
-    return frozenset(p.lower() for p in parts if p)
+# Token equality rather than substring containment, so `zipcode` is not `code`
+# and `executive` is not `exec`. `country_code` and `sourceCode` both yield a
+# `code` token and are then gated on execution context. The splitter is shared
+# with the pattern rules — see mcpnuke/patterns/tokens.py.
 
 
 def check_code_execution(result: TargetResult):
@@ -68,7 +61,7 @@ def check_code_execution(result: TargetResult):
 
             executes = bool(_EXECUTION_CONTEXT.search(combined))
             for pname in tool.get("inputSchema", {}).get("properties", {}):
-                tokens = _name_tokens(pname)
+                tokens = identifier_tokens(pname)
                 if tokens & _ALWAYS_EXECUTION_PARAMS or (
                     executes and tokens & _CONTEXTUAL_EXECUTION_PARAMS
                 ):
@@ -83,7 +76,9 @@ def check_remote_access(result: TargetResult):
     with time_check("remote_access", result):
         for tool in result.tools:
             name = tool.get("name", "")
-            combined = name + " " + tool.get("description", "")
+            # The name is normalized so anchored patterns see word boundaries
+            # across snake_case and camelCase; the description is already prose.
+            combined = normalize_identifier(name) + " " + tool.get("description", "")
             for category, (pattern, severity) in RAC_PATTERNS.items():
                 if re.search(pattern, combined, re.IGNORECASE):
                     _add(result,

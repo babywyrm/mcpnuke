@@ -1,0 +1,53 @@
+name: OSS Targets
+
+# Scans five pinned open-source MCP servers, launched locally over stdio, and
+# diffs the findings against committed snapshots. This is how we measure what
+# mcpnuke says about servers we did not write; the triage lives in
+# docs/oss-target-baseline.md.
+#
+# Deliberately not on push or pull_request. It needs npx, uvx, network and
+# package downloads, and takes minutes — no contributor should pay for it, and
+# the hermetic gate in tests.yml stays the one that blocks merges.
+#
+# The weekly schedule exists because an opt-in check nobody runs stops being
+# true. That is exactly how .trufflehog.yaml sat broken and silently disabled.
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Mondays, 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  oss-targets:
+    name: Snapshot real MCP servers
+    runs-on: ubuntu-latest
+    # A local run of all five takes ~6 min. CI pays cold npm and PyPI
+    # downloads on top, so the ceiling is generous rather than tight.
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install
+        run: uv sync --frozen --extra dev
+
+      - name: Scan pinned open-source MCP servers
+        env:
+          MCPNUKE_OSS_TARGETS: '1'
+        run: uv run pytest tests/test_oss_targets.py -v

@@ -5,6 +5,7 @@ import re
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.rules import DANGEROUS_TOOL_PATTERNS
+from mcpnuke.patterns.tokens import normalize_identifier
 
 _WEAK_SIGNAL_THRESHOLD = 2
 
@@ -12,7 +13,11 @@ _WEAK_SIGNAL_THRESHOLD = 2
 def check_excessive_permissions(result: TargetResult):
     with time_check("excessive_permissions", result):
         for tool in result.tools:
-            name = tool.get("name", "").lower()
+            # Normalize before lowercasing: the camelCase split needs the
+            # original case, so `readFile` becomes "read File" and matches.
+            # Descriptions stay raw — they are already prose, and normalizing
+            # them would break literal alternatives like `__import__`.
+            name = normalize_identifier(tool.get("name", "")).lower()
             desc = tool.get("description", "").lower()
 
             name_hits: list[tuple[str, str, str]] = []

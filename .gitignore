@@ -32,6 +32,8 @@ profiles/*-scan.json
 profiles/*-fast.json
 # Slice D offline goldens (minimal findings-only fixtures)
 !tests/fixtures/scans/*.json
+# Open-source target snapshots (normalized findings, no evidence blobs)
+!tests/oss_targets/snapshots/*.json
 
 .mypy_cache/
 .ruff_cache/

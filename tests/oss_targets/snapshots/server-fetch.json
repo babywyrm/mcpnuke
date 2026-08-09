@@ -1,0 +1,65 @@
+{
+  "version": "2026.7.10",
+  "findings": [
+    {
+      "check": "anon_budget_exhaust",
+      "severity": "HIGH",
+      "title": "Anonymous flood pattern: 25 unauthenticated calls succeeded"
+    },
+    {
+      "check": "behavioral_rate_limit",
+      "severity": "MEDIUM",
+      "title": "No rate limiting: 10/10 rapid calls succeeded in <duration>"
+    },
+    {
+      "check": "command_injection_broad",
+      "severity": "CRITICAL",
+      "title": "Command injection in 'fetch' via param 'url' (semicolon_chain)"
+    },
+    {
+      "check": "excessive_permissions",
+      "severity": "HIGH",
+      "title": "Dangerous capability [network]: 'fetch'"
+    },
+    {
+      "check": "multi_vector",
+      "severity": "CRITICAL",
+      "title": "Multi-vector attack: 2 categories active"
+    },
+    {
+      "check": "native_function_identity_erasure",
+      "severity": "MEDIUM",
+      "title": "No caller identity in tool calls (1 tools)"
+    },
+    {
+      "check": "pre_auth_injection",
+      "severity": "HIGH",
+      "title": "Pre-auth tool access: 1 tools available without authentication"
+    },
+    {
+      "check": "prompt_injection_t01",
+      "severity": "CRITICAL",
+      "title": "Prompt injection via tool 'fetch' param 'url' (direct_override)"
+    },
+    {
+      "check": "schema_risk",
+      "severity": "MEDIUM",
+      "title": "Unbounded string param 'url' in tool 'fetch'"
+    },
+    {
+      "check": "ssrf_probe",
+      "severity": "MEDIUM",
+      "title": "SSRF surface: tool 'fetch' accepts URL params and fetches content"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "HIGH",
+      "title": "Tool 'fetch' reflects input via param 'url'"
+    },
+    {
+      "check": "tool_shadowing",
+      "severity": "HIGH",
+      "title": "Tool shadowing: redefines common name(s): ['fetch']"
+    }
+  ]
+}
