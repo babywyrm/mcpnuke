@@ -11,6 +11,37 @@ from mcpnuke.patterns.rules import CODE_EXEC_PATTERNS, RAC_PATTERNS
 # (2026-04-26 by-lane reporting spec).
 _add = lane_tagged(lane=4, transport="A")
 
+# Parameter names that mean execution wherever they appear.
+_ALWAYS_EXECUTION_PARAMS: frozenset[str] = frozenset({
+    "command", "cmd", "script", "exec", "eval", "expression", "shell",
+})
+
+# Names that are execution-like only when the tool says it executes something.
+# On their own these are ordinary: a `query` searches, a `code` is a country or
+# status code, a `payload` is request data, a `statement` is a bank statement.
+_CONTEXTUAL_EXECUTION_PARAMS: frozenset[str] = frozenset({
+    "query", "code", "statement", "payload",
+})
+
+_EXECUTION_CONTEXT = re.compile(
+    r"\b(sql|database|db|eval|evaluate|interpret|shell|subprocess|"
+    r"execute|executes|execution|compiler?)\b",
+    re.IGNORECASE,
+)
+
+_TOKEN_SPLIT = re.compile(r"[^a-z0-9]+|(?<=[a-z0-9])(?=[A-Z])")
+
+
+def _name_tokens(param_name: str) -> frozenset[str]:
+    """Split a parameter name into words.
+
+    Token equality rather than substring containment, so `zipcode` is not
+    `code` and `executive` is not `exec`. `country_code` and `sourceCode` both
+    yield a `code` token and are then gated on execution context.
+    """
+    parts = _TOKEN_SPLIT.split(param_name)
+    return frozenset(p.lower() for p in parts if p)
+
 
 def check_code_execution(result: TargetResult):
     with time_check("code_execution", result):
@@ -35,20 +66,11 @@ def check_code_execution(result: TargetResult):
                     )
                     break
 
+            executes = bool(_EXECUTION_CONTEXT.search(combined))
             for pname in tool.get("inputSchema", {}).get("properties", {}):
-                if any(
-                    kw in pname.lower()
-                    for kw in [
-                        "command",
-                        "cmd",
-                        "code",
-                        "script",
-                        "payload",
-                        "exec",
-                        "query",
-                        "expression",
-                        "statement",
-                    ]
+                tokens = _name_tokens(pname)
+                if tokens & _ALWAYS_EXECUTION_PARAMS or (
+                    executes and tokens & _CONTEXTUAL_EXECUTION_PARAMS
                 ):
                     _add(result,
                         "code_execution",
