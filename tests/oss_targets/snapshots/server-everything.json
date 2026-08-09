@@ -24,27 +24,12 @@
     {
       "check": "attack_chain",
       "severity": "CRITICAL",
-      "title": "Attack chain: exfil_flow \u2192 remote_access"
-    },
-    {
-      "check": "attack_chain",
-      "severity": "CRITICAL",
-      "title": "Attack chain: indirect_injection \u2192 remote_access"
-    },
-    {
-      "check": "attack_chain",
-      "severity": "CRITICAL",
-      "title": "Attack chain: response_credentials \u2192 remote_access"
-    },
-    {
-      "check": "attack_chain",
-      "severity": "CRITICAL",
       "title": "Attack chain: state_mutation \u2192 deep_rug_pull"
     },
     {
       "check": "behavioral_rate_limit",
       "severity": "MEDIUM",
-      "title": "No rate limiting: 10/10 rapid calls succeeded in 0.0s"
+      "title": "No rate limiting: 10/10 rapid calls succeeded in <duration>"
     },
     {
       "check": "command_injection_broad",
@@ -60,11 +45,6 @@
       "check": "error_leakage",
       "severity": "MEDIUM",
       "title": "Tool 'get-env' leaks info on empty input"
-    },
-    {
-      "check": "excessive_permissions",
-      "severity": "CRITICAL",
-      "title": "Dangerous capability [shell_exec]: 'trigger-long-running-operation'"
     },
     {
       "check": "excessive_permissions",
@@ -109,7 +89,7 @@
     {
       "check": "multi_vector",
       "severity": "CRITICAL",
-      "title": "Multi-vector attack: 6 categories active"
+      "title": "Multi-vector attack: 5 categories active"
     },
     {
       "check": "native_function_identity_erasure",
@@ -125,16 +105,6 @@
       "check": "prompt_injection_t01",
       "severity": "CRITICAL",
       "title": "Prompt injection via tool 'echo' param 'message' (direct_override)"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'get-resource-links'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'get-resource-reference'"
     },
     {
       "check": "response_credentials",

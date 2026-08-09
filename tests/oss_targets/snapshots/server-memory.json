@@ -9,7 +9,7 @@
     {
       "check": "behavioral_rate_limit",
       "severity": "MEDIUM",
-      "title": "No rate limiting: 10/10 rapid calls succeeded in 0.0s"
+      "title": "No rate limiting: 10/10 rapid calls succeeded in <duration>"
     },
     {
       "check": "excessive_permissions",

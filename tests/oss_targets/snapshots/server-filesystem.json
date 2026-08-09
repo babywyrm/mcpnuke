@@ -77,14 +77,9 @@
       "title": "Anonymous flood pattern: 25 unauthenticated calls succeeded"
     },
     {
-      "check": "attack_chain",
-      "severity": "HIGH",
-      "title": "Attack chain: ssrf_probe \u2192 remote_access (directory_tree, edit_file, get_file_info, list_directory_with_sizes, move_file)"
-    },
-    {
       "check": "behavioral_rate_limit",
       "severity": "MEDIUM",
-      "title": "No rate limiting: 10/10 rapid calls succeeded in 0.0s"
+      "title": "No rate limiting: 10/10 rapid calls succeeded in <duration>"
     },
     {
       "check": "command_injection_broad",
@@ -103,18 +98,8 @@
     },
     {
       "check": "excessive_permissions",
-      "severity": "CRITICAL",
-      "title": "Dangerous capability [shell_exec]: 'search_files'"
-    },
-    {
-      "check": "excessive_permissions",
       "severity": "HIGH",
       "title": "Dangerous capability [filesystem]: 'read_file'"
-    },
-    {
-      "check": "excessive_permissions",
-      "severity": "HIGH",
-      "title": "Dangerous capability [filesystem]: 'search_files'"
     },
     {
       "check": "excessive_permissions",
@@ -179,12 +164,7 @@
     {
       "check": "multi_vector",
       "severity": "CRITICAL",
-      "title": "Attack chain: injection + exfiltration vector present"
-    },
-    {
-      "check": "multi_vector",
-      "severity": "CRITICAL",
-      "title": "Multi-vector attack: 4 categories active"
+      "title": "Multi-vector attack: 3 categories active"
     },
     {
       "check": "native_function_identity_erasure",
@@ -220,46 +200,6 @@
       "check": "prompt_injection_t01",
       "severity": "CRITICAL",
       "title": "Prompt injection via tool 'read_text_file' param 'path' (direct_override)"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'directory_tree'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'edit_file'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'get_file_info'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'list_directory_with_sizes'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'read_media_file'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'read_multiple_files'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'read_text_file'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'write_file'"
     },
     {
       "check": "schema_risk",

@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 
 from mcpnuke.scanner import scan_stdio_target
 from tests.oss_targets.targets import Target
+
+# A stopwatch reading, e.g. behavioral_rate_limit's "succeeded in 0.8s".
+# Counts are deliberately not touched: "13 tools" changing is real drift.
+_ELAPSED = re.compile(r"\b\d+\.\d+s\b")
 
 
 def launcher_available(launcher: str) -> bool:
@@ -33,7 +38,12 @@ def normalize_findings(findings: list) -> list[dict]:
     are large, and they carry both.
     """
     rows = [
-        {"check": f.check, "severity": f.severity, "title": f.title} for f in findings
+        {
+            "check": f.check,
+            "severity": f.severity,
+            "title": _ELAPSED.sub("<duration>", f.title),
+        }
+        for f in findings
     ]
     rows.sort(key=lambda r: (r["check"], r["severity"], r["title"]))
     return rows

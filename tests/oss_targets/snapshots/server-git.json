@@ -69,17 +69,12 @@
     {
       "check": "behavioral_rate_limit",
       "severity": "MEDIUM",
-      "title": "No rate limiting: 10/10 rapid calls succeeded in 0.0s"
+      "title": "No rate limiting: 10/10 rapid calls succeeded in <duration>"
     },
     {
       "check": "command_injection_broad",
       "severity": "CRITICAL",
       "title": "Command injection in 'git_status' via param 'repo_path' (semicolon_chain)"
-    },
-    {
-      "check": "excessive_permissions",
-      "severity": "CRITICAL",
-      "title": "Dangerous capability [shell_exec]: 'git_show'"
     },
     {
       "check": "excessive_permissions",
@@ -169,12 +164,7 @@
     {
       "check": "multi_vector",
       "severity": "CRITICAL",
-      "title": "Attack chain: injection + exfiltration vector present"
-    },
-    {
-      "check": "multi_vector",
-      "severity": "CRITICAL",
-      "title": "Multi-vector attack: 3 categories active"
+      "title": "Multi-vector attack: 2 categories active"
     },
     {
       "check": "native_function_identity_erasure",
@@ -185,26 +175,6 @@
       "check": "pre_auth_injection",
       "severity": "HIGH",
       "title": "Pre-auth tool access: 12 tools available without authentication"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'git_branch'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'git_checkout'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'git_create_branch'"
-    },
-    {
-      "check": "remote_access",
-      "severity": "CRITICAL",
-      "title": "Remote access [reverse_shell]: 'git_diff'"
     },
     {
       "check": "schema_risk",
