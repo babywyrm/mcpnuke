@@ -37,6 +37,29 @@ def _session(status: int = 200, post_url: str = _ENDPOINT):
     return s
 
 
+def _dpop_aware_session(*statuses: int, post_url: str = _ENDPOINT):
+    """A server that answers each probe differently.
+
+    Needed for the only case where probes 2 and 3 carry information: a server
+    that does reject proof-less requests (probe 1 → 401) but then accepts
+    garbage in the proof it demanded.
+    """
+    s = MagicMock()
+    s.post_url = post_url
+    s.post_raw.side_effect = [_resp(code) for code in statuses]
+    return s
+
+
+def _enforcing(result: TargetResult) -> TargetResult:
+    """Mark a result as having observed DPoP enforcement in probe 1.
+
+    Probes 2 and 3 are gated on this. Called directly, they have no probe 1
+    result to read, so the precondition has to be stated.
+    """
+    result.auth_context["_dpop_enforced"] = True
+    return result
+
+
 class _StdioLikeSession:
     """Mirrors StdioSession: a post_url, but no post_raw and no HTTP layer."""
 
@@ -142,13 +165,13 @@ class TestRequestShape:
 
     def test_second_probe_sends_a_malformed_proof(self):
         session = _session(401)
-        _probe_malformed_dpop(TargetResult(url=_URL), session)
+        _probe_malformed_dpop(_enforcing(TargetResult(url=_URL)), session)
 
         assert session.post_raw.call_args.kwargs["extra_headers"]["DPoP"] == "not.a.valid.jwt"
 
     def test_third_probe_sends_a_proof_without_htm_or_htu(self):
         session = _session(401)
-        _probe_missing_htm_htu(TargetResult(url=_URL), session)
+        _probe_missing_htm_htu(_enforcing(TargetResult(url=_URL)), session)
 
         proof = session.post_raw.call_args.kwargs["extra_headers"]["DPoP"]
         payload = _decode_segment(proof.split(".")[1])
@@ -184,7 +207,7 @@ class TestNoDpopHeaderProbe:
 
 class TestMalformedDpopProbe:
     def test_200_flags_not_validated(self):
-        result = TargetResult(url=_URL)
+        result = _enforcing(TargetResult(url=_URL))
         _probe_malformed_dpop(result, _session(200))
 
         assert [f.check for f in result.findings] == ["dpop_header_not_validated"]
@@ -198,7 +221,7 @@ class TestMalformedDpopProbe:
 
 class TestMissingBindingProbe:
     def test_200_flags_binding_not_enforced(self):
-        result = TargetResult(url=_URL)
+        result = _enforcing(TargetResult(url=_URL))
         _probe_missing_htm_htu(result, _session(200))
 
         assert [f.check for f in result.findings] == ["dpop_binding_not_enforced"]
@@ -211,12 +234,28 @@ class TestMissingBindingProbe:
 
 
 class TestRunAll:
-    def test_all_three_findings_on_permissive_server(self):
+    def test_server_without_dpop_reports_it_once(self):
+        """Previously asserted all three findings, which encoded a bug.
+
+        A server that does not implement DPoP returns 200 to every probe by
+        construction, so probes 2 and 3 could not fail independently — they
+        restated probe 1 twice more and inferred the proof header was
+        "decorative" on a server that never claimed to support it. Three HIGH
+        findings for one fact, on every plain-bearer server in existence.
+        """
         result = TargetResult(url=_URL)
         run_dpop_enforcement_checks(result, session=_session(200))
 
+        assert [f.check for f in result.findings] == ["dpop_not_enforced"]
+
+    def test_dpop_claiming_server_that_accepts_garbage_is_still_caught(self):
+        """The case probes 2 and 3 exist for, and where they are damning."""
+        result = TargetResult(url=_URL)
+        run_dpop_enforcement_checks(
+            result, session=_dpop_aware_session(401, 200, 200)
+        )
+
         assert {f.check for f in result.findings} == {
-            "dpop_not_enforced",
             "dpop_header_not_validated",
             "dpop_binding_not_enforced",
         }
@@ -235,7 +274,9 @@ class TestRunAll:
 
     def test_findings_tagged_lane3_transport_a(self):
         result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(result, session=_session(200))
+        run_dpop_enforcement_checks(
+            result, session=_dpop_aware_session(401, 200, 200)
+        )
 
         assert all(f.lane == 3 for f in result.findings)
         assert all(f.transport == "A" for f in result.findings)
@@ -260,8 +301,13 @@ class TestProbeErrorHandling:
         session = _session()
         session.post_raw.side_effect = RuntimeError("boom")
 
-        result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(result, session=session)
+        # Driven probe by probe rather than through the chain: a probe 1 that
+        # raises never establishes whether DPoP is enforced, so probes 2 and 3
+        # correctly decline to run and would record nothing.
+        result = _enforcing(TargetResult(url=_URL))
+        _probe_no_dpop_header(result, session)
+        _probe_malformed_dpop(result, session)
+        _probe_missing_htm_htu(result, session)
 
         for probe in ("dpop_no_header", "dpop_malformed", "dpop_missing_binding"):
             assert probe in result.error, f"{probe} missing from {result.error!r}"

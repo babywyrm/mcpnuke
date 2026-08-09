@@ -40,6 +40,13 @@ _add = lane_tagged(lane=3, transport="A")
 
 _PROBE_TOOL = "tools/list"  # lightweight probe, available on any MCP server
 
+# Set by probe 1, read by probes 2 and 3. A server that does not implement DPoP
+# returns 200 to all three probes by construction, so without this gate every
+# plain-bearer server — which is nearly all of them — collected three HIGH
+# findings restating one fact, and probes 2 and 3 called a header "decorative"
+# on a server that had never claimed to support it.
+_DPOP_ENFORCED_KEY = "_dpop_enforced"
+
 
 def _minimal_jwt(*, include_htm: bool = True, include_htu: bool = True) -> str:
     """Build a syntactically valid but semantically incomplete DPoP proof JWT.
@@ -111,6 +118,14 @@ def run_dpop_enforcement_checks(result: TargetResult, session: Any) -> None:
     _probe_missing_htm_htu(result, session)
 
 
+def _server_enforces_dpop(result: TargetResult) -> bool:
+    """Whether probe 1 saw the server reject a request that carried no proof.
+
+    Probes 2 and 3 read this. See ``_DPOP_ENFORCED_KEY``.
+    """
+    return result.auth_context.get(_DPOP_ENFORCED_KEY) is True
+
+
 def _probe_no_dpop_header(result: TargetResult, session: Any) -> None:
     """Check 1: plain bearer request accepted → DPoP not enforced."""
     with time_check("dpop_no_header", result):
@@ -119,6 +134,10 @@ def _probe_no_dpop_header(result: TargetResult, session: Any) -> None:
         except Exception as exc:
             result.note_error(f"dpop_no_header probe error: {exc}")
             return
+
+    # Recorded for probes 2 and 3, which are only meaningful against a server
+    # that demands a proof in the first place.
+    result.auth_context[_DPOP_ENFORCED_KEY] = resp.status_code != 200
 
     # A DPoP-enforcing server MUST return 401 for requests without DPoP proof.
     # HTTP 200 means the server accepts token-less or DPoP-less bearer tokens.
@@ -147,7 +166,14 @@ def _probe_no_dpop_header(result: TargetResult, session: Any) -> None:
 
 
 def _probe_malformed_dpop(result: TargetResult, session: Any) -> None:
-    """Check 2: malformed DPoP header accepted → header is decorative."""
+    """Check 2: malformed DPoP header accepted → header is decorative.
+
+    Only meaningful once probe 1 has shown the server demands a proof. A server
+    with no DPoP support ignores the header and returns 200, which says nothing
+    beyond what probe 1 already reported.
+    """
+    if not _server_enforces_dpop(result):
+        return
     with time_check("dpop_malformed", result):
         try:
             resp = session.post_raw(
@@ -186,7 +212,13 @@ def _probe_malformed_dpop(result: TargetResult, session: Any) -> None:
 
 
 def _probe_missing_htm_htu(result: TargetResult, session: Any) -> None:
-    """Check 3: JWT missing htm/htu accepted → binding not checked."""
+    """Check 3: JWT missing htm/htu accepted → binding not checked.
+
+    Gated on probe 1 for the same reason as probe 2: a server that never asked
+    for a proof cannot meaningfully be said to have skipped validating it.
+    """
+    if not _server_enforces_dpop(result):
+        return
     proof = _minimal_jwt(include_htm=False, include_htu=False)
     with time_check("dpop_missing_binding", result):
         try:
