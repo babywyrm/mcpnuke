@@ -4,6 +4,47 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+**Findings change in this release.** Capability findings that were substring
+accidents no longer fire, so a scan of an **unchanged** server reports fewer of
+them and `--diff` against an older baseline shows them as resolved. That is the
+fix landing, not the server changing. Measured across five real open-source MCP
+servers: 211 findings → 187, and **71 CRITICAL → 49**.
+
+### Fixed
+
+- **Dangerous-capability patterns matched substrings, not words.** `shell_exec`
+  matched `run` inside "running" and `sh` inside "show"; `reverse_shell` matched
+  `nc` inside "reference", "branch" and "encoding"; `secrets_access` matched
+  `key` inside "monkey". Real servers collected CRITICAL findings for tools
+  named `git_show`, `git_branch`, `get-resource-reference` and
+  `trigger-long-running-operation`, none of which execute anything —
+  `remote_access` alone went from 14 findings to **zero across all five
+  targets**, every one a false positive.
+
+  Six further CRITICALs disappeared as a consequence, because they were derived
+  from the false ones: three `attack_chain` findings were chaining into a
+  `remote_access` that did not exist. Patterns are now anchored and applied to
+  a normalized identifier, so `run_command` still matches while `long-running`
+  does not.
+
+- **A capability that was never reported.** The same fix closed a false
+  negative: the pattern held a literal `file_read`, which never matched a
+  dot-separated `file.read`, so that tool's filesystem access went unreported.
+
+### Added
+
+- **Open-source target snapshots.** Five pinned third-party MCP servers are
+  scanned locally over stdio and diffed against committed snapshots, with every
+  finding triaged in writing in
+  [docs/oss-target-baseline.md](docs/oss-target-baseline.md). Opt-in locally
+  via `MCPNUKE_OSS_TARGETS=1`, run weekly in CI. This is the first
+  false-positive measurement against servers we did not write, and the first
+  coverage of **stdio**, **resources** and **prompts**.
+
+  The triage also records what is still wrong and unfixed — roughly 72 findings
+  where a server's *error message* echoing your input is read as reflection,
+  and ~15 auth findings on a transport that has no auth boundary.
+
 ## [6.14.0] - 2026-08-09
 
 First tagged release since 6.13.0 (2026-05-19). Three months of work, and the

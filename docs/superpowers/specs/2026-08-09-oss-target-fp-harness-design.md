@@ -1,6 +1,6 @@
 # Open-Source Target False-Positive Harness
 
-**Status:** Approved — not yet implemented
+**Status:** Implemented (2026-08-09) — see [docs/oss-target-baseline.md](../../oss-target-baseline.md)
 **Date:** 2026-08-09
 **Follows:** `2026-08-08-false-positive-harness-design.md`
 
