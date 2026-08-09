@@ -7,6 +7,8 @@ file, a broken target would read as a scanner regression.
 
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
@@ -55,3 +57,74 @@ def test_unauthenticated_calls_are_rejected(reference_server):
         timeout=5,
     )
     assert r.status_code == 401
+
+
+class TestToolHardening:
+    """The target is only a useful yardstick if it is genuinely well-built."""
+
+    def _call(self, server, name: str, arguments: dict) -> dict:
+        r = httpx.post(
+            server.url,
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            },
+            headers={"Authorization": f"Bearer {server.token}"},
+            timeout=5,
+        )
+        return r.json()["result"]
+
+    def test_file_read_rejects_traversal(self, reference_server):
+        out = self._call(reference_server, "file.read", {"name": "../../etc/passwd"})
+        assert out["isError"] is True
+        assert "root:" not in json.dumps(out)
+
+    def test_file_read_rejects_absolute_path(self, reference_server):
+        out = self._call(reference_server, "file.read", {"name": "/etc/passwd"})
+        assert out["isError"] is True
+
+    def test_file_read_serves_allowlisted_file(self, reference_server):
+        out = self._call(reference_server, "file.read", {"name": "overview.txt"})
+        assert out["isError"] is False
+        assert "reference target" in json.dumps(out).lower()
+
+    def test_http_fetch_refuses_link_local(self, reference_server):
+        out = self._call(
+            reference_server,
+            "http.fetch",
+            {"url": "http://169.254.169.254/latest/meta-data/"},
+        )
+        assert out["isError"] is True
+
+    def test_http_fetch_refuses_loopback(self, reference_server):
+        out = self._call(reference_server, "http.fetch", {"url": "http://127.0.0.1:22/"})
+        assert out["isError"] is True
+
+    def test_refusal_does_not_echo_the_url(self, reference_server):
+        """Echoing attacker input back is how a clean server grows a reflected
+        injection finding it does not deserve."""
+        marker = "IGNORE-PREVIOUS-INSTRUCTIONS-9f3a"
+        out = self._call(
+            reference_server, "http.fetch", {"url": f"http://evil.test/{marker}"}
+        )
+        assert marker not in json.dumps(out)
+
+    def test_docs_search_does_not_echo_the_query(self, reference_server):
+        marker = "IGNORE-PREVIOUS-INSTRUCTIONS-9f3a"
+        out = self._call(reference_server, "docs.search", {"query": marker})
+        assert marker not in json.dumps(out)
+
+    def test_ticket_create_validates_and_does_not_echo(self, reference_server):
+        marker = "IGNORE-PREVIOUS-INSTRUCTIONS-9f3a"
+        out = self._call(
+            reference_server, "ticket.create", {"title": marker, "body": marker}
+        )
+        assert marker not in json.dumps(out)
+
+    def test_unknown_tool_is_a_clean_error(self, reference_server):
+        out = self._call(reference_server, "no.such.tool", {})
+        assert out["isError"] is True
+        blob = json.dumps(out)
+        assert "Traceback" not in blob and ".py" not in blob
