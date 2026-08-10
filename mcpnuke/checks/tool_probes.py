@@ -16,7 +16,13 @@ import json
 import re
 import time
 
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import (
+    ERROR_REFLECTION_SUFFIX,
+    graded_severity,
+    payload_echo_removed,
+    response_is_error,
+    time_check,
+)
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.llm import _call_claude
 from mcpnuke.core.models import TargetResult
@@ -568,15 +574,39 @@ def check_tool_response_injection(session: MCPSessionProtocol, result: TargetRes
                 refl_resp = _call_tool(session, name, probe_args, timeout=8)
                 refl_text = _response_text(refl_resp)
                 if refl_text and REFLECTION_PAYLOAD in refl_text:
-                    result.add(
-                        "tool_response_injection",
+                    # Subtraction is meaningless here — an echo *is* the finding.
+                    # What matters is where it landed: in successful output it
+                    # is a conduit into the LLM context, in a rejection it is a
+                    # server naming the input it refused.
+                    in_error = response_is_error(refl_resp)
+                    # Not `severity`: the threat loop above binds that name as
+                    # a plain str, and this one is optional.
+                    refl_severity = graded_severity(
                         "HIGH",
-                        f"Tool '{name}' reflects input via param '{pname}'",
-                        "User-controlled text appears verbatim in tool output — "
-                        "indirect injection vector: attacker content can reach the LLM "
-                        "through this tool's response",
-                        evidence=f"Sent: {REFLECTION_PAYLOAD}\nReflected in: {refl_text[:300]}",
+                        reflected_in_error=in_error,
+                        policy=opts.get("error_reflection", "downgrade"),
                     )
+                    if refl_severity:
+                        title = f"Tool '{name}' reflects input via param '{pname}'"
+                        detail = (
+                            "User-controlled text appears verbatim in tool output — "
+                            "indirect injection vector: attacker content can reach "
+                            "the LLM through this tool's response"
+                        )
+                        if in_error:
+                            title += ERROR_REFLECTION_SUFFIX
+                            detail = (
+                                "The tool echoed the probe while rejecting the call. "
+                                "Naming refused input is normal; this only reaches an "
+                                "LLM if the client forwards error text as context."
+                            )
+                        result.add(
+                            "tool_response_injection",
+                            refl_severity,
+                            title,
+                            detail,
+                            evidence=f"Sent: {REFLECTION_PAYLOAD}\nReflected in: {refl_text[:300]}",
+                        )
                     break
 
 
@@ -604,6 +634,50 @@ def _classify_ssti(
     if math_hit:
         return "llm_evaluated"
     return "unknown"
+
+
+def _canary_sighting(
+    result: TargetResult,
+    *,
+    resp: dict | None,
+    text: str,
+    payload: str,
+    base_severity: str,
+    title: str,
+    detail: str,
+    evidence: str,
+    policy: str,
+) -> bool:
+    """Report a canary in *text*, graded by who put it there.
+
+    Returns True when the canary was seen at all, so callers can stop probing.
+    Suppression is a reporting choice and must not change what we probe.
+
+    The finding is only weakened when *both* things are true: the response was
+    a refusal, and the canary survives nowhere outside a verbatim copy of the
+    probe. Either alone is not enough — a canary loose in an error response is
+    execution evidence, and an echo in a *successful* response is a different
+    question that `tool_response_injection` already asks.
+    """
+    if CANARY not in text:
+        return False
+
+    echoed_only = CANARY not in payload_echo_removed(text, payload)
+    reflected_in_error = echoed_only and response_is_error(resp)
+
+    severity = graded_severity(
+        base_severity, reflected_in_error=reflected_in_error, policy=policy
+    )
+    if severity:
+        if reflected_in_error:
+            title += ERROR_REFLECTION_SUFFIX
+            detail += (
+                ". The canary appeared only inside a verbatim echo of the probe "
+                "in a rejected call — what a server does when it refuses input "
+                "and names what it refused"
+            )
+        result.add("input_sanitization", severity, title, detail, evidence=evidence)
+    return True
 
 
 def _fuzz_single_tool(
@@ -645,14 +719,19 @@ def _fuzz_single_tool(
             if not text:
                 continue
 
-            # Canary reflected back = no sanitization
-            if CANARY in text and probe_type in ("command_injection", "path_traversal"):
-                result.add(
-                    "input_sanitization",
-                    "HIGH",
-                    f"Tool '{name}' reflects probe canary unsanitized",
-                    f"Probe: {probe_type}, param: {pname}",
+            # Canary reflected back = no sanitization — unless the canary only
+            # came back because the server quoted our probe while refusing it.
+            if probe_type in ("command_injection", "path_traversal"):
+                _canary_sighting(
+                    result,
+                    resp=resp,
+                    text=text,
+                    payload=probe_value,
+                    base_severity="HIGH",
+                    title=f"Tool '{name}' reflects probe canary unsanitized",
+                    detail=f"Probe: {probe_type}, param: {pname}",
                     evidence=f"Sent: {probe_value}\nGot: {text[:300]}",
+                    policy=opts.get("error_reflection", "downgrade"),
                 )
 
         probe_text = text  # main-loop responses for error leakage (before interpreter/SSTI)
@@ -663,14 +742,17 @@ def _fuzz_single_tool(
                 test_args = {**base_args, pname: interp_probe}
                 resp = _call_tool(session, name, test_args, timeout=8)
                 text = _response_text(resp)
-                if text and CANARY in text:
-                    result.add(
-                        "input_sanitization",
-                        "CRITICAL",
-                        f"Blocklist bypass: '{interp_name}' executed in tool '{name}'",
-                        f"Interpreter '{interp_name}' not blocked — param '{pname}'",
-                        evidence=f"Sent: {interp_probe}\nGot: {text[:300]}",
-                    )
+                if _canary_sighting(
+                    result,
+                    resp=resp,
+                    text=text,
+                    payload=interp_probe,
+                    base_severity="CRITICAL",
+                    title=f"Blocklist bypass: '{interp_name}' executed in tool '{name}'",
+                    detail=f"Interpreter '{interp_name}' not blocked — param '{pname}'",
+                    evidence=f"Sent: {interp_probe}\nGot: {text[:300]}",
+                    policy=opts.get("error_reflection", "downgrade"),
+                ):
                     break
 
         # Encoding bypass probes: 9 techniques that evade blocklists
@@ -679,14 +761,17 @@ def _fuzz_single_tool(
                 test_args = {**base_args, pname: enc_payload}
                 resp = _call_tool(session, name, test_args, timeout=8)
                 text = _response_text(resp)
-                if text and CANARY in text:
-                    result.add(
-                        "input_sanitization",
-                        "CRITICAL",
-                        f"Encoding bypass ({enc_name}): canary executed in tool '{name}'",
-                        f"Technique '{enc_name}' bypassed input filter — param '{pname}'",
-                        evidence=f"Sent: {enc_payload[:120]}\nGot: {text[:300]}",
-                    )
+                if _canary_sighting(
+                    result,
+                    resp=resp,
+                    text=text,
+                    payload=enc_payload,
+                    base_severity="CRITICAL",
+                    title=f"Encoding bypass ({enc_name}): canary executed in tool '{name}'",
+                    detail=f"Technique '{enc_name}' bypassed input filter — param '{pname}'",
+                    evidence=f"Sent: {enc_payload[:120]}\nGot: {text[:300]}",
+                    policy=opts.get("error_reflection", "downgrade"),
+                ):
                     break
 
         # Dedicated template injection with engine fingerprinting
