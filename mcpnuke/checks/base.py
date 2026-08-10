@@ -41,6 +41,24 @@ def response_is_error(resp: dict | None) -> bool:
     return isinstance(result, dict) and bool(result.get("isError"))
 
 
+def payload_echo_removed(text: str, payload: str) -> str:
+    """Return *text* with verbatim copies of *payload* removed.
+
+    Several checks look for a marker that is itself part of the payload they
+    sent: ``active_prompt_injection`` matches an indicator word, and
+    ``input_sanitization`` matches CANARY inside its probe. A server that
+    rejects the call and quotes the offending input hands the marker straight
+    back, and the check reads its own input as proof the server complied.
+
+    Subtracting the echo answers the question that actually matters: did the
+    marker come from the server, or from us? Anything left over, the server
+    produced.
+    """
+    if not payload:
+        return text
+    return text.replace(payload, "")
+
+
 def time_check(name: str, result: TargetResult):
     """Context manager to record check timing."""
 
