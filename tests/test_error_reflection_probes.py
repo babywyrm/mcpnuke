@@ -8,12 +8,20 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
+from mcpnuke.checks.command_injection_broad import check_command_injection_broad
+from mcpnuke.checks.injection import check_active_prompt_injection
 from mcpnuke.checks.tool_probes import (
     check_input_sanitization,
     check_tool_response_injection,
 )
 from mcpnuke.core.models import TargetResult
-from mcpnuke.patterns.probes import CANARY, REFLECTION_PAYLOAD
+from mcpnuke.patterns.probes import (
+    ACTIVE_INJECTION_PAYLOADS,
+    CANARY,
+    REFLECTION_PAYLOAD,
+)
 
 
 def _tool(name="run_thing", param="cmd"):
@@ -118,3 +126,65 @@ class TestToolResponseInjection:
         session = _session(f"Here you go: {REFLECTION_PAYLOAD}", is_error=False)
         check_tool_response_injection(session, r, {"error_reflection": "downgrade"})
         assert "HIGH" in _sev(r, "tool_response_injection"), r.findings
+
+
+def test_credential_leakage_checks_do_not_consult_the_policy():
+    """A secret in an error string is a leak regardless of isError.
+
+    Exempt by design (see the spec). Asserting it here means a later pass that
+    threads the policy everywhere has to make that choice deliberately.
+
+    Scoped to the functions, not their modules: `check_error_leakage` lives in
+    tool_probes.py, which does gain the policy for its other checks.
+    """
+    import inspect
+
+    from mcpnuke.checks.response_credentials import check_response_credentials
+    from mcpnuke.checks.tool_probes import check_error_leakage
+
+    for fn in (check_error_leakage, check_response_credentials):
+        assert "error_reflection" not in inspect.getsource(fn), fn.__name__
+
+
+class TestActivePromptInjection:
+    def _indicator_payload(self):
+        for p in ACTIVE_INJECTION_PAYLOADS:
+            if p.get("indicator"):
+                return p
+        pytest.skip("no active-injection payload carries an indicator")
+
+    def test_payload_quoted_in_a_rejection_is_downgraded(self):
+        r = _result(_tool(param="input"))
+        session = _echoing_session("Rejected input: {payload}", is_error=True)
+        check_active_prompt_injection(session, r, {"error_reflection": "downgrade"})
+        assert _sev(r, "active_prompt_injection"), "expected a finding"
+        assert all(s == "LOW" for s in _sev(r, "active_prompt_injection")), r.findings
+
+    def test_server_that_actually_complies_stays_critical(self):
+        """The indicator arrives on its own — the server produced it."""
+        p = self._indicator_payload()
+        r = _result(_tool(param="input"))
+        session = _session(p["indicator"], is_error=False)
+        check_active_prompt_injection(session, r, {"error_reflection": "downgrade"})
+        assert "CRITICAL" in _sev(r, "active_prompt_injection"), r.findings
+
+
+class TestCommandInjectionBroad:
+    # This check deliberately skips shell-named tools; those belong to
+    # shell_injection.py. Hence a search tool rather than `run_thing`.
+    def _searchy_tool(self):
+        return _tool(name="search_docs", param="query")
+
+    def test_canary_quoted_in_a_rejection_is_downgraded(self):
+        r = _result(self._searchy_tool())
+        session = _echoing_session("Unknown input: {payload}", is_error=True)
+        check_command_injection_broad(session, r, {"error_reflection": "downgrade"})
+        assert all(s == "LOW" for s in _sev(r, "command_injection_broad")), r.findings
+
+    def test_shell_error_in_a_failed_response_stays_high(self):
+        """Execution evidence, not reflection. isError is expected here —
+        the shell errored *because* it parsed our metacharacters."""
+        r = _result(self._searchy_tool())
+        session = _session("sh: 1: nosuchcmd: not found", is_error=True)
+        check_command_injection_broad(session, r, {"error_reflection": "downgrade"})
+        assert "HIGH" in _sev(r, "command_injection_broad"), r.findings

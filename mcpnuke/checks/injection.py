@@ -3,7 +3,13 @@
 import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import (
+    ERROR_REFLECTION_SUFFIX,
+    graded_severity,
+    payload_echo_removed,
+    response_is_error,
+    time_check,
+)
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
@@ -230,13 +236,42 @@ def check_active_prompt_injection(session: MCPSessionProtocol, result: TargetRes
 
                 indicator = payload_info.get("indicator")
                 if indicator and indicator in text:
-                    _add(result,
-                        "active_prompt_injection",
-                        "CRITICAL",
-                        f"Active injection: server follows injected instructions via '{name}'",
-                        f"Category: {payload_info['category']}, param: {target_param}",
-                        evidence=f"Sent: {payload_info['payload'][:120]}\nGot: {text[:300]}",
+                    # The indicator is a word inside the payload we just sent,
+                    # so a server that quotes the input while refusing it hands
+                    # the indicator straight back. Subtract our own text first,
+                    # and only then ask whether the server said it.
+                    echoed_only = indicator not in payload_echo_removed(
+                        text, payload_info["payload"]
                     )
+                    reflected = echoed_only and response_is_error(resp)
+                    severity = graded_severity(
+                        "CRITICAL",
+                        reflected_in_error=reflected,
+                        policy=opts.get("error_reflection", "downgrade"),
+                    )
+                    if severity:
+                        title = (
+                            "Active injection: server follows injected "
+                            f"instructions via '{name}'"
+                        )
+                        detail = (
+                            f"Category: {payload_info['category']}, "
+                            f"param: {target_param}"
+                        )
+                        if reflected:
+                            title += ERROR_REFLECTION_SUFFIX
+                            detail += (
+                                ". The indicator appeared only inside a verbatim "
+                                "echo of the payload in a rejected call, so the "
+                                "server named the input rather than obeying it"
+                            )
+                        _add(result,
+                            "active_prompt_injection",
+                            severity,
+                            title,
+                            detail,
+                            evidence=f"Sent: {payload_info['payload'][:120]}\nGot: {text[:300]}",
+                        )
                     found = True
                     break
 

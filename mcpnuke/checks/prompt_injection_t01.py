@@ -16,7 +16,13 @@ Lane 2 (Delegated) / Transport A (MCP JSON-RPC).
 from __future__ import annotations
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import (
+    ERROR_REFLECTION_SUFFIX,
+    graded_severity,
+    payload_echo_removed,
+    response_is_error,
+    time_check,
+)
 from mcpnuke.checks.tool_probes import (
     _build_safe_args,
     _call_tool,
@@ -141,15 +147,41 @@ def check_prompt_injection(
                 text = _response_text(resp)
 
                 if probe["indicator"].lower() in text.lower():
-                    _add(
-                        result,
-                        "prompt_injection_t01",
+                    # The indicator lives inside the payload, so a rejection
+                    # that quotes the input returns it for free.
+                    produced = payload_echo_removed(text, probe["payload"]).lower()
+                    echoed_only = probe["indicator"].lower() not in produced
+                    reflected = echoed_only and response_is_error(resp)
+                    severity = graded_severity(
                         probe["severity"],
-                        f"Prompt injection via tool '{name}' param '{target_param}' ({probe['category']})",
-                        f"The tool '{name}' passes parameter '{target_param}' into an "
-                        f"LLM context without sanitization. Injection payload "
-                        f"'{probe['category']}' produced the expected canary marker.",
-                        evidence=text[:500],
-                        taxonomy_id="MCP-T01",
+                        reflected_in_error=reflected,
+                        policy=opts.get("error_reflection", "downgrade"),
                     )
+                    if severity:
+                        title = (
+                            f"Prompt injection via tool '{name}' param "
+                            f"'{target_param}' ({probe['category']})"
+                        )
+                        detail = (
+                            f"The tool '{name}' passes parameter '{target_param}' into an "
+                            f"LLM context without sanitization. Injection payload "
+                            f"'{probe['category']}' produced the expected canary marker."
+                        )
+                        if reflected:
+                            title += ERROR_REFLECTION_SUFFIX
+                            detail = (
+                                f"The tool '{name}' echoed the payload back while "
+                                f"rejecting the call. The marker appears only inside "
+                                f"that echo, which is not evidence the parameter "
+                                f"reaches an LLM context."
+                            )
+                        _add(
+                            result,
+                            "prompt_injection_t01",
+                            severity,
+                            title,
+                            detail,
+                            evidence=text[:500],
+                            taxonomy_id="MCP-T01",
+                        )
                     break  # One confirmed injection per tool is enough

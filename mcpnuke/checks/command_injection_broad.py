@@ -18,7 +18,13 @@ from __future__ import annotations
 import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import (
+    ERROR_REFLECTION_SUFFIX,
+    graded_severity,
+    payload_echo_removed,
+    response_is_error,
+    time_check,
+)
 from mcpnuke.checks.tool_probes import (
     _build_safe_args,
     _call_tool,
@@ -140,25 +146,55 @@ def check_command_injection_broad(
 
                     # Check for canary in response
                     if probe["indicator"] in text:
-                        _add(
-                            result,
-                            "command_injection_broad",
+                        # The canary rides inside the payload, so a server that
+                        # quotes the input it refused returns it untouched.
+                        echoed_only = probe["indicator"] not in payload_echo_removed(
+                            text, probe["payload"]
+                        )
+                        reflected = echoed_only and response_is_error(resp)
+                        severity = graded_severity(
                             "CRITICAL",
-                            f"Command injection in '{name}' via param '{param}' ({probe['category']})",
-                            (
+                            reflected_in_error=reflected,
+                            policy=opts.get("error_reflection", "downgrade"),
+                        )
+                        if severity:
+                            title = (
+                                f"Command injection in '{name}' via param "
+                                f"'{param}' ({probe['category']})"
+                            )
+                            detail = (
                                 f"Tool '{name}' passes parameter '{param}' through a shell "
                                 f"or subprocess without sanitization. The metacharacter payload "
                                 f"'{probe['category']}' successfully injected and the canary "
                                 f"marker appeared in the response."
-                            ),
-                            evidence=f"Payload: {probe['payload']}\nResponse: {text[:300]}",
-                            taxonomy_id="MCP-T05",
-                        )
+                            )
+                            if reflected:
+                                title += ERROR_REFLECTION_SUFFIX
+                                detail = (
+                                    f"Tool '{name}' echoed the payload back while "
+                                    f"rejecting the call. The canary survives nowhere "
+                                    f"outside that echo, so there is no evidence the "
+                                    f"parameter reached an interpreter."
+                                )
+                            _add(
+                                result,
+                                "command_injection_broad",
+                                severity,
+                                title,
+                                detail,
+                                evidence=f"Payload: {probe['payload']}\nResponse: {text[:300]}",
+                                taxonomy_id="MCP-T05",
+                            )
                         return  # One confirmed injection per tool is sufficient
 
-                    # Check for shell error patterns (weaker signal but still indicates shell parsing)
+                    # Shell error text is the server's own output, not our echo,
+                    # so it keeps its severity even when isError is set — a shell
+                    # errors *because* it parsed the metacharacters. Subtraction
+                    # still applies: a pattern matching only inside a verbatim
+                    # copy of the payload is our text, not the server's.
+                    produced = payload_echo_removed(text, probe["payload"])
                     for err_pattern in _SHELL_ERROR_PATTERNS:
-                        if err_pattern.search(text):
+                        if err_pattern.search(produced):
                             _add(
                                 result,
                                 "command_injection_broad",
