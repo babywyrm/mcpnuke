@@ -10,7 +10,7 @@ reachability of theoretical exfiltration paths.
 import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import response_is_error, time_check
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
@@ -80,22 +80,6 @@ def _try_source_read(session: MCPSessionProtocol, tool: dict) -> str | None:
     return text if text and len(text) > 5 else None
 
 
-def _is_failure(resp: dict | None) -> bool:
-    """True when the sink refused the payload.
-
-    `_call_tool` returns the response whenever the JSON-RPC round trip
-    completes, so a refusal arrives as a value, not an exception. Treating any
-    non-None response as success turned "permission denied" into confirmed
-    exfiltration.
-    """
-    if resp is None:
-        return True
-    if resp.get("error"):
-        return True
-    result = resp.get("result")
-    return isinstance(result, dict) and bool(result.get("isError"))
-
-
 def _try_sink_send(session: MCPSessionProtocol, tool: dict, data: str) -> tuple[bool, str]:
     """Attempt to route canary data through a sink tool.
 
@@ -127,7 +111,7 @@ def _try_sink_send(session: MCPSessionProtocol, tool: dict, data: str) -> tuple[
 
     resp = _call_tool(session, name, args, timeout=10)
     text = _response_text(resp)
-    return not _is_failure(resp), text or ""
+    return not response_is_error(resp), text or ""
 
 
 def check_exfil_flow(

@@ -148,6 +148,12 @@ class TestClaimIsProportionate:
 
 
 class TestSinkErrorHelper:
+    """The helper moved to checks/base.py and is shared now.
+
+    Reached through `exfil_flow` deliberately: this asserts the sink logic
+    still consults it, which a direct import would not.
+    """
+
     @pytest.mark.parametrize(
         "resp,expected",
         [
@@ -160,4 +166,4 @@ class TestSinkErrorHelper:
         ],
     )
     def test_rejects_only_failures(self, resp, expected) -> None:
-        assert exfil_flow._is_failure(resp) is expected
+        assert exfil_flow.response_is_error(resp) is expected

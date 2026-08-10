@@ -24,6 +24,23 @@ def tool_text(tool: dict) -> str:
     return "\n".join(parts)
 
 
+def response_is_error(resp: dict | None) -> bool:
+    """True when the server refused or failed the call.
+
+    ``_call_tool`` returns the response whenever the JSON-RPC round trip
+    completes, so a refusal arrives as a value, not an exception. Treating any
+    non-None response as success turned "permission denied" into confirmed
+    exfiltration once already — this is that fix, in one place instead of two
+    private copies.
+    """
+    if resp is None:
+        return True
+    if resp.get("error"):
+        return True
+    result = resp.get("result")
+    return isinstance(result, dict) and bool(result.get("isError"))
+
+
 def time_check(name: str, result: TargetResult):
     """Context manager to record check timing."""
 

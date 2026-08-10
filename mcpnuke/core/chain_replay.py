@@ -18,6 +18,7 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from mcpnuke.checks.base import response_is_error
 from mcpnuke.checks.tool_probes import (
     _build_safe_args,
     _call_tool,
@@ -175,15 +176,6 @@ def _resolve_args(template: dict, prior: list[StepResult], oast_url: str = "") -
     return resolved
 
 
-def _is_failure(resp: dict | None) -> bool:
-    if resp is None:
-        return True
-    if resp.get("error"):
-        return True
-    result = resp.get("result")
-    return isinstance(result, dict) and bool(result.get("isError"))
-
-
 def replay_chain(
     session: MCPSessionProtocol,
     chain: ProposedChain,
@@ -238,7 +230,7 @@ def replay_chain(
         args.update(_resolve_args(step.args, run.results, oast_url))
         resp = _call_tool(session, step.tool, args)
         text = _response_text(resp)
-        failed = _is_failure(resp)
+        failed = response_is_error(resp)
         run.results.append(
             StepResult(
                 tool=step.tool,
