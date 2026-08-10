@@ -2,7 +2,7 @@
 
 All notable changes to this submodule are documented here.
 
-## [Unreleased]
+## [6.15.0] - 2026-08-10
 
 **Findings change in this release.** Two classes of false positive stop firing,
 so a scan of an **unchanged** server reports fewer of them and `--diff` against
