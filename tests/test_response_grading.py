@@ -6,7 +6,8 @@ byte-identical private copies — and never reached the probe checks at all.
 
 from __future__ import annotations
 
-import subprocess
+import re
+from pathlib import Path
 
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
@@ -107,15 +108,22 @@ class TestGradeReflection:
 
 
 def test_only_one_definition_of_the_error_check():
-    """Two copies drifted once. This is the same guard the tokenizer has."""
-    out = (
-        subprocess.run(
-            ["rg", "-n", r"def response_is_error|def _is_failure", "mcpnuke/"],
-            capture_output=True,
-            text=True,
-        )
-        .stdout.strip()
-        .splitlines()
+    """Two copies drifted once. This is the same guard the tokenizer has.
+
+    Walks the tree with pathlib rather than shelling out to ripgrep. The
+    subprocess version passed locally and failed on the CI runner, which has
+    no `rg` — a guard that only runs on the author's laptop is not a guard.
+    """
+    pattern = re.compile(r"^def (response_is_error|_is_failure)\b", re.MULTILINE)
+    package = Path(__file__).resolve().parent.parent / "mcpnuke"
+
+    found = [
+        str(path.relative_to(package.parent))
+        for path in sorted(package.rglob("*.py"))
+        if pattern.search(path.read_text(encoding="utf-8"))
+    ]
+
+    assert found == ["mcpnuke/checks/base.py"], (
+        "expected exactly one definition in checks/base.py, found:\n"
+        + "\n".join(found)
     )
-    assert len(out) == 1, "expected exactly one definition, found:\n" + "\n".join(out)
-    assert "checks/base.py" in out[0]
