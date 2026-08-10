@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 #
-# Canonical secret scan for mcpnuke.
+# Canonical secret scan for mcpnuke. Runs two engines, because they see
+# different things:
+#
+#   TruffleHog  reads the working tree and verifies findings against the live
+#               provider, so it answers "is this key real".
+#   Gitleaks    walks git history, so it answers "was a key ever committed" —
+#               including one deleted before the current tree, which TruffleHog
+#               in filesystem mode cannot see at all.
+#
+# Either engine failing fails the script.
 #
 # There used to be a .trufflehog.yaml here. TruffleHog rejected every key in
 # it — `exclude_detectors` and `exclude_paths` are both absent from its config
@@ -61,3 +70,24 @@ if [ "${verified}" -gt 0 ]; then
 fi
 
 echo "OK — no verified secrets."
+
+# Gitleaks, over history. Skipped rather than failed when absent: it is not in
+# the dev dependencies, and a missing optional tool must not read as a clean
+# scan — hence the explicit SKIPPED line rather than silence.
+echo
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "gitleaks:   SKIPPED (not installed — brew install gitleaks)"
+    exit 0
+fi
+
+echo "gitleaks: scanning git history..."
+if gitleaks detect --source "${REPO_ROOT}" --config "${REPO_ROOT}/.gitleaks.toml" \
+        --no-banner --redact 2>&1 | tail -3; then
+    echo "OK — no leaks in history."
+else
+    echo
+    echo "GITLEAKS FOUND SECRETS IN HISTORY (see above)."
+    echo "Fixture credentials belong in .gitleaks.toml, with a reason."
+    exit 1
+fi

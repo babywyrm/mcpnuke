@@ -35,12 +35,25 @@ Before pushing, also run the secret scan:
 ./scripts/secret-scan.sh
 ```
 
-Use the script rather than calling `trufflehog` directly. It carries the
-detector exclusions, which cannot be expressed in a config file, and it gates
-on *verified* findings only — the repo intentionally ships fake credentials as
-scanner fixtures, so a scan that failed on unverified results would fail every
-time and be ignored. One exclusion worth knowing about: Lob API keys begin with
-`test_`, so that detector matches pytest function names.
+Use the script rather than calling either engine directly. It runs both, and
+they answer different questions: TruffleHog reads the working tree and verifies
+findings against the live provider, while Gitleaks walks git history and would
+still see a key that was committed and later deleted.
+
+The script carries TruffleHog's detector exclusions, which cannot be expressed
+in a config file, and gates on *verified* findings only — the repo
+intentionally ships fake credentials as scanner fixtures, so a scan that failed
+on unverified results would fail every time and be ignored. One exclusion worth
+knowing about: Lob API keys begin with `test_`, so that detector matches pytest
+function names.
+
+Gitleaks reads [.gitleaks.toml](.gitleaks.toml), where the same fixture corpus
+is allowlisted by path. `mcpnuke/patterns/credentials.py` is deliberately *not*
+path-allowlisted — it is shipping code, so only the two illustrative values in
+its comments are excused, by value. A real key committed there is still caught.
+
+Gitleaks is optional (`brew install gitleaks`); the script prints `SKIPPED`
+rather than passing silently when it is missing.
 
 ## Reporting detection bugs
 

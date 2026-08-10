@@ -1,0 +1,38 @@
+# Gitleaks configuration for mcpnuke.
+#
+# Gitleaks runs alongside TruffleHog rather than instead of it, because they
+# look at different things. `trufflehog filesystem` reads the working tree, so
+# a credential that was committed and later deleted is invisible to it.
+# `gitleaks detect` walks git history and would still find it.
+#
+# Run both with: ./scripts/secret-scan.sh
+
+[extend]
+useDefault = true
+
+# A tool that detects credentials needs credentials to test against. Every
+# entry below is a fixture the credential checks assert on — removing them
+# would delete the corpus that proves the scanner works.
+#
+# Scoped to specific paths, never a global regex: a rule broad enough to
+# excuse these would also excuse a real key committed next to them.
+[allowlist]
+description = "Fixture credentials in the detection corpus"
+paths = [
+  # The corpus itself. tests/test_credential_patterns.py is named in
+  # .cursor/rules as the invariant guarding every consumer of the credential
+  # tiers; the fake keys in it are the test data.
+  '''tests/test_credential_patterns\.py''',
+  '''tests/test_credential_in_description\.py''',
+  '''tests/test_credential_in_schema\.py''',
+  '''tests/test_response_credentials\.py''',
+]
+
+# mcpnuke/patterns/credentials.py is *not* path-allowlisted. It is shipping
+# code, and a blanket exemption there would hide a real secret committed into
+# the pattern library. Only the two illustrative values in its comments are
+# excused, by value.
+regexes = [
+  '''svc-internal-abc123''',   # Camazotz lab example, quoted in a comment
+  '''a8f3c91b7d2e4f60''',      # the paired counter-example in the same comment
+]
