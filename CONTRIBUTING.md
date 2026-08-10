@@ -29,6 +29,20 @@ uv run mypy mcpnuke/         # must not exceed the CI ceiling
 change lowers the count, lower the ceiling in the same PR to lock the win in.
 `mcpnuke.core.*` additionally enforces `disallow_untyped_defs`.
 
+Coverage is available but off by default, since `--cov` roughly doubles an
+80-second run:
+
+```bash
+uv run pytest tests/ --cov=mcpnuke
+```
+
+**61% branch coverage** as of 6.15.0. Two known holes account for most of the
+gap and are not excluded from the report, because hiding them would raise the
+number without covering a line: `mcpnuke/server/*` needs the optional `server`
+extra and sits at 0%, and `mcpnuke/scanner.py` is low because most tests drive
+`run_all_checks` directly rather than through the scan entry points. Check
+modules are the part that matters, and they are well above the average.
+
 Before pushing, also run the secret scan:
 
 ```bash

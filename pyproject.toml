@@ -32,6 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=5.0",
     "ruff>=0.8",
     "mypy>=1.13",
     "types-PyYAML>=6.0",
@@ -70,6 +71,28 @@ packages = ["mcpnuke"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short --ignore=tests/test_targets"
+
+# Coverage is configured but not switched on by default: --cov roughly doubles
+# a full run, and the suite is already 80s. Opt in with
+# `uv run pytest tests/ --cov=mcpnuke`.
+[tool.coverage.run]
+source = ["mcpnuke"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# No `omit`, deliberately. mcpnuke/server/* sits at 0% because it needs the
+# optional `server` extra, and mcpnuke/scanner.py is low because most tests
+# drive the pipeline directly. Both are real gaps; excluding them would raise
+# the number without covering a line. There is no fail_under for the same
+# reason MYPY_CEILING lives in CI rather than here — a floor that trips on a
+# focused single-file run gets switched off.
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
 
 [tool.ruff]
 target-version = "py311"
