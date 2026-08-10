@@ -20,6 +20,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | Taxonomy coverage | **22/56 IDs (39%)** — Tier 1 complete, see gap map below |
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
+| False-positive measurement | **Done** — two harnesses, both baselined and gated; see below |
 | Distribution (PyPI, install script) | **Gap** — source-only |
 | CI/CD workflow for the tool itself | **Partial** — `tests.yml` + reusable scan workflow; dogfood CI still thin |
 
@@ -126,6 +127,26 @@ Target-agnostic operator loop — labs (Camazotz / DVMCP) are oracles only:
 | **Impact / fix / verify** | Deterministic guidance on each priority action |
 | **`--generate-policy`** | NullfieldPolicy YAML; proved chains → DENY(sink) + HOLD(source*) |
 | **Lab baselines** | Offline fixtures in `tests/fixtures/scans/` guard A/C/B contracts in CI |
+
+## False-positive measurement (done 2026-08-10)
+
+How wrong mcpnuke is, measured rather than assumed. Two harnesses, because
+they answer different questions:
+
+| Harness | Question | Result |
+|---------|----------|--------|
+| **Hardened fixture** — `tests/test_false_positives.py`, runs in default CI | How quiet are we against a server built to be clean? | 5 findings, 0 unexpected, each justified in writing. Ceiling ratchets down. See [docs/false-positive-baseline.md](docs/false-positive-baseline.md) |
+| **Open-source targets** — `tests/test_oss_targets.py`, opt-in + weekly CI | How wrong are we about servers other people wrote? | 5 pinned servers over stdio, every finding triaged. See [docs/oss-target-baseline.md](docs/oss-target-baseline.md) |
+
+Two false-positive classes found and fixed by this measurement:
+
+| Fix | Effect across the five real servers |
+|-----|-------------------------------------|
+| **Pattern anchoring** — capability patterns matched substrings (`sh` in "show", `nc` in "branch") | 211 findings → 187; 71 CRITICAL → 49 |
+| **Error-reflection grading** — a server quoting the input it refused was read as compliance | 187 → 185; 49 CRITICAL → **18** |
+
+Still open: ~15 auth findings firing on stdio, which has no auth boundary.
+Needs transport-awareness, not severity work.
 
 ## Infrastructure roadmap
 

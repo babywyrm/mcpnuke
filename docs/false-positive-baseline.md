@@ -9,11 +9,12 @@ no Docker, no external lab, no environment gate.
 
 ## Current baseline
 
-**2026-08-09 — 4 findings, 0 unexpected.** Scan takes ~22s.
+**2026-08-10 — 5 findings, 0 unexpected.** Scan takes ~22s.
 
 | Severity | Check | Why it is legitimate |
 |----------|-------|----------------------|
 | HIGH | `excessive_permissions` | `http.fetch` really can reach the network. Capability inventory is true and worth surfacing; the priority ranker collapses it so it cannot bury a proved finding. |
+| HIGH | `excessive_permissions` | `file.read` really does read files off disk — the same kind of true capability statement. It only began firing when the dangerous-capability patterns were anchored: the old pattern held a literal `file_read` and never matched the dot-separated `file.read`. A false **negative** the fix closed, which is why the ceiling went 4 → 5. |
 | HIGH | `dpop_not_enforced` | The target uses a plain bearer token and does not implement RFC 9449, so a stolen token is replayable. Deliberate: DPoP is uncommon enough that requiring it would stop the target resembling a real server. |
 | MEDIUM | `ssrf_probe` | `http.fetch` accepts a URL parameter. The finding says "SSRF **surface**", which is accurate — every probe was refused by the host allowlist. |
 | MEDIUM | `behavioral_rate_limit` | The target has no rate limiting. True. Adding it was rejected because throttling the scanner would reduce what the rest of the harness can measure. |

@@ -40,6 +40,7 @@ bug in this file, and fix it here.
 - [Static Checks (metadata only)](#static-checks-metadata-only)
   - [Token & Identity Checks (JWT)](#token--identity-checks-jwt)
 - [Behavioral Checks (active server interaction)](#behavioral-checks-active-server-interaction)
+  - [Error-reflection grading](#error-reflection-grading)
 - [Infrastructure Checks (opt-in)](#infrastructure-checks-opt-in)
   - [Target Surface](#target-surface)
   - [Teleport / Machine Identity](#teleport--machine-identity)
@@ -135,16 +136,16 @@ back. All of them are skipped by `--no-invoke`.
 |-------|----------|----------------|
 | `rug_pull` | CRITICAL–HIGH | Tool list changes between two `tools/list` calls |
 | `deep_rug_pull` | CRITICAL | Tool list/schema changes **after invoking tools** — catches state-dependent rug pulls, injection pattern drift (clean → poisoned after N calls) |
-| `tool_response_injection` | CRITICAL–HIGH | Calls every invocable tool with safe arguments and runs the **broad** response scan over the reply: injection payloads, exfil URLs, hidden content, invisible Unicode, semantic injection and base64-encoded attacks. The widest of the response-scanning checks |
+| `tool_response_injection` | CRITICAL–LOW | Calls every invocable tool with safe arguments and runs the **broad** response scan over the reply: injection payloads, exfil URLs, hidden content, invisible Unicode, semantic injection and base64-encoded attacks. The widest of the response-scanning checks. A reflection seen only in a **rejected** call reports LOW — see [error-reflection grading](#error-reflection-grading) |
 | `cross_tool_manipulation` | HIGH | Tool output that directs the LLM to invoke a different tool. Emitted by `tool_response_injection`, in the same pass |
-| `input_sanitization` | CRITICAL–MEDIUM | Path traversal and command injection probes reflected back unsanitized. SQL probes are sent to `query`/`sql` parameters but the reflection finding excludes them, so SQL only ever surfaces through `error_leakage`. **LLM-aware SSTI:** confirmed engine fingerprints (Jinja2/Mako/ERB/EL) stay CRITICAL; math-style template probes evaluated by the LLM (e.g. `{{7*7}}` → `49`) are downgraded to MEDIUM so LLM-backed MCP servers are not false-flagged as code SSTI. |
+| `input_sanitization` | CRITICAL–LOW | Path traversal and command injection probes reflected back unsanitized. A canary that survives nowhere outside a verbatim echo of the probe, in a rejected call, reports LOW — see [error-reflection grading](#error-reflection-grading). SQL probes are sent to `query`/`sql` parameters but the reflection finding excludes them, so SQL only ever surfaces through `error_leakage`. **LLM-aware SSTI:** confirmed engine fingerprints (Jinja2/Mako/ERB/EL) stay CRITICAL; math-style template probes evaluated by the LLM (e.g. `{{7*7}}` → `49`) are downgraded to MEDIUM so LLM-backed MCP servers are not false-flagged as code SSTI. |
 | `error_leakage` | HIGH–MEDIUM | Stack traces, internal paths, connection strings, or secrets in error responses |
 | `temporal_consistency` | CRITICAL–MEDIUM | Escalating injection, wildly inconsistent responses, or new threats across repeated identical calls |
 | `resource_poisoning` | CRITICAL–HIGH | Base64-encoded injection, data URIs, steganographic Unicode, CSS-hidden HTML, or markdown image exfiltration in resource content |
 | `state_mutation` | HIGH–MEDIUM | Resources that appear, disappear, or change content after tool invocations |
 | `notification_abuse` | CRITICAL–MEDIUM | Unsolicited `sampling/createMessage`, `roots/list`, or other server-initiated requests |
 | `indirect_injection` | CRITICAL–HIGH | Injection/poison patterns in resource content; probes content-processing tools with embedded injection payloads |
-| `active_prompt_injection` | CRITICAL | Sends injection payloads into the first string parameter of **every** invocable tool and flags only a confirmed effect: the canary echoed back, or a system-prompt indicator in the reply |
+| `active_prompt_injection` | CRITICAL–LOW | Sends injection payloads into the first string parameter of **every** invocable tool and flags only a confirmed effect: the indicator produced by the server, or a system-prompt indicator in the reply. The indicator is a word *inside* the payload, so the response has the payload subtracted before it is searched — a server that merely quoted the input it refused reports LOW. See [error-reflection grading](#error-reflection-grading) |
 | `response_credentials` | CRITICAL | Credentials (API keys, passwords, private keys, connection strings) in tool responses |
 | `protocol_robustness` | MEDIUM | Server answers an unknown JSON-RPC method with success instead of `-32601`, or returns a result for `tools/call` with no params |
 | `ssrf_probe` | CRITICAL–MEDIUM | Sends IMDS and loopback URLs through URL-shaped parameters. Cloud metadata content in the response is CRITICAL; an internal-service indicator absent from the safe-URL baseline is HIGH; a large response-size differential, or a fetching tool that merely exposes URL parameters, is MEDIUM. MCP-T06 |
@@ -154,14 +155,57 @@ back. All of them are skipped by `--no-invoke`.
 | `shell_injection` | CRITICAL–HIGH | Shell metacharacter and base-command probes against subprocess-wrapping tools |
 | `sdk_cache_poisoning` | CRITICAL–HIGH | Writes a forged JWT to the target's token cache, then invokes a tool that reads it. Sensitive content in the reply is CRITICAL; an accepted call with no denial is HIGH. **Mutates target state** — skipped by `--fast`. MCP-T33 |
 | `ai_guardrail_probe` (finding: `ai_guardrail_bypass`) | CRITICAL–HIGH | Social-engineering strategies against AI-gated tools. Leaking under three or more strategies is CRITICAL, one or two is HIGH |
-| `prompt_injection_t01` | CRITICAL–HIGH | The same idea as `active_prompt_injection` aimed at a narrower target: only tools whose name, description or parameter names suggest the argument reaches an LLM, and the most prompt-like parameter rather than the first string one. Four canary payloads — direct override, maintenance mode, template evaluation (HIGH), system-role injection — each flagged only when its marker comes back. MCP-T01 |
+| `prompt_injection_t01` | CRITICAL–HIGH | The same idea as `active_prompt_injection` aimed at a narrower target: only tools whose name, description or parameter names suggest the argument reaches an LLM, and the most prompt-like parameter rather than the first string one. Four canary payloads — direct override, maintenance mode, template evaluation (HIGH), system-role injection — each flagged only when the server produces its marker, rather than merely quoting the payload back. See [error-reflection grading](#error-reflection-grading). MCP-T01 |
 | `tool_output_poisoning_t02` (finding: `tool_output_poisoning`) | HIGH | Calls every invocable tool with safe arguments like `tool_response_injection`, but matches only the shared instruction-injection regexes, catching a tool whose *output* carries commands for whichever agent reads it. Narrower surface, one severity, tagged to the taxonomy. MCP-T02 |
-| `command_injection_broad_t05` (finding: `command_injection_broad`) | CRITICAL–HIGH | Command injection through any string parameter, not just command-named ones. MCP-T05 |
+| `command_injection_broad_t05` (finding: `command_injection_broad`) | CRITICAL–LOW | Command injection through any string parameter, not just command-named ones. Shell error text keeps its HIGH even in a failed response — a shell errors *because* it parsed the payload — but a canary that only comes back inside a quoted rejection reports LOW. MCP-T05 |
 | `agentic_loop_behavioral_t10` (finding: `agentic_loop_behavioral`) | HIGH | Tool-call directives embedded in a tool's response, which drive the agent into a loop. MCP-T10 |
 
 `--fast` skips `input_sanitization`, `error_leakage`, `temporal_consistency`,
 `ssrf_probe` and `sdk_cache_poisoning`, and keeps `input_sanitization` anyway
 when a tool exposes a dangerous parameter.
+
+### Error-reflection grading
+
+A well-behaved server rejects a bad argument and says which one it rejected:
+
+```
+Repository not found: /tmp/MCP_PROBE_8f4c2a
+```
+
+Five of the probes above look for a marker that is **part of the payload they
+sent**, so that sentence hands the marker straight back and the check reads its
+own input as proof the server complied. Measured against five real open-source
+MCP servers, this was 61 findings, 29 of them CRITICAL.
+
+Two conditions must now both hold before such a finding is weakened:
+
+1. The response was a refusal (`isError`, a JSON-RPC error, or no response).
+2. The marker survives **nowhere outside a verbatim copy of the payload**. The
+   response has the payload subtracted from it, and only the remainder is
+   searched. Anything left over, the server produced.
+
+When both hold, the finding reports **LOW** and its title says
+`(reflected in error response)`. It is not hidden — a server can return
+`isError` and still be compromised.
+
+Two things are exempt by design:
+
+- **Execution evidence.** Shell error text such as `sh: 1: foo: not found`
+  keeps its severity even in a failed response, because a shell errors
+  *because* it parsed the payload. That is the server's output, not our echo.
+- **Credential leakage.** `response_credentials` and `error_leakage` are
+  untouched: a secret in an error string is a leak either way.
+
+The operator sets the weighting:
+
+```bash
+--error-reflection downgrade   # default: LOW, retitled
+--error-reflection keep        # previous severities, for diffing an old baseline
+--error-reflection suppress    # drop the finding entirely
+```
+
+`keep` reproduces pre-6.15 output exactly, titles included — verified against
+the committed [open-source target snapshots](oss-target-baseline.md).
 
 ---
 
@@ -227,8 +271,8 @@ attack path was exercised and blocked, which is not the same as not testing it.
 | `dpop_not_enforced` | HIGH | Request accepted with no DPoP proof — a stolen bearer token replays without the paired key (RFC 9449 §7) |
 | `dpop_header_not_validated` | HIGH | A malformed DPoP header is accepted, so the proof is decorative (RFC 9449 §7.1) |
 | `dpop_binding_not_enforced` | HIGH | Proof accepted without `htm`/`htu`, so it replays against any endpoint (RFC 9449 §4.2) |
-| `multi_vector` | CRITICAL | 2+ dangerous vulnerability categories active on one server |
-| `attack_chains` (finding: `attack_chain`) | CRITICAL | Linked vulnerability pairs (e.g. `input_sanitization → code_execution`) |
+| `multi_vector` | CRITICAL | 2+ dangerous vulnerability categories active on one server. A category counts only if it has a finding at **MEDIUM or above** — a CRITICAL claim should not rest on evidence we ourselves graded LOW |
+| `attack_chains` (finding: `attack_chain`) | CRITICAL | Linked vulnerability pairs (e.g. `input_sanitization → code_execution`), subject to the same MEDIUM floor as `multi_vector` |
 
 ### DPoP Enforcement (RFC 9449)
 
