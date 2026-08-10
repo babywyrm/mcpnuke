@@ -1,8 +1,17 @@
 # Error-Reflection Severity
 
-**Status:** Approved — not yet implemented
+**Status:** Implemented (2026-08-10) — see
+[docs/oss-target-baseline.md](../../oss-target-baseline.md)
 **Date:** 2026-08-09
 **Follows:** `2026-08-09-oss-target-fp-harness-design.md`
+
+> **Implementation note.** The counts below (187 findings, ~83 in this class)
+> describe the state when this was written. Implementation found a sharper
+> discriminator than the `isError` test proposed here: every affected check
+> matched a marker that was *part of the payload it sent*, so subtracting a
+> verbatim echo of the payload separates compliance from an echo, and works
+> even where `isError` is absent. `isError` remains a required second
+> condition. Measured result: 61 findings re-graded, CRITICAL 49 → 18.
 
 ## Problem
 

@@ -4,13 +4,48 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
-**Findings change in this release.** Capability findings that were substring
-accidents no longer fire, so a scan of an **unchanged** server reports fewer of
-them and `--diff` against an older baseline shows them as resolved. That is the
-fix landing, not the server changing. Measured across five real open-source MCP
-servers: 211 findings → 187, and **71 CRITICAL → 49**.
+**Findings change in this release.** Two classes of false positive stop firing,
+so a scan of an **unchanged** server reports fewer of them and `--diff` against
+an older baseline shows them as resolved. That is the fix landing, not the
+server changing. Measured across five real open-source MCP servers: 211
+findings → 185, and **71 CRITICAL → 18**, a 75% cut with no true positive lost.
+
+Only two findings disappear outright. The rest are re-graded to LOW, where they
+stay visible and countable, and `--error-reflection keep` restores the previous
+severities exactly for anyone who needs a clean diff against an old baseline.
 
 ### Fixed
+
+- **A server refusing bad input was scored as a vulnerability.** Five probes
+  looked for a marker that was itself part of the payload they sent, so a
+  server that rejected the call and quoted the offending input handed the
+  marker straight back: `Repository not found: /tmp/<canary>` was read as proof
+  the server had obeyed an injected instruction. Across five real servers this
+  was **61 findings, 29 of them CRITICAL** — on `server-git` it was every
+  single tool.
+
+  Responses now have the payload subtracted before the marker is looked for. If
+  the marker survives, the server produced it; if it vanishes, we were reading
+  our own input. Findings whose only evidence is such an echo report at LOW and
+  say so in the title. `--error-reflection {downgrade,keep,suppress}` controls
+  the weighting, defaulting to `downgrade`.
+
+  Two exemptions are deliberate: shell error text like `sh: 1: foo: not found`
+  keeps its severity even under `isError`, because a shell errors *because* it
+  parsed the payload, and credential leakage is untouched, because a secret in
+  an error string is a leak either way.
+
+- **`multi_vector` and `attack_chain` counted LOW findings as active attack
+  vectors.** Both built their vector set from finding names with no severity
+  filter, so a CRITICAL "multi-vector attack" could rest entirely on evidence
+  graded LOW. A check now counts as a vector only when it has a finding at
+  MEDIUM or above. Two CRITICALs on real servers were resting on exactly that.
+
+- **The logic for "did this call fail" existed twice and reached neither
+  probe.** `exfil_flow` and `chain_replay` each carried a private, byte-identical
+  copy — written after treating "permission denied" as confirmed exfiltration —
+  and none of the probe checks had it at all. Now one definition in
+  `checks/base.py`, with a test that fails if a second appears.
 
 - **Dangerous-capability patterns matched substrings, not words.** `shell_exec`
   matched `run` inside "running" and `sh` inside "show"; `reverse_shell` matched
@@ -41,9 +76,10 @@ servers: 211 findings → 187, and **71 CRITICAL → 49**.
   false-positive measurement against servers we did not write, and the first
   coverage of **stdio**, **resources** and **prompts**.
 
-  The triage also records what is still wrong and unfixed — roughly 72 findings
-  where a server's *error message* echoing your input is read as reflection,
-  and ~15 auth findings on a transport that has no auth boundary.
+        The triage also records what is still wrong and unfixed. It named two
+    classes; the larger one — a server's *error message* echoing your input
+    being read as reflection — is fixed above. The remaining ~15 auth findings
+    fire on a transport that has no auth boundary, and are still open.
 
 ## [6.14.0] - 2026-08-09
 

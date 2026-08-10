@@ -4,32 +4,7 @@
     {
       "check": "active_prompt_injection",
       "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'create_directory'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'directory_tree'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
       "title": "Active injection: server follows injected instructions via 'edit_file'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'get_file_info'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'list_directory'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'list_directory_with_sizes'"
     },
     {
       "check": "active_prompt_injection",
@@ -39,27 +14,52 @@
     {
       "check": "active_prompt_injection",
       "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'read_file'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'read_media_file'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'read_text_file'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'search_files'"
-    },
-    {
-      "check": "active_prompt_injection",
-      "severity": "CRITICAL",
       "title": "Active injection: server follows injected instructions via 'write_file'"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'create_directory' (reflected in error response)"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'directory_tree' (reflected in error response)"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'get_file_info' (reflected in error response)"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'list_directory' (reflected in error response)"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'list_directory_with_sizes' (reflected in error response)"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'read_file' (reflected in error response)"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'read_media_file' (reflected in error response)"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'read_text_file' (reflected in error response)"
+    },
+    {
+      "check": "active_prompt_injection",
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'search_files' (reflected in error response)"
     },
     {
       "check": "agentic_loop",
@@ -83,8 +83,8 @@
     },
     {
       "check": "command_injection_broad",
-      "severity": "CRITICAL",
-      "title": "Command injection in 'read_file' via param 'path' (semicolon_chain)"
+      "severity": "LOW",
+      "title": "Command injection in 'read_file' via param 'path' (semicolon_chain) (reflected in error response)"
     },
     {
       "check": "delegation_depth",
@@ -178,28 +178,28 @@
     },
     {
       "check": "prompt_injection_t01",
-      "severity": "CRITICAL",
-      "title": "Prompt injection via tool 'get_file_info' param 'path' (direct_override)"
+      "severity": "LOW",
+      "title": "Prompt injection via tool 'get_file_info' param 'path' (direct_override) (reflected in error response)"
     },
     {
       "check": "prompt_injection_t01",
-      "severity": "CRITICAL",
-      "title": "Prompt injection via tool 'list_directory' param 'path' (direct_override)"
+      "severity": "LOW",
+      "title": "Prompt injection via tool 'list_directory' param 'path' (direct_override) (reflected in error response)"
     },
     {
       "check": "prompt_injection_t01",
-      "severity": "CRITICAL",
-      "title": "Prompt injection via tool 'list_directory_with_sizes' param 'path' (direct_override)"
+      "severity": "LOW",
+      "title": "Prompt injection via tool 'list_directory_with_sizes' param 'path' (direct_override) (reflected in error response)"
     },
     {
       "check": "prompt_injection_t01",
-      "severity": "CRITICAL",
-      "title": "Prompt injection via tool 'move_file' param 'source' (direct_override)"
+      "severity": "LOW",
+      "title": "Prompt injection via tool 'move_file' param 'source' (direct_override) (reflected in error response)"
     },
     {
       "check": "prompt_injection_t01",
-      "severity": "CRITICAL",
-      "title": "Prompt injection via tool 'read_text_file' param 'path' (direct_override)"
+      "severity": "LOW",
+      "title": "Prompt injection via tool 'read_text_file' param 'path' (direct_override) (reflected in error response)"
     },
     {
       "check": "schema_risk",
@@ -289,32 +289,7 @@
     {
       "check": "tool_response_injection",
       "severity": "HIGH",
-      "title": "Tool 'create_directory' reflects input via param 'path'"
-    },
-    {
-      "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'directory_tree' reflects input via param 'path'"
-    },
-    {
-      "check": "tool_response_injection",
-      "severity": "HIGH",
       "title": "Tool 'edit_file' reflects input via param 'path'"
-    },
-    {
-      "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'get_file_info' reflects input via param 'path'"
-    },
-    {
-      "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'list_directory' reflects input via param 'path'"
-    },
-    {
-      "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'list_directory_with_sizes' reflects input via param 'path'"
     },
     {
       "check": "tool_response_injection",
@@ -324,17 +299,42 @@
     {
       "check": "tool_response_injection",
       "severity": "HIGH",
-      "title": "Tool 'read_media_file' reflects input via param 'path'"
-    },
-    {
-      "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'search_files' reflects input via param 'path'"
-    },
-    {
-      "check": "tool_response_injection",
-      "severity": "HIGH",
       "title": "Tool 'write_file' reflects input via param 'path'"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "LOW",
+      "title": "Tool 'create_directory' reflects input via param 'path' (reflected in error response)"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "LOW",
+      "title": "Tool 'directory_tree' reflects input via param 'path' (reflected in error response)"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "LOW",
+      "title": "Tool 'get_file_info' reflects input via param 'path' (reflected in error response)"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "LOW",
+      "title": "Tool 'list_directory' reflects input via param 'path' (reflected in error response)"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "LOW",
+      "title": "Tool 'list_directory_with_sizes' reflects input via param 'path' (reflected in error response)"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "LOW",
+      "title": "Tool 'read_media_file' reflects input via param 'path' (reflected in error response)"
+    },
+    {
+      "check": "tool_response_injection",
+      "severity": "LOW",
+      "title": "Tool 'search_files' reflects input via param 'path' (reflected in error response)"
     }
   ]
 }

@@ -1,7 +1,8 @@
 # Open-source target baseline
 
 What mcpnuke reports against five MCP servers **we did not write**, pinned and
-run locally over stdio. Captured 2026-08-09.
+run locally over stdio. Captured 2026-08-09, re-measured 2026-08-10 after the
+error-reflection fix.
 
 The hardened fixture in [false-positive-baseline.md](false-positive-baseline.md)
 measures a server we built to be quiet. This measures servers other people
@@ -9,20 +10,35 @@ built to do real work, which is the harder and more honest question.
 
 ## Summary
 
-| Server | Version | Findings | CRITICAL | HIGH |
-|--------|---------|----------|----------|------|
-| server-everything | 2026.7.4 | 33 | 12 | 6 |
-| server-filesystem | 2026.7.10 | 67 | 20 | 24 |
-| server-git | 2026.7.10 | 66 | 14 | 26 |
-| server-fetch | 2026.7.10 | 12 | 3 | 5 |
-| server-memory | 2026.7.4 | 9 | 0 | 5 |
-| **Total** | | **187** | **49** | **66** |
+| Server | Version | Findings | CRITICAL | HIGH | LOW |
+|--------|---------|----------|----------|------|-----|
+| server-everything | 2026.7.4 | 33 | 12 | 6 | 0 |
+| server-filesystem | 2026.7.10 | 67 | 5 | 17 | 24 |
+| server-git | 2026.7.10 | 65 | 0 | 2 | 42 |
+| server-fetch | 2026.7.10 | 11 | 1 | 4 | 2 |
+| server-memory | 2026.7.4 | 9 | 0 | 5 | 0 |
+| **Total** | | **185** | **18** | **34** | **68** |
 
-**Headline:** the anchoring fix in this release removed **24 findings, 22 of
-them CRITICAL** — a 31% cut in CRITICAL volume across five real servers, with
-no loss of true positives. Of what remains, a large share is still suspected
-false positive; see "Known false positives" below. This document does not
-claim the remaining 187 are all correct.
+**Headline:** two fixes in this release cut CRITICAL findings across five real
+servers from **71 to 18**, a 75% reduction, with no true positive lost.
+
+| Fix | Findings | CRITICAL |
+|-----|----------|----------|
+| Starting point | 211 | 71 |
+| After pattern anchoring | 187 | 49 |
+| After error-reflection grading | 185 | 18 |
+
+`server-git` is the clearest case: **14 CRITICAL and 26 HIGH became 0 and 2.**
+Not one of them described anything the server does. They described what the
+server *said* while refusing us.
+
+Nothing was hidden to achieve this. Only two findings disappeared outright —
+both `multi_vector` CRITICALs that existed solely because they were chaining
+LOW-graded evidence. Every other change is a re-grading: 61 findings moved to
+LOW, where they remain visible and countable.
+
+This document does not claim the remaining 185 are all correct. The auth-on-stdio
+class below is still unfixed.
 
 ## Two servers were not measurable at first
 
@@ -82,34 +98,50 @@ louder finding that looks like corroboration. The same pattern appeared in
 | `schema_risk` | 44 | **True but low value.** These servers really do accept unbounded strings. Accurate; mostly MEDIUM/LOW, and the priority ranker collapses it. |
 | `tool_shadowing` | 3 | **True.** `fetch` and `echo` are genuinely common names a malicious server could shadow. |
 
+## What the error-reflection fix removed
+
+The largest class in the first measurement was a server's *error message*
+being read as a successful injection. The probe sends a path containing a
+canary, the server rejects it and names the bad path — `Repository not found:
+/tmp/<canary>` — and the check reads its own canary coming back as proof the
+server complied.
+
+The discriminator turned out to be sharper than "did this response set
+`isError`". Every one of these checks matched a marker that was **part of the
+payload it sent**. So the response has the payload subtracted from it first,
+and only what remains is searched. If the marker survives, the server produced
+it. If it vanishes, we were reading our own input.
+
+| Check | Was | Now | Severity move |
+|-------|-----|-----|---------------|
+| `active_prompt_injection` | 21 CRITICAL | 21 LOW | CRITICAL → LOW |
+| `tool_response_injection` | 20 HIGH | 20 LOW | HIGH → LOW |
+| `input_sanitization` | 12 HIGH | 12 LOW | HIGH → LOW |
+| `prompt_injection_t01` | 5 CRITICAL | 5 LOW | CRITICAL → LOW |
+| `command_injection_broad` | 3 CRITICAL | 3 LOW | CRITICAL → LOW |
+| `multi_vector` | 2 CRITICAL | — | removed entirely |
+
+The `multi_vector` pair is the interesting one. Both chaining checks built
+their vector set from finding *names* with no severity filter, so downgrading
+the evidence would have left the CRITICAL conclusion drawn from it standing.
+A check now counts as an active vector only at MEDIUM or above.
+
+Two exemptions were deliberate. `command_injection_broad` also matches shell
+error text like `sh: 1: foo: not found`, and that is **not** downgraded even
+though it arrives with `isError` set — a shell errors precisely *because* it
+parsed the metacharacters, so that is the server's own output, not our echo.
+Credential and secret leakage is likewise untouched: a password in an error
+string is a leak whether or not the call succeeded.
+
+**This is auditable, not a matter of trust.** `--error-reflection keep`
+reproduces the pre-fix output exactly; it was checked against all three
+changed targets, and all three matched finding-for-finding. Operators who
+disagree with our grading can restore the old severities, or drop these
+findings entirely with `suppress`.
+
 ## Known false positives, not yet fixed
 
-These are **not** fixed in this release. They are recorded here rather than
-quietly left in the snapshot, and each needs its own piece of work.
-
-### 1. Error-message echo read as injection — ~72 findings, the largest class
-
-`active_prompt_injection` (26), `tool_response_injection` (24) and
-`input_sanitization` (22) fire on nearly every tool of server-git and
-server-filesystem.
-
-The mechanism: the probe sends a path containing a canary, the server rejects
-it and names the bad path in the error message — `Repository not found:
-/tmp/<canary>` — and the check reads its canary coming back as reflection.
-
-Evidence: `rg 'isError|is_error' mcpnuke/checks/tool_probes.py` returns
-**nothing**. These probes never distinguish a *rejected* call from a
-*successful* one, so a server doing exactly the right thing (refusing bad
-input and saying which input it refused) is scored the same as one that
-executed the payload.
-
-Confidence: high on the mechanism, and the class is not yet confirmed
-finding-by-finding. Fixing it means teaching the reflection probes to weigh
-`isError` and to distinguish an error string from tool output — a behavioral
-change, larger than this release's pattern work, and it must not weaken the
-DVMCP true positives that depend on these checks.
-
-### 2. Auth checks on a transport with no auth — ~15 findings
+### Auth checks on a transport with no auth — ~15 findings
 
 `pre_auth_injection` (5), `anon_budget_exhaust` (5) and
 `behavioral_rate_limit` (5) fire on every stdio target.
@@ -123,17 +155,8 @@ here.
 These checks are correct for a networked server. They should be transport-aware
 rather than deleted.
 
-### 3. `command_injection_broad` — 4 findings
-
-Fires on `git_status` and `read_file` for a `;`-chained path. Same root cause
-as class 1: the server echoed the semicolon back inside a "no such path" error.
-Nothing was executed. CRITICAL severity makes this the most costly of the
-remaining false positives per finding.
-
-### 4. `prompt_injection_t01` — 7 findings
-
-Fires where a path parameter was reflected. Needs the same `isError` distinction
-as class 1.
+This is now the only class recorded here as unfixed, and it is the next piece
+of work on these targets.
 
 ## How to reproduce
 

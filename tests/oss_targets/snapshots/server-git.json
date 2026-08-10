@@ -3,63 +3,63 @@
   "findings": [
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_add'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_add' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_branch'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_branch' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_checkout'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_checkout' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_commit'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_commit' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_create_branch'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_create_branch' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_diff'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_diff' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_diff_staged'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_diff_staged' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_diff_unstaged'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_diff_unstaged' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_log'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_log' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_reset'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_reset' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_show'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_show' (reflected in error response)"
     },
     {
       "check": "active_prompt_injection",
-      "severity": "CRITICAL",
-      "title": "Active injection: server follows injected instructions via 'git_status'"
+      "severity": "LOW",
+      "title": "Active injection: server follows injected instructions via 'git_status' (reflected in error response)"
     },
     {
       "check": "anon_budget_exhaust",
@@ -73,8 +73,8 @@
     },
     {
       "check": "command_injection_broad",
-      "severity": "CRITICAL",
-      "title": "Command injection in 'git_status' via param 'repo_path' (semicolon_chain)"
+      "severity": "LOW",
+      "title": "Command injection in 'git_status' via param 'repo_path' (semicolon_chain) (reflected in error response)"
     },
     {
       "check": "excessive_permissions",
@@ -103,68 +103,63 @@
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_add' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_add' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_branch' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_branch' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_checkout' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_checkout' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_commit' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_commit' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_create_branch' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_create_branch' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_diff' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_diff' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_diff_staged' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_diff_staged' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_diff_unstaged' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_diff_unstaged' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_log' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_log' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_reset' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_reset' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_show' reflects probe canary unsanitized"
+      "severity": "LOW",
+      "title": "Tool 'git_show' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "input_sanitization",
-      "severity": "HIGH",
-      "title": "Tool 'git_status' reflects probe canary unsanitized"
-    },
-    {
-      "check": "multi_vector",
-      "severity": "CRITICAL",
-      "title": "Multi-vector attack: 2 categories active"
+      "severity": "LOW",
+      "title": "Tool 'git_status' reflects probe canary unsanitized (reflected in error response)"
     },
     {
       "check": "native_function_identity_erasure",
@@ -268,63 +263,63 @@
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_add' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_add' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_branch' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_branch' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_checkout' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_checkout' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_commit' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_commit' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_create_branch' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_create_branch' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_diff' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_diff' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_diff_staged' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_diff_staged' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_diff_unstaged' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_diff_unstaged' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_log' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_log' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_reset' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_reset' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_show' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_show' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'git_status' reflects input via param 'repo_path'"
+      "severity": "LOW",
+      "title": "Tool 'git_status' reflects input via param 'repo_path' (reflected in error response)"
     },
     {
       "check": "tool_shadowing",

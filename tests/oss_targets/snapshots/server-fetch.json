@@ -13,18 +13,13 @@
     },
     {
       "check": "command_injection_broad",
-      "severity": "CRITICAL",
-      "title": "Command injection in 'fetch' via param 'url' (semicolon_chain)"
+      "severity": "LOW",
+      "title": "Command injection in 'fetch' via param 'url' (semicolon_chain) (reflected in error response)"
     },
     {
       "check": "excessive_permissions",
       "severity": "HIGH",
       "title": "Dangerous capability [network]: 'fetch'"
-    },
-    {
-      "check": "multi_vector",
-      "severity": "CRITICAL",
-      "title": "Multi-vector attack: 2 categories active"
     },
     {
       "check": "native_function_identity_erasure",
@@ -53,8 +48,8 @@
     },
     {
       "check": "tool_response_injection",
-      "severity": "HIGH",
-      "title": "Tool 'fetch' reflects input via param 'url'"
+      "severity": "LOW",
+      "title": "Tool 'fetch' reflects input via param 'url' (reflected in error response)"
     },
     {
       "check": "tool_shadowing",
