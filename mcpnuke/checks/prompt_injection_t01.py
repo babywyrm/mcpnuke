@@ -18,7 +18,7 @@ from __future__ import annotations
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
-    graded_severity,
+    grade_reflection,
     payload_echo_removed,
     response_is_error,
     time_check,
@@ -152,12 +152,13 @@ def check_prompt_injection(
                     produced = payload_echo_removed(text, probe["payload"]).lower()
                     echoed_only = probe["indicator"].lower() not in produced
                     reflected = echoed_only and response_is_error(resp)
-                    severity = graded_severity(
+                    graded = grade_reflection(
                         probe["severity"],
                         reflected_in_error=reflected,
                         policy=opts.get("error_reflection", "downgrade"),
                     )
-                    if severity:
+                    if graded:
+                        severity, annotate = graded
                         title = (
                             f"Prompt injection via tool '{name}' param "
                             f"'{target_param}' ({probe['category']})"
@@ -167,7 +168,7 @@ def check_prompt_injection(
                             f"LLM context without sanitization. Injection payload "
                             f"'{probe['category']}' produced the expected canary marker."
                         )
-                        if reflected:
+                        if annotate:
                             title += ERROR_REFLECTION_SUFFIX
                             detail = (
                                 f"The tool '{name}' echoed the payload back while "

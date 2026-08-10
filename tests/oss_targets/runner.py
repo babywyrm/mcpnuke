@@ -17,7 +17,11 @@ def launcher_available(launcher: str) -> bool:
     return shutil.which(launcher) is not None
 
 
-def scan_target(target: Target, timeout: float = 60.0) -> list[dict]:
+def scan_target(
+    target: Target,
+    timeout: float = 60.0,
+    probe_opts: dict | None = None,
+) -> list[dict]:
     """Scan *target* and return its normalized finding set.
 
     Calls scan_stdio_target — the same function --stdio uses — rather than
@@ -25,8 +29,11 @@ def scan_target(target: Target, timeout: float = 60.0) -> list[dict]:
     that path, not the product: the HTTP fixture made exactly that mistake by
     omitting the auth_context the CLI always sets, and fabricated three
     findings.
+
+    *probe_opts* exists so a claim like "--error-reflection keep reproduces the
+    old output" can be checked against these snapshots rather than asserted.
     """
-    result = scan_stdio_target(target.command, timeout=timeout)
+    result = scan_stdio_target(target.command, timeout=timeout, probe_opts=probe_opts)
     return normalize_findings(result.findings)
 
 

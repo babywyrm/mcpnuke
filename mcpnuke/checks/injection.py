@@ -5,7 +5,7 @@ import re
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
-    graded_severity,
+    grade_reflection,
     payload_echo_removed,
     response_is_error,
     time_check,
@@ -244,12 +244,13 @@ def check_active_prompt_injection(session: MCPSessionProtocol, result: TargetRes
                         text, payload_info["payload"]
                     )
                     reflected = echoed_only and response_is_error(resp)
-                    severity = graded_severity(
+                    graded = grade_reflection(
                         "CRITICAL",
                         reflected_in_error=reflected,
                         policy=opts.get("error_reflection", "downgrade"),
                     )
-                    if severity:
+                    if graded:
+                        severity, annotate = graded
                         title = (
                             "Active injection: server follows injected "
                             f"instructions via '{name}'"
@@ -258,7 +259,7 @@ def check_active_prompt_injection(session: MCPSessionProtocol, result: TargetRes
                             f"Category: {payload_info['category']}, "
                             f"param: {target_param}"
                         )
-                        if reflected:
+                        if annotate:
                             title += ERROR_REFLECTION_SUFFIX
                             detail += (
                                 ". The indicator appeared only inside a verbatim "

@@ -18,7 +18,7 @@ import time
 
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
-    graded_severity,
+    grade_reflection,
     payload_echo_removed,
     response_is_error,
     time_check,
@@ -581,19 +581,20 @@ def check_tool_response_injection(session: MCPSessionProtocol, result: TargetRes
                     in_error = response_is_error(refl_resp)
                     # Not `severity`: the threat loop above binds that name as
                     # a plain str, and this one is optional.
-                    refl_severity = graded_severity(
+                    refl_graded = grade_reflection(
                         "HIGH",
                         reflected_in_error=in_error,
                         policy=opts.get("error_reflection", "downgrade"),
                     )
-                    if refl_severity:
+                    if refl_graded:
+                        refl_severity, annotate = refl_graded
                         title = f"Tool '{name}' reflects input via param '{pname}'"
                         detail = (
                             "User-controlled text appears verbatim in tool output — "
                             "indirect injection vector: attacker content can reach "
                             "the LLM through this tool's response"
                         )
-                        if in_error:
+                        if annotate:
                             title += ERROR_REFLECTION_SUFFIX
                             detail = (
                                 "The tool echoed the probe while rejecting the call. "
@@ -665,11 +666,12 @@ def _canary_sighting(
     echoed_only = CANARY not in payload_echo_removed(text, payload)
     reflected_in_error = echoed_only and response_is_error(resp)
 
-    severity = graded_severity(
+    graded = grade_reflection(
         base_severity, reflected_in_error=reflected_in_error, policy=policy
     )
-    if severity:
-        if reflected_in_error:
+    if graded:
+        severity, annotate = graded
+        if annotate:
             title += ERROR_REFLECTION_SUFFIX
             detail += (
                 ". The canary appeared only inside a verbatim echo of the probe "

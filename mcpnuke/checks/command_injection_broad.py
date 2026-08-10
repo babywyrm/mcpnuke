@@ -20,7 +20,7 @@ import re
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
-    graded_severity,
+    grade_reflection,
     payload_echo_removed,
     response_is_error,
     time_check,
@@ -152,12 +152,13 @@ def check_command_injection_broad(
                             text, probe["payload"]
                         )
                         reflected = echoed_only and response_is_error(resp)
-                        severity = graded_severity(
+                        graded = grade_reflection(
                             "CRITICAL",
                             reflected_in_error=reflected,
                             policy=opts.get("error_reflection", "downgrade"),
                         )
-                        if severity:
+                        if graded:
+                            severity, annotate = graded
                             title = (
                                 f"Command injection in '{name}' via param "
                                 f"'{param}' ({probe['category']})"
@@ -168,7 +169,7 @@ def check_command_injection_broad(
                                 f"'{probe['category']}' successfully injected and the canary "
                                 f"marker appeared in the response."
                             )
-                            if reflected:
+                            if annotate:
                                 title += ERROR_REFLECTION_SUFFIX
                                 detail = (
                                     f"Tool '{name}' echoed the payload back while "

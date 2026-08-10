@@ -47,24 +47,29 @@ def response_is_error(resp: dict | None) -> bool:
 ERROR_REFLECTION_SUFFIX: str = " (reflected in error response)"
 
 
-def graded_severity(
+def grade_reflection(
     base: str,
     *,
     reflected_in_error: bool,
     policy: str = "downgrade",
-) -> str | None:
-    """Severity to report for *base*, or None to drop the finding.
+) -> tuple[str, bool] | None:
+    """Return ``(severity, annotate)`` for a finding, or None to drop it.
 
     A server that refuses bad input and names it in the error message is
     behaving correctly. Downgrading rather than suppressing is deliberate: a
     server can return isError and still be compromised, so the finding stays
     visible and the operator decides what it is worth.
+
+    Severity and annotation are decided together on purpose. Splitting them
+    across two functions is how ``keep`` first shipped preserving severities
+    while still retitling every finding — which breaks the baseline diff that
+    ``keep`` exists to protect.
     """
-    if not reflected_in_error or policy == "keep":
-        return base
+    if policy == "keep" or not reflected_in_error:
+        return base, False
     if policy == "suppress":
         return None
-    return "LOW"
+    return "LOW", True
 
 
 def payload_echo_removed(text: str, payload: str) -> str:

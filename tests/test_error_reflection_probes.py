@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mcpnuke.checks.base import ERROR_REFLECTION_SUFFIX
 from mcpnuke.checks.command_injection_broad import check_command_injection_broad
 from mcpnuke.checks.injection import check_active_prompt_injection
 from mcpnuke.checks.tool_probes import (
@@ -92,10 +93,16 @@ class TestInputSanitization:
         assert "HIGH" in _sev(r, "input_sanitization"), r.findings
 
     def test_keep_policy_reproduces_old_behaviour(self):
+        """Severity *and* title. A retitled finding breaks a baseline diff just
+        as surely as a re-graded one, and that diff is why `keep` exists. The
+        first implementation preserved severity but still retitled; the OSS
+        snapshot audit is what caught it."""
         r = _result(_tool())
         session = _echoing_session("Invalid command: {payload}", is_error=True)
         check_input_sanitization(session, r, {"error_reflection": "keep"})
         assert "HIGH" in _sev(r, "input_sanitization"), r.findings
+        for f in r.findings:
+            assert ERROR_REFLECTION_SUFFIX not in f.title, f.title
 
     def test_suppress_policy_emits_nothing(self):
         r = _result(_tool())
@@ -126,6 +133,14 @@ class TestToolResponseInjection:
         session = _session(f"Here you go: {REFLECTION_PAYLOAD}", is_error=False)
         check_tool_response_injection(session, r, {"error_reflection": "downgrade"})
         assert "HIGH" in _sev(r, "tool_response_injection"), r.findings
+
+    def test_keep_leaves_the_title_alone_too(self):
+        r = _result(_tool(param="path"))
+        session = _session(f"No such path: {REFLECTION_PAYLOAD}", is_error=True)
+        check_tool_response_injection(session, r, {"error_reflection": "keep"})
+        assert "HIGH" in _sev(r, "tool_response_injection"), r.findings
+        for f in r.findings:
+            assert ERROR_REFLECTION_SUFFIX not in f.title, f.title
 
 
 def test_credential_leakage_checks_do_not_consult_the_policy():

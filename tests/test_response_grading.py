@@ -10,7 +10,7 @@ import subprocess
 
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
-    graded_severity,
+    grade_reflection,
     payload_echo_removed,
     response_is_error,
 )
@@ -71,28 +71,36 @@ class TestPayloadEchoRemoved:
         assert "PWNED" not in payload_echo_removed(f"{payload} / {payload}", payload)
 
 
-class TestGradedSeverity:
-    def test_clean_finding_keeps_its_severity(self):
-        assert (
-            graded_severity("CRITICAL", reflected_in_error=False, policy="downgrade")
-            == "CRITICAL"
-        )
+class TestGradeReflection:
+    def test_clean_finding_is_untouched_and_unannotated(self):
+        assert grade_reflection(
+            "CRITICAL", reflected_in_error=False, policy="downgrade"
+        ) == ("CRITICAL", False)
 
-    def test_error_reflection_downgrades_by_default(self):
-        assert (
-            graded_severity("CRITICAL", reflected_in_error=True, policy="downgrade")
-            == "LOW"
-        )
+    def test_error_reflection_downgrades_and_annotates_by_default(self):
+        assert grade_reflection(
+            "CRITICAL", reflected_in_error=True, policy="downgrade"
+        ) == ("LOW", True)
 
-    def test_keep_preserves_todays_behaviour(self):
-        """Needed by anyone diffing against a pre-change baseline."""
-        assert graded_severity("HIGH", reflected_in_error=True, policy="keep") == "HIGH"
+    def test_keep_changes_nothing_at_all_including_the_title(self):
+        """`keep` exists so a pre-change baseline still diffs clean. A retitled
+        finding breaks that diff just as surely as a re-graded one, so the
+        annotation has to be suppressed too — measured against the real OSS
+        snapshots, where severities matched but every title had drifted."""
+        assert grade_reflection("HIGH", reflected_in_error=True, policy="keep") == (
+            "HIGH",
+            False,
+        )
 
     def test_suppress_drops_the_finding(self):
-        assert graded_severity("HIGH", reflected_in_error=True, policy="suppress") is None
+        assert (
+            grade_reflection("HIGH", reflected_in_error=True, policy="suppress") is None
+        )
 
     def test_unknown_policy_falls_back_to_the_default(self):
-        assert graded_severity("HIGH", reflected_in_error=True, policy="nonsense") == "LOW"
+        assert grade_reflection(
+            "HIGH", reflected_in_error=True, policy="nonsense"
+        ) == ("LOW", True)
 
     def test_suffix_is_stated_plainly(self):
         assert "error response" in ERROR_REFLECTION_SUFFIX
