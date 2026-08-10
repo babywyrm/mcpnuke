@@ -15,6 +15,11 @@ _add = lane_tagged(lane=4, transport="A")
 
 _TOOL_NAME_RE = re.compile(r"'([\w.]+)'|tool\s+'?([\w.]+)'?", re.IGNORECASE)
 
+# What counts as an active attack vector. LOW is excluded on its own merits:
+# a chain is a claim about things an attacker can actually use, and a finding
+# we graded LOW is one we are saying is probably not that.
+_VECTOR_SEVERITY_FLOOR: frozenset[str] = frozenset({"CRITICAL", "HIGH", "MEDIUM"})
+
 # Two tools on one server whose names differ by a plural or a character are
 # indistinguishable to an agent selecting by name. Calibrated against real
 # tool vocabularies: legitimate neighbours peak around 0.71
@@ -120,9 +125,23 @@ def _flag_confusable_names(result: TargetResult) -> None:
         )
 
 
+def _active_vectors(result: TargetResult) -> set[str]:
+    """Checks with at least one finding we graded MEDIUM or above.
+
+    Both chaining checks used to build this from finding names alone, with no
+    severity filter, so a finding demoted to LOW still counted as a fully
+    active attack vector. That let a CRITICAL "multi-vector attack" rest
+    entirely on evidence we ourselves graded weak.
+
+    Per check, not per finding: one weak finding must not disqualify a check
+    that also produced a strong one.
+    """
+    return {f.check for f in result.findings if f.severity in _VECTOR_SEVERITY_FLOOR}
+
+
 def check_multi_vector(result: TargetResult):
     with time_check("multi_vector", result):
-        checks_hit = {f.check for f in result.findings}
+        checks_hit = _active_vectors(result)
         dangerous = {
             "prompt_injection",
             "active_prompt_injection",
@@ -221,7 +240,7 @@ def _grade_linkage(
 
 def check_attack_chains(result: TargetResult):
     with time_check("attack_chains", result):
-        checks = {f.check for f in result.findings}
+        checks = _active_vectors(result)
         tool_names = {t["name"] for t in result.tools}
         tool_prefixes = {n.split(".")[0] for n in tool_names}
         valid = tool_names | tool_prefixes
