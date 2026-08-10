@@ -60,6 +60,7 @@ Generated from the parser, so it cannot fall behind the code.
 | `--oast-port PORT` | Port for the callback listener (default: an ephemeral port). Set a fixed port when the callback has to traverse a firewall rule. |
 | `--no-invoke` | Static-only mode: skip all behavioral probes that call tools. Safe for production servers where tool invocation could have side effects. |
 | `--safe-mode` | Skip invoking tools classified as dangerous (delete, send, exec, write, webhook, egress, exfil, …). Namespaced names like shellwrap.exec and shadow.register_webhook count too. Behavioral probes still run on read-only / low-risk tools. |
+| `--error-reflection POLICY` | How to score a payload reflected in a server's error message. A server that refuses bad input and names it is behaving correctly. 'downgrade' (default) reports it at LOW and says so in the title, 'keep' restores pre-6.15 severities for baseline diffs, 'suppress' drops the finding. |
 | `--probe-calls N` | Number of tool invocations per tool for deep rug pull detection (default: 10) |
 
 ## Performance

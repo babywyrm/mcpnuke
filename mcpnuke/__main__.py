@@ -590,6 +590,7 @@ def _main_inner() -> None:
     probe_opts = {
         "no_invoke": args.no_invoke,
         "safe_mode": args.safe_mode,
+        "error_reflection": getattr(args, "error_reflection", "downgrade"),
         "probe_calls": args.probe_calls,
         "max_pages": args.max_pages,
         "protocol_mode": args.protocol_mode,

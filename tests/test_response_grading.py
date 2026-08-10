@@ -8,7 +8,12 @@ from __future__ import annotations
 
 import subprocess
 
-from mcpnuke.checks.base import payload_echo_removed, response_is_error
+from mcpnuke.checks.base import (
+    ERROR_REFLECTION_SUFFIX,
+    graded_severity,
+    payload_echo_removed,
+    response_is_error,
+)
 
 
 class TestResponseIsError:
@@ -64,6 +69,33 @@ class TestPayloadEchoRemoved:
     def test_repeated_echoes_are_all_removed(self):
         payload = "SAY PWNED"
         assert "PWNED" not in payload_echo_removed(f"{payload} / {payload}", payload)
+
+
+class TestGradedSeverity:
+    def test_clean_finding_keeps_its_severity(self):
+        assert (
+            graded_severity("CRITICAL", reflected_in_error=False, policy="downgrade")
+            == "CRITICAL"
+        )
+
+    def test_error_reflection_downgrades_by_default(self):
+        assert (
+            graded_severity("CRITICAL", reflected_in_error=True, policy="downgrade")
+            == "LOW"
+        )
+
+    def test_keep_preserves_todays_behaviour(self):
+        """Needed by anyone diffing against a pre-change baseline."""
+        assert graded_severity("HIGH", reflected_in_error=True, policy="keep") == "HIGH"
+
+    def test_suppress_drops_the_finding(self):
+        assert graded_severity("HIGH", reflected_in_error=True, policy="suppress") is None
+
+    def test_unknown_policy_falls_back_to_the_default(self):
+        assert graded_severity("HIGH", reflected_in_error=True, policy="nonsense") == "LOW"
+
+    def test_suffix_is_stated_plainly(self):
+        assert "error response" in ERROR_REFLECTION_SUFFIX
 
 
 def test_only_one_definition_of_the_error_check():

@@ -254,6 +254,17 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
         "probes still run on read-only / low-risk tools.",
     )
     group.add_argument(
+        "--error-reflection",
+        metavar="POLICY",
+        default="downgrade",
+        choices=["downgrade", "keep", "suppress"],
+        help="How to score a payload reflected in a server's error message. A "
+        "server that refuses bad input and names it is behaving correctly. "
+        "'downgrade' (default) reports it at LOW and says so in the title, "
+        "'keep' restores pre-6.15 severities for baseline diffs, 'suppress' "
+        "drops the finding.",
+    )
+    group.add_argument(
         "--probe-calls",
         type=int,
         default=10,

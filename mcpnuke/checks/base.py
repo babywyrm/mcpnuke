@@ -41,6 +41,32 @@ def response_is_error(resp: dict | None) -> bool:
     return isinstance(result, dict) and bool(result.get("isError"))
 
 
+# Stated in the title rather than only the detail, because a triager scanning
+# a list of titles is exactly the reader who needs to know this one came from
+# a rejection.
+ERROR_REFLECTION_SUFFIX: str = " (reflected in error response)"
+
+
+def graded_severity(
+    base: str,
+    *,
+    reflected_in_error: bool,
+    policy: str = "downgrade",
+) -> str | None:
+    """Severity to report for *base*, or None to drop the finding.
+
+    A server that refuses bad input and names it in the error message is
+    behaving correctly. Downgrading rather than suppressing is deliberate: a
+    server can return isError and still be compromised, so the finding stays
+    visible and the operator decides what it is worth.
+    """
+    if not reflected_in_error or policy == "keep":
+        return base
+    if policy == "suppress":
+        return None
+    return "LOW"
+
+
 def payload_echo_removed(text: str, payload: str) -> str:
     """Return *text* with verbatim copies of *payload* removed.
 
