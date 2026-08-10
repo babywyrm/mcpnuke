@@ -13,6 +13,12 @@ import pytest
 from mcpnuke.checks.base import ERROR_REFLECTION_SUFFIX
 from mcpnuke.checks.command_injection_broad import check_command_injection_broad
 from mcpnuke.checks.injection import check_active_prompt_injection
+from mcpnuke.checks.prompt_injection_t01 import (
+    _INJECTION_PAYLOADS as _T01_PAYLOADS,
+)
+from mcpnuke.checks.prompt_injection_t01 import (
+    check_prompt_injection as check_prompt_injection_t01,
+)
 from mcpnuke.checks.tool_probes import (
     check_input_sanitization,
     check_tool_response_injection,
@@ -182,6 +188,36 @@ class TestActivePromptInjection:
         session = _session(p["indicator"], is_error=False)
         check_active_prompt_injection(session, r, {"error_reflection": "downgrade"})
         assert "CRITICAL" in _sev(r, "active_prompt_injection"), r.findings
+
+
+class TestPromptInjectionT01:
+    # Only tools whose name or params suggest the argument reaches an LLM are
+    # probed at all, hence `prompt` rather than the generic fixture param.
+    def _llm_tool(self):
+        return _tool(name="ask_assistant", param="prompt")
+
+    def test_payload_quoted_in_a_rejection_is_downgraded(self):
+        r = _result(self._llm_tool())
+        session = _echoing_session("Rejected: {payload}", is_error=True)
+        check_prompt_injection_t01(session, r, {"error_reflection": "downgrade"})
+        assert _sev(r, "prompt_injection_t01"), "expected a finding"
+        assert all(s == "LOW" for s in _sev(r, "prompt_injection_t01")), r.findings
+
+    def test_server_that_actually_complies_keeps_its_severity(self):
+        p = _T01_PAYLOADS[0]
+        r = _result(self._llm_tool())
+        session = _session(p["indicator"], is_error=False)
+        check_prompt_injection_t01(session, r, {"error_reflection": "downgrade"})
+        assert p["severity"] in _sev(r, "prompt_injection_t01"), r.findings
+
+    def test_keep_leaves_severity_and_title_alone(self):
+        p = _T01_PAYLOADS[0]
+        r = _result(self._llm_tool())
+        session = _echoing_session("Rejected: {payload}", is_error=True)
+        check_prompt_injection_t01(session, r, {"error_reflection": "keep"})
+        assert p["severity"] in _sev(r, "prompt_injection_t01"), r.findings
+        for f in r.findings:
+            assert ERROR_REFLECTION_SUFFIX not in f.title, f.title
 
 
 class TestCommandInjectionBroad:
