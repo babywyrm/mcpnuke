@@ -21,7 +21,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
 | False-positive measurement | **Done** — two harnesses, both baselined and gated; see below |
-| Distribution (PyPI, install script) | **Ready** — `install.sh`, tag-triggered publish workflow; awaiting first tag |
+| Distribution (PyPI, install script) | **Ready** — `install.sh` + publish workflow, both tested; upload armed by the `PYPI_PUBLISH` variable once the trusted publisher is registered |
 | CI/CD workflow for the tool itself | **Partial** — `tests.yml` + reusable scan workflow; dogfood CI still thin |
 
 ---
@@ -163,9 +163,16 @@ so it needs its own decision rather than the same filter.
 
 ### Publishing, when the tag goes up
 
-One-time, on PyPI under the project's Publishing settings: owner `babywyrm`,
-repository `mcpnuke`, workflow `publish.yml`, environment `pypi`. No API token
-is created or stored — `publish.yml` mints a short-lived OIDC credential per
+Two one-time steps, in this order:
+
+1. On PyPI, under the project's Publishing settings: owner `babywyrm`,
+   repository `mcpnuke`, workflow `publish.yml`, environment `pypi`. Create
+   the matching `pypi` environment in repo settings.
+2. Set the repository variable `PYPI_PUBLISH` to `true`.
+
+Until step 2, a `vX.Y.Z` tag still runs the full build-and-verify job and
+simply skips the upload, so tagging a release is safe before PyPI exists.
+No API token is created or stored — `publish.yml` mints a short-lived OIDC credential per
 run, and a stored token would be the same long-lived secret mcpnuke flags on
 other people's servers.
 

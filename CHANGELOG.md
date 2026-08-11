@@ -2,7 +2,7 @@
 
 All notable changes to this submodule are documented here.
 
-## [Unreleased]
+## [6.16.0] - 2026-08-11
 
 Two independent threads: mcpnuke becomes installable, and three checks stop
 reporting an authentication failure on a transport that has no authentication.

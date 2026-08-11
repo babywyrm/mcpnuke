@@ -108,8 +108,16 @@ jobs:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    # Never on a manual dry run, and never on a branch push.
-    if: startsWith(github.ref, 'refs/tags/')
+    # Two conditions, both required.
+    #
+    # The tag check keeps releases off branch pushes and manual dry runs.
+    #
+    # PYPI_PUBLISH is an explicit opt-in for the upload itself, and stays
+    # unset until the trusted publisher is registered on PyPI and the `pypi`
+    # environment exists in repo settings. Without it a tag push queues a job
+    # that cannot start, and every release reads as failed while the build
+    # underneath it was fine. Set the repository variable to 'true' to arm it.
+    if: startsWith(github.ref, 'refs/tags/') && vars.PYPI_PUBLISH == 'true'
 
     environment:
       name: pypi

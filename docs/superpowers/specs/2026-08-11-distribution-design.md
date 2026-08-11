@@ -1,8 +1,23 @@
 # Distribution: installer, publish workflow, packaging fixes
 
-**Status:** Approved, in progress
+**Status:** Implemented 2026-08-11, shipped in 6.16.0
 **Date:** 2026-08-11
 **Follows:** `2026-08-10-stdio-transport-awareness-design.md`
+
+## Outcome
+
+Everything below shipped as designed, verified against a real clean-room
+install: wheel built from the committed tree, installed into an empty venv
+with no extras, `twine check --strict` passed on both artifacts, both console
+scripts checked, and a full scan run end to end from the installed binary.
+
+One addition the design did not anticipate. The upload job is gated on a
+`PYPI_PUBLISH` repository variable as well as the tag, because the first
+`vX.Y.Z` tag was pushed before the PyPI trusted publisher was registered.
+Without the gate that tag queues a job which cannot start — the `pypi`
+environment does not exist yet — and the release reads as failed even though
+the build under it was green. Setting the variable to `true` arms the upload
+once PyPI is configured.
 
 ## Problem
 

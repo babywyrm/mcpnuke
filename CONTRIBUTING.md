@@ -271,8 +271,10 @@ open an issue first so we can agree on the shape before you build it.
    scripts, and only then uploads to PyPI.
 
 Publishing uses OIDC trusted publishing, so there is no API token to rotate or
-leak. The `pypi` environment must exist in repo settings for the upload job to
-start.
+leak. The upload step is armed by the `PYPI_PUBLISH` repository variable and
+needs the `pypi` environment to exist; until both are in place a tag runs the
+full build-and-verify job and skips the upload, which keeps tagging safe
+before PyPI is configured.
 
 **A published version is permanent.** PyPI does not allow re-uploading or
 replacing one, which is why `scripts/check-tag-version.sh` runs before the

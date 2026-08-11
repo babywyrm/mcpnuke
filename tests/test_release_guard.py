@@ -89,6 +89,10 @@ def test_the_publish_workflow_only_uploads_on_a_tag():
     publish = workflow["jobs"]["publish"]
 
     assert "refs/tags/" in publish["if"]
+    # Uploading is opt-in on top of the tag check, so a tag pushed before the
+    # PyPI trusted publisher exists produces a green build with the upload
+    # skipped, rather than a red one nobody can fix from this repo.
+    assert "vars.PYPI_PUBLISH" in publish["if"]
     # Trusted publishing needs this and must not be granted repo-wide.
     assert publish["permissions"] == {"id-token": "write"}
     assert workflow.get("permissions") == {"contents": "read"}
