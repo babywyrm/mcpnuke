@@ -23,6 +23,8 @@ for training, or point at any MCP server in dev/staging/prod.
 **On this page**
 
 - [Install](#install)
+  - [To use mcpnuke](#to-use-mcpnuke)
+  - [To work on mcpnuke](#to-work-on-mcpnuke)
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
 - [Security Checks](#security-checks)
@@ -59,40 +61,49 @@ walkthroughs and cross-project guides for camazotz + nullfield + mcpnuke.
 
 ## Install
 
-**Quickstart (recommended):**
+### To use mcpnuke
+
+**One-liner:**
+```bash
+curl -LsSf https://raw.githubusercontent.com/babywyrm/mcpnuke/main/install.sh | bash
+```
+
+Picks `uv tool`, `pipx` or `pip --user`, whichever you have. All three install
+mcpnuke into its own environment, so its dependency pins cannot disturb the
+rest of your Python. Pass `--extras all` for the optional features, or
+`--dry-run` to see the plan first.
+
+**Or install it yourself:**
+```bash
+uv tool install mcpnuke          # recommended
+pipx install mcpnuke
+pip install --user mcpnuke
+```
+
+**Verify:**
+```bash
+mcpnuke --doctor
+```
+
+Optional extras: `ai` (Claude analysis), `k8s` (Kubernetes checks), `server`
+(the `mcpnuke-runner` HTTP job API), `all` (everything). The scanner itself
+needs none of them — `uv tool install 'mcpnuke[all]'` if you want the lot.
+
+### To work on mcpnuke
+
 ```bash
 git clone https://github.com/babywyrm/mcpnuke.git && cd mcpnuke
 ./quickstart.sh
 ```
 
-This creates a `.venv`, installs all extras (dev, ai, k8s), runs tests, and
-prints usage. After that, `./scan` and `uv run mcpnuke` just work — no
-activation needed.
+Creates a `.venv`, installs every extra including `dev`, runs the test suite
+and prints usage. After that `./scan` and `uv run mcpnuke` both work with no
+activation, because `uv run` finds the project venv on its own.
 
-**uv (manual):**
+Manual equivalents:
 ```bash
-uv sync --all-extras
-uv run mcpnuke --help
-```
-
-No `source .venv/bin/activate` needed — `uv run` finds the project venv automatically.
-
-Optional extras: `dev` (testing/linting), `ai` (Claude analysis), `k8s` (Kubernetes checks), `all` (everything).
-
-**pip (manual):**
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[all,dev]"
-```
-
-**From PyPI** (coming soon):
-```bash
-uv pip install 'mcpnuke[all]'
-```
-
-**Verify your install:**
-```bash
-mcpnuke --doctor
+uv sync --all-extras                              # uv
+python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[all,dev]"
 ```
 
 ---

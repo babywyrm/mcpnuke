@@ -21,7 +21,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
 | False-positive measurement | **Done** — two harnesses, both baselined and gated; see below |
-| Distribution (PyPI, install script) | **Gap** — source-only |
+| Distribution (PyPI, install script) | **Ready** — `install.sh`, tag-triggered publish workflow; awaiting first tag |
 | CI/CD workflow for the tool itself | **Partial** — `tests.yml` + reusable scan workflow; dogfood CI still thin |
 
 ---
@@ -156,9 +156,23 @@ so it needs its own decision rather than the same filter.
 ### Near-term
 
 - **CI dogfood** — broaden `.github/workflows/tests.yml` / scan workflow (matrix, self-scan)
-- **Publish workflow** — PyPI via OIDC trusted publishing on tag push
-- **`install.sh`** — one-liner macOS/Linux installer (same pattern as skillseraph)
-- **PyPI package** — `pip install mcpnuke` / `uvx mcpnuke`
+- **First PyPI release** — everything below is built and tested; what remains
+  is registering the trusted publisher on PyPI and pushing a `vX.Y.Z` tag
+  - ~~Publish workflow — PyPI via OIDC trusted publishing on tag push~~ **Done**
+  - ~~`install.sh` — one-liner macOS/Linux installer~~ **Done**
+
+### Publishing, when the tag goes up
+
+One-time, on PyPI under the project's Publishing settings: owner `babywyrm`,
+repository `mcpnuke`, workflow `publish.yml`, environment `pypi`. No API token
+is created or stored — `publish.yml` mints a short-lived OIDC credential per
+run, and a stored token would be the same long-lived secret mcpnuke flags on
+other people's servers.
+
+The workflow refuses to build when the tag disagrees with the packaged
+version (`scripts/check-tag-version.sh`), because a PyPI version can never be
+replaced or reused. It then installs the built wheel into a clean environment
+and checks both console scripts before anything is uploaded.
 
 ### Medium-term
 

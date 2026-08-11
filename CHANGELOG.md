@@ -4,6 +4,51 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+Two independent threads: mcpnuke becomes installable, and three checks stop
+reporting an authentication failure on a transport that has no authentication.
+
+### Distribution
+
+**mcpnuke becomes installable.** Until now the only way to get it was to clone
+the repo. This release adds an installer and a publish pipeline, so the next
+tag pushed puts `pip install mcpnuke` and `uv tool install mcpnuke` within
+reach.
+
+#### Added
+
+- **`install.sh`** — one-liner installer for people who want the tool rather
+  than the repo. Picks `uv tool`, `pipx` or `pip --user`, whichever is
+  available; all three isolate the install so mcpnuke's pins cannot disturb
+  the rest of your Python. `--extras`, `--version`, `--from` and `--dry-run`
+  are supported. `quickstart.sh` is unchanged and remains the way to set up a
+  development clone.
+- **`.github/workflows/publish.yml`** — publishes to PyPI on a `vX.Y.Z` tag
+  via OIDC trusted publishing, with no stored API token. It runs the full
+  suite, refuses to build if the tag disagrees with the packaged version, and
+  installs the built wheel into a clean environment to check both console
+  scripts before uploading anything.
+- **`scripts/check-tag-version.sh`** — the tag/version guard, as a tested
+  script rather than inline workflow YAML. A PyPI version can never be
+  replaced or reused, so a tag shipping the wrong artifact burns that number
+  permanently.
+- **`tests/test_packaging.py`** — invariants that are invisible from a source
+  checkout and would first be hit by someone who just ran `pip install`.
+
+#### Fixed
+
+- **`mcpnuke-runner` no longer prints a traceback in a base install.** It is
+  installed by the base package but implemented behind the optional `server`
+  extra, so `pip install mcpnuke && mcpnuke-runner` produced a raw
+  `ModuleNotFoundError` for pydantic. It now explains that the extra is
+  needed and exits 2. The scanner itself never required it.
+
+#### Changed
+
+- `[project.urls]` gains Homepage, Documentation and Changelog links, which
+  are what PyPI renders in the project sidebar.
+
+### Findings
+
 **Findings change again, in the same direction.** Three checks reported a
 missing authentication boundary on stdio, a transport that has none to miss.
 They fired on 5 of 5 pinned open-source servers — 100%, the signature of a
@@ -13,7 +58,7 @@ now reports 15 fewer findings across those five: 185 → 170, and **34 HIGH →
 
 All three remain fully active on HTTP and SSE, where the boundary is real.
 
-### Fixed
+#### Fixed
 
 - **`pre_auth_injection` no longer fires on stdio.** "N tools available
   without authentication" is true of every stdio server, because the
@@ -27,7 +72,7 @@ All three remain fully active on HTTP and SSE, where the boundary is real.
   user who launched it — so there is no ambiguity to erase, and a `caller_id`
   parameter would be self-asserted by that same client.
 
-### Added
+#### Added
 
 - **A stdio reference target and false-positive gate**
   (`tests/reference_target/stdio_server.py`,
@@ -40,7 +85,7 @@ All three remain fully active on HTTP and SSE, where the boundary is real.
 - **First tests for `pre_auth_injection` and
   `native_function_identity_erasure`,** neither of which had any.
 
-### Known
+#### Known
 
 - `behavioral_rate_limit` still fires on all five stdio targets. It was
   grouped with the class above originally and deliberately left alone: an

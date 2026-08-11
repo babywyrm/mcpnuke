@@ -259,6 +259,30 @@ AST-level tests that fail if lab strings appear in them.
 For anything large — a new transport, a new check family, a reporting change —
 open an issue first so we can agree on the shape before you build it.
 
+## Cutting a release
+
+1. Bump the version in `pyproject.toml` **and** `mcpnuke/__init__.py`, and give
+   `## [Unreleased]` its number and date. `tests/test_version_consistency.py`
+   fails if the three disagree.
+2. Full suite green, `ruff` at zero, `mypy` at or under the ceiling.
+3. Tag `vX.Y.Z` and push the tag. `.github/workflows/publish.yml` does the
+   rest: it re-runs the suite, checks the tag against the packaged version,
+   builds, installs the wheel into a clean environment to verify both console
+   scripts, and only then uploads to PyPI.
+
+Publishing uses OIDC trusted publishing, so there is no API token to rotate or
+leak. The `pypi` environment must exist in repo settings for the upload job to
+start.
+
+**A published version is permanent.** PyPI does not allow re-uploading or
+replacing one, which is why `scripts/check-tag-version.sh` runs before the
+build rather than after it. If a tag is wrong, delete it and tag again — but
+only before the upload job has run.
+
+To rehearse without publishing, run the workflow manually
+(`workflow_dispatch`); it builds and verifies but the upload job is gated on a
+tag ref.
+
 ## Scope
 
 mcpnuke is **outside-in runtime scanning of live MCP endpoints**. Adjacent work

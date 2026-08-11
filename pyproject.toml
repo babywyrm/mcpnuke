@@ -61,7 +61,10 @@ mcpnuke = "mcpnuke.__main__:main"
 mcpnuke-runner = "mcpnuke._runner_entry:main"
 
 [project.urls]
+Homepage = "https://github.com/babywyrm/mcpnuke"
 Repository = "https://github.com/babywyrm/mcpnuke"
+Documentation = "https://github.com/babywyrm/mcpnuke/blob/main/docs/checks.md"
+Changelog = "https://github.com/babywyrm/mcpnuke/blob/main/CHANGELOG.md"
 Issues = "https://github.com/babywyrm/mcpnuke/issues"
 
 [build-system]
