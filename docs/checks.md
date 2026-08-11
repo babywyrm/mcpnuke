@@ -37,6 +37,7 @@ bug in this file, and fix it here.
 ## Contents
 
 - [When each check runs](#when-each-check-runs)
+  - [Authentication findings on stdio](#authentication-findings-on-stdio)
 - [Static Checks (metadata only)](#static-checks-metadata-only)
   - [Token & Identity Checks (JWT)](#token--identity-checks-jwt)
 - [Behavioral Checks (active server interaction)](#behavioral-checks-active-server-interaction)
@@ -63,6 +64,29 @@ bug in this file, and fix it here.
 `tbot_credential_exposure` and `teleport_bot_overprivilege` are the exceptions
 to the base-URL rule: they run on every scan but return immediately unless
 mcpnuke is running inside a Kubernetes pod with a service-account token.
+
+### Authentication findings on stdio
+
+A stdio server is a subprocess the scanner launched, connected by a pipe. It
+has no header layer to carry a credential and exactly one caller, which is the
+client that spawned it. A finding phrased as "unauthenticated X" or "no caller
+identity" therefore describes stdio itself, and would be true of every stdio
+server ever written — these three fired on 5 of 5 pinned open-source servers.
+
+| Check | Behaviour on stdio |
+|-------|--------------------|
+| `auth` | Not reported |
+| `pre_auth_injection` | Not reported |
+| `native_function_identity_erasure` | Not reported |
+| `anon_budget_exhaust` | Not probed — returns before its 25-call burst |
+| `dpop_not_enforced` | Not reported (already required an HTTP endpoint) |
+
+All are unchanged on HTTP and SSE, where the boundary is real. There is no
+flag to re-enable them on stdio: the finding is not a matter of severity
+taste, it is a statement about the transport rather than the server.
+
+`behavioral_rate_limit` is the deliberate exception — it still fires on stdio,
+because an agent stuck in a loop really can hammer a local server.
 
 ---
 
@@ -99,11 +123,11 @@ but also attempts a live canary transfer when invocation is allowed.
 | `delegation_depth` | MEDIUM | Delegation and multi-hop agent tools, where identity attribution dilutes at each hop. MCP-T32 |
 | `sdk_cache_tamper` | CRITICAL–HIGH | A tool exposing a writable SDK token cache is HIGH; CRITICAL when a tool that consumes cached identity is present too, completing the write-then-use pair. MCP-T33 |
 | `subprocess_cred_inheritance` | HIGH–MEDIUM | Subprocess-spawning tools whose children may inherit parent credentials. HIGH when an env or credential parameter is exposed, MEDIUM otherwise. MCP-T34 |
-| `native_function_identity_erasure` | MEDIUM | No caller-identity parameter on any tool and no auth token — function calls carry no attribution. MCP-T35 |
+| `native_function_identity_erasure` | MEDIUM | No caller-identity parameter on any tool and no auth token — function calls carry no attribution. Not reported on stdio. MCP-T35 |
 | `tool_description_injection` | CRITICAL | Instruction-override language in a tool description, which manipulates any agent that loads the manifest. MCP-T36 |
 | `scope_pollution` | CRITICAL–MEDIUM | A token-minting tool accepting caller-controlled scope/audience with no narrowing is HIGH, or CRITICAL when the caller's own claims are read-class and the tool advertises privileged scopes. Shared-IdP topology disclosure alone is MEDIUM. MCP-T42 |
 | `schema_overdisclosure` | CRITICAL–LOW | Pre-auth recon in `tools/list`: a credential pattern is CRITICAL, an internal hostname HIGH, an infrastructure env-var name MEDIUM, an internal filesystem path LOW. MCP-T50 |
-| `pre_auth_injection` | HIGH | Tools enumerated and invocable with no auth token at all — every call is pre-authentication, with no identity binding. MCP-T52 |
+| `pre_auth_injection` | HIGH | Tools enumerated and invocable with no auth token at all — every call is pre-authentication, with no identity binding. Not reported on stdio. MCP-T52 |
 | `shell_wrapping_injection` | HIGH | Shell wrapping (`sh -c`, `subprocess(..., shell=True)`, `os.system`) in a description or schema — arguments stay injectable despite apparent validation. MCP-T53 |
 | `cached_session_exposure` | MEDIUM | Session or cache identifier parameters — session fixation and token reuse surface. MCP-T57 |
 | `host_network_loopback` | HIGH | `127.0.0.1`, `localhost`, `0.0.0.0` or `hostNetwork` references, suggesting a bridge to node-local services. MCP-T58 |
@@ -151,7 +175,7 @@ back. All of them are skipped by `--no-invoke`.
 | `ssrf_probe` | CRITICAL–MEDIUM | Sends IMDS and loopback URLs through URL-shaped parameters. Cloud metadata content in the response is CRITICAL; an internal-service indicator absent from the safe-URL baseline is HIGH; a large response-size differential, or a fetching tool that merely exposes URL parameters, is MEDIUM. MCP-T06 |
 | `config_dump` | CRITICAL–MEDIUM | Internal configuration, service topology or secret paths in tool output. Severity is the strongest infrastructure-leak pattern matched, floored at MEDIUM |
 | `behavioral_rate_limit` | MEDIUM | Rapid-fire identical calls that all succeed — no throttling in the request path |
-| `anon_budget_exhaust` | HIGH–MEDIUM | A burst of unauthenticated calls that all succeed is HIGH; MEDIUM when the catalog advertises per-caller accounting but this surface still appears unmetered. MCP-T51 |
+| `anon_budget_exhaust` | HIGH–MEDIUM | A burst of unauthenticated calls that all succeed is HIGH; MEDIUM when the catalog advertises per-caller accounting but this surface still appears unmetered. Not probed at all on stdio. MCP-T51 |
 | `shell_injection` | CRITICAL–HIGH | Shell metacharacter and base-command probes against subprocess-wrapping tools |
 | `sdk_cache_poisoning` | CRITICAL–HIGH | Writes a forged JWT to the target's token cache, then invokes a tool that reads it. Sensitive content in the reply is CRITICAL; an accepted call with no denial is HIGH. **Mutates target state** — skipped by `--fast`. MCP-T33 |
 | `ai_guardrail_probe` (finding: `ai_guardrail_bypass`) | CRITICAL–HIGH | Social-engineering strategies against AI-gated tools. Leaking under three or more strategies is CRITICAL, one or two is HIGH |

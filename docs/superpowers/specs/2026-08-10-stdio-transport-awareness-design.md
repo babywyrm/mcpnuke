@@ -1,8 +1,32 @@
 # Transport-Aware Auth Checks
 
-**Status:** Approved, not yet implemented
+**Status:** Implemented 2026-08-10
 **Date:** 2026-08-10
 **Follows:** `2026-08-09-error-reflection-severity-design.md`
+
+## Outcome, and where it differed from this design
+
+Shipped across six commits. Two deliberate deviations, both discovered during
+implementation:
+
+1. **A third check was in the class.** `native_function_identity_erasure`
+   (MEDIUM) gates on the same raw `_raw_token` test and also fired on 5 of 5
+   servers. It was not in the hand triage; the new stdio gate found it on its
+   first run, which is the case for having the gate. Fixed the same way, in
+   its own commit with its own tests.
+2. **`anon_budget_exhaust` returns early instead of using
+   `skip_transports`.** `skip_transports` filters at `result.add`, i.e. after
+   the check has run. That check's body is a burst of 25 live calls, so
+   filtering the finding would have kept every one of them and simply hidden
+   the output — the worst of both. Its test asserts zero calls, not zero
+   findings.
+
+Result across the five pinned servers: 185 findings → 170, 34 HIGH → 24,
+CRITICAL unchanged at 18. The re-snapshot was a pure deletion — 75 lines
+removed, none added — so nothing but the three intended checks moved.
+
+`behavioral_rate_limit` was named in the original triage as part of this class
+and was **not** fixed. See the closing section.
 
 ## Problem
 
@@ -150,3 +174,20 @@ The new stdio gate will very likely report findings of its own on first run.
 That is the point. Following the rule already set by the HTTP harness: fix the
 check, and only add to an expected-list when the finding is genuinely true of
 the server, with a written reason.
+
+### Measured
+
+**170, not 175.** HIGH landed on 24 exactly as predicted; the extra five are
+the `native_function_identity_erasure` MEDIUMs, which this design had not
+identified. The gate did report a finding of its own on first run, and it was
+that check.
+
+One class does **not** close: `behavioral_rate_limit` still fires on all five
+targets. This design inherited the original triage's grouping of it with the
+auth checks, and that grouping was wrong. Missing authentication on a pipe is
+vacuous; an absent rate limit is not, because an agent stuck in a loop really
+can hammer a local server. The remedy it implies — throttling a subprocess
+against its only caller — is still questionable, but that is a judgement about
+what the check is for, and it deserves its own decision rather than being
+carried along by a change about authentication. It is recorded as open in
+[docs/oss-target-baseline.md](../../oss-target-baseline.md).

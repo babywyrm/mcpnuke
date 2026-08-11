@@ -2,6 +2,51 @@
 
 All notable changes to this submodule are documented here.
 
+## [Unreleased]
+
+**Findings change again, in the same direction.** Three checks reported a
+missing authentication boundary on stdio, a transport that has none to miss.
+They fired on 5 of 5 pinned open-source servers — 100%, the signature of a
+finding that carries no information. A scan of an **unchanged** stdio server
+now reports 15 fewer findings across those five: 185 → 170, and **34 HIGH →
+24**. The re-snapshot was a pure deletion; nothing else moved.
+
+All three remain fully active on HTTP and SSE, where the boundary is real.
+
+### Fixed
+
+- **`pre_auth_injection` no longer fires on stdio.** "N tools available
+  without authentication" is true of every stdio server, because the
+  transport is a pipe with nowhere to put a credential.
+- **`anon_budget_exhaust` no longer probes stdio at all.** It returns before
+  the burst rather than filtering the finding afterwards, sparing a local
+  server 25 pointless calls per scan. There is no auth boundary to bypass and
+  no second caller whose quota could be exhausted.
+- **`native_function_identity_erasure` no longer fires on stdio.** stdio has
+  exactly one caller — the process that spawned the server, running as the
+  user who launched it — so there is no ambiguity to erase, and a `caller_id`
+  parameter would be self-asserted by that same client.
+
+### Added
+
+- **A stdio reference target and false-positive gate**
+  (`tests/reference_target/stdio_server.py`,
+  `tests/test_false_positives_stdio.py`). The harness measured HTTP only,
+  which is how three checks shipped reporting findings on every stdio server.
+  It reuses the existing tool schemas and hardened handlers, so only the
+  transport differs, and it carries an invariant that no auth-shaped check may
+  fire where there is no auth boundary. It found the third check on its first
+  run.
+- **First tests for `pre_auth_injection` and
+  `native_function_identity_erasure`,** neither of which had any.
+
+### Known
+
+- `behavioral_rate_limit` still fires on all five stdio targets. It was
+  grouped with the class above originally and deliberately left alone: an
+  agent stuck in a loop really can hammer a local server, so it needs its own
+  decision rather than the same filter.
+
 ## [6.15.0] - 2026-08-10
 
 **Findings change in this release.** Two classes of false positive stop firing,

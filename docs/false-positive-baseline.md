@@ -7,7 +7,19 @@ Measured by `tests/test_false_positives.py`, which runs the real pipeline
 hardened reference target in `tests/reference_target/`. It runs in default CI —
 no Docker, no external lab, no environment gate.
 
-## Current baseline
+The same fixture is measured over **two transports**, because for a while it
+was measured over one:
+
+| Harness | Transport | Findings |
+|---------|-----------|----------|
+| `tests/test_false_positives.py` | HTTP | 5 |
+| `tests/test_false_positives_stdio.py` | stdio | 4 |
+
+Both run the real entry point for their transport. A harness that reassembles
+the pipeline itself ends up measuring the harness, which this one did once
+already.
+
+## Current baseline — HTTP
 
 **2026-08-10 — 5 findings, 0 unexpected.** Scan takes ~22s.
 
@@ -18,6 +30,32 @@ no Docker, no external lab, no environment gate.
 | HIGH | `dpop_not_enforced` | The target uses a plain bearer token and does not implement RFC 9449, so a stolen token is replayable. Deliberate: DPoP is uncommon enough that requiring it would stop the target resembling a real server. |
 | MEDIUM | `ssrf_probe` | `http.fetch` accepts a URL parameter. The finding says "SSRF **surface**", which is accurate — every probe was refused by the host allowlist. |
 | MEDIUM | `behavioral_rate_limit` | The target has no rate limiting. True. Adding it was rejected because throttling the scanner would reduce what the rest of the harness can measure. |
+
+## Current baseline — stdio
+
+**2026-08-10 — 4 findings, 0 unexpected.** Scan takes ~25s.
+
+Same tool schemas and the same hardened handlers as above, served over
+newline-delimited JSON-RPC on stdin/stdout by
+`tests/reference_target/stdio_server.py`. Only the transport differs, so any
+difference in findings is a statement about transport handling.
+
+| Severity | Check | Why it is legitimate |
+|----------|-------|----------------------|
+| HIGH | `excessive_permissions` | `http.fetch` really can reach the network — same true capability as over HTTP. |
+| HIGH | `excessive_permissions` | `file.read` really does read files off disk. |
+| MEDIUM | `ssrf_probe` | `http.fetch` accepts a URL parameter; every probe was refused by the host allowlist. |
+| MEDIUM | `behavioral_rate_limit` | The target has no rate limiting. True, and deliberately still reported on stdio. |
+
+`dpop_not_enforced` is absent rather than allowlisted: it already required an
+HTTP endpoint, so it correctly stays away from a transport with no headers.
+
+This harness exists because stdio went unmeasured while being the transport
+most users have. Three checks — `pre_auth_injection`, `anon_budget_exhaust`
+and `native_function_identity_erasure` — reported a missing auth boundary on
+a pipe to a subprocess, and nothing caught it until five real servers were
+scanned by hand. The gate carries a named invariant that no auth-shaped check
+may fire here, and it found the third of those three on its first run.
 
 ## What the first run found
 
