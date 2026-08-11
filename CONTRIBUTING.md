@@ -36,7 +36,7 @@ Coverage is available but off by default, since `--cov` roughly doubles an
 uv run pytest tests/ --cov=mcpnuke
 ```
 
-**61% branch coverage** as of 6.15.0. Two known holes account for most of the
+**63% branch coverage** as of 6.15.0. Two known holes account for most of the
 gap and are not excluded from the report, because hiding them would raise the
 number without covering a line: `mcpnuke/server/*` needs the optional `server`
 extra and sits at 0%, and `mcpnuke/scanner.py` is low because most tests drive
