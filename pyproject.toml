@@ -55,7 +55,10 @@ all = [
 
 [project.scripts]
 mcpnuke = "mcpnuke.__main__:main"
-mcpnuke-runner = "mcpnuke.server.app:run"
+# Via a shim, not mcpnuke.server.app:run directly. The runner needs the
+# optional `server` extra but its script is installed by the base package,
+# so the target must be importable without fastapi/pydantic present.
+mcpnuke-runner = "mcpnuke._runner_entry:main"
 
 [project.urls]
 Repository = "https://github.com/babywyrm/mcpnuke"
