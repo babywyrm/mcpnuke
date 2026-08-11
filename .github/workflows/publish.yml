@@ -1,0 +1,129 @@
+name: Publish
+
+# Publishes mcpnuke to PyPI when a vX.Y.Z tag is pushed.
+#
+# Trusted publishing (OIDC), not an API token. A long-lived PyPI token in
+# repo secrets is a credential anything able to run a workflow can reach;
+# OIDC mints a short-lived one per run and stores nothing. For a tool that
+# flags exactly that pattern on other people's servers, the alternative is
+# not defensible.
+#
+# One-time setup on PyPI, under the project's Publishing settings:
+#   owner        babywyrm
+#   repository   mcpnuke
+#   workflow     publish.yml
+#   environment  pypi
+#
+# The `pypi` environment is what makes the deployment reviewable and lets a
+# protection rule gate it. It must exist in repo settings or the job will not
+# start.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build and check only; do not upload'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and verify artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      # Before the build, so a mismatch costs nothing. A PyPI version cannot
+      # be replaced or reused, so a tag shipping the wrong artifact burns
+      # that number permanently. Logic lives in a script with tests rather
+      # than inline here; see tests/test_release_guard.py.
+      - name: Tag matches packaged version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version="$(uv run python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          ./scripts/check-tag-version.sh "${GITHUB_REF_NAME}" "$version"
+
+      # The full suite gates the release, not just the tag. A green main and
+      # a green tag are different claims when the tag is what users install.
+      - name: Install project
+        run: uv sync --frozen --extra dev
+
+      - name: Run tests
+        run: uv run pytest -q
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Check metadata renders on PyPI
+        run: uvx twine check --strict dist/*
+
+      # Installs the built wheel into a clean environment with no extras and
+      # no source tree, which is the only way to catch a missing data file or
+      # a console script that needs an optional dependency.
+      - name: Smoke-test the wheel in a clean environment
+        run: |
+          uv venv /tmp/smoke
+          uv pip install --python /tmp/smoke/bin/python dist/*.whl
+          /tmp/smoke/bin/mcpnuke --version
+          /tmp/smoke/bin/mcpnuke --help > /dev/null
+
+          # Installed by the base package but implemented behind the server
+          # extra, so it must explain itself rather than traceback. Exit 2 is
+          # the contract; see mcpnuke/_runner_entry.py.
+          set +e
+          out="$(/tmp/smoke/bin/mcpnuke-runner 2>&1)"
+          code=$?
+          set -e
+          echo "$out"
+          if [ "$code" -ne 2 ]; then
+            echo "::error::mcpnuke-runner exited $code, expected 2"
+            exit 1
+          fi
+          case "$out" in
+            *"mcpnuke[server]"*) ;;
+            *) echo "::error::mcpnuke-runner did not name the server extra"; exit 1 ;;
+          esac
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # Never on a manual dry run, and never on a branch push.
+    if: startsWith(github.ref, 'refs/tags/')
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mcpnuke
+
+    permissions:
+      id-token: write   # mints the OIDC token; no PyPI secret is stored
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
