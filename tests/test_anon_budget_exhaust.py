@@ -81,6 +81,36 @@ def test_skipped_when_session_has_raw_token(monkeypatch) -> None:
     assert counters["calls"] == 0
 
 
+def test_stdio_is_not_probed_at_all(monkeypatch) -> None:
+    """stdio is a pipe to a subprocess we launched ourselves.
+
+    There is no auth boundary to bypass and no second caller whose quota
+    could be exhausted, so this finding is true of every stdio server and
+    says nothing about this one.
+
+    Asserts no calls were made, not merely that no finding was added: the
+    probe bursts 25 requests, and suppressing the finding while keeping the
+    burst would still hammer a user's local server for nothing.
+    """
+    r = _result([{"name": "tool.list_items"}])
+    r.transport = "stdio"
+    counters = _patch_call_tool(monkeypatch, ["ok"] * ANON_BURST_COUNT)
+    check_anon_budget_exhaust(FakeSession([]), r)
+    assert counters["calls"] == 0
+    assert not [f for f in r.findings if f.check == "anon_budget_exhaust"]
+
+
+def test_http_still_reports_the_flood_pattern(monkeypatch) -> None:
+    """The stdio skip must not leak into the transports this check is for."""
+    r = _result([{"name": "tool.list_items"}])
+    r.transport = "http"
+    _patch_call_tool(monkeypatch, ["ok"] * ANON_BURST_COUNT)
+    check_anon_budget_exhaust(FakeSession([]), r)
+    findings = [f for f in r.findings if f.check == "anon_budget_exhaust"]
+    assert len(findings) == 1
+    assert findings[0].severity == "HIGH"
+
+
 def test_skipped_when_no_safe_tool_available(monkeypatch) -> None:
     """All tools are destructive — nothing to burst."""
     r = _result([

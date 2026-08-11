@@ -104,6 +104,18 @@ def check_anon_budget_exhaust(
     _log = opts.get("_log", lambda _msg: None)
 
     with time_check("anon_budget_exhaust", result):
+        # stdio has no auth boundary: the transport is a pipe to a subprocess
+        # the scanner launched itself. "Anonymous" there is a property of the
+        # transport, not of the caller, so this finding would be true of every
+        # stdio server ever written — and was, on all five pinned open-source
+        # targets.
+        #
+        # Returns here rather than filtering at result.add, because the burst
+        # below is 25 live calls and there is no reason to make them.
+        if result.transport == "stdio":
+            _log("    [dim]    skipped: stdio has no auth boundary[/dim]")
+            return
+
         if not _session_is_anonymous(result):
             _log("    [dim]    skipped: session has auth token (anon-only probe)[/dim]")
             return
