@@ -12,21 +12,23 @@ built to do real work, which is the harder and more honest question.
 
 | Server | Version | Findings | CRITICAL | HIGH | LOW |
 |--------|---------|----------|----------|------|-----|
-| server-everything | 2026.7.4 | 33 | 12 | 6 | 0 |
-| server-filesystem | 2026.7.10 | 67 | 5 | 17 | 24 |
-| server-git | 2026.7.10 | 65 | 0 | 2 | 42 |
-| server-fetch | 2026.7.10 | 11 | 1 | 4 | 2 |
-| server-memory | 2026.7.4 | 9 | 0 | 5 | 0 |
-| **Total** | | **185** | **18** | **34** | **68** |
+| server-everything | 2026.7.4 | 30 | 12 | 4 | 0 |
+| server-filesystem | 2026.7.10 | 64 | 5 | 15 | 24 |
+| server-git | 2026.7.10 | 62 | 0 | 0 | 42 |
+| server-fetch | 2026.7.10 | 8 | 1 | 2 | 2 |
+| server-memory | 2026.7.4 | 6 | 0 | 3 | 0 |
+| **Total** | | **170** | **18** | **24** | **68** |
 
-**Headline:** two fixes in this release cut CRITICAL findings across five real
-servers from **71 to 18**, a 75% reduction, with no true positive lost.
+**Headline:** three fixes cut CRITICAL findings across five real servers from
+**71 to 18**, a 75% reduction, and HIGH from 34 to 24, with no true positive
+lost.
 
-| Fix | Findings | CRITICAL |
-|-----|----------|----------|
-| Starting point | 211 | 71 |
-| After pattern anchoring | 187 | 49 |
-| After error-reflection grading | 185 | 18 |
+| Fix | Findings | CRITICAL | HIGH |
+|-----|----------|----------|------|
+| Starting point | 211 | 71 | — |
+| After pattern anchoring | 187 | 49 | — |
+| After error-reflection grading | 185 | 18 | 34 |
+| After transport-aware auth | 170 | 18 | 24 |
 
 `server-git` is the clearest case: **14 CRITICAL and 26 HIGH became 0 and 2.**
 Not one of them described anything the server does. They described what the
@@ -37,8 +39,8 @@ both `multi_vector` CRITICALs that existed solely because they were chaining
 LOW-graded evidence. Every other change is a re-grading: 61 findings moved to
 LOW, where they remain visible and countable.
 
-This document does not claim the remaining 185 are all correct. The auth-on-stdio
-class below is still unfixed.
+This document does not claim the remaining 170 are all correct. The
+rate-limiting class below is still unfixed.
 
 ## Two servers were not measurable at first
 
@@ -139,24 +141,48 @@ changed targets, and all three matched finding-for-finding. Operators who
 disagree with our grading can restore the old severities, or drop these
 findings entirely with `suppress`.
 
-## Known false positives, not yet fixed
+## What the transport-awareness fix removed
 
-### Auth checks on a transport with no auth — ~15 findings
-
-`pre_auth_injection` (5), `anon_budget_exhaust` (5) and
-`behavioral_rate_limit` (5) fire on every stdio target.
+### Auth checks on a transport with no auth — 15 findings
 
 A local stdio server is a **subprocess with a pipe**. There is no
-authentication boundary to be missing and no anonymous caller to rate-limit:
+authentication boundary to be missing and no second caller to distinguish:
 whoever can spawn the process already has the privileges. "13 tools available
 without authentication" is technically accurate and operationally meaningless
-here.
+here — it is a statement about stdio, not about the server.
 
-These checks are correct for a networked server. They should be transport-aware
-rather than deleted.
+Three checks fired on all five targets, 100% of the time, which is the
+signature of a finding carrying no information:
 
-This is now the only class recorded here as unfixed, and it is the next piece
-of work on these targets.
+| Check | Severity | Removed |
+|-------|----------|---------|
+| `pre_auth_injection` | HIGH | 5 |
+| `anon_budget_exhaust` | HIGH | 5 |
+| `native_function_identity_erasure` | MEDIUM | 5 |
+
+All three remain fully active on HTTP and SSE, where the boundary is real.
+`anon_budget_exhaust` now also returns before probing rather than after, which
+spares a local server 25 pointless calls per scan.
+
+The re-snapshot was a **pure deletion** — 75 lines removed, none added. No
+other finding on any of the five targets changed.
+
+`native_function_identity_erasure` was not in the original triage below. The
+[stdio false-positive harness](false-positive-baseline.md) found it on its
+first run, which is the argument for having one.
+
+## Known false positives, not yet fixed
+
+### Rate limiting on a single-caller transport — 5 findings
+
+`behavioral_rate_limit` (MEDIUM) fires on every stdio target, and was
+originally grouped with the auth class above. It was left alone deliberately.
+
+It is weaker than the three checks removed above but not empty in the same
+way: an agent stuck in a loop really can hammer a local server. The remedy it
+implies — rate-limiting a subprocess against its only caller — is still
+dubious advice. Resolving it needs its own decision about what the check is
+for, rather than being folded into a change about authentication.
 
 ## How to reproduce
 

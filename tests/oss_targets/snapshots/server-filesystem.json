@@ -72,11 +72,6 @@
       "title": "Orchestration tool 'search_files' may enable recursive chains"
     },
     {
-      "check": "anon_budget_exhaust",
-      "severity": "HIGH",
-      "title": "Anonymous flood pattern: 25 unauthenticated calls succeeded"
-    },
-    {
       "check": "behavioral_rate_limit",
       "severity": "MEDIUM",
       "title": "No rate limiting: 10/10 rapid calls succeeded in <duration>"
@@ -165,16 +160,6 @@
       "check": "multi_vector",
       "severity": "CRITICAL",
       "title": "Multi-vector attack: 3 categories active"
-    },
-    {
-      "check": "native_function_identity_erasure",
-      "severity": "MEDIUM",
-      "title": "No caller identity in tool calls (14 tools)"
-    },
-    {
-      "check": "pre_auth_injection",
-      "severity": "HIGH",
-      "title": "Pre-auth tool access: 14 tools available without authentication"
     },
     {
       "check": "prompt_injection_t01",

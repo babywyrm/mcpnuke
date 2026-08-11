@@ -12,11 +12,6 @@
       "title": "Active injection: server follows injected instructions via 'gzip-file-as-resource'"
     },
     {
-      "check": "anon_budget_exhaust",
-      "severity": "HIGH",
-      "title": "Anonymous flood pattern: 25 unauthenticated calls succeeded"
-    },
-    {
       "check": "attack_chain",
       "severity": "CRITICAL",
       "title": "Attack chain: deep_rug_pull \u2192 tool_response_injection (echo)"
@@ -90,16 +85,6 @@
       "check": "multi_vector",
       "severity": "CRITICAL",
       "title": "Multi-vector attack: 5 categories active"
-    },
-    {
-      "check": "native_function_identity_erasure",
-      "severity": "MEDIUM",
-      "title": "No caller identity in tool calls (13 tools)"
-    },
-    {
-      "check": "pre_auth_injection",
-      "severity": "HIGH",
-      "title": "Pre-auth tool access: 13 tools available without authentication"
     },
     {
       "check": "prompt_injection_t01",
