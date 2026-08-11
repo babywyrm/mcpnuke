@@ -134,6 +134,10 @@ def check_pre_auth_injection(result: TargetResult) -> None:
                 "The MCP server accepted initialize and listed tools without any auth token. "
                 "All tool invocations are pre-authentication — no identity binding.",
                 taxonomy_id="MCP-T52",
+                # stdio has nowhere to put a credential, so "available without
+                # authentication" describes the transport rather than this
+                # server. Same filter the enumerator's `auth` finding carries.
+                skip_transports=["stdio"],
             )
 
 
