@@ -256,4 +256,10 @@ def check_native_function_identity_erasure(result: TargetResult) -> None:
                     "Tools do not accept caller identity parameters and no auth token is present — "
                     "function calls have no attribution to the invoking agent or user",
                     taxonomy_id="MCP-T35",
+                    # stdio has exactly one caller: the process that spawned
+                    # the server, running as the user who launched it. There
+                    # is no ambiguity to erase, and a caller_id parameter
+                    # would be self-asserted by that same client, so both the
+                    # premise and the remedy are empty on this transport.
+                    skip_transports=["stdio"],
                 )
