@@ -17,10 +17,10 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | AI-augmented analysis (Claude + Ollama ensemble) | **Strong** — 3-phase analysis, consensus mode |
 | Transport security (JWT, DPoP, scope, boundaries) | **Strong** — 8 transport checks |
 | Lane coverage (5 identity lanes) | **All 5 represented** |
-| Taxonomy coverage | **22/56 IDs (39%)** — Tier 1 complete, see gap map below |
+| Taxonomy coverage | **40/57 IDs (70%)** — Tier 1 complete, see gap map below |
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
-| False-positive measurement | **Done** — two harnesses, both baselined and gated; see below |
+| False-positive measurement | **Done** — three harnesses, all baselined and gated; see below |
 | Distribution (PyPI, install script) | **Ready** — `install.sh` + publish workflow, both tested; upload armed by the `PYPI_PUBLISH` variable once the trusted publisher is registered |
 | CI/CD workflow for the tool itself | **Partial** — `tests.yml` + reusable scan workflow; dogfood CI still thin |
 
@@ -28,7 +28,26 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 
 ## Taxonomy coverage map
 
-### Covered (14 IDs — implemented with dedicated checks)
+> **The tables below are stale; the code is not.** They name threats using a
+> numbering that predates the `lanes.yaml` this package bundles, and the two
+> disagree: the tables read T43 as AI guardrail bypass and T56 as DPoP
+> enforcement, where `lanes.yaml` has those the other way around. The checks
+> follow `lanes.yaml` — `ai_guardrail_probe` emits T56, `dpop_enforcement`
+> attributes T43 — so it is the prose here that needs rewriting, not the
+> attribution. Two things do need fixing in code:
+>
+> - **`shell_injection` emits `MCP-T54`**, which `lanes.yaml` defines as
+>   unauthenticated inference backend exposure. T53, "Shell Command Wrapping
+>   Injection", is the one it means. Left alone so far because changing it
+>   changes the `taxonomy_id` on a shipped finding, which is a consumer-visible
+>   break rather than a typo.
+> - **`profile` (T06) and `dpop_enforcement` (T43) record their threat ID only
+>   in the evidence dict**, never setting `taxonomy_id`. Both count as covered
+>   below, but lane attribution and the SARIF export read the field, so neither
+>   is visible to either. `tests/test_taxonomy_coverage_claim.py` pins this at
+>   exactly those two so a third cannot appear by accident.
+
+### Covered at the Tier 1 milestone (14 IDs — historical snapshot)
 
 | ID | Threat | Check module |
 |----|--------|--------------|
@@ -130,7 +149,7 @@ Target-agnostic operator loop — labs (Camazotz / DVMCP) are oracles only:
 
 ## False-positive measurement (done 2026-08-10)
 
-How wrong mcpnuke is, measured rather than assumed. Two harnesses, because
+How wrong mcpnuke is, measured rather than assumed. Three harnesses, because
 they answer different questions:
 
 | Harness | Question | Result |
