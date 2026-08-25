@@ -32,14 +32,17 @@ Three columns, nothing fuzzier:
 
 ## Ready queue
 
-Already in the 2026-07-28 spec. Ignored today. First slices when we leave docs-only.
+Already in the 2026-07-28 spec. Next slice, one at a time, behind the
+false-positive gates.
 
 | Gap | Where | Speak | Scan | Why it is Ready |
 |-----|-------|-------|------|-----------------|
 | List caching (`ttlMs`, `cacheScope`) — SEP-2549 | `tools/list`, `resources/list`, `prompts/list`, resource reads | Partial. `enumerator._paginated_list` follows `nextCursor` and never reads cache fields. | None | The fields are in the current spec. A check can flag missing, contradictory, or attacker-controlled cache metadata without waiting for ETags. |
-| Dual `tools/call` body (`content` and `structuredContent`) | `_response_text` in `mcpnuke/checks/tool_probes.py` | Partial. If `content` is a list, that branch returns and `structuredContent` is dropped. If `content` is absent, the whole result is `json.dumps`’d, so structured output is scanned only as an accident of serialization. | None as a subject | The dual body is in the current spec. A check (and a `_response_text` fix) can treat both forms as searchable surface without waiting for the Core Primitives WG redesign. |
 
-Build these one at a time, behind the gates in [Later, with zero regressions](#later-with-zero-regressions).
+Done this cycle: dual `tools/call` body — `_response_text` now extracts
+`structuredContent` even when `content` is a list. See [Spoken and scanned](#spoken-and-scanned).
+
+Build the remaining row behind the gates in [Later, with zero regressions](#later-with-zero-regressions).
 
 ## Spoken and scanned
 
@@ -51,6 +54,7 @@ Keep. Do not relabel as the new work.
 | Unauthenticated `server/discover` | Yes | Yes | Lane 5 / Transport A finding, skipped on stdio. |
 | DPoP (RFC 9449) | Yes | Yes | Three probes: no proof, malformed proof, missing `htm`/`htu` binding. Subject is bearer-binding, not agent identity. `taxonomy_id` is still evidence-only (known, deferred). |
 | Pagination | Yes | Yes | `nextCursor` up to `--max-pages`; truncated lists emit LOW `enumeration`. |
+| Dual `tools/call` body | Yes | Yes | `_response_text` reads `content` blocks and `structuredContent`. Done 2026-08-25. |
 
 ## 1. Agentic messaging primitives
 
@@ -101,7 +105,7 @@ Tool calling has held up. Result handling has not: `tools/call` may return `cont
 
 | Deliverable | Speak | Scan | Ready | Notes |
 |-------------|-------|------|-------|-------|
-| Dual result body (`content` + `structuredContent`) | Partial | No as a subject | **Ready** | See [Ready queue](#ready-queue). Poisoning, credential, and injection checks that go through `_response_text` inherit the blind spot. |
+| Dual result body (`content` + `structuredContent`) | Yes | Yes, via `_response_text` | **Done** | Content-list early return used to drop `structuredContent`. Poisoning, credential, and injection checks inherit the extractor. |
 | Core Primitives WG redesign of `tools/call` | n/a | n/a | Wait | Do not guess the replacement contract. |
 | Progressive discovery | No | No | Wait | Enumerator ingests the full catalog. `schema_overdisclosure` (MCP-T50) is recon against that full list — the **opposite** assumption. When progressive discovery ships, that check’s threat model changes: a small entry point may be the new anonymous surface, and a hidden catalog may be the new hide. |
 | Primitive annotations (audience / priority, SEP-2200) | No | No | Wait | Roadmap says most implementers have not adopted them. Scanning for absence would fire on almost every server. |

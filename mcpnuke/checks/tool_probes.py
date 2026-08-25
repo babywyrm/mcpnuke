@@ -390,8 +390,23 @@ def _call_tool(
     return None
 
 
+def _serialize_structured(value: object) -> str:
+    """JSON for a structuredContent payload, same 2000-char cap as the fallback."""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    return json.dumps(value)[:2000]
+
+
 def _response_text(resp: dict | None) -> str:
-    """Extract all text content from a tools/call response."""
+    """Extract all text content from a tools/call response.
+
+    A successful result may carry ``content`` (blocks for humans) and
+    ``structuredContent`` (the same payload for machines) at once. Returning
+    after the content list used to hide the structured half from every check
+    that scans this string.
+    """
     if not resp:
         return ""
     result = resp.get("result", resp.get("error", {}))
@@ -404,12 +419,15 @@ def _response_text(resp: dict | None) -> str:
         # "" and no check ever scanned them.
         content = result.get("content")
         if isinstance(content, list):
-            parts = []
+            parts: list[str] = []
             for c in content:
                 if isinstance(c, dict):
                     parts.append(c.get("text", "") or c.get("blob", "") or str(c))
                 else:
                     parts.append(str(c))
+            structured = _serialize_structured(result.get("structuredContent"))
+            if structured:
+                parts.append(structured)
             return "\n".join(parts)
         # error responses
         if "message" in result:

@@ -7,10 +7,19 @@ All notable changes to this submodule are documented here.
 ### Added
 
 - **`docs/spec-surface.md`** — Speak / Scan / Ready map of mcpnuke against
-  the MCP 2026-08-22 roadmap. Two current-spec gaps are Ready (list caching
-  `ttlMs`/`cacheScope`, dual `tools/call` body). Tasks, HTTP-over-stdio, WIF,
-  and progressive discovery wait for a wire format. Cousin checks are named
-  so they are not relabeled as the new primitives.
+  the MCP 2026-08-22 roadmap. List caching (`ttlMs`/`cacheScope`) is the
+  remaining Ready row. Tasks, HTTP-over-stdio, WIF, and progressive
+  discovery wait for a wire format. Cousin checks are named so they are not
+  relabeled as the new primitives.
+
+### Fixed
+
+- **`structuredContent` is no longer invisible when `content` is a list.**
+  `_response_text` used to return after extracting content blocks, so every
+  poisoning, credential, and injection check that uses the helper missed the
+  structured half of a `tools/call` result. An empty content list hid it
+  too. Both bodies are now scanned. No dedicated check: fixing the extractor
+  is the scan.
 
 ## [6.16.0] - 2026-08-11
 
