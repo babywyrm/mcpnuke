@@ -29,7 +29,7 @@ class TestPaginatedList:
     def test_single_page_no_cursor(self):
         pages = [{"result": {"tools": [{"name": "t1"}, {"name": "t2"}]}}]
         session = FakeSession(pages)
-        items, truncated = _paginated_list(session, "tools/list", max_pages=20)
+        items, truncated, _cache = _paginated_list(session, "tools/list", max_pages=20)
         assert len(items) == 2
         assert not truncated
 
@@ -40,7 +40,7 @@ class TestPaginatedList:
             {"result": {"tools": [{"name": "t3"}]}},
         ]
         session = FakeSession(pages)
-        items, truncated = _paginated_list(session, "tools/list", max_pages=20)
+        items, truncated, _cache = _paginated_list(session, "tools/list", max_pages=20)
         assert len(items) == 3
         assert [t["name"] for t in items] == ["t1", "t2", "t3"]
         assert not truncated
@@ -51,20 +51,20 @@ class TestPaginatedList:
             for i in range(5)
         ]
         session = FakeSession(pages)
-        items, truncated = _paginated_list(session, "tools/list", max_pages=3)
+        items, truncated, _cache = _paginated_list(session, "tools/list", max_pages=3)
         assert len(items) == 3
         assert truncated
 
     def test_empty_result(self):
         pages = [{"result": {"tools": []}}]
         session = FakeSession(pages)
-        items, truncated = _paginated_list(session, "tools/list")
+        items, truncated, _cache = _paginated_list(session, "tools/list")
         assert items == []
         assert not truncated
 
     def test_no_response(self):
         session = FakeSession([])
-        items, truncated = _paginated_list(session, "tools/list")
+        items, truncated, _cache = _paginated_list(session, "tools/list")
         assert items == []
         assert not truncated
 
@@ -74,9 +74,37 @@ class TestPaginatedList:
             {"result": {"resources": [{"uri": "r2"}]}},
         ]
         session = FakeSession(pages)
-        items, truncated = _paginated_list(session, "resources/list")
+        items, truncated, cache_pages = _paginated_list(session, "resources/list")
         assert len(items) == 2
         assert not truncated
+        assert cache_pages == [{}, {}]
+
+    def test_cache_hints_are_captured_per_page(self):
+        pages = [
+            {
+                "result": {
+                    "tools": [{"name": "t1"}],
+                    "nextCursor": "p2",
+                    "ttlMs": 1000,
+                    "cacheScope": "private",
+                }
+            },
+            {
+                "result": {
+                    "tools": [{"name": "t2"}],
+                    "ttlMs": 1000,
+                    "cacheScope": "private",
+                }
+            },
+        ]
+        session = FakeSession(pages)
+        items, truncated, cache_pages = _paginated_list(session, "tools/list")
+        assert [t["name"] for t in items] == ["t1", "t2"]
+        assert not truncated
+        assert cache_pages == [
+            {"ttlMs": 1000, "cacheScope": "private"},
+            {"ttlMs": 1000, "cacheScope": "private"},
+        ]
 
     def test_default_max_pages_constant(self):
         assert DEFAULT_MAX_PAGES == 20
@@ -127,3 +155,43 @@ class TestEnumerateServerPagination:
         truncation_findings = [f for f in result.findings if f.check == "enumeration"]
         assert len(truncation_findings) >= 1
         assert "truncated" in truncation_findings[0].title.lower()
+
+    def test_enumerate_stores_list_cache_hints(self, result_with_tools):
+        from mcpnuke.core.enumerator import enumerate_server
+
+        init_resp = {
+            "result": {
+                "protocolVersion": "2026-07-28",
+                "serverInfo": {"name": "test", "version": "1.0"},
+                "capabilities": {"tools": {}},
+            }
+        }
+
+        class CacheSession:
+            protocol_mode = ""
+
+            def call(self, method, params=None, timeout=15, retries=2):
+                if method == "initialize":
+                    return init_resp
+                if method == "tools/list":
+                    return {
+                        "result": {
+                            "tools": [{"name": "t1"}],
+                            "ttlMs": 5000,
+                            "cacheScope": "private",
+                        }
+                    }
+                if method in ("resources/list", "prompts/list"):
+                    return {"result": {method.split("/")[0]: []}}
+                return None
+
+            def notify(self, method, params=None):
+                pass
+
+        result = result_with_tools([])
+        enumerate_server(CacheSession(), result)
+        assert result.list_cache["tools/list"] == [
+            {"ttlMs": 5000, "cacheScope": "private"}
+        ]
+        assert result.list_cache["resources/list"] == [{}]
+        assert result.list_cache["prompts/list"] == [{}]

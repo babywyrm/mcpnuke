@@ -7,10 +7,16 @@ All notable changes to this submodule are documented here.
 ### Added
 
 - **`docs/spec-surface.md`** — Speak / Scan / Ready map of mcpnuke against
-  the MCP 2026-08-22 roadmap. List caching (`ttlMs`/`cacheScope`) is the
-  remaining Ready row. Tasks, HTTP-over-stdio, WIF, and progressive
+  the MCP 2026-08-22 roadmap. The two Ready rows (dual `tools/call` body,
+  list caching) are done. Tasks, HTTP-over-stdio, WIF, and progressive
   discovery wait for a wire format. Cousin checks are named so they are not
   relabeled as the new primitives.
+- **`list_cache`** — SEP-2549 `ttlMs` / `cacheScope` on `tools/list`,
+  `resources/list`, and `prompts/list`. Silent when the fields are absent, so
+  servers that have not implemented caching stay quiet. Invalid TTL or
+  cacheScope is MEDIUM; mixed cacheScope across pages of the same list is
+  HIGH (the spec requires one scope; mixed public/private is a shared-cache
+  footgun). Does not probe `resources/read`.
 
 ### Fixed
 

@@ -52,6 +52,7 @@ class TargetResult:
     tools: list[dict[str, Any]] = field(default_factory=list)
     resources: list[dict[str, Any]] = field(default_factory=list)
     prompts: list[dict[str, Any]] = field(default_factory=list)
+    list_cache: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     findings: list[Finding] = field(default_factory=list)
     attack_chains: list[AttackChain] = field(default_factory=list)
     timings: dict[str, float] = field(default_factory=dict)

@@ -3,6 +3,7 @@
 import json
 import time
 from collections.abc import Callable
+from typing import Any
 
 from mcpnuke.core.constants import MCP_INIT_PARAMS
 from mcpnuke.core.models import TargetResult
@@ -18,25 +19,36 @@ _LIST_ITEM_KEYS: dict[str, str] = {
 }
 
 
+def _cache_fields(result: dict[str, Any]) -> dict[str, Any]:
+    """ttlMs / cacheScope from one list page; omitted keys stay omitted."""
+    page: dict[str, Any] = {}
+    if "ttlMs" in result:
+        page["ttlMs"] = result["ttlMs"]
+    if "cacheScope" in result:
+        page["cacheScope"] = result["cacheScope"]
+    return page
+
+
 def _paginated_list(
     session: MCPSessionProtocol,
     method: str,
     max_pages: int = DEFAULT_MAX_PAGES,
     timeout: float = 15,
     retries: int = 2,
-) -> tuple[list[dict], bool]:
+) -> tuple[list[dict[str, Any]], bool, list[dict[str, Any]]]:
     """Fetch a paginated MCP list, following nextCursor up to *max_pages*.
 
-    Returns (items, truncated) where truncated is True when the page cap
-    was reached before the server stopped returning cursors.
+    Returns (items, truncated, cache_pages). cache_pages is one dict per
+    response page, holding ttlMs/cacheScope when the server sent them.
     """
     item_key = _LIST_ITEM_KEYS.get(method, method.split("/")[0])
-    all_items: list[dict] = []
+    all_items: list[dict[str, Any]] = []
+    cache_pages: list[dict[str, Any]] = []
     cursor: str | None = None
     truncated = False
 
     for page in range(max_pages):
-        params: dict = {}
+        params: dict[str, Any] = {}
         if cursor:
             params["cursor"] = cursor
 
@@ -47,6 +59,7 @@ def _paginated_list(
         result = resp["result"]
         items = result.get(item_key, [])
         all_items.extend(items)
+        cache_pages.append(_cache_fields(result))
 
         cursor = result.get("nextCursor") or result.get("cursor")
         if not cursor:
@@ -55,7 +68,7 @@ def _paginated_list(
         if page == max_pages - 1:
             truncated = True
 
-    return all_items, truncated
+    return all_items, truncated, cache_pages
 
 
 def negotiate_protocol(
@@ -187,11 +200,12 @@ def enumerate_server(
         _log("  [dim]Enumerating tools...[/dim]")
 
     for _attempt in range(3):
-        tools, tools_truncated = _paginated_list(
+        tools, tools_truncated, tools_cache = _paginated_list(
             session, "tools/list", max_pages=max_pages, timeout=15,
         )
         if tools is not None:
             result.tools = tools
+            result.list_cache["tools/list"] = tools_cache
             break
         time.sleep(1)
 
@@ -213,10 +227,11 @@ def enumerate_server(
     if verbose:
         _log("  [dim]Enumerating resources...[/dim]")
 
-    resources, res_truncated = _paginated_list(
+    resources, res_truncated, res_cache = _paginated_list(
         session, "resources/list", max_pages=max_pages, timeout=15,
     )
     result.resources = resources
+    result.list_cache["resources/list"] = res_cache
 
     if res_truncated:
         result.add(
@@ -235,10 +250,11 @@ def enumerate_server(
     if verbose:
         _log("  [dim]Enumerating prompts...[/dim]")
 
-    prompts, prompts_truncated = _paginated_list(
+    prompts, prompts_truncated, prompts_cache = _paginated_list(
         session, "prompts/list", max_pages=max_pages, timeout=15,
     )
     result.prompts = prompts
+    result.list_cache["prompts/list"] = prompts_cache
 
     if prompts_truncated:
         result.add(

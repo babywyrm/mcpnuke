@@ -64,6 +64,7 @@ from mcpnuke.checks.jwt_validation import (
     check_jwt_ttl,
     check_jwt_weak_key,
 )
+from mcpnuke.checks.list_cache import check_list_cache
 from mcpnuke.checks.model_routing import check_model_routing
 from mcpnuke.checks.permissions import (
     check_excessive_permissions,
@@ -197,6 +198,7 @@ _STATIC_CHECK_NAMES: tuple[str, ...] = (
     "schema_overdisclosure",
     "scope_pollution",
     "sdk_cache_tamper",
+    "list_cache",
     "exfil_flow",
 )
 
@@ -512,6 +514,7 @@ def run_all_checks(
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)
+    _run("list_cache", check_list_cache, result)
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
 
     # JWT hardening checks (only when auth token is present)
