@@ -24,6 +24,7 @@ from mcpnuke.core.protocol import (
     STATELESS,
     inject_meta,
 )
+from mcpnuke.core.session import _parse_sse_json
 
 _BODY_METHOD: str = "tools/list"
 _HEADER_METHOD: str = "tools/call"
@@ -40,14 +41,22 @@ def _probeable(session: Any, result: TargetResult) -> bool:
     return bool(getattr(session, "post_raw", None) and getattr(session, "post_url", ""))
 
 
-def _rpc_succeeded(resp: Any) -> bool:
-    if getattr(resp, "status_code", None) not in (200, 202):
-        return False
+def _rpc_body(resp: Any) -> dict[str, Any] | None:
     try:
         body = resp.json()
     except Exception:
+        body = None
+    if isinstance(body, dict):
+        return body
+    parsed = _parse_sse_json(getattr(resp, "text", "") or "")
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _rpc_succeeded(resp: Any) -> bool:
+    if getattr(resp, "status_code", None) not in (200, 202):
         return False
-    return isinstance(body, dict) and "result" in body and "error" not in body
+    body = _rpc_body(resp)
+    return body is not None and "result" in body and "error" not in body
 
 
 def check_routing_header_binding(session: Any, result: TargetResult) -> None:

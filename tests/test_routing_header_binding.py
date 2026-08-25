@@ -8,16 +8,25 @@ a tools/list body tagged Mcp-Method: tools/call.
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 from mcpnuke.checks.routing_header_binding import check_routing_header_binding
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.protocol import LEGACY, STATELESS
+from mcpnuke.core.session import HTTPSession
+
+_UNSET = object()
+_SSE_RESULT = (
+    "event: message\n"
+    'data: {"jsonrpc":"2.0","id":1,"result":{"tools":[]}}\n\n'
+)
 
 
 class _Resp:
-    def __init__(self, status: int, body: dict[str, Any] | None):
+    def __init__(self, status: int, body: dict[str, Any] | None, text: str = ""):
         self.status_code = status
         self._body = body
+        self.text = text
 
     def json(self) -> dict[str, Any]:
         if self._body is None:
@@ -31,20 +40,26 @@ class _HTTP:
         *,
         mode: str = STATELESS,
         status: int = 200,
-        body: dict[str, Any] | None = None,
+        body: Any = _UNSET,
+        text: str = "",
         post_url: str = "http://t/mcp",
     ):
         self.protocol_mode = mode
         self.post_url = post_url
         self._status = status
-        self._body = body if body is not None else {"jsonrpc": "2.0", "id": 1, "result": {"tools": []}}
+        self._body: dict[str, Any] | None
+        if body is _UNSET:
+            self._body = {"jsonrpc": "2.0", "id": 1, "result": {"tools": []}}
+        else:
+            self._body = body
+        self._text = text
         self.payload: dict[str, Any] | None = None
         self.extra_headers: dict[str, str] | None = None
 
     def post_raw(self, payload, extra_headers=None, timeout=None):
         self.payload = payload
         self.extra_headers = extra_headers
-        return _Resp(self._status, self._body)
+        return _Resp(self._status, self._body, self._text)
 
 
 def _stateless_result() -> TargetResult:
@@ -140,3 +155,35 @@ def test_timing_recorded_when_skipped():
     r = TargetResult(url="http://t/mcp")
     check_routing_header_binding(None, r)
     assert "routing_header_binding" in r.timings
+
+
+def test_sse_framed_result_is_reported():
+    session = _HTTP(body=None, text=_SSE_RESULT)
+    r = _stateless_result()
+    check_routing_header_binding(session, r)
+    hits = [f for f in r.findings if f.check == "routing_header_binding"]
+    assert len(hits) == 1
+
+
+def test_httpsession_mismatch_is_on_the_wire():
+    """extra_headers must win over routing_headers() derived from the body."""
+    session = HTTPSession("http://t", "http://t/mcp", protocol_mode=STATELESS)
+    captured: dict[str, Any] = {}
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        captured["json"] = json
+        captured["headers"] = headers
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.headers = {"content-type": "application/json"}
+        resp.text = ""
+        resp.json.return_value = {"jsonrpc": "2.0", "id": 1, "result": {"tools": []}}
+        return resp
+
+    with patch.object(session._client, "post", side_effect=fake_post):
+        r = _stateless_result()
+        check_routing_header_binding(session, r)
+
+    assert captured["json"]["method"] == "tools/list"
+    assert captured["headers"]["Mcp-Method"] == "tools/call"
+    assert any(f.check == "routing_header_binding" for f in r.findings)

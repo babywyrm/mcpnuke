@@ -2,7 +2,7 @@
 
 How mcpnuke sits against the [MCP roadmap of 2026-08-22](https://modelcontextprotocol.io/development/roadmap). This is the map. It is not a check inventory — that is [docs/checks.md](checks.md) — and it is not the attack-taxonomy coverage target — that is [ROADMAP.md](../ROADMAP.md).
 
-The scanner already speaks the **2026-07-28** spec: stateless mode, `server/discover`, SEP-2243 routing headers, `--protocol-mode`. Almost none of the next 6–12 months is in the client or the checks. Two pieces of the *current* spec are spoken only in part and never scanned. Those two are the first things to build later. Everything else waits for a Working Group to ship a wire format.
+The scanner already speaks the **2026-07-28** spec: stateless mode, `server/discover`, SEP-2243 routing headers, `--protocol-mode`. The current-spec Ready rows (dual `tools/call` body, list caching, routing-header binding) are scanned. Everything else waits for a Working Group to ship a wire format.
 
 ## Contents
 

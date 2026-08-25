@@ -871,9 +871,9 @@ class TestDocLinks:
     def test_spec_surface_is_the_speak_scan_ready_map(self):
         """A stub that exists would satisfy the row above and hide a deleted map.
 
-        The five area headings are the MCP 2026-08-22 roadmap. The two Ready
-        rows are current-spec gaps we can probe without guessing a SEP; if they
-        vanish the later-build queue has nowhere to start.
+        The five area headings are the MCP 2026-08-22 roadmap. ttlMs,
+        cacheScope, structuredContent, and Mcp-Method lock the current-spec
+        surfaces; if they vanish the later-build queue has nowhere to start.
         """
         text = (_docsgen.REPO_ROOT / "docs" / "spec-surface.md").read_text()
         for heading in (
