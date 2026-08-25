@@ -75,6 +75,7 @@ from mcpnuke.checks.prompt_leakage import check_prompt_leakage
 from mcpnuke.checks.rate_limit import check_behavioral_rate_limit, check_rate_limit
 from mcpnuke.checks.remote_package_exec import check_remote_package_execution
 from mcpnuke.checks.response_credentials import check_response_credentials
+from mcpnuke.checks.routing_header_binding import check_routing_header_binding
 from mcpnuke.checks.schema_overdisclosure import check_schema_overdisclosure
 from mcpnuke.checks.scope_pollution import check_scope_pollution
 from mcpnuke.checks.sdk_cache_tamper import (
@@ -227,6 +228,7 @@ _LIGHT_BEHAVIORAL_CHECK_NAMES: tuple[str, ...] = (
     "rug_pull",
     "indirect_injection",
     "protocol_robustness",
+    "routing_header_binding",
 )
 
 _TRANSPORT_CHECK_NAMES: tuple[str, ...] = ("sse_security",)
@@ -546,6 +548,7 @@ def run_all_checks(
         _run("rug_pull", check_rug_pull, session, result)
         _run("indirect_injection", check_indirect_injection, session, result, probe_opts=opts)
         _run("protocol_robustness", check_protocol_robustness, session, result)
+        _run("routing_header_binding", check_routing_header_binding, session, result)
 
         # ── Deep behavioral probes (invoke tools, analyze responses) ───
         if verbose:

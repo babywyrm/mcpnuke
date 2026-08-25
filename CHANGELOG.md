@@ -7,10 +7,15 @@ All notable changes to this submodule are documented here.
 ### Added
 
 - **`docs/spec-surface.md`** — Speak / Scan / Ready map of mcpnuke against
-  the MCP 2026-08-22 roadmap. The two Ready rows (dual `tools/call` body,
-  list caching) are done. Tasks, HTTP-over-stdio, WIF, and progressive
-  discovery wait for a wire format. Cousin checks are named so they are not
-  relabeled as the new primitives.
+  the MCP 2026-08-22 roadmap. The current-spec Ready rows (dual `tools/call`
+  body, list caching, SEP-2243 routing-header binding) are done. Tasks,
+  HTTP-over-stdio, WIF, and progressive discovery wait for a wire format.
+  Cousin checks are named so they are not relabeled as the new primitives.
+- **`routing_header_binding`** — SEP-2243: a discover-negotiated stateless
+  HTTP server that returns a JSON-RPC result for `tools/list` tagged
+  `Mcp-Method: tools/call` is MEDIUM. Load balancers route on the header;
+  if the app honours the body, they disagree. Silent on legacy, stdio, and
+  the AUTO tools/list-only fallback (that path is not a 2026-07-28 claim).
 - **`list_cache`** — SEP-2549 `ttlMs` / `cacheScope` on `tools/list`,
   `resources/list`, `prompts/list`, and a sample of `resources/read` (up to
   five URIs; skipped under `--no-invoke`). Silent when the fields are

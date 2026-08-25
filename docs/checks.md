@@ -1,7 +1,7 @@
 # Security Checks Reference
 
 Every check mcpnuke runs, with the severity it emits and what it detects.
-84 checks in total: 60 in the check inventory in `mcpnuke/checks/__init__.py`,
+85 checks in total: 61 in the check inventory in `mcpnuke/checks/__init__.py`,
 plus the 24 deep behavioral probes `_build_deep_checks()` assembles.
 
 Three conventions worth knowing before reading the tables:
@@ -173,6 +173,7 @@ back. All of them are skipped by `--no-invoke`.
 | `active_prompt_injection` | CRITICAL–LOW | Sends injection payloads into the first string parameter of **every** invocable tool and flags only a confirmed effect: the indicator produced by the server, or a system-prompt indicator in the reply. The indicator is a word *inside* the payload, so the response has the payload subtracted before it is searched — a server that merely quoted the input it refused reports LOW. See [error-reflection grading](#error-reflection-grading) |
 | `response_credentials` | CRITICAL | Credentials (API keys, passwords, private keys, connection strings) in tool responses |
 | `protocol_robustness` | MEDIUM | Server answers an unknown JSON-RPC method with success instead of `-32601`, or returns a result for `tools/call` with no params |
+| `routing_header_binding` | MEDIUM | A 2026-07-28 (stateless, `server/discover`) HTTP server returned a JSON-RPC result for `tools/list` tagged `Mcp-Method: tools/call`. SEP-2243 requires that disagreement to be rejected so a gateway routing on the header cannot desync from the body. Silent on legacy, stdio, and the tools/list-only AUTO fallback. |
 | `ssrf_probe` | CRITICAL–MEDIUM | Sends IMDS and loopback URLs through URL-shaped parameters. Cloud metadata content in the response is CRITICAL; an internal-service indicator absent from the safe-URL baseline is HIGH; a large response-size differential, or a fetching tool that merely exposes URL parameters, is MEDIUM. MCP-T06 |
 | `config_dump` | CRITICAL–MEDIUM | Internal configuration, service topology or secret paths in tool output. Severity is the strongest infrastructure-leak pattern matched, floored at MEDIUM |
 | `behavioral_rate_limit` | MEDIUM | Rapid-fire identical calls that all succeed — no throttling in the request path |

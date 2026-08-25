@@ -175,7 +175,7 @@ so it needs its own decision rather than the same filter.
 
 ### Near-term
 
-- **First Ready-row spec-surface checks** — dual `tools/call` body and list caching (`ttlMs` / `cacheScope` on lists and sampled `resources/read`) are done. ETags, Tasks, HTTP-over-stdio, WIF wait for a wire format. See [docs/spec-surface.md](docs/spec-surface.md).
+- **First Ready-row spec-surface checks** — dual `tools/call` body, list caching, and SEP-2243 routing-header binding are done. ETags, Tasks, HTTP-over-stdio, WIF wait for a wire format. See [docs/spec-surface.md](docs/spec-surface.md).
 - **CI dogfood** — broaden `.github/workflows/tests.yml` / scan workflow (matrix, self-scan)
 - **First PyPI release** — everything below is built and tested; what remains
   is registering the trusted publisher on PyPI and pushing a `vX.Y.Z` tag

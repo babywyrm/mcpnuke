@@ -32,14 +32,14 @@ Three columns, nothing fuzzier:
 
 ## Ready queue
 
-The two 2026-07-28 gaps that were Ready without guessing a SEP are done:
+The 2026-07-28 gaps that were Ready without guessing a SEP:
 
-- Dual `tools/call` body — `_response_text` reads `structuredContent`.
-- List caching — enumerator stores `ttlMs` / `cacheScope` per list page;
-  `list_cache` samples up to five `resources/read` URIs when invocation is
-  allowed. Invalid values MEDIUM; mixed cacheScope across pages of one list
-  HIGH. Absence is not a finding. Mixed scope across different resource URIs
-  is not a page mismatch.
+- Dual `tools/call` body — `_response_text` reads `structuredContent`. **Done.**
+- List caching — enumerator stores `ttlMs` / `cacheScope`; `list_cache` samples
+  `resources/read`. **Done.**
+- SEP-2243 routing-header binding — `routing_header_binding` probes a
+  `tools/list` body tagged `Mcp-Method: tools/call` on discover-negotiated
+  stateless HTTP. **Done.**
 
 ETags, Tasks, HTTP-over-stdio, and WIF stay Wait. See [Later, with zero regressions](#later-with-zero-regressions).
 
@@ -49,12 +49,13 @@ Keep. Do not relabel as the new work.
 
 | Surface | Speak | Scan | Notes |
 |---------|-------|------|-------|
-| Stateless 2026-07-28 | Yes | Partial | `core/protocol.py`: routing headers, `params._meta` client identity, `--protocol-mode {auto,legacy,stateless}`. Enumerator probes `initialize` then `server/discover` then bare `tools/list`. |
+| Stateless 2026-07-28 | Yes | Partial | `core/protocol.py`: routing headers, `params._meta` client identity, `--protocol-mode {auto,legacy,stateless}`. Enumerator probes `initialize` then `server/discover` then bare `tools/list`. `routing_header_binding` scans SEP-2243 header/body agreement on discover-negotiated stateless HTTP. |
 | Unauthenticated `server/discover` | Yes | Yes | Lane 5 / Transport A finding, skipped on stdio. |
 | DPoP (RFC 9449) | Yes | Yes | Three probes: no proof, malformed proof, missing `htm`/`htu` binding. Subject is bearer-binding, not agent identity. `taxonomy_id` is still evidence-only (known, deferred). |
 | Pagination | Yes | Yes | `nextCursor` up to `--max-pages`; truncated lists emit LOW `enumeration`. |
 | Dual `tools/call` body | Yes | Yes | `_response_text` reads `content` blocks and `structuredContent`. Done 2026-08-25. |
 | List caching (SEP-2549) | Yes | Yes | Enumerator keeps per-page `ttlMs` / `cacheScope`. `list_cache` samples up to five `resources/read` URIs (skipped under `--no-invoke`). Silent when the fields are absent. Invalid TTL/scope is MEDIUM; mixed cacheScope across pages of one list is HIGH. Mixed scope across different resource URIs is not that finding. |
+| Routing header binding (SEP-2243) | Yes | Yes | `routing_header_binding`: discover-negotiated stateless HTTP must reject `Mcp-Method` that disagrees with the JSON-RPC method. Silent on legacy, stdio, and the tools/list-only AUTO fallback. |
 
 ## 1. Agentic messaging primitives
 
@@ -75,10 +76,11 @@ A remote MCP server is an HTTP workload as of 2026-07-28. Local servers still sp
 
 | Deliverable | Speak | Scan | Ready | Notes |
 |-------------|-------|------|-------|-------|
-| Streamable HTTP / SSE as HTTP workloads | Yes | Partial | Keep | `HTTPSession`, `MCPSession` (SSE). Auth, DPoP, and TLS checks are HTTP-family only. |
-| JSON-RPC over stdio | Yes | Yes, with transport-aware auth | Keep | `StdioSession`: newline-delimited JSON-RPC. Not HTTP. Three auth-shaped checks already suppressed here. |
+| Streamable HTTP / SSE as HTTP workloads | Yes | Partial | Keep | `HTTPSession`, `MCPSession` (SSE). Auth, DPoP, and TLS checks are HTTP-family only. `routing_header_binding` is HTTP-only. |
+| JSON-RPC over stdio | Yes | Yes, with transport-aware auth | Keep | `StdioSession`: newline-delimited JSON-RPC. Not HTTP. Three auth-shaped checks already suppressed here. `routing_header_binding` does not run (no header layer). |
 | HTTP/2 over stdio (single binding) | No | No | Wait | A **new** binding when it ships. Today’s stdio session is not a preview of it. Unifying would collapse two pipelines; do not start that guess. |
 | List caching (`ttlMs` / `cacheScope`, SEP-2549) | Yes | Yes | **Done** | Silent when omitted. Invalid values MEDIUM; mixed cacheScope across pages of one list HIGH. `resources/read` sampled (cap 5, honor `--no-invoke`). Mixed scope across URIs is not a page mismatch. |
+| Routing headers (`Mcp-Method` / `Mcp-Name`, SEP-2243) | Yes | Yes | **Done** | `routing_header_binding` sends `tools/list` with `Mcp-Method: tools/call`. A JSON-RPC result is MEDIUM. Legacy / stdio / tools/list-only AUTO fallback are silent. Not a `tools/call` invoke. |
 | ETags on primitive results, including tool calls | No | No | Wait | Roadmap item, not in 2026-07-28. |
 | Standardized error handling across surfaces | Partial | Partial | Keep | `protocol_robustness` flags unknown methods that return success and `tools/call` with no params that returns a result. Not a full error-code matrix. |
 | Capability scoping for tool lists after SEP-2575 | No | No | Wait | Enumerator always asks for the full catalog. `schema_overdisclosure` assumes that catalog is complete. |
@@ -135,7 +137,7 @@ These look like the new work. They are not. Building the new primitive means a n
 | `schema_overdisclosure` | Secrets and recon in a full `tools/list` | Progressive discovery |
 | `dpop_enforcement` | RFC 9449 proof on an HTTP request | WIF, ID-JAG, token exchange, agent identity |
 | `sdk_cache_tamper` | Client SDK token cache on disk | List-result `ttlMs` / `cacheScope` |
-| `protocol_robustness` | Unknown method / empty `tools/call` | Standardized error codes across Tasks, events, and HTTP |
+| `protocol_robustness` | Unknown method / empty `tools/call` | Standardized error codes across Tasks, events, and HTTP; SEP-2243 header/body binding (`routing_header_binding`) |
 
 ## Later, with zero regressions
 

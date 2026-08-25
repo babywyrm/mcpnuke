@@ -890,6 +890,7 @@ class TestDocLinks:
             )
         assert "ttlMs" in text and "cacheScope" in text
         assert "structuredContent" in text
+        assert "Mcp-Method" in text
 
 
 def _heading_anchors(text: str) -> set[str]:
