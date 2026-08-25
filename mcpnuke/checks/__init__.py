@@ -514,7 +514,7 @@ def run_all_checks(
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)
-    _run("list_cache", check_list_cache, result)
+    _run("list_cache", check_list_cache, result, session=session, probe_opts=opts)
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
 
     # JWT hardening checks (only when auth token is present)

@@ -12,11 +12,13 @@ All notable changes to this submodule are documented here.
   discovery wait for a wire format. Cousin checks are named so they are not
   relabeled as the new primitives.
 - **`list_cache`** — SEP-2549 `ttlMs` / `cacheScope` on `tools/list`,
-  `resources/list`, and `prompts/list`. Silent when the fields are absent, so
-  servers that have not implemented caching stay quiet. Invalid TTL or
-  cacheScope is MEDIUM; mixed cacheScope across pages of the same list is
-  HIGH (the spec requires one scope; mixed public/private is a shared-cache
-  footgun). Does not probe `resources/read`.
+  `resources/list`, `prompts/list`, and a sample of `resources/read` (up to
+  five URIs; skipped under `--no-invoke`). Silent when the fields are
+  absent, so servers that have not implemented caching stay quiet. Invalid
+  TTL or cacheScope is MEDIUM; mixed cacheScope across pages of the same
+  list is HIGH (the spec requires one scope; mixed public/private is a
+  shared-cache footgun). Mixed scope across different resource URIs is not
+  that finding — each read is independently cacheable.
 
 ### Fixed
 

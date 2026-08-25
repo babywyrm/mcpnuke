@@ -35,7 +35,11 @@ Three columns, nothing fuzzier:
 The two 2026-07-28 gaps that were Ready without guessing a SEP are done:
 
 - Dual `tools/call` body — `_response_text` reads `structuredContent`.
-- List caching — enumerator stores `ttlMs` / `cacheScope` per list page; `list_cache` flags invalid values and cross-page scope mismatch. Absence is not a finding. `resources/read` cache hints are not captured yet (no extra read round-trip).
+- List caching — enumerator stores `ttlMs` / `cacheScope` per list page;
+  `list_cache` samples up to five `resources/read` URIs when invocation is
+  allowed. Invalid values MEDIUM; mixed cacheScope across pages of one list
+  HIGH. Absence is not a finding. Mixed scope across different resource URIs
+  is not a page mismatch.
 
 ETags, Tasks, HTTP-over-stdio, and WIF stay Wait. See [Later, with zero regressions](#later-with-zero-regressions).
 
@@ -50,7 +54,7 @@ Keep. Do not relabel as the new work.
 | DPoP (RFC 9449) | Yes | Yes | Three probes: no proof, malformed proof, missing `htm`/`htu` binding. Subject is bearer-binding, not agent identity. `taxonomy_id` is still evidence-only (known, deferred). |
 | Pagination | Yes | Yes | `nextCursor` up to `--max-pages`; truncated lists emit LOW `enumeration`. |
 | Dual `tools/call` body | Yes | Yes | `_response_text` reads `content` blocks and `structuredContent`. Done 2026-08-25. |
-| List caching (SEP-2549) | Yes (list methods) | Yes | Enumerator keeps per-page `ttlMs` / `cacheScope`. `list_cache` is silent when they are absent. Invalid TTL/scope is MEDIUM; mixed cacheScope across pages is HIGH. `resources/read` not probed. |
+| List caching (SEP-2549) | Yes | Yes | Enumerator keeps per-page `ttlMs` / `cacheScope`. `list_cache` samples up to five `resources/read` URIs (skipped under `--no-invoke`). Silent when the fields are absent. Invalid TTL/scope is MEDIUM; mixed cacheScope across pages of one list is HIGH. Mixed scope across different resource URIs is not that finding. |
 
 ## 1. Agentic messaging primitives
 
@@ -74,7 +78,7 @@ A remote MCP server is an HTTP workload as of 2026-07-28. Local servers still sp
 | Streamable HTTP / SSE as HTTP workloads | Yes | Partial | Keep | `HTTPSession`, `MCPSession` (SSE). Auth, DPoP, and TLS checks are HTTP-family only. |
 | JSON-RPC over stdio | Yes | Yes, with transport-aware auth | Keep | `StdioSession`: newline-delimited JSON-RPC. Not HTTP. Three auth-shaped checks already suppressed here. |
 | HTTP/2 over stdio (single binding) | No | No | Wait | A **new** binding when it ships. Today’s stdio session is not a preview of it. Unifying would collapse two pipelines; do not start that guess. |
-| List caching (`ttlMs` / `cacheScope`, SEP-2549) | Yes (lists) | Yes | **Done** | Silent when omitted. Invalid values MEDIUM; cross-page cacheScope mismatch HIGH. `resources/read` still uncaptured. |
+| List caching (`ttlMs` / `cacheScope`, SEP-2549) | Yes | Yes | **Done** | Silent when omitted. Invalid values MEDIUM; mixed cacheScope across pages of one list HIGH. `resources/read` sampled (cap 5, honor `--no-invoke`). Mixed scope across URIs is not a page mismatch. |
 | ETags on primitive results, including tool calls | No | No | Wait | Roadmap item, not in 2026-07-28. |
 | Standardized error handling across surfaces | Partial | Partial | Keep | `protocol_robustness` flags unknown methods that return success and `tools/call` with no params that returns a result. Not a full error-code matrix. |
 | Capability scoping for tool lists after SEP-2575 | No | No | Wait | Enumerator always asks for the full catalog. `schema_overdisclosure` assumes that catalog is complete. |

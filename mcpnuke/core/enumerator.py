@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from mcpnuke.core.cache_hints import cache_fields_from_result
 from mcpnuke.core.constants import MCP_INIT_PARAMS
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.protocol import AUTO, LEGACY, STATELESS
@@ -17,16 +18,6 @@ _LIST_ITEM_KEYS: dict[str, str] = {
     "resources/list": "resources",
     "prompts/list": "prompts",
 }
-
-
-def _cache_fields(result: dict[str, Any]) -> dict[str, Any]:
-    """ttlMs / cacheScope from one list page; omitted keys stay omitted."""
-    page: dict[str, Any] = {}
-    if "ttlMs" in result:
-        page["ttlMs"] = result["ttlMs"]
-    if "cacheScope" in result:
-        page["cacheScope"] = result["cacheScope"]
-    return page
 
 
 def _paginated_list(
@@ -59,7 +50,7 @@ def _paginated_list(
         result = resp["result"]
         items = result.get(item_key, [])
         all_items.extend(items)
-        cache_pages.append(_cache_fields(result))
+        cache_pages.append(cache_fields_from_result(result))
 
         cursor = result.get("nextCursor") or result.get("cursor")
         if not cursor:
