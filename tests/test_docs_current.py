@@ -864,8 +864,32 @@ class TestDocLinks:
             "ai-analysis.md",
             "kubernetes.md",
             "methodology.md",
+            "spec-surface.md",
         ):
             assert (_docsgen.REPO_ROOT / "docs" / name).is_file(), f"docs/{name} missing"
+
+    def test_spec_surface_is_the_speak_scan_ready_map(self):
+        """A stub that exists would satisfy the row above and hide a deleted map.
+
+        The five area headings are the MCP 2026-08-22 roadmap. The two Ready
+        rows are current-spec gaps we can probe without guessing a SEP; if they
+        vanish the later-build queue has nowhere to start.
+        """
+        text = (_docsgen.REPO_ROOT / "docs" / "spec-surface.md").read_text()
+        for heading in (
+            "Agentic messaging primitives",
+            "HTTP-native transport unification and hardening",
+            "Agent identity and enterprise-ready security",
+            "Improved primitives",
+            "Improved SDK developer experience",
+        ):
+            assert heading in text, f"missing area: {heading}"
+        for column in ("Speak", "Scan", "Ready"):
+            assert f"**{column}**" in text or f"| {column} |" in text, (
+                f"spec-surface.md lost the {column} column"
+            )
+        assert "ttlMs" in text and "cacheScope" in text
+        assert "structuredContent" in text
 
 
 def _heading_anchors(text: str) -> set[str]:

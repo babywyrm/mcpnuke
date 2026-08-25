@@ -46,6 +46,7 @@ for training, or point at any MCP server in dev/staging/prod.
 | [docs/ai-analysis.md](docs/ai-analysis.md) | Claude, Bedrock and Ollama analysis |
 | [docs/kubernetes.md](docs/kubernetes.md) | In-cluster deployment and posture checks |
 | [docs/methodology.md](docs/methodology.md) | Probing methodology, risk scoring, attack chains |
+| [docs/spec-surface.md](docs/spec-surface.md) | MCP 2026-08-22 roadmap: what we speak, scan, and can probe next |
 | [QUICKSTART.md](QUICKSTART.md) | End-to-end scenarios |
 | [docs/ci-cd-guide.md](docs/ci-cd-guide.md) | Integrating scans into your pipeline |
 | [walkthrough/README.md](walkthrough/README.md) | Guided DVMCP scan, finding by finding |

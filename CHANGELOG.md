@@ -2,6 +2,16 @@
 
 All notable changes to this submodule are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **`docs/spec-surface.md`** — Speak / Scan / Ready map of mcpnuke against
+  the MCP 2026-08-22 roadmap. Two current-spec gaps are Ready (list caching
+  `ttlMs`/`cacheScope`, dual `tools/call` body). Tasks, HTTP-over-stdio, WIF,
+  and progressive discovery wait for a wire format. Cousin checks are named
+  so they are not relabeled as the new primitives.
+
 ## [6.16.0] - 2026-08-11
 
 Two independent threads: mcpnuke becomes installable, and three checks stop

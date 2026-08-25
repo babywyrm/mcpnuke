@@ -18,6 +18,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | Transport security (JWT, DPoP, scope, boundaries) | **Strong** — 8 transport checks |
 | Lane coverage (5 identity lanes) | **All 5 represented** |
 | Taxonomy coverage | **40/57 IDs (70%)** — Tier 1 complete, see gap map below |
+| MCP spec surface (2026-08-22 roadmap) | **Mapped** — Speak/Scan/Ready in [docs/spec-surface.md](docs/spec-surface.md) |
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
 | False-positive measurement | **Done** — three harnesses, all baselined and gated; see below |
@@ -174,6 +175,7 @@ so it needs its own decision rather than the same filter.
 
 ### Near-term
 
+- **First Ready-row spec-surface checks** — list caching (`ttlMs` / `cacheScope`) and the dual `tools/call` body. Documented in [docs/spec-surface.md](docs/spec-surface.md). Not this cycle: one row at a time, behind the three false-positive harnesses. Do not start Wait-column rows (Tasks, HTTP-over-stdio, WIF) until the WG ships a wire format.
 - **CI dogfood** — broaden `.github/workflows/tests.yml` / scan workflow (matrix, self-scan)
 - **First PyPI release** — everything below is built and tested; what remains
   is registering the trusted publisher on PyPI and pushing a `vX.Y.Z` tag
