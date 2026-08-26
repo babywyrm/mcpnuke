@@ -35,18 +35,14 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 > enforcement, where `lanes.yaml` has those the other way around. The checks
 > follow `lanes.yaml` — `ai_guardrail_probe` emits T56, `dpop_enforcement`
 > attributes T43 — so it is the prose here that needs rewriting, not the
-> attribution. Two things do need fixing in code:
+> attribution. Code that used to disagree is now aligned:
 >
-> - **`shell_injection` emits `MCP-T54`**, which `lanes.yaml` defines as
->   unauthenticated inference backend exposure. T53, "Shell Command Wrapping
->   Injection", is the one it means. Left alone so far because changing it
->   changes the `taxonomy_id` on a shipped finding, which is a consumer-visible
->   break rather than a typo.
-> - **`profile` (T06) and `dpop_enforcement` (T43) record their threat ID only
->   in the evidence dict**, never setting `taxonomy_id`. Both count as covered
->   below, but lane attribution and the SARIF export read the field, so neither
->   is visible to either. `tests/test_taxonomy_coverage_claim.py` pins this at
->   exactly those two so a third cannot appear by accident.
+> - **`shell_injection` emits `MCP-T53`** (shell command wrapping), matching
+>   `shell_wrapping_injection`. T54 stays on `inference_backend`.
+> - **`ssrf_probe` (T06) and `dpop_enforcement` (T43) set `taxonomy_id`**, so
+>   SARIF and `--by-lane` see them. `profile.py`'s schema example still mentions
+>   T06 as a `threat_id` key; that is documentation, not a finding.
+>   `test_no_check_attributes_only_in_evidence` keeps the evidence-only set empty.
 
 ### Covered at the Tier 1 milestone (14 IDs — historical snapshot)
 

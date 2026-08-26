@@ -51,7 +51,7 @@ Keep. Do not relabel as the new work.
 |---------|-------|------|-------|
 | Stateless 2026-07-28 | Yes | Partial | `core/protocol.py`: routing headers, `params._meta` client identity, `--protocol-mode {auto,legacy,stateless}`. Enumerator probes `initialize` then `server/discover` then bare `tools/list`. `routing_header_binding` scans SEP-2243 header/body agreement on discover-negotiated stateless HTTP. |
 | Unauthenticated `server/discover` | Yes | Yes | Lane 5 / Transport A finding, skipped on stdio. |
-| DPoP (RFC 9449) | Yes | Yes | Three probes: no proof, malformed proof, missing `htm`/`htu` binding. Subject is bearer-binding, not agent identity. `taxonomy_id` is still evidence-only (known, deferred). |
+| DPoP (RFC 9449) | Yes | Yes | Three probes: no proof, malformed proof, missing `htm`/`htu` binding. Subject is bearer-binding, not agent identity. Findings set `taxonomy_id` MCP-T43. |
 | Pagination | Yes | Yes | `nextCursor` up to `--max-pages`; truncated lists emit LOW `enumeration`. |
 | Dual `tools/call` body | Yes | Yes | `_response_text` reads `content` blocks and `structuredContent`. Done 2026-08-25. |
 | List caching (SEP-2549) | Yes | Yes | Enumerator keeps per-page `ttlMs` / `cacheScope`. `list_cache` samples up to five `resources/read` URIs (skipped under `--no-invoke`). Silent when the fields are absent. Invalid TTL/scope is MEDIUM; mixed cacheScope across pages of one list is HIGH. Mixed scope across different resource URIs is not that finding. |

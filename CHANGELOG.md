@@ -27,6 +27,12 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Taxonomy IDs reach `Finding.taxonomy_id`.** `ssrf_probe` is MCP-T06 and
+  `dpop_enforcement` is MCP-T43 on the finding, not only inside the evidence
+  dict — SARIF tags and `--by-lane` can see them. `shell_injection` was
+  emitting MCP-T54 (unauthenticated inference backend); it now emits MCP-T53
+  (shell command wrapping), matching `shell_wrapping_injection`. T54 stays on
+  `inference_backend`. Coverage stays 40/57; the IDs were already counted.
 - **`structuredContent` is no longer invisible when `content` is a list.**
   `_response_text` used to return after extracting content blocks, so every
   poisoning, credential, and injection check that uses the helper missed the

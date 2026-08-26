@@ -12,6 +12,8 @@ from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_t
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
+_TAXONOMY_ID: str = "MCP-T06"
+
 URL_PARAM_PATTERNS = re.compile(
     r"(url|uri|endpoint|href|target|host|webhook|link|address|redirect|proxy|fetch|request|resource_url|source_url|dest|destination)",
     re.IGNORECASE,
@@ -90,6 +92,7 @@ def check_ssrf_probe(session: MCPSessionProtocol, result: TargetResult, probe_op
                                 f"SSRF: cloud metadata accessible via tool '{name}'",
                                 f"Payload: {payload_name} via param '{pname}'",
                                 evidence=text[:400],
+                                taxonomy_id=_TAXONOMY_ID,
                             )
                             found_critical = True
                             break
@@ -105,6 +108,7 @@ def check_ssrf_probe(session: MCPSessionProtocol, result: TargetResult, probe_op
                                     f"SSRF: internal service accessed via tool '{name}'",
                                     f"Payload: {payload_name} via param '{pname}'",
                                     evidence=text[:400],
+                                    taxonomy_id=_TAXONOMY_ID,
                                 )
                                 break
 
@@ -116,6 +120,7 @@ def check_ssrf_probe(session: MCPSessionProtocol, result: TargetResult, probe_op
                                 "MEDIUM",
                                 f"SSRF indicator: differential response for internal URL via '{name}'",
                                 f"Payload: {payload_name}, response length ratio: {len_ratio:.1f}",
+                                taxonomy_id=_TAXONOMY_ID,
                             )
 
             # Static flag: tool has URL params at all
@@ -127,4 +132,5 @@ def check_ssrf_probe(session: MCPSessionProtocol, result: TargetResult, probe_op
                         "MEDIUM",
                         f"SSRF surface: tool '{name}' accepts URL params and fetches content",
                         f"URL params: {url_params}",
+                        taxonomy_id=_TAXONOMY_ID,
                     )

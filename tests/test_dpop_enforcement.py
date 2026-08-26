@@ -198,6 +198,7 @@ class TestNoDpopHeaderProbe:
 
         assert [f.check for f in result.findings] == ["dpop_not_enforced"]
         assert result.findings[0].severity == "HIGH"
+        assert result.findings[0].taxonomy_id == "MCP-T43"
 
     def test_401_is_clean(self):
         result = TargetResult(url=_URL)
@@ -280,6 +281,7 @@ class TestRunAll:
 
         assert all(f.lane == 3 for f in result.findings)
         assert all(f.transport == "A" for f in result.findings)
+        assert all(f.taxonomy_id == "MCP-T43" for f in result.findings)
 
 
 # ── Probe error handling ──────────────────────────────────────────────

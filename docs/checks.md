@@ -178,7 +178,7 @@ back. All of them are skipped by `--no-invoke`.
 | `config_dump` | CRITICAL–MEDIUM | Internal configuration, service topology or secret paths in tool output. Severity is the strongest infrastructure-leak pattern matched, floored at MEDIUM |
 | `behavioral_rate_limit` | MEDIUM | Rapid-fire identical calls that all succeed — no throttling in the request path |
 | `anon_budget_exhaust` | HIGH–MEDIUM | A burst of unauthenticated calls that all succeed is HIGH; MEDIUM when the catalog advertises per-caller accounting but this surface still appears unmetered. Not probed at all on stdio. MCP-T51 |
-| `shell_injection` | CRITICAL–HIGH | Shell metacharacter and base-command probes against subprocess-wrapping tools |
+| `shell_injection` | CRITICAL–HIGH | Shell metacharacter and base-command probes against subprocess-wrapping tools. MCP-T53 |
 | `sdk_cache_poisoning` | CRITICAL–HIGH | Writes a forged JWT to the target's token cache, then invokes a tool that reads it. Sensitive content in the reply is CRITICAL; an accepted call with no denial is HIGH. **Mutates target state** — skipped by `--fast`. MCP-T33 |
 | `ai_guardrail_probe` (finding: `ai_guardrail_bypass`) | CRITICAL–HIGH | Social-engineering strategies against AI-gated tools. Leaking under three or more strategies is CRITICAL, one or two is HIGH |
 | `prompt_injection_t01` | CRITICAL–HIGH | The same idea as `active_prompt_injection` aimed at a narrower target: only tools whose name, description or parameter names suggest the argument reaches an LLM, and the most prompt-like parameter rather than the first string one. Four canary payloads — direct override, maintenance mode, template evaluation (HIGH), system-role injection — each flagged only when the server produces its marker, rather than merely quoting the payload back. See [error-reflection grading](#error-reflection-grading). MCP-T01 |
@@ -294,9 +294,9 @@ attack path was exercised and blocked, which is not the same as not testing it.
 |-------|----------|----------------|
 | `auth` | HIGH | Unauthenticated MCP/tool-server initialize accepted. Emitted by the enumerator during connection, not by a check, so it appears in reports without a corresponding entry in the progress count |
 | `sse_security` | HIGH–MEDIUM | Unauthenticated SSE stream, CORS misconfiguration, cross-origin POST |
-| `dpop_not_enforced` | HIGH | Request accepted with no DPoP proof — a stolen bearer token replays without the paired key (RFC 9449 §7) |
-| `dpop_header_not_validated` | HIGH | A malformed DPoP header is accepted, so the proof is decorative (RFC 9449 §7.1) |
-| `dpop_binding_not_enforced` | HIGH | Proof accepted without `htm`/`htu`, so it replays against any endpoint (RFC 9449 §4.2) |
+| `dpop_not_enforced` | HIGH | Request accepted with no DPoP proof — a stolen bearer token replays without the paired key (RFC 9449 §7). MCP-T43 |
+| `dpop_header_not_validated` | HIGH | A malformed DPoP header is accepted, so the proof is decorative (RFC 9449 §7.1). MCP-T43 |
+| `dpop_binding_not_enforced` | HIGH | Proof accepted without `htm`/`htu`, so it replays against any endpoint (RFC 9449 §4.2). MCP-T43 |
 | `multi_vector` | CRITICAL | 2+ dangerous vulnerability categories active on one server. A category counts only if it has a finding at **MEDIUM or above** — a CRITICAL claim should not rest on evidence we ourselves graded LOW |
 | `attack_chains` (finding: `attack_chain`) | CRITICAL | Linked vulnerability pairs (e.g. `input_sanitization → code_execution`), subject to the same MEDIUM floor as `multi_vector` |
 

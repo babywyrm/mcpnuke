@@ -37,6 +37,7 @@ from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=3, transport="A")
+_TAXONOMY_ID: str = "MCP-T43"
 
 _PROBE_TOOL = "tools/list"  # lightweight probe, available on any MCP server
 
@@ -162,6 +163,7 @@ def _probe_no_dpop_header(result: TargetResult, session: Any) -> None:
                 "rfc": "RFC 9449 §7.1",
                 "threat_id": "MCP-T43",
             },
+            taxonomy_id=_TAXONOMY_ID,
         )
 
 
@@ -208,6 +210,7 @@ def _probe_malformed_dpop(result: TargetResult, session: Any) -> None:
                 "rfc": "RFC 9449 §7.1",
                 "threat_id": "MCP-T43",
             },
+            taxonomy_id=_TAXONOMY_ID,
         )
 
 
@@ -256,4 +259,5 @@ def _probe_missing_htm_htu(result: TargetResult, session: Any) -> None:
                 "rfc": "RFC 9449 §4.2, §7.1",
                 "threat_id": "MCP-T43",
             },
+            taxonomy_id=_TAXONOMY_ID,
         )

@@ -95,6 +95,7 @@ class TestShellInjectionCheck:
         assert findings[0].severity == "CRITICAL"
         assert findings[0].lane == 3
         assert findings[0].transport == "D"
+        assert findings[0].taxonomy_id == "MCP-T53"
 
     def test_detects_subshell_injection(self):
         result = TargetResult(url="http://test")
@@ -128,6 +129,7 @@ class TestShellInjectionCheck:
         check_shell_injection(session, result)
         findings = [f for f in result.findings if f.check == "shell_injection"]
         assert any("Dangerous base command" in f.title for f in findings)
+        assert all(f.taxonomy_id == "MCP-T53" for f in findings)
 
     def test_dangerous_base_not_flagged_if_denied(self):
         result = TargetResult(url="http://test")

@@ -44,6 +44,7 @@ def test_cloud_metadata_detected():
     })
     check_ssrf_probe(session, r)
     assert any(f.check == "ssrf_probe" and f.severity == "CRITICAL" for f in r.findings)
+    assert all(f.taxonomy_id == "MCP-T06" for f in r.findings if f.check == "ssrf_probe")
 
 
 def test_clean_tool_no_url_params():
@@ -64,6 +65,7 @@ def test_static_ssrf_surface_flag():
     session = FakeSession({"_default": "OK"})
     check_ssrf_probe(session, r)
     assert any(f.check == "ssrf_probe" for f in r.findings)
+    assert all(f.taxonomy_id == "MCP-T06" for f in r.findings if f.check == "ssrf_probe")
 
 
 def test_timing_recorded():

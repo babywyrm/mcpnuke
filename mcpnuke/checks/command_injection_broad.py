@@ -2,7 +2,7 @@
 
 Behavioral check that tests ALL tools with string parameters for command
 injection — not just tools with shell-like names (that's shell_injection.py /
-MCP-T54). This is the broader class: any tool that processes a string argument
+MCP-T53). This is the broader class: any tool that processes a string argument
 through a system shell, subprocess, or eval path is vulnerable, regardless of
 whether its name suggests execution.
 
@@ -79,7 +79,7 @@ _SHELL_ERROR_PATTERNS = [
     re.compile(r"Permission denied.*sh", re.IGNORECASE),
 ]
 
-# Tools to skip (already covered by shell_injection.py / MCP-T54)
+# Tools to skip (already covered by shell_injection.py / MCP-T53)
 _SKIP_SHELL_TOOLS = frozenset({
     "shell", "exec", "subprocess", "command", "cmd", "invoke",
     "worker", "spawn", "run", "bash", "sh",
@@ -108,7 +108,7 @@ def check_command_injection_broad(
 ) -> None:
     """Probe all tools for command injection via string params (MCP-T05).
 
-    Unlike shell_injection.py (MCP-T54) which targets shell-named tools,
+    Unlike shell_injection.py (MCP-T53) which targets shell-named tools,
     this checks ANY tool with string parameters — catching injection in
     tools that don't obviously suggest execution (e.g. search, query,
     filename, path parameters that get passed to a subprocess internally).

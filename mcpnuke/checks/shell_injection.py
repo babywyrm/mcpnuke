@@ -27,6 +27,7 @@ from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=3, transport="D")
+_TAXONOMY_ID: str = "MCP-T53"
 
 _SHELL_TOOL_KEYWORDS = frozenset({
     "shell", "exec", "subprocess", "command", "cmd", "invoke",
@@ -143,7 +144,7 @@ def check_shell_injection(
                                 f"Payload: {payload_info['payload']}\n"
                                 f"Response: {text[:300]}"
                             ),
-                            taxonomy_id="MCP-T54",
+                            taxonomy_id=_TAXONOMY_ID,
                         )
                         break
 
@@ -187,4 +188,5 @@ def _probe_dangerous_base(
                 f"Dangerous base command accepted by '{name}'",
                 f"Category: {probe['category']} — {probe['base_cmd']} executed successfully",
                 evidence=f"Command: {probe['base_cmd']}\nResponse: {text[:300]}",
+                taxonomy_id=_TAXONOMY_ID,
             )

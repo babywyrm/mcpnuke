@@ -12,12 +12,13 @@ here rather than left to whoever next runs a grep:
 1. `rg 'MCP-T\\d+' | sort -u | wc -l` overcounts, because ripgrep prefixes each
    match with a filename and the same ID in two modules counts twice.
 2. Counting only inline `taxonomy_id="MCP-T.."` literals undercounts, because
-   three modules pass a module-level constant, one of which is
+   several modules pass a module-level constant, one of which is
    `_INTEGRITY_TAXONOMY_ID` — so a regex anchored on `_?TAXONOMY_ID` misses it.
-3. Counting only `Finding.taxonomy_id` undercounts, because two checks record
-   their threat as a `threat_id` key inside the evidence dict instead. See
-   `test_two_checks_attribute_only_in_evidence` for why that distinction is
-   worth keeping visible.
+   Typed assignments (`_TAXONOMY_ID: str = "MCP-T06"`) used to miss too.
+3. Counting only `Finding.taxonomy_id` used to undercount, because two checks
+   recorded their threat as a `threat_id` key inside the evidence dict instead.
+   That gap is closed; `test_no_check_attributes_only_in_evidence` keeps it
+   closed.
 
 Coverage means: an ID some check attributes to a finding by either mechanism,
 over the IDs defined in the `lanes.yaml` this package bundles. It says nothing
@@ -37,7 +38,9 @@ _LANES = _ROOT / "mcpnuke" / "data" / "taxonomy" / "lanes.yaml"
 _ROADMAP = _ROOT / "ROADMAP.md"
 
 _CLAIM_RE = re.compile(r"Taxonomy coverage \| \*\*(\d+)/(\d+) IDs \((\d+)%\)\*\*")
-_CONST_RE = re.compile(r'^(\w*TAXONOMY\w*)\s*=\s*"(MCP-T\d+)"', re.M)
+_CONST_RE = re.compile(
+    r'^(\w*TAXONOMY\w*)(?:\s*:\s*\w+)?\s*=\s*"(MCP-T\d+)"', re.M
+)
 _LITERAL_RE = re.compile(r'taxonomy_id\s*=\s*"(MCP-T\d+)"')
 _EVIDENCE_RE = re.compile(r'"threat_id":\s*"(MCP-T\d+)"')
 
@@ -126,19 +129,18 @@ def test_constant_resolution_finds_the_ids_no_literal_carries():
 
     assert "MCP-T55" not in inline_only, "T55 is inline now; this guard is moot"
     assert "MCP-T55" in _structural_ids(), "constant resolution stopped working"
+    assert "MCP-T06" not in inline_only, "T06 is inline now; typed-const guard is moot"
+    assert "MCP-T06" in _structural_ids(), "typed `_TAXONOMY_ID: str =` is invisible"
 
 
-def test_two_checks_attribute_only_in_evidence():
-    """Pins a known gap so a third instance has to be a decision, not an accident.
+def test_no_check_attributes_only_in_evidence():
+    """IDs that only live in an evidence dict never reach SARIF or --by-lane.
 
-    `profile` (T06) and `dpop_enforcement` (T43) put their threat ID in the
-    evidence dict and never set `taxonomy_id`, so both are invisible to lane
-    attribution and to the SARIF export while still counting as covered. That is
-    worth fixing; what is not acceptable is it spreading unnoticed.
+    `ssrf_probe` (T06) and `dpop_enforcement` (T43) used to do that. A new
+    evidence-only ID is a regression; put it on `taxonomy_id` instead.
     """
     evidence_only = _evidence_ids() - _structural_ids()
-    assert evidence_only == {"MCP-T06", "MCP-T43"}, (
-        "the set of evidence-only threat IDs changed; if a check was fixed to "
-        "set taxonomy_id, narrow this assertion — if a new one was added, set "
-        f"taxonomy_id instead. Got: {sorted(evidence_only)}"
+    assert evidence_only == set(), (
+        "a check attributes a threat only in evidence: "
+        f"{sorted(evidence_only)}"
     )
