@@ -157,4 +157,4 @@ A new check that raises an FP ceiling is a regression even if the suite is green
 - 2026-07-28 release: https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/
 - Tasks extension: [SEP-2663](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/seps/2663-tasks-extension.md)
 
-Measured against mcpnuke 6.16.0 (`enumerator.py`, `protocol.py`, `checks/tool_probes.py`, `checks/dpop_enforcement.py`, `core/session.py` StdioSession).
+Measured against mcpnuke 6.17.0 (`enumerator.py`, `protocol.py`, `checks/tool_probes.py`, `checks/dpop_enforcement.py`, `core/session.py` StdioSession).

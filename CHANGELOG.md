@@ -4,6 +4,11 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.17.0] - 2026-08-26
+
+Current-spec scan surface (dual `tools/call` body, SEP-2549 list cache,
+SEP-2243 routing headers) and taxonomy IDs that reach the finding.
+
 ### Added
 
 - **`docs/spec-surface.md`** — Speak / Scan / Ready map of mcpnuke against
