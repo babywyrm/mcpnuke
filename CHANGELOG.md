@@ -34,8 +34,13 @@ All notable changes to this submodule are documented here.
   `client_id_metadata_document_supported` is MEDIUM. Silent when the
   document is absent, including stdio.
 - **CLI dogfood in CI.** `tests.yml` runs `python -m mcpnuke` against the
-  in-repo HTTP and stdio reference targets. The reusable scan workflow is
-  `workflow_call` only.
+  in-repo HTTP and stdio reference targets.
+
+### Changed
+
+- **Reusable scan workflow is `workflow_call` only.** This repo's push/PR
+  no longer runs `mcp-security-scan.yml` against a missing `:8080`.
+  Callers must `uses:` it and pass `target`.
 
 ## [6.17.0] - 2026-08-26
 

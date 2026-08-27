@@ -54,6 +54,18 @@ def _unexpected_high(findings: list[dict], expected: dict[tuple[str, str], str])
     ]
 
 
+def _missing_expected(findings: list[dict], expected: dict[tuple[str, str], str]) -> list[tuple[str, str]]:
+    """Empty JSON findings would otherwise pass `_unexpected_high`."""
+    return [
+        key
+        for key in expected
+        if not any(
+            f.get("check") == key[0] and key[1] in (f.get("title") or "")
+            for f in findings
+        )
+    ]
+
+
 def test_cli_scans_the_http_reference_target(tmp_path: Path) -> None:
     server = start_reference_server()
     report = tmp_path / "http.json"
@@ -70,6 +82,8 @@ def test_cli_scans_the_http_reference_target(tmp_path: Path) -> None:
         assert tgt["tools_total"] > 0
         offenders = _unexpected_high(tgt["findings"], _HTTP_EXPECTED)
         assert not offenders, offenders
+        missing = _missing_expected(tgt["findings"], _HTTP_EXPECTED)
+        assert not missing, missing
     finally:
         server.stop()
 
@@ -84,3 +98,5 @@ def test_cli_scans_the_stdio_reference_target(tmp_path: Path) -> None:
     assert tgt["tools_total"] > 0
     offenders = _unexpected_high(tgt["findings"], _STDIO_EXPECTED)
     assert not offenders, offenders
+    missing = _missing_expected(tgt["findings"], _STDIO_EXPECTED)
+    assert not missing, missing

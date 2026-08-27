@@ -165,9 +165,6 @@ so it needs its own decision rather than the same filter.
 ### Near-term
 
 - **First Ready-row spec-surface checks** — dual `tools/call` body, list caching, and SEP-2243 routing-header binding are done. ETags, Tasks, HTTP-over-stdio, WIF wait for a wire format. See [docs/spec-surface.md](docs/spec-surface.md).
-- **CI dogfood** — `tests.yml` `dogfood` job runs `python -m mcpnuke` against
-  the in-repo HTTP and stdio reference targets. The reusable
-  `mcp-security-scan.yml` is `workflow_call` only.
 - **First PyPI release** — everything below is built and tested; what remains
   is registering the trusted publisher on PyPI and pushing a `vX.Y.Z` tag
   - ~~Publish workflow — PyPI via OIDC trusted publishing on tag push~~ **Done**
