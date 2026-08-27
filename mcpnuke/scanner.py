@@ -79,6 +79,9 @@ def scan_stdio_target(
     result.transport = "stdio"
     console.print(f"  [green]✓[/green] Transport=stdio  pid={session._proc.pid}")
 
+    if opts.get("auth_context_summary"):
+        result.auth_context.update(opts["auth_context_summary"])
+
     enumerate_server(
         session,
         result,
@@ -94,8 +97,6 @@ def scan_stdio_target(
             console.print(
                 f"  [dim]Server: {si.get('name', '?')} v{si.get('version', '?')}[/dim]"
             )
-    if opts.get("auth_context_summary"):
-        result.auth_context.update(opts["auth_context_summary"])
 
     console.print(
         f"  [dim]Tools={len(result.tools)} "
@@ -234,6 +235,14 @@ def scan_target(
         f"  post_url={session.post_url}"
     )
 
+    # Credentials must land on the result before enumerate: the anonymous
+    # initialize finding reads scanned_anonymously(). Applying the summary
+    # afterwards made --auth-token still claim the handshake was unauthenticated.
+    if auth_token:
+        result.auth_context.setdefault("_raw_token", auth_token)
+    if opts.get("auth_context_summary"):
+        result.auth_context.update(opts["auth_context_summary"])
+
     base = ""
     sse_path = ""
     if hasattr(session, "sse_url") and session.sse_url:
@@ -257,8 +266,6 @@ def scan_target(
             console.print(
                 f"  [dim]Server: {si.get('name', '?')} v{si.get('version', '?')}[/dim]"
             )
-    if opts.get("auth_context_summary"):
-        result.auth_context.update(opts["auth_context_summary"])
 
     console.print(
         f"  [dim]Tools={len(result.tools)} "

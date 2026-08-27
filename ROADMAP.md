@@ -23,7 +23,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
 | False-positive measurement | **Done** — three harnesses, all baselined and gated; see below |
 | Distribution (PyPI, install script) | **Ready** — `install.sh` + publish workflow, both tested; upload armed by the `PYPI_PUBLISH` variable once the trusted publisher is registered |
-| CI/CD workflow for the tool itself | **Partial** — `tests.yml` + reusable scan workflow; dogfood CI still thin |
+| CI/CD workflow for the tool itself | **CLI dogfood** — `tests.yml` scans the in-repo reference target via `python -m mcpnuke` |
 
 ---
 
@@ -165,7 +165,9 @@ so it needs its own decision rather than the same filter.
 ### Near-term
 
 - **First Ready-row spec-surface checks** — dual `tools/call` body, list caching, and SEP-2243 routing-header binding are done. ETags, Tasks, HTTP-over-stdio, WIF wait for a wire format. See [docs/spec-surface.md](docs/spec-surface.md).
-- **CI dogfood** — broaden `.github/workflows/tests.yml` / scan workflow (matrix, self-scan)
+- **CI dogfood** — `tests.yml` `dogfood` job runs `python -m mcpnuke` against
+  the in-repo HTTP and stdio reference targets. The reusable
+  `mcp-security-scan.yml` is `workflow_call` only.
 - **First PyPI release** — everything below is built and tested; what remains
   is registering the trusted publisher on PyPI and pushing a `vX.Y.Z` tag
   - ~~Publish workflow — PyPI via OIDC trusted publishing on tag push~~ **Done**

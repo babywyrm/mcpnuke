@@ -56,6 +56,25 @@ class TestAnonymousInitializeFinding:
         enumerate_server(_LegacySession(), result)
         assert _auth_findings(result) == []
 
+    def test_scan_target_with_a_bearer_does_not_claim_anonymous_initialize(self):
+        """scan_target used to copy _raw_token onto the result *after*
+        enumerate, so --auth-token still emitted unauthenticated initialize.
+        """
+        from mcpnuke.scanner import scan_target
+        from tests.reference_target import start_reference_server
+
+        server = start_reference_server()
+        try:
+            result = scan_target(
+                server.url,
+                [],
+                auth_token=server.token,
+                probe_opts={"no_invoke": True, "fast": True},
+            )
+            assert _auth_findings(result) == []
+        finally:
+            server.stop()
+
 
 class TestScannedAnonymously:
     def test_true_with_empty_auth_context(self):

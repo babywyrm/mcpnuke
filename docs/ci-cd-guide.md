@@ -3,6 +3,10 @@
 Run mcpnuke as a security gate in your CI/CD pipeline. Fail builds on
 CRITICAL findings, generate nullfield policy, and track regressions.
 
+mcpnuke's own CI (`tests.yml`) dogfoods the CLI against the in-repo
+reference target (`tests/test_cli_dogfood.py`). The reusable workflow
+below is for scanning *your* MCP server; it is `workflow_call` only.
+
 ---
 
 ## GitHub Actions (Recommended)

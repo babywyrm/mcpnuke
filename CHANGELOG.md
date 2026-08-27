@@ -21,6 +21,9 @@ All notable changes to this submodule are documented here.
 - **ROADMAP taxonomy tables follow `lanes.yaml`.** T43 is DPoP, T56 is
   AI guardrail bypass, T53 is shell wrapping. A test pins every single-ID
   row's title so those names cannot swap again.
+- **`--auth-token` is visible to enumerate.** `scan_target` used to copy
+  `_raw_token` onto the result *after* the handshake, so an authenticated
+  CLI scan still emitted `Unauthenticated MCP initialize accepted`.
 
 ### Added
 
@@ -30,6 +33,9 @@ All notable changes to this submodule are documented here.
   whose `issuer` does not match the URL is HIGH; DCR without
   `client_id_metadata_document_supported` is MEDIUM. Silent when the
   document is absent, including stdio.
+- **CLI dogfood in CI.** `tests.yml` runs `python -m mcpnuke` against the
+  in-repo HTTP and stdio reference targets. The reusable scan workflow is
+  `workflow_call` only.
 
 ## [6.17.0] - 2026-08-26
 

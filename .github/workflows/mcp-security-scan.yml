@@ -1,7 +1,5 @@
-# mcpnuke MCP Security Scan — reusable GitHub Actions workflow
-#
-# Scans MCP servers on every PR, fails on CRITICAL/HIGH findings,
-# generates nullfield policy recommendations, and compares against baseline.
+# Reusable only. mcpnuke's own CI dogfoods the in-repo reference target
+# from tests.yml (`dogfood` job), not a missing localhost:8080.
 #
 # Usage in your repo's workflow:
 #   jobs:
@@ -46,12 +44,6 @@ on:
         required: false
       MCP_AUTH_TOKEN:
         required: false
-
-  # Also run directly on push/PR for this repo
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   scan:

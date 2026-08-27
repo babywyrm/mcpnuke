@@ -1,9 +1,11 @@
 name: Tests
 
 # Per-repo CI for mcpnuke. Gates lint first, then runs the unit-test suite
-# verbose against Python 3.11, 3.12 and 3.13 on every push and PR. Includes a one-shot
-# policy round-trip lint that confirms `--generate-policy` still emits YAML the
-# nullfield v1alpha1 controller can load (catches schema drift early).
+# verbose against Python 3.11, 3.12 and 3.13 on every push and PR. Includes a
+# CLI dogfood job that scans the in-repo reference target via `python -m
+# mcpnuke`, and a one-shot policy round-trip lint that confirms
+# `--generate-policy` still emits YAML the nullfield v1alpha1 controller can
+# load (catches schema drift early).
 #
 # Install steps use `uv sync --frozen --extra dev` with uv's cache keyed on the
 # committed uv.lock, so CI resolves the same dependency set every run. Both had
@@ -101,6 +103,28 @@ jobs:
       - name: Run pytest verbose
         run: uv run pytest -v --tb=short
 
+  dogfood:
+    name: CLI dogfood (reference target)
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install project
+        run: uv sync --frozen --extra dev
+
+      - name: Scan the in-repo reference target via the CLI
+        run: uv run pytest tests/test_cli_dogfood.py -v --tb=short
+
   policy-yaml-roundtrip:
     name: --generate-policy YAML round-trip
     runs-on: ubuntu-latest
@@ -152,7 +176,7 @@ jobs:
   notify-coherence:
     name: Notify ecosystem coherence workflow
     runs-on: ubuntu-latest
-    needs: [pytest, policy-yaml-roundtrip]
+    needs: [pytest, policy-yaml-roundtrip, dogfood]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
