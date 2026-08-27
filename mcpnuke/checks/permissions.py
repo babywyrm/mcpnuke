@@ -2,12 +2,15 @@
 
 import re
 
+from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.rules import DANGEROUS_TOOL_PATTERNS
 from mcpnuke.patterns.tokens import normalize_identifier
 
 _WEAK_SIGNAL_THRESHOLD = 2
+_add = lane_tagged(lane=1, transport="A")
+_TAXONOMY_ID: str = "MCP-T20"
 
 
 def check_excessive_permissions(result: TargetResult):
@@ -30,41 +33,48 @@ def check_excessive_permissions(result: TargetResult):
                     desc_only_hits.append((category, pattern, severity))
 
             for category, pattern, severity in name_hits:
-                result.add(
+                _add(
+                    result,
                     "excessive_permissions",
                     severity,
                     f"Dangerous capability [{category}]: '{tool['name']}'",
                     tool.get("description", "")[:200],
                     evidence=f"Pattern: {pattern}",
-                    taxonomy_id="MCP-T20",
+                    taxonomy_id=_TAXONOMY_ID,
                 )
 
             if len(desc_only_hits) >= _WEAK_SIGNAL_THRESHOLD:
                 for category, pattern, severity in desc_only_hits:
-                    result.add(
+                    _add(
+                        result,
                         "excessive_permissions",
                         severity,
                         f"Dangerous capability [{category}]: '{tool['name']}'",
                         tool.get("description", "")[:200],
                         evidence=f"Pattern: {pattern}",
+                        taxonomy_id=_TAXONOMY_ID,
                     )
 
             schema = tool.get("inputSchema", {})
             if schema.get("type") == "object":
                 props = schema.get("properties", {})
                 if not props and not schema.get("required"):
-                    result.add(
+                    _add(
+                        result,
                         "excessive_permissions",
                         "MEDIUM",
                         f"Tool '{tool['name']}' has no input schema",
                         "Accepts arbitrary input with no validation",
+                        taxonomy_id=_TAXONOMY_ID,
                     )
                 for pname, pdef in props.items():
                     if not pdef.get("type"):
-                        result.add(
+                        _add(
+                            result,
                             "excessive_permissions",
                             "LOW",
                             f"Untyped param '{pname}' in '{tool['name']}'",
+                            taxonomy_id=_TAXONOMY_ID,
                         )
 
 

@@ -124,7 +124,9 @@ class TestExistingBehaviourPreserved:
         a = _result([_tool("deploy_service", "Deploy")], url="http://a/mcp")
         b = _result([_tool("deploy_service", "Deploy")], url="http://b/mcp")
         check_tool_shadowing([a, b], a)
-        assert any("Name collision" in f.title for f in _shadow_findings(a))
+        hits = [f for f in _shadow_findings(a) if "Name collision" in f.title]
+        assert hits
+        assert all(f.taxonomy_id == "MCP-T25" for f in hits)
 
     def test_confusable_check_does_not_need_other_targets(self) -> None:
         r = _result([

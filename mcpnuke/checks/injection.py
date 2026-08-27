@@ -42,6 +42,7 @@ def check_prompt_injection(result: TargetResult):
                         "Prompt injection payload detected",
                         f"Location: {location}",
                         evidence=f"Pattern: {pat}\nText: {text[:300]}",
+                        taxonomy_id="MCP-T01",
                     )
                     return
 

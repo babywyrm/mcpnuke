@@ -82,6 +82,7 @@ def check_tool_shadowing(
                     "tool_shadowing",
                     "MEDIUM",
                     f"Name collision with {other.url}: {sorted(dupes)}",
+                    taxonomy_id="MCP-T25",
                 )
 
         _flag_confusable_names(result)

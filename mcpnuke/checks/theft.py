@@ -52,4 +52,5 @@ def check_token_theft(result: TargetResult):
                         "token_theft",
                         "HIGH",
                         f"Tool '{name}' accepts credential param: '{pname}'",
+                        taxonomy_id="MCP-T21",
                     )

@@ -98,15 +98,15 @@ but also attempts a live canary transfer when invocation is allowed.
 
 | Check | Severity | What It Detects |
 |-------|----------|----------------|
-| `prompt_injection` | CRITICAL | Injection payloads in tool/resource/prompt descriptions |
+| `prompt_injection` | CRITICAL | Injection payloads in tool/resource/prompt descriptions. MCP-T01 |
 | `tool_poisoning` | CRITICAL | Hidden instructions, invisible Unicode in tool descriptions |
-| `excessive_permissions` | CRITICAL–LOW | Dangerous capabilities (shell, filesystem, network, DB, cloud). A tool with no input schema at all is MEDIUM, an untyped parameter LOW |
+| `excessive_permissions` | CRITICAL–LOW | Dangerous capabilities (shell, filesystem, network, DB, cloud). A tool with no input schema at all is MEDIUM, an untyped parameter LOW. MCP-T20 |
 | `code_execution` | CRITICAL–HIGH | Tools with exec/eval/shell parameters or descriptions |
 | `remote_access` | CRITICAL–HIGH | Reverse shells, C2 beacons, port forwarding, data exfil |
-| `token_theft` | CRITICAL–HIGH | Tools that accept or forward credentials as parameters |
+| `token_theft` | CRITICAL–HIGH | Tools that accept or forward credentials as parameters. MCP-T21 |
 | `supply_chain` | CRITICAL | Dynamic package install from user-controlled URLs |
 | `schema_risks` (finding: `schema_risk`) | CRITICAL–MEDIUM | Command params, unbounded strings, freeform objects |
-| `tool_shadowing` | HIGH–MEDIUM | Tool names that collide with common tools or other servers |
+| `tool_shadowing` | HIGH–MEDIUM | Tool names that collide with common tools or other servers. MCP-T25 |
 | `prompt_leakage` | HIGH | Tools that may echo, log, or expose internal prompts |
 | `rate_limit` | MEDIUM | Descriptions suggesting unbounded/unthrottled usage |
 | `webhook_persistence` | HIGH | Callback/webhook params or tool names enabling persistent re-injection |

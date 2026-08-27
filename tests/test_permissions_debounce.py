@@ -19,6 +19,7 @@ def test_name_match_always_reported():
     check_excessive_permissions(r)
     findings = [f for f in r.findings if f.check == "excessive_permissions"]
     assert len(findings) >= 1
+    assert all(f.taxonomy_id == "MCP-T20" and f.lane == 1 for f in findings)
 
 
 def test_single_desc_match_suppressed():

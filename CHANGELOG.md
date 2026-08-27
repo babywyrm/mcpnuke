@@ -11,6 +11,13 @@ All notable changes to this submodule are documented here.
   NodePort) used to emit `init` / "No response to MCP initialize" even though
   `HTTPSession` had the error body. The finding now names the code and
   message. True non-response keeps the old title.
+- **Camazotz-visible findings carry their taxonomy IDs.** Static
+  `prompt_injection` is MCP-T01, credential-param `token_theft` is MCP-T21
+  (the pattern path already was), every `excessive_permissions` finding is
+  MCP-T20 on lane 1, and cross-target `tool_shadowing` name collisions are
+  MCP-T25 like the other two shadowing paths. `--by-lane` no longer dumps
+  those in Uncategorized. Aggregates (`attack_chain`, `multi_vector`) and
+  `code_execution` stay unlabeled — they are not a single Atlas ID.
 
 ## [6.17.0] - 2026-08-26
 

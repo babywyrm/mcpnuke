@@ -67,6 +67,7 @@ class TestDVMCPChallenge1PromptInjection:
         check_prompt_injection(r)
         assert "prompt_injection" in _checks_found(r)
         assert "CRITICAL" in _severities(r)
+        assert all(f.taxonomy_id == "MCP-T01" for f in r.findings if f.check == "prompt_injection")
 
     def test_role_hijack_payload(self):
         r = _make([{
@@ -294,6 +295,9 @@ class TestDVMCPChallenge5TokenTheft:
         }])
         check_token_theft(r)
         assert "token_theft" in _checks_found(r)
+        assert all(
+            f.taxonomy_id == "MCP-T21" for f in r.findings if f.check == "token_theft"
+        )
 
     def test_exfil_description(self):
         r = _make([{
