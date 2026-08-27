@@ -72,6 +72,9 @@ from mcpnuke.checks.permissions import (
 )
 from mcpnuke.checks.prompt_injection_t01 import check_prompt_injection as check_prompt_injection_t01
 from mcpnuke.checks.prompt_leakage import check_prompt_leakage
+from mcpnuke.checks.protected_resource_metadata import (
+    check_protected_resource_metadata,
+)
 from mcpnuke.checks.rate_limit import check_behavioral_rate_limit, check_rate_limit
 from mcpnuke.checks.remote_package_exec import check_remote_package_execution
 from mcpnuke.checks.response_credentials import check_response_credentials
@@ -200,6 +203,7 @@ _STATIC_CHECK_NAMES: tuple[str, ...] = (
     "scope_pollution",
     "sdk_cache_tamper",
     "list_cache",
+    "protected_resource_metadata",
     "exfil_flow",
 )
 
@@ -517,6 +521,13 @@ def run_all_checks(
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)
     _run("list_cache", check_list_cache, result, session=session, probe_opts=opts)
+    _run(
+        "protected_resource_metadata",
+        check_protected_resource_metadata,
+        session,
+        result,
+        probe_opts=opts,
+    )
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
 
     # JWT hardening checks (only when auth token is present)

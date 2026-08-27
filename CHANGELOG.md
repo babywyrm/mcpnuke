@@ -22,6 +22,15 @@ All notable changes to this submodule are documented here.
   AI guardrail bypass, T53 is shell wrapping. A test pins every single-ID
   row's title so those names cannot swap again.
 
+### Added
+
+- **`protected_resource_metadata`** — RFC 9728 document when an HTTP MCP
+  server publishes one (401 `resource_metadata` or well-known). Missing
+  `authorization_servers` is HIGH; a non-HTTPS AS is MEDIUM; AS metadata
+  whose `issuer` does not match the URL is HIGH; DCR without
+  `client_id_metadata_document_supported` is MEDIUM. Silent when the
+  document is absent, including stdio.
+
 ## [6.17.0] - 2026-08-26
 
 Current-spec scan surface (dual `tools/call` body, SEP-2549 list cache,

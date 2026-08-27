@@ -40,6 +40,8 @@ The 2026-07-28 gaps that were Ready without guessing a SEP:
 - SEP-2243 routing-header binding — `routing_header_binding` probes a
   `tools/list` body tagged `Mcp-Method: tools/call` on discover-negotiated
   stateless HTTP. **Done.**
+- RFC 9728 protected resource metadata + CIMD advertisement —
+  `protected_resource_metadata`. Silent when the document is absent. **Done.**
 
 ETags, Tasks, HTTP-over-stdio, and WIF stay Wait. See [Later, with zero regressions](#later-with-zero-regressions).
 
@@ -56,6 +58,7 @@ Keep. Do not relabel as the new work.
 | Dual `tools/call` body | Yes | Yes | `_response_text` reads `content` blocks and `structuredContent`. Done 2026-08-25. |
 | List caching (SEP-2549) | Yes | Yes | Enumerator keeps per-page `ttlMs` / `cacheScope`. `list_cache` samples up to five `resources/read` URIs (skipped under `--no-invoke`). Silent when the fields are absent. Invalid TTL/scope is MEDIUM; mixed cacheScope across pages of one list is HIGH. Mixed scope across different resource URIs is not that finding. |
 | Routing header binding (SEP-2243) | Yes | Yes | `routing_header_binding`: discover-negotiated stateless HTTP must reject `Mcp-Method` that disagrees with the JSON-RPC method. Silent on legacy, stdio, and the tools/list-only AUTO fallback. |
+| Protected resource metadata / CIMD ad (RFC 9728) | Partial | Yes | `protected_resource_metadata` fetches the RFC 9728 document when present and flags DCR without `client_id_metadata_document_supported`. Silent when absent. Does not speak CIMD as a client. |
 
 ## 1. Agentic messaging primitives
 
@@ -99,7 +102,7 @@ MCP authorization still assumes a person with a browser at consent time. The nex
 | Human-presence attestation (interactive vs headless) | No | No | Wait | Under discussion, not a deliverable yet. |
 | Person-style OAuth that mcpnuke already has | Yes | Partial | Keep | CLI: `--oidc-url`, client credentials, token introspection. Checks: `jwt_*`, `theft`, `scope_pollution`. These are not agent identity. |
 
-2026-07-28 also shipped issuer validation, issuer-bound client credentials, and CIMD as the preferred registration path. mcpnuke does not probe CIMD or issuer-bound client credentials as subjects. That is a current-spec gap, but it is not on the Ready queue until we can name a safe, low-FP probe — OAuth metadata is a famous source of noise.
+2026-07-28 also shipped issuer validation, issuer-bound client credentials, and CIMD as the preferred registration path. `protected_resource_metadata` fetches RFC 9728 metadata (WWW-Authenticate `resource_metadata`, then well-known) and, when an AS document is present, flags DCR without `client_id_metadata_document_supported`. Absence is silence. Issuer-bound credential *storage* and RFC 9207 authorization-response `iss` remain client-side and are not scanned. `jwt_issuer` is still "token missing `iss`", not RFC 9207.
 
 ## 4. Improved primitives
 
