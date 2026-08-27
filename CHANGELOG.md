@@ -4,6 +4,14 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A JSON-RPC handshake error is no longer reported as silence.** A server
+  that returns `-32001 identity verification failed` (nullfield on the NUC
+  NodePort) used to emit `init` / "No response to MCP initialize" even though
+  `HTTPSession` had the error body. The finding now names the code and
+  message. True non-response keeps the old title.
+
 ## [6.17.0] - 2026-08-26
 
 Current-spec scan surface (dual `tools/call` body, SEP-2549 list cache,

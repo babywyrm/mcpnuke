@@ -20,6 +20,22 @@ _LIST_ITEM_KEYS: dict[str, str] = {
 }
 
 
+def _jsonrpc_error(resp: dict | None) -> dict | None:
+    """Return the JSON-RPC error object, or None if this was not an error reply."""
+    if not isinstance(resp, dict):
+        return None
+    err = resp.get("error")
+    return err if isinstance(err, dict) else None
+
+
+def _error_label(err: dict) -> str:
+    code = err.get("code", "?")
+    message = err.get("message", "")
+    if message:
+        return f"{code} {message}"
+    return str(code)
+
+
 def _paginated_list(
     session: MCPSessionProtocol,
     method: str,
@@ -74,9 +90,12 @@ def negotiate_protocol(
     Probes ``initialize`` (legacy handshake), then ``server/discover``, then a
     bare ``tools/list`` (both stateless). Returns the winning mode, or ``""``
     when the server answered none of them. Sets ``result.protocol_mode`` and
-    ``session.protocol_mode`` as a side effect.
+    ``session.protocol_mode`` as a side effect. A JSON-RPC error on every
+    probe is recorded as an ``init`` finding so a sidecar rejection is not
+    reported as silence.
     """
     _log = log or (lambda msg: None)
+    handshake_errors: list[tuple[str, dict]] = []
 
     if mode in (AUTO, LEGACY):
         if verbose:
@@ -87,7 +106,11 @@ def negotiate_protocol(
             result.protocol_mode = LEGACY
             session.protocol_mode = LEGACY
             return LEGACY
+        err = _jsonrpc_error(resp)
+        if err is not None:
+            handshake_errors.append(("initialize", err))
         if mode == LEGACY:
+            _emit_handshake_failure(result, handshake_errors)
             return ""
 
     # Stateless: capabilities are optional, so a failed discover is not fatal.
@@ -112,6 +135,9 @@ def negotiate_protocol(
             transport="A",
         )
         return STATELESS
+    err = _jsonrpc_error(resp)
+    if err is not None:
+        handshake_errors.append(("server/discover", err))
 
     if verbose:
         _log("  [dim]Trying stateless tools/list without discovery...[/dim]")
@@ -119,9 +145,33 @@ def negotiate_protocol(
     if resp and "result" in resp:
         result.protocol_mode = STATELESS
         return STATELESS
+    err = _jsonrpc_error(resp)
+    if err is not None:
+        handshake_errors.append(("tools/list", err))
 
     session.protocol_mode = LEGACY
+    _emit_handshake_failure(result, handshake_errors)
     return ""
+
+
+def _emit_handshake_failure(
+    result: TargetResult, errors: list[tuple[str, dict]],
+) -> None:
+    """Record a JSON-RPC handshake error. Silence is left to enumerate_server."""
+    if not errors:
+        return
+    method, err = errors[0]
+    label = _error_label(err)
+    result.add(
+        "init",
+        "HIGH",
+        f"MCP handshake rejected: {label}",
+        f"{method} returned JSON-RPC error {label}. "
+        "initialize, server/discover, and tools/list did not return a result.",
+        evidence=json.dumps(err)[:500],
+        lane=5,
+        transport="A",
+    )
 
 
 def enumerate_server(
@@ -142,12 +192,13 @@ def enumerate_server(
     mode = negotiate_protocol(session, result, protocol_mode, verbose=verbose, log=log)
 
     if not mode:
-        result.add(
-            "init",
-            "HIGH",
-            "No response to MCP initialize",
-            "Server did not respond to initialize, server/discover, or tools/list",
-        )
+        if not any(f.check == "init" for f in result.findings):
+            result.add(
+                "init",
+                "HIGH",
+                "No response to MCP initialize",
+                "Server did not respond to initialize, server/discover, or tools/list",
+            )
         result.timings["enumerate"] = time.time() - t0
         return
 

@@ -541,6 +541,7 @@ _DOCUMENTED_NON_CHECKS: frozenset[str] = frozenset({
     # Emitted by the enumerator while connecting, not by any check, so it
     # reaches reports with no entry in the check inventory at all.
     "auth",
+    "init",
     # Emitted by tool_response_injection in the same pass, under its own name.
     "cross_tool_manipulation",
     # The three findings of the dpop_no_header / dpop_malformed /

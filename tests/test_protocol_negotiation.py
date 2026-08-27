@@ -1,5 +1,5 @@
 from mcpnuke.cli import parse_args
-from mcpnuke.core.enumerator import negotiate_protocol
+from mcpnuke.core.enumerator import enumerate_server, negotiate_protocol
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.protocol import AUTO, LEGACY, STATELESS
 
@@ -93,6 +93,53 @@ def test_stateless_server_records_anonymous_discovery_finding():
     finding = next(f for f in result.findings if f.check == "auth")
     assert finding.lane == 5
     assert finding.transport == "A"
+
+
+_IDENTITY_ERR = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {"code": -32001, "message": "identity verification failed"},
+}
+
+
+def test_jsonrpc_error_is_not_reported_as_silence():
+    """A sidecar that answers -32001 is not a dead server (NUC :30080)."""
+    session = FakeSession({
+        "initialize": _IDENTITY_ERR,
+        "server/discover": _IDENTITY_ERR,
+        "tools/list": _IDENTITY_ERR,
+    })
+    result = TargetResult(url="http://t/mcp")
+    enumerate_server(session, result)
+
+    titles = [f.title for f in result.findings]
+    assert not any("No response" in t for t in titles)
+    init = next(f for f in result.findings if f.check == "init")
+    assert "-32001" in init.title
+    assert "identity verification failed" in f"{init.title} {init.detail}".lower()
+    assert init.severity == "HIGH"
+    assert init.lane == 5
+    assert init.transport == "A"
+
+
+def test_true_silence_still_says_no_response():
+    session = FakeSession({})
+    result = TargetResult(url="http://t/mcp")
+    enumerate_server(session, result)
+
+    init = next(f for f in result.findings if f.check == "init")
+    assert init.title == "No response to MCP initialize"
+
+
+def test_tools_list_result_still_wins_over_initialize_error():
+    session = FakeSession({
+        "initialize": _IDENTITY_ERR,
+        "tools/list": {"result": {"tools": []}},
+    })
+    result = TargetResult(url="http://t/mcp")
+
+    assert negotiate_protocol(session, result, AUTO) == STATELESS
+    assert [f.check for f in result.findings] == []
 
 
 def test_protocol_mode_flag_defaults_to_auto():

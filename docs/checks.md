@@ -293,6 +293,7 @@ attack path was exercised and blocked, which is not the same as not testing it.
 | Check | Severity | What It Detects |
 |-------|----------|----------------|
 | `auth` | HIGH | Unauthenticated MCP/tool-server initialize accepted. Emitted by the enumerator during connection, not by a check, so it appears in reports without a corresponding entry in the progress count |
+| `init` | HIGH | Handshake failed. A JSON-RPC error (e.g. `-32001 identity verification failed`) names the code and message. No reply at all is still "No response to MCP initialize". Enumerator, not the check inventory |
 | `sse_security` | HIGH–MEDIUM | Unauthenticated SSE stream, CORS misconfiguration, cross-origin POST |
 | `dpop_not_enforced` | HIGH | Request accepted with no DPoP proof — a stolen bearer token replays without the paired key (RFC 9449 §7). MCP-T43 |
 | `dpop_header_not_validated` | HIGH | A malformed DPoP header is accepted, so the proof is decorative (RFC 9449 §7.1). MCP-T43 |
