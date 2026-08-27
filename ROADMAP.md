@@ -29,67 +29,64 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 
 ## Taxonomy coverage map
 
-> **The tables below are stale; the code is not.** They name threats using a
-> numbering that predates the `lanes.yaml` this package bundles, and the two
-> disagree: the tables read T43 as AI guardrail bypass and T56 as DPoP
-> enforcement, where `lanes.yaml` has those the other way around. The checks
-> follow `lanes.yaml` — `ai_guardrail_probe` emits T56, `dpop_enforcement`
-> attributes T43 — so it is the prose here that needs rewriting, not the
-> attribution. Code that used to disagree is now aligned:
->
-> - **`shell_injection` emits `MCP-T53`** (shell command wrapping), matching
->   `shell_wrapping_injection`. T54 stays on `inference_backend`.
-> - **`ssrf_probe` (T06) and `dpop_enforcement` (T43) set `taxonomy_id`**, so
->   SARIF and `--by-lane` see them. `profile.py`'s schema example still mentions
->   T06 as a `threat_id` key; that is documentation, not a finding.
->   `test_no_check_attributes_only_in_evidence` keeps the evidence-only set empty.
+Threat names in the tables follow `mcpnuke/data/taxonomy/lanes.yaml`.
+`test_roadmap_table_titles_match_lanes_yaml` fails if a single-ID row
+drifts. Range rows (`MCP-T16–T32`) are buckets, not IDs.
+
+Every attributed finding sets `taxonomy_id` (`test_no_check_attributes_only_in_evidence`).
+`shell_injection` is MCP-T53; T54 stays on `inference_backend`.
 
 ### Covered at the Tier 1 milestone (14 IDs — historical snapshot)
 
+IDs this milestone claimed, with current `lanes.yaml` titles and the
+module that emits them today. Not a claim that each check is a perfect
+fit for that ID.
+
 | ID | Threat | Check module |
 |----|--------|--------------|
-| MCP-T04 | Supply chain artifacts | `supply_chain.py` |
-| MCP-T06 | Path traversal / TLS bypass | `ssrf_probe.py` |
-| MCP-T07 | Secret exposure in tool responses | `response_credentials.py` |
-| MCP-T09 | Config tampering / arbitrary exec | `config_tampering.py`, `execution.py` |
-| MCP-T12 | Exfiltration flows | `exfil_flow.py` |
-| MCP-T14 | Persistence / server redirect | `webhook_persistence.py` |
-| MCP-T33 | SDK token cache tamper | `sdk_cache_tamper.py` |
-| MCP-T42 | Actuator/management exposure | `actuator_probe.py` |
-| MCP-T43 | AI guardrail bypass probe | `ai_guardrail_probe.py` |
-| MCP-T50 | Anonymous pre-auth surface | `anon_budget_exhaust.py` |
-| MCP-T51 | Anonymous tool enumeration | `transport.py` |
-| MCP-T54 | Subprocess/shell injection | `shell_injection.py` |
-| MCP-T55 | Inference backend integrity | `inference_backend.py` |
-| MCP-T56 | DPoP enforcement gaps | `dpop_enforcement.py` |
+| MCP-T04 | Confused Deputy / Token Theft | `supply_chain.py` |
+| MCP-T06 | SSRF via Tool | `ssrf_probe.py` |
+| MCP-T07 | Secrets in Tool Output | `response_credentials.py` |
+| MCP-T09 | Agent Config Tampering | `config_tampering.py` |
+| MCP-T12 | Exfiltration via Chaining | `exfil_flow.py` |
+| MCP-T14 | Persistence via Webhook | `webhook_persistence.py` |
+| MCP-T33 | SDK Token Cache Poisoning | `sdk_cache_tamper.py` |
+| MCP-T42 | Shared IdP Cross-Pollution (User → Agent Token Escalation) | `scope_pollution.py` |
+| MCP-T43 | DPoP Key Exposure and JWT Forgery | `dpop_enforcement.py` |
+| MCP-T50 | Anonymous Tool Schema Over-Disclosure | `schema_overdisclosure.py` |
+| MCP-T51 | Anonymous Rate-Limit Exhaustion | `anon_budget_exhaust.py` |
+| MCP-T54 | Unauthenticated Inference Backend Exposure | `inference_backend.py` |
+| MCP-T55 | Inference Model Integrity Drift | `inference_backend.py` |
+| MCP-T56 | AI Guardrail Bypass via Social Engineering | `ai_guardrail_probe.py` |
 
 ### Tier 1 — DONE (high-value, directly scannable from outside)
 
-> **Completed 2026-06-28.** All checks live-verified against DVMCP on a K3s cluster.
-> Coverage: 14 → 22 IDs. Only T11 (cross-tenant) deferred (needs multi-auth infra).
+> **Completed 2026-06-28.** Live-verified against DVMCP on a K3s cluster.
+> Coverage then: 14 → 22 IDs. T11 still needs multi-auth infra.
 
 | ID | Threat | Approach |
 |----|--------|----------|
-| ✅ **MCP-T01** | Prompt injection via tool args | Behavioral: inject override instructions in tool arguments, detect if server passes them unsanitized to LLM |
-| ✅ **MCP-T02** | Tool output poisoning (indirect injection) | Behavioral: invoke tools and check if responses contain embedded instructions that would manipulate a downstream agent |
-| ✅ **MCP-T03** | Credential forwarding in tool calls | Static: detect tools whose schema accepts credential-like parameters (tokens, keys, passwords) that could be forwarded to attacker-controlled endpoints |
-| ✅ **MCP-T05** | Command injection via tool args | Behavioral: pass shell metacharacters (`;`, `|`, `$()`, backticks) in tool arguments, detect execution indicators in response |
-| ✅ **MCP-T08** | Remote package execution | Static: detect tools that fetch and execute remote code (`npx`, `uvx`, `pip install`, `curl | sh` patterns in tool descriptions or args) |
-| ✅ **MCP-T10** | Agentic loop / resource exhaustion | Behavioral: detect recursive tool invocations or unbounded fan-out (tool A calls tool B calls tool A) |
-| **MCP-T11** | Cross-tenant data access | Behavioral: probe with different auth contexts, detect if one tenant's data leaks to another |
-| ✅ **MCP-T13** | Insecure inter-agent communication | Static: detect unsigned message-passing tools, check for agent-to-agent trust without verification |
-| ✅ **MCP-T15** | Model routing manipulation | Behavioral: probe if model selection can be influenced via tool parameters or headers |
-
-
+| ✅ **MCP-T01** | Direct Prompt Injection | `injection.py`, `prompt_injection_t01.py` |
+| ✅ **MCP-T02** | Indirect Prompt Injection | `tool_output_poisoning.py` |
+| ✅ **MCP-T03** | Tool Behavior Mutation (Rug Pull) | `tool_output_poisoning.py` |
+| ✅ **MCP-T05** | Cross-Tool Context Poisoning | `command_injection_broad.py` |
+| ✅ **MCP-T08** | Supply Chain via Content | `remote_package_exec.py` |
+| ✅ **MCP-T10** | Hallucination-Driven Destruction | `agentic_loop.py` |
+| **MCP-T11** | Cross-Tenant Memory Leak | Needs distinct auth contexts; still deferred |
+| ✅ **MCP-T13** | Audit Log Evasion | `insecure_agent_comms.py` |
+| ✅ **MCP-T15** | Error Information Disclosure | `model_routing.py` |
 
 ### Tier 2 audit results (T16–T32 mapping, 2026-06-28)
+
+Titles match `lanes.yaml`. Action column is the 2026-06-28 note, not
+current status — several of these are tagged now.
 
 | ID | Threat | Existing check | Action |
 |----|--------|---------------|--------|
 | T16 | Temporal Consistency Drift | `behavioral.py` (state_mutation) | Tag |
 | T17 | Notification / Sampling Abuse | `behavioral.py` (notification_abuse) | Tag |
-| T18 | Bot Identity Theft | `theft.py` | Tag |
-| T19 | Short-Lived Certificate Replay | `teleport.py` (cert_replay) | Tag |
+| T18 | Bot Identity Theft via tbot Credential Exposure | `theft.py` | Tag |
+| T19 | Short-Lived Certificate Replay Attack | `teleport.py` (cert_replay) | Tag |
 | T20 | RBAC & Isolation Boundary Bypass | `permissions.py` | Tag |
 | T21 | OAuth Token Theft & Replay | `theft.py` + `jwt_validation.py` | Tag |
 | T22 | Execution Context Forgery | **gap** | Write new |
@@ -98,30 +95,26 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | T25 | Agent Delegation Chain Abuse | `chaining.py` | Tag |
 | T26 | Token Lifecycle & Revocation Gaps | `jwt_validation.py` | Tag |
 | T27 | LLM Cost Exhaustion & Misattribution | `rate_limit.py` + `anon_budget_exhaust.py` | Tag |
-| T28 | Teleport Role Escalation via MCP | `teleport_labs.py` | Tag |
-| T29 | Policy Authoring (defense) | *out of scope* — defensive | Skip |
-| T30 | Response Inspection (defense) | *out of scope* — defensive | Skip |
-| T31 | Budget Tuning (defense) | *out of scope* — defensive | Skip |
-| T32 | Delegation Depth / Identity Dilution | `chaining.py` partial | Tag + extend |
+| T28 | Teleport Role Escalation via MCP Tool | `teleport_labs.py` | Tag |
+| T29 | Policy Authoring — Write Rules That Block Attack Chains | *out of scope* — defensive | Skip |
+| T30 | Response Inspection — Craft Redaction Rules That Catch Leaks | *out of scope* — defensive | Skip |
+| T31 | Budget Tuning — Rate Limits That Stop Attackers Without Blocking Users | *out of scope* — defensive | Skip |
+| T32 | Delegation Depth — Multi-Agent Identity Dilution | `chaining.py` partial | Tag + extend |
 
-**Conclusion:** 11 can be tagged to existing checks (no new logic), 3 are defensive
-(skip), 3 need new/extended logic (T22, T23, T32). Tagging would jump coverage
-from 22 → ~33 IDs (59%) with zero new check code.
-
-**Next action:** carefully tag each file with `taxonomy_id=` on the correct
-`result.add()` calls (per-file surgical edits, not batch).
+**Then:** 11 taggable, 3 defensive (skip), 3 new/extend (T22, T23, T32).
+Coverage today is the glance row (measured, not this audit's 22).
 
 ### Tier 2 — Medium-term
 
 | ID | Threat | Notes |
 |----|--------|-------|
-| MCP-T16–T32 | Transport/auth/identity (17 IDs) | Many partially overlap with existing jwt/dpop/transport checks; need per-ID audit to identify true gaps vs already-covered-under-different-name |
-| MCP-T34–T36 | Advanced delegation/chain attacks | Require multi-hop scanning (call server A, observe effect on server B) |
-| MCP-T37–T41 | RAG poisoning, HTTP bypass, governance redirect | Harder to probe without internal corpus access; AI analysis can partially cover |
-| MCP-T44–T49 | Transport identity dilution (lanes B–E) | Extend lane-aware checks with per-transport behavioral probes |
-| MCP-T52 | Context window overflow | Behavioral: detect if oversized inputs cause truncation of security-critical context |
-| MCP-T53 | Subprocess credential inheritance | Behavioral: check if spawned processes inherit parent credentials |
-| MCP-T57–T58 | K8s-specific (namespace escape, RBAC) | Extend teleport checks with namespace-boundary probes |
+| MCP-T16–T32 | Transport/auth/identity (17 IDs) | Many overlap jwt/dpop/transport; remaining true gaps are T22/T23 |
+| MCP-T34–T36 | Advanced delegation/chain attacks | T34/T35/T36 are attributed; multi-hop still thin |
+| MCP-T37–T41 | RAG poisoning, HTTP bypass, governance redirect | Harder without internal corpus access |
+| MCP-T44–T49 | Transport identity dilution (lanes B–E) | T44 has a probe; B–E still thin |
+| MCP-T52 | Pre-Authentication Injection | `pre_auth_injection` in `taxonomy_coverage.py` |
+| MCP-T53 | Shell Command Wrapping Injection | `shell_injection.py` |
+| MCP-T57–T58 | K8s-specific (namespace escape, RBAC) | Attributed; namespace-boundary probes still thin |
 
 ### Out of scope (other tools' lanes)
 

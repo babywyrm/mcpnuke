@@ -18,6 +18,9 @@ All notable changes to this submodule are documented here.
   MCP-T25 like the other two shadowing paths. `--by-lane` no longer dumps
   those in Uncategorized. Aggregates (`attack_chain`, `multi_vector`) and
   `code_execution` stay unlabeled — they are not a single Atlas ID.
+- **ROADMAP taxonomy tables follow `lanes.yaml`.** T43 is DPoP, T56 is
+  AI guardrail bypass, T53 is shell wrapping. A test pins every single-ID
+  row's title so those names cannot swap again.
 
 ## [6.17.0] - 2026-08-26
 

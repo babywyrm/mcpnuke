@@ -22,8 +22,9 @@ here rather than left to whoever next runs a grep:
 
 Coverage means: an ID some check attributes to a finding by either mechanism,
 over the IDs defined in the `lanes.yaml` this package bundles. It says nothing
-about whether an ID names the threat the check actually probes — ROADMAP.md
-records where those disagree.
+about whether an ID names the threat the check actually probes — some
+modules still stretch (T04 on `supply_chain.py`, T10 on `agentic_loop.py`).
+The ROADMAP tables use `lanes.yaml` titles; the test below pins that.
 """
 
 from __future__ import annotations
@@ -92,6 +93,53 @@ def _evidence_ids() -> set[str]:
 
 def _covered_ids() -> set[str]:
     return _structural_ids() | _evidence_ids()
+
+
+_TABLE_ID_RE = re.compile(
+    r"\|\s*(?:✅\s*)?\*{0,2}(MCP-T\d+|T\d+)\*{0,2}\s*\|\s*([^|]+)\|"
+)
+
+
+def _yaml_titles() -> dict[str, str]:
+    titles: dict[str, str] = {}
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            threat_id = node.get("threat_id")
+            title = node.get("title")
+            if isinstance(threat_id, str) and isinstance(title, str):
+                titles[threat_id] = title
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(yaml.safe_load(_LANES.read_text()))
+    return titles
+
+
+def test_roadmap_table_titles_match_lanes_yaml():
+    """A ROADMAP row that names one ID must use that ID's lanes.yaml title.
+
+    The historical tables used to call T43 AI guardrail bypass and T56 DPoP.
+    The glance coverage count is already pinned; this pins the names.
+    Range rows (MCP-T16–T32) are skipped — they are buckets, not IDs.
+    """
+    titles = _yaml_titles()
+    mismatches: list[str] = []
+    for raw_id, threat in _TABLE_ID_RE.findall(_ROADMAP.read_text()):
+        if "–" in raw_id or "-" in raw_id[raw_id.find("T") + 1 :]:
+            continue
+        number = raw_id.split("T", 1)[1]
+        threat_id = f"MCP-T{int(number):02d}"
+        expected = titles[threat_id]
+        cell = threat.strip()
+        if cell != expected:
+            mismatches.append(f"{threat_id}: {cell!r} != {expected!r}")
+    assert not mismatches, "ROADMAP.md titles drifted from lanes.yaml:\n" + "\n".join(
+        mismatches
+    )
 
 
 def test_roadmap_states_the_measured_coverage():
