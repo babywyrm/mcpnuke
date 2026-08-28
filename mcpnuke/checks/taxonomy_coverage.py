@@ -4,7 +4,7 @@ These are focused detectors for specific threat IDs that existing checks
 partially cover but under different names. Each is a minimal schema/description
 scan that tags findings with the correct taxonomy ID.
 
-Coverage targets: MCP-T17, T28, T32, T34, T36, T52, T53, T57, T58
+Coverage targets: MCP-T17, T22, T23, T28, T32, T34, T36, T52, T53, T57, T58
 """
 
 from __future__ import annotations
@@ -19,6 +19,42 @@ _add_l1 = lane_tagged(lane=1, transport="A")
 _add_l2 = lane_tagged(lane=2, transport="A")
 _add_l3 = lane_tagged(lane=3, transport="A")
 _add_l4 = lane_tagged(lane=4, transport="A")
+
+# Caller-supplied identity *substitution*. Bare user_id is T35 presence, not T22.
+_FORGE_PARAMS: frozenset[str] = frozenset({
+    "on_behalf_of",
+    "as_user",
+    "acting_as",
+    "claimed_identity",
+    "execution_context",
+    "run_as_user",
+    "impersonate_user",
+    "actor_id",
+    "acting_user",
+    "spoof_identity",
+    "forge_context",
+    "claimed_user",
+})
+
+_SIDECAR_RE = re.compile(
+    r"\bsidecar\b|credential[ _]broker|secret[ _]volume|shared[ _]volume|"
+    r"kube[ _]secret|sidecar[ _]secret",
+    re.IGNORECASE,
+)
+_SIDECAR_PARAMS: frozenset[str] = frozenset({
+    "sidecar",
+    "secret_mount",
+    "credential_broker",
+    "shared_volume",
+    "volume_mount",
+    "sibling_env",
+    "sidecar_secret",
+})
+
+
+def _param_keys(tool: dict) -> set[str]:
+    props = tool.get("inputSchema", {}).get("properties", {}) or {}
+    return {str(p).lower().replace("-", "_") for p in props}
 
 
 def check_notification_sampling_abuse(result: TargetResult) -> None:
@@ -262,4 +298,41 @@ def check_native_function_identity_erasure(result: TargetResult) -> None:
                     # would be self-asserted by that same client, so both the
                     # premise and the remedy are empty on this transport.
                     skip_transports=["stdio"],
+                )
+
+
+def check_execution_context_forgery(result: TargetResult) -> None:
+    """MCP-T22: Execution Context Forgery.
+
+    The caller supplies the execution principal. That is not missing
+    identity (T35) and not a role-grant tool (T28).
+    """
+    with time_check("execution_context_forgery", result):
+        for tool in result.tools:
+            keys = _param_keys(tool)
+            name = str(tool.get("name", "")).lower().replace("-", "_")
+            if keys & _FORGE_PARAMS or any(p in name for p in _FORGE_PARAMS):
+                _add_l4(
+                    result, "execution_context_forgery", "HIGH",
+                    f"Caller-supplied execution identity on '{tool.get('name', '')}'",
+                    "Tool lets the caller name who it runs as — forged attribution",
+                    taxonomy_id="MCP-T22",
+                )
+
+
+def check_sidecar_credential_tamper(result: TargetResult) -> None:
+    """MCP-T23: Credential Isolation & Sidecar Tampering.
+
+    Tools that mutate a sidecar, credential broker, or shared secret
+    volume. Hardcoded schema secrets stay on credential_in_schema (T07).
+    """
+    with time_check("sidecar_credential_tamper", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _SIDECAR_RE.search(blob) or (_param_keys(tool) & _SIDECAR_PARAMS):
+                _add_l2(
+                    result, "sidecar_credential_tamper", "HIGH",
+                    f"Sidecar/credential-isolation tool: '{tool.get('name', '')}'",
+                    "Tool can reach a sidecar, credential broker, or shared secret volume",
+                    taxonomy_id="MCP-T23",
                 )

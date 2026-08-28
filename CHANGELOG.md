@@ -38,6 +38,10 @@ All notable changes to this submodule are documented here.
   document is absent, including stdio.
 - **CLI dogfood in CI.** `tests.yml` runs `python -m mcpnuke` against the
   in-repo HTTP and stdio reference targets.
+- **`execution_context_forgery` (MCP-T22)** and **`sidecar_credential_tamper`
+  (MCP-T23).** Static. Caller-supplied execution identity, and sidecar /
+  credential-broker / shared-volume tools. `credential_in_schema` stays T07
+  surface, not T23.
 
 ### Changed
 

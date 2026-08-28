@@ -91,12 +91,14 @@ from mcpnuke.checks.supply_chain import check_supply_chain
 from mcpnuke.checks.taxonomy_coverage import (
     check_cached_session_exposure,
     check_delegation_depth,
+    check_execution_context_forgery,
     check_host_network_loopback,
     check_native_function_identity_erasure,
     check_notification_sampling_abuse,
     check_pre_auth_injection,
     check_role_escalation_tool,
     check_shell_wrapping_injection,
+    check_sidecar_credential_tamper,
     check_subprocess_credential_inheritance,
     check_tool_description_injection,
 )
@@ -199,6 +201,8 @@ _STATIC_CHECK_NAMES: tuple[str, ...] = (
     "role_escalation_tool",
     "shell_wrapping_injection",
     "native_function_identity_erasure",
+    "execution_context_forgery",
+    "sidecar_credential_tamper",
     "schema_overdisclosure",
     "scope_pollution",
     "sdk_cache_tamper",
@@ -517,6 +521,8 @@ def run_all_checks(
     _run("role_escalation_tool", check_role_escalation_tool, result)
     _run("shell_wrapping_injection", check_shell_wrapping_injection, result)
     _run("native_function_identity_erasure", check_native_function_identity_erasure, result)
+    _run("execution_context_forgery", check_execution_context_forgery, result)
+    _run("sidecar_credential_tamper", check_sidecar_credential_tamper, result)
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)

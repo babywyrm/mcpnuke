@@ -17,7 +17,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | AI-augmented analysis (Claude + Ollama ensemble) | **Strong** — 3-phase analysis, consensus mode |
 | Transport security (JWT, DPoP, scope, boundaries) | **Strong** — 8 transport checks |
 | Lane coverage (5 identity lanes) | **All 5 represented** |
-| Taxonomy coverage | **40/57 IDs (70%)** — Tier 1 complete, see gap map below |
+| Taxonomy coverage | **42/57 IDs (74%)** — Tier 1 complete, see gap map below |
 | MCP spec surface (2026-08-22 roadmap) | **Mapped** — Speak/Scan/Ready in [docs/spec-surface.md](docs/spec-surface.md) |
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
@@ -89,8 +89,8 @@ current status — several of these are tagged now.
 | T19 | Short-Lived Certificate Replay Attack | `teleport.py` (cert_replay) | Tag |
 | T20 | RBAC & Isolation Boundary Bypass | `permissions.py` | Tag |
 | T21 | OAuth Token Theft & Replay | `theft.py` + `jwt_validation.py` | Tag |
-| T22 | Execution Context Forgery | **gap** | Write new |
-| T23 | Credential Isolation & Sidecar Tampering | `credential_in_schema.py` partial | Tag + extend |
+| T22 | Execution Context Forgery | `execution_context_forgery` | Done |
+| T23 | Credential Isolation & Sidecar Tampering | `sidecar_credential_tamper` | Done |
 | T24 | Authentication Pattern Downgrade | `dpop_enforcement.py` | Tag |
 | T25 | Agent Delegation Chain Abuse | `chaining.py` | Tag |
 | T26 | Token Lifecycle & Revocation Gaps | `jwt_validation.py` | Tag |
@@ -108,7 +108,7 @@ Coverage today is the glance row (measured, not this audit's 22).
 
 | ID | Threat | Notes |
 |----|--------|-------|
-| MCP-T16–T32 | Transport/auth/identity (17 IDs) | Many overlap jwt/dpop/transport; remaining true gaps are T22/T23 |
+| MCP-T16–T32 | Transport/auth/identity (17 IDs) | Many overlap jwt/dpop/transport; T22/T23 have static checks |
 | MCP-T34–T36 | Advanced delegation/chain attacks | T34/T35/T36 are attributed; multi-hop still thin |
 | MCP-T37–T41 | RAG poisoning, HTTP bypass, governance redirect | Harder without internal corpus access |
 | MCP-T44–T49 | Transport identity dilution (lanes B–E) | T44 has a probe; B–E still thin |

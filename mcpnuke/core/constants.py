@@ -64,6 +64,8 @@ ATTACK_CHAIN_PATTERNS: list[tuple[str, str]] = [
     ("webhook_persistence", "tool_response_injection"),
     ("webhook_persistence", "token_theft"),
     ("credential_in_schema", "token_theft"),
+    ("execution_context_forgery", "token_theft"),
+    ("sidecar_credential_tamper", "token_theft"),
     ("ssrf_probe", "token_theft"),
     ("ssrf_probe", "remote_access"),
     ("actuator_probe", "response_credentials"),

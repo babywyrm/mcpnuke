@@ -121,6 +121,8 @@ guard. The risk column is prose and is not derived from anything.
 | `webhook_persistence → tool_response_injection` | Persistent callback feeds poisoned responses |
 | `webhook_persistence → token_theft` | Webhook exfils credentials |
 | `credential_in_schema → token_theft` | A credential in the schema is stealable from `tools/list` alone |
+| `execution_context_forgery → token_theft` | A forged execution principal is a stolen identity |
+| `sidecar_credential_tamper → token_theft` | A sidecar or broker write is a stolen credential |
 | `ssrf_probe → token_theft` | Server-side fetch reaches a metadata credential endpoint |
 | `ssrf_probe → remote_access` | Server-side fetch pivots into the internal network |
 | `actuator_probe → response_credentials` | Exposed actuator dumps config holding secrets |
