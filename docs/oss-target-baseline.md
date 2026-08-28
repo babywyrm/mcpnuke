@@ -171,18 +171,15 @@ other finding on any of the five targets changed.
 [stdio false-positive harness](false-positive-baseline.md) found it on its
 first run, which is the argument for having one.
 
-## Known false positives, not yet fixed
+## Kept: rate limiting on a single-caller transport — 5 findings
 
-### Rate limiting on a single-caller transport — 5 findings
+`behavioral_rate_limit` (MEDIUM) fires on every stdio target. It was
+originally grouped with the auth class above and left parked.
 
-`behavioral_rate_limit` (MEDIUM) fires on every stdio target, and was
-originally grouped with the auth class above. It was left alone deliberately.
-
-It is weaker than the three checks removed above but not empty in the same
-way: an agent stuck in a loop really can hammer a local server. The remedy it
-implies — rate-limiting a subprocess against its only caller — is still
-dubious advice. Resolving it needs its own decision about what the check is
-for, rather than being folded into a change about authentication.
+Keep. An agent stuck in a loop can hammer a local server. That is MCP-T27,
+not a missing auth header. The advice to rate-limit a subprocess against
+its only caller is still weak operator guidance; the finding is still true.
+Do not apply the stdio auth skip.
 
 ## How to reproduce
 

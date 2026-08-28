@@ -9,11 +9,12 @@ from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.rules import RATE_LIMIT_PATTERNS
 
-RAPID_BURST_COUNT = 10
-RAPID_BURST_WINDOW = 2.0
+RAPID_BURST_COUNT: int = 10
+RAPID_BURST_WINDOW: float = 2.0
+_TAXONOMY_ID: str = "MCP-T27"
 
 
-def check_rate_limit(result: TargetResult):
+def check_rate_limit(result: TargetResult) -> None:
     """Flag tools that suggest no rate limiting or unbounded invocations (static)."""
     with time_check("rate_limit", result):
         for tool in result.tools:
@@ -34,18 +35,22 @@ def check_rate_limit(result: TargetResult):
                         f"Rate limit concern in tool '{name}'",
                         f"Pattern suggests unbounded or unthrottled usage: {pat}",
                         evidence=combined[:300],
-                        taxonomy_id="MCP-T27",
+                        taxonomy_id=_TAXONOMY_ID,
                     )
                     break
 
 
 def check_behavioral_rate_limit(
     session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None,
-):
+) -> None:
     """Behavioral rate limit test: rapid-fire calls to detect missing throttling.
 
     Picks a safe, low-side-effect tool and fires RAPID_BURST_COUNT calls in
     quick succession. If all succeed without 429/throttle errors, flags it.
+
+    Stdio stays in scope: a pipe has no auth boundary to miss, but an agent
+    in a loop can still hammer the subprocess. That is MCP-T27, not an auth
+    finding. Do not fold this into the stdio auth skip.
     """
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
@@ -80,4 +85,5 @@ def check_behavioral_rate_limit(
                 "MEDIUM",
                 f"No rate limiting: {successes}/{RAPID_BURST_COUNT} rapid calls succeeded in {elapsed:.1f}s",
                 f"Tool '{name}' accepted all burst calls with no throttling or 429 response",
+                taxonomy_id=_TAXONOMY_ID,
             )

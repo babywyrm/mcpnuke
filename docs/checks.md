@@ -108,7 +108,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `schema_risks` (finding: `schema_risk`) | CRITICAL–MEDIUM | Command params, unbounded strings, freeform objects |
 | `tool_shadowing` | HIGH–MEDIUM | Tool names that collide with common tools or other servers. MCP-T25 |
 | `prompt_leakage` | HIGH | Tools that may echo, log, or expose internal prompts |
-| `rate_limit` | MEDIUM | Descriptions suggesting unbounded/unthrottled usage |
+| `rate_limit` | MEDIUM | Descriptions suggesting unbounded/unthrottled usage. MCP-T27 |
 | `webhook_persistence` | HIGH | Callback/webhook params or tool names enabling persistent re-injection |
 | `credential_in_schema` | CRITICAL | Hardcoded credentials (API keys, JWTs, connection strings) in tool schemas |
 | `config_tampering` | CRITICAL–HIGH | Tools that can modify agent config, system prompt, or tool registry. A matching tool name or description is CRITICAL; a config/prompt parameter name alone is HIGH |
@@ -177,7 +177,7 @@ back. All of them are skipped by `--no-invoke`.
 | `routing_header_binding` | MEDIUM | A 2026-07-28 (stateless, `server/discover`) HTTP server returned a JSON-RPC result for `tools/list` tagged `Mcp-Method: tools/call`. SEP-2243 requires that disagreement to be rejected so a gateway routing on the header cannot desync from the body. Silent on legacy, stdio, and the tools/list-only AUTO fallback. |
 | `ssrf_probe` | CRITICAL–MEDIUM | Sends IMDS and loopback URLs through URL-shaped parameters. Cloud metadata content in the response is CRITICAL; an internal-service indicator absent from the safe-URL baseline is HIGH; a large response-size differential, or a fetching tool that merely exposes URL parameters, is MEDIUM. MCP-T06 |
 | `config_dump` | CRITICAL–MEDIUM | Internal configuration, service topology or secret paths in tool output. Severity is the strongest infrastructure-leak pattern matched, floored at MEDIUM |
-| `behavioral_rate_limit` | MEDIUM | Rapid-fire identical calls that all succeed — no throttling in the request path |
+| `behavioral_rate_limit` | MEDIUM | Rapid-fire identical calls that all succeed — no throttling in the request path. Fires on stdio (an agent loop can hammer a local server). MCP-T27 |
 | `anon_budget_exhaust` | HIGH–MEDIUM | A burst of unauthenticated calls that all succeed is HIGH; MEDIUM when the catalog advertises per-caller accounting but this surface still appears unmetered. Not probed at all on stdio. MCP-T51 |
 | `shell_injection` | CRITICAL–HIGH | Shell metacharacter and base-command probes against subprocess-wrapping tools. MCP-T53 |
 | `sdk_cache_poisoning` | CRITICAL–HIGH | Writes a forged JWT to the target's token cache, then invokes a tool that reads it. Sensitive content in the reply is CRITICAL; an accepted call with no denial is HIGH. **Mutates target state** — skipped by `--fast`. MCP-T33 |

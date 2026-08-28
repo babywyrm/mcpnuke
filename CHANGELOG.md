@@ -24,6 +24,9 @@ All notable changes to this submodule are documented here.
 - **`--auth-token` is visible to enumerate.** `scan_target` used to copy
   `_raw_token` onto the result *after* the handshake, so an authenticated
   CLI scan still emitted `Unauthenticated MCP initialize accepted`.
+- **`behavioral_rate_limit` stays on stdio and is MCP-T27.** An agent loop
+  can hammer a local subprocess; that is not a missing auth header. Same
+  ID as the static `rate_limit` sibling.
 
 ### Added
 

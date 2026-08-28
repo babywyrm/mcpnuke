@@ -141,6 +141,14 @@ so an allowance for one true finding cannot become a blanket pass for anything
 else that check might emit. A stale entry that no longer matches any finding
 fails the suite and should be deleted.
 
+## Closed questions
+
+- **`behavioral_rate_limit` on stdio is kept.** True: the target has no
+  throttling, and an agent in a loop can hammer a local server. Not an
+  auth-boundary finding; tagged MCP-T27. Rate limiting may still be the
+  gateway's job on HTTP — that does not make the stdio finding a false
+  positive.
+
 ## Open questions
 
 - **Is `dpop_not_enforced` really HIGH?** It fires on every plain-bearer server,
@@ -148,8 +156,6 @@ fails the suite and should be deleted.
   information. The redundancy fix took it from three findings to one; whether
   the severity should also fall is a separate judgement, deliberately not made
   in the same change.
-- **`behavioral_rate_limit` on a server with no rate limiting** is true, but
-  rate limiting is arguably the gateway's job rather than the MCP server's.
 
 ## Not covered
 

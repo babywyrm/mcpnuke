@@ -122,3 +122,10 @@ def test_no_auth_findings_on_a_transport_without_auth(scanned):
         "auth findings on stdio, which has no auth boundary:\n"
         + _describe(offenders)
     )
+
+
+def test_behavioral_rate_limit_on_stdio_is_kept_and_t27(scanned):
+    """Keep: an agent loop can hammer a local server. Not an auth skip."""
+    found = [f for f in scanned.findings if f.check == "behavioral_rate_limit"]
+    assert found, "stdio fixture still has no throttle; the finding should fire"
+    assert all(f.taxonomy_id == "MCP-T27" for f in found)

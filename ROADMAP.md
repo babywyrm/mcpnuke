@@ -156,9 +156,9 @@ Three false-positive classes found and fixed by this measurement:
 | **Error-reflection grading** — a server quoting the input it refused was read as compliance | 187 → 185; 49 CRITICAL → **18** |
 | **Transport-aware auth** — three checks reported a missing auth boundary on stdio, which has none to miss | 185 → 170; 34 HIGH → **24** |
 
-Still open: `behavioral_rate_limit` on stdio, 5 findings. Weaker than the auth
-class but not empty — an agent in a loop really can hammer a local server —
-so it needs its own decision rather than the same filter.
+Still decided: `behavioral_rate_limit` on stdio, 5 findings. Keep. An agent
+in a loop can hammer a local server; that is not a missing auth boundary.
+Tagged MCP-T27 like the static sibling. Do not apply the stdio auth skip.
 
 ## Infrastructure roadmap
 

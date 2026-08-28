@@ -189,5 +189,5 @@ vacuous; an absent rate limit is not, because an agent stuck in a loop really
 can hammer a local server. The remedy it implies — throttling a subprocess
 against its only caller — is still questionable, but that is a judgement about
 what the check is for, and it deserves its own decision rather than being
-carried along by a change about authentication. It is recorded as open in
-[docs/oss-target-baseline.md](../../oss-target-baseline.md).
+carried along by a change about authentication. Closed 2026-08-27: keep, tag
+MCP-T27. See [2026-08-27-stdio-rate-limit-design.md](2026-08-27-stdio-rate-limit-design.md).
