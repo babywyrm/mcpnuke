@@ -127,7 +127,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `subprocess_cred_inheritance` | HIGH–MEDIUM | Subprocess-spawning tools whose children may inherit parent credentials. HIGH when an env or credential parameter is exposed, MEDIUM otherwise. MCP-T34 |
 | `native_function_identity_erasure` | MEDIUM | No caller-identity parameter on any tool and no auth token — function calls carry no attribution. Not reported on stdio. MCP-T35 |
 | `execution_context_forgery` | HIGH | Caller-supplied execution identity (`on_behalf_of`, `as_user`, `actor_id`, …). Bare `user_id` is not this finding. MCP-T22 |
-| `sidecar_credential_tamper` | HIGH | Sidecar, credential-broker, or shared secret-volume tools. Not hardcoded schema secrets (`credential_in_schema`). MCP-T23 |
+| `sidecar_credential_tamper` | HIGH | Sidecar paired with secret/credential/broker language, or params like `secret_mount`. Not a generic volume or a logging sidecar. Not hardcoded schema secrets (`credential_in_schema`). MCP-T23 |
 | `tool_description_injection` | CRITICAL | Instruction-override language in a tool description, which manipulates any agent that loads the manifest. MCP-T36 |
 | `scope_pollution` | CRITICAL–MEDIUM | A token-minting tool accepting caller-controlled scope/audience with no narrowing is HIGH, or CRITICAL when the caller's own claims are read-class and the tool advertises privileged scopes. Shared-IdP topology disclosure alone is MEDIUM. MCP-T42 |
 | `schema_overdisclosure` | CRITICAL–LOW | Pre-auth recon in `tools/list`: a credential pattern is CRITICAL, an internal hostname HIGH, an infrastructure env-var name MEDIUM, an internal filesystem path LOW. MCP-T50 |

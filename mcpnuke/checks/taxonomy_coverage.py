@@ -37,24 +37,30 @@ _FORGE_PARAMS: frozenset[str] = frozenset({
 })
 
 _SIDECAR_RE = re.compile(
-    r"\bsidecar\b|credential[ _]broker|secret[ _]volume|shared[ _]volume|"
-    r"kube[ _]secret|sidecar[ _]secret",
+    r"(sidecar.{0,48}(secret|credential|token|broker))"
+    r"|((secret|credential|token|broker).{0,48}sidecar)"
+    r"|credential[ _]broker"
+    r"|secret[ _]volume"
+    r"|kube[ _]secret"
+    r"|sidecar[ _]secret",
     re.IGNORECASE,
 )
 _SIDECAR_PARAMS: frozenset[str] = frozenset({
     "sidecar",
     "secret_mount",
     "credential_broker",
-    "shared_volume",
-    "volume_mount",
-    "sibling_env",
     "sidecar_secret",
+    "sibling_env",
 })
 
 
 def _param_keys(tool: dict) -> set[str]:
     props = tool.get("inputSchema", {}).get("properties", {}) or {}
-    return {str(p).lower().replace("-", "_") for p in props}
+    out: set[str] = set()
+    for raw in props:
+        split = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(raw))
+        out.add(split.lower().replace("-", "_"))
+    return out
 
 
 def check_notification_sampling_abuse(result: TargetResult) -> None:
@@ -309,9 +315,7 @@ def check_execution_context_forgery(result: TargetResult) -> None:
     """
     with time_check("execution_context_forgery", result):
         for tool in result.tools:
-            keys = _param_keys(tool)
-            name = str(tool.get("name", "")).lower().replace("-", "_")
-            if keys & _FORGE_PARAMS or any(p in name for p in _FORGE_PARAMS):
+            if _param_keys(tool) & _FORGE_PARAMS:
                 _add_l4(
                     result, "execution_context_forgery", "HIGH",
                     f"Caller-supplied execution identity on '{tool.get('name', '')}'",
@@ -333,6 +337,6 @@ def check_sidecar_credential_tamper(result: TargetResult) -> None:
                 _add_l2(
                     result, "sidecar_credential_tamper", "HIGH",
                     f"Sidecar/credential-isolation tool: '{tool.get('name', '')}'",
-                    "Tool can reach a sidecar, credential broker, or shared secret volume",
+                    "Tool can reach a sidecar credential store, broker, or secret volume",
                     taxonomy_id="MCP-T23",
                 )

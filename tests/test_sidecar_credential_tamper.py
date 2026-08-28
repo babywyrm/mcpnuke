@@ -58,6 +58,26 @@ def test_silent_on_hardcoded_schema_secret_without_sidecar() -> None:
     assert _findings(r) == []
 
 
+def test_silent_on_generic_volume_mount() -> None:
+    r = _result([{
+        "name": "config.apply",
+        "description": "Apply runtime config",
+        "inputSchema": {"properties": {"volume_mount": {"type": "string"}}},
+    }])
+    check_sidecar_credential_tamper(r)
+    assert _findings(r) == []
+
+
+def test_silent_on_logging_sidecar() -> None:
+    r = _result([{
+        "name": "logs.tail",
+        "description": "Tail the logging sidecar stdout",
+        "inputSchema": {},
+    }])
+    check_sidecar_credential_tamper(r)
+    assert _findings(r) == []
+
+
 def test_silent_on_clean_tools() -> None:
     r = _result([{"name": "echo", "description": "Echo a string", "inputSchema": {}}])
     check_sidecar_credential_tamper(r)

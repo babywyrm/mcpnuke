@@ -16,13 +16,16 @@ which would be a lie: that check is hardcoded secrets in `tools/list`
 Two thin static detectors in `taxonomy_coverage.py`, same shape as T34/T35.
 
 - **T22 `execution_context_forgery`** — HIGH when a tool takes a caller-supplied
-  identity *substitution* (`on_behalf_of`, `as_user`, `acting_as`,
+  identity *substitution* parameter (`on_behalf_of`, `as_user`, `acting_as`,
   `claimed_identity`, `execution_context`, `run_as_user`, `impersonate_user`,
-  `actor_id`, …). Bare `user_id` is not T22 (T35 uses it as identity presence).
+  `actor_id`, …), including camelCase (`onBehalfOf`). Bare `user_id` is not
+  T22. Tool *names* are not matched (avoids `as_user` inside `has_users`).
   Lane 4.
-- **T23 `sidecar_credential_tamper`** — HIGH when name, description, or
-  params talk about a sidecar, credential broker, or shared secret volume.
-  Do not retag `credential_in_schema`. Lane 2.
+- **T23 `sidecar_credential_tamper`** — HIGH when name/description pair
+  sidecar with secret/credential/token/broker, or params named
+  `secret_mount` / `credential_broker` / `sidecar`. Not a generic
+  `volume_mount` or a logging sidecar. Do not retag `credential_in_schema`.
+  Lane 2.
 
 Silent on the reference target (`file.read`, `http.fetch`, …). FP ceilings
 unchanged.

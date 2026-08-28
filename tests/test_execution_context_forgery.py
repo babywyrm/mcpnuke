@@ -43,6 +43,37 @@ def test_silent_on_bare_user_id() -> None:
     assert _findings(r) == []
 
 
+def test_silent_when_as_user_is_a_name_substring() -> None:
+    r = _result([{
+        "name": "has_users",
+        "description": "Whether the tenant has users",
+        "inputSchema": {"properties": {"tenant": {"type": "string"}}},
+    }])
+    check_execution_context_forgery(r)
+    assert _findings(r) == []
+
+
+def test_silent_when_actor_id_is_a_name_substring() -> None:
+    r = _result([{
+        "name": "get_factor_id",
+        "description": "Return a factor identifier",
+        "inputSchema": {},
+    }])
+    check_execution_context_forgery(r)
+    assert _findings(r) == []
+
+
+def test_flags_camelcase_on_behalf_of() -> None:
+    r = _result([{
+        "name": "tickets.comment",
+        "inputSchema": {"properties": {"onBehalfOf": {"type": "string"}}},
+    }])
+    check_execution_context_forgery(r)
+    found = _findings(r)
+    assert found
+    assert found[0].taxonomy_id == "MCP-T22"
+
+
 def test_silent_on_clean_tools() -> None:
     r = _result([{"name": "echo", "description": "Echo a string", "inputSchema": {}}])
     check_execution_context_forgery(r)
