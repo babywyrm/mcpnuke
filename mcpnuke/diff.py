@@ -32,15 +32,15 @@ class DiffResult:
 
 
 def _tool_key(t: dict) -> str:
-    return t.get("name", "")
+    return str(t.get("name", ""))
 
 
 def _resource_key(r: dict) -> str:
-    return r.get("uri", r.get("name", ""))
+    return str(r.get("uri", r.get("name", "")))
 
 
 def _prompt_key(p: dict) -> str:
-    return p.get("name", "")
+    return str(p.get("name", ""))
 
 
 def _tools_equal(a: dict, b: dict) -> bool:

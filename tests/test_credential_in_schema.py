@@ -19,8 +19,10 @@ def test_openai_key_in_default():
         }},
     }])
     check_credential_in_schema(r)
-    assert any(f.check == "credential_in_schema" for f in r.findings)
-    assert any(f.severity == "CRITICAL" for f in r.findings)
+    found = [f for f in r.findings if f.check == "credential_in_schema"]
+    assert found
+    assert found[0].severity == "CRITICAL"
+    assert found[0].taxonomy_id == "MCP-T07"
 
 
 def test_aws_key_in_description():

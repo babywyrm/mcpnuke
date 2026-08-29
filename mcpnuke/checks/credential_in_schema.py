@@ -18,7 +18,10 @@ from mcpnuke.patterns.credentials import SCHEMA_CREDENTIALS, find_credential
 SCHEMA_CREDENTIAL_PATTERNS = SCHEMA_CREDENTIALS
 
 
-def check_credential_in_schema(result: TargetResult):
+_TAXONOMY_ID: str = "MCP-T07"
+
+
+def check_credential_in_schema(result: TargetResult) -> None:
     with time_check("credential_in_schema", result):
         for tool in result.tools:
             name = tool.get("name", "")
@@ -33,4 +36,5 @@ def check_credential_in_schema(result: TargetResult):
                     f"Hardcoded {cred_type} in tool '{name}' definition",
                     "Credential embedded in tool schema — visible to any client that calls tools/list",
                     evidence=matched[:200],
+                    taxonomy_id=_TAXONOMY_ID,
                 )

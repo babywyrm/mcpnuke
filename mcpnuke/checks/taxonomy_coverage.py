@@ -90,16 +90,23 @@ def check_delegation_depth(result: TargetResult) -> None:
 
     Detect tools that enable unbounded delegation chains where identity
     attribution degrades at each hop.
+
+    Bare "nested" / "depth" / "hop" is not this threat — those match
+    filesystem mkdirs. Need a delegation signal.
     """
+    _STRONG: tuple[str, ...] = (
+        "delegate", "forward_to_agent", "sub_agent", "spawn_agent",
+        "create_agent",
+    )
+    _WEAK: tuple[str, ...] = ("nest", "depth", "hop")
+    _PARAMS: frozenset[str] = frozenset({"agent_id", "target_agent", "delegate_to"})
     with time_check("delegation_depth", result):
         for tool in result.tools:
-            name = tool.get("name", "").lower()
-            desc = (tool.get("description", "") or "").lower()
-            props = tool.get("inputSchema", {}).get("properties", {})
-            if any(kw in f"{name} {desc}" for kw in (
-                "delegate", "forward_to_agent", "sub_agent", "spawn_agent",
-                "create_agent", "nest", "depth", "hop",
-            )) or any(p.lower() in ("agent_id", "target_agent", "delegate_to", "depth") for p in props):
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}".lower()
+            keys = _param_keys(tool)
+            strong = any(kw in blob for kw in _STRONG) or bool(keys & _PARAMS)
+            weak = any(kw in blob for kw in _WEAK)
+            if strong or (weak and ("agent" in blob or "delegat" in blob)):
                 _add_l4(
                     result, "delegation_depth", "MEDIUM",
                     f"Delegation/multi-hop tool: '{tool.get('name', '')}'",

@@ -82,16 +82,6 @@
       "title": "Command injection in 'read_file' via param 'path' (semicolon_chain) (reflected in error response)"
     },
     {
-      "check": "delegation_depth",
-      "severity": "MEDIUM",
-      "title": "Delegation/multi-hop tool: 'create_directory'"
-    },
-    {
-      "check": "delegation_depth",
-      "severity": "MEDIUM",
-      "title": "Delegation/multi-hop tool: 'list_allowed_directories'"
-    },
-    {
       "check": "excessive_permissions",
       "severity": "HIGH",
       "title": "Dangerous capability [filesystem]: 'read_file'"

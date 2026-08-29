@@ -3,6 +3,7 @@
 import threading
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 from rich.console import Console
@@ -22,6 +23,14 @@ from mcpnuke.core.models import TargetResult
 from mcpnuke.core.session import StdioSession, ToolServerSession, detect_transport
 
 console = Console()
+
+
+def _quiet(_msg: str) -> None:
+    return None
+
+
+def _print_log(msg: str) -> None:
+    console.print(msg)
 
 
 def _stdio_short_label(cmd: str) -> str:
@@ -54,7 +63,7 @@ def scan_stdio_target(
     t_start = time.time()
 
     opts = probe_opts or {}
-    _log = console.print if verbose else lambda msg: None
+    _log: Callable[[str], None] = _print_log if verbose else _quiet
 
     console.print(f"\n[bold cyan]▶ {label}[/bold cyan]")
     console.print(f"  [dim]Launching subprocess: {cmd}[/dim]")
@@ -187,7 +196,7 @@ def scan_target(
     console.print(f"\n[bold cyan]▶ {url}[/bold cyan]")
 
     opts = probe_opts or {}
-    _log = console.print if verbose else lambda msg: None
+    _log: Callable[[str], None] = _print_log if verbose else _quiet
     session = detect_transport(
         url, connect_timeout=timeout, verbose=verbose, auth_token=auth_token,
         verify_tls=bool(opts.get("tls_verify", False)),

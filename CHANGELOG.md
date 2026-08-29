@@ -27,6 +27,11 @@ All notable changes to this submodule are documented here.
 - **`behavioral_rate_limit` stays on stdio and is MCP-T27.** An agent loop
   can hammer a local subprocess; that is not a missing auth header. Same
   ID as the static `rate_limit` sibling.
+- **`delegation_depth` needs a delegation signal.** "Nested directory" and a
+  lone `depth` parameter are not multi-agent hops. Two filesystem-server
+  FPs drop out of the OSS snapshot.
+- **`credential_in_schema` findings are MCP-T07.** The module already claimed
+  it; the finding now carries the ID.
 
 ### Added
 
@@ -48,6 +53,8 @@ All notable changes to this submodule are documented here.
 - **Reusable scan workflow is `workflow_call` only.** This repo's push/PR
   no longer runs `mcp-security-scan.yml` against a missing `:8080`.
   Callers must `uses:` it and pass `target`.
+- **`MYPY_CEILING` 42 → 30.** Console, diff, and scanner typing paid twelve
+  errors; lock the count.
 
 ## [6.17.0] - 2026-08-26
 

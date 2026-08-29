@@ -46,7 +46,7 @@ fit for that ID.
 |----|--------|--------------|
 | MCP-T04 | Confused Deputy / Token Theft | `supply_chain.py` |
 | MCP-T06 | SSRF via Tool | `ssrf_probe.py` |
-| MCP-T07 | Secrets in Tool Output | `response_credentials.py` |
+| MCP-T07 | Secrets in Tool Output | `response_credentials.py`, `credential_in_schema.py` |
 | MCP-T09 | Agent Config Tampering | `config_tampering.py` |
 | MCP-T12 | Exfiltration via Chaining | `exfil_flow.py` |
 | MCP-T14 | Persistence via Webhook | `webhook_persistence.py` |
@@ -99,7 +99,7 @@ current status — several of these are tagged now.
 | T29 | Policy Authoring — Write Rules That Block Attack Chains | *out of scope* — defensive | Skip |
 | T30 | Response Inspection — Craft Redaction Rules That Catch Leaks | *out of scope* — defensive | Skip |
 | T31 | Budget Tuning — Rate Limits That Stop Attackers Without Blocking Users | *out of scope* — defensive | Skip |
-| T32 | Delegation Depth — Multi-Agent Identity Dilution | `chaining.py` partial | Tag + extend |
+| T32 | Delegation Depth — Multi-Agent Identity Dilution | `delegation_depth` | Done |
 
 **Then:** 11 taggable, 3 defensive (skip), 3 new/extend (T22, T23, T32).
 Coverage today is the glance row (measured, not this audit's 22).

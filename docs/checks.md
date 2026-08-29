@@ -110,7 +110,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `prompt_leakage` | HIGH | Tools that may echo, log, or expose internal prompts |
 | `rate_limit` | MEDIUM | Descriptions suggesting unbounded/unthrottled usage. MCP-T27 |
 | `webhook_persistence` | HIGH | Callback/webhook params or tool names enabling persistent re-injection |
-| `credential_in_schema` | CRITICAL | Hardcoded credentials (API keys, JWTs, connection strings) in tool schemas |
+| `credential_in_schema` | CRITICAL | Hardcoded credentials (API keys, JWTs, connection strings) in tool schemas. MCP-T07 |
 | `config_tampering` | CRITICAL–HIGH | Tools that can modify agent config, system prompt, or tool registry. A matching tool name or description is CRITICAL; a config/prompt parameter name alone is HIGH |
 | `exfil_flow` | CRITICAL–HIGH | Data flow from sensitive source tools to communication/network sinks. A sensitive source paired with a sink is CRITICAL, other sources paired with a sink HIGH. Unlike the rest of this table it also attempts a live canary transfer when a session is available and `--no-invoke` is off. Without `--oast`, acceptance by the sink is the honest ceiling (CRITICAL). With `--oast`, a canary callback — awaited briefly for queued sinks — upgrades the claim to confirmed out-of-band egress |
 | `credential_forwarding` | CRITICAL–HIGH | A tool taking both a credential parameter and an endpoint parameter is CRITICAL — credential theft by design. A credential parameter on a tool whose description mentions fetching or sending is HIGH. MCP-T03 |
@@ -120,7 +120,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `model_routing` | CRITICAL–MEDIUM | A model-management tool name is CRITICAL; a caller-supplied model/provider parameter is HIGH; routing language in the description alone is MEDIUM. MCP-T15 |
 | `notification_sampling_abuse` | MEDIUM | Tools that push notifications to the client or sample the client's model — side-channel and DoS surface. MCP-T17 |
 | `role_escalation_tool` | HIGH | Tools that grant, assume, elevate or impersonate a role. MCP-T28 |
-| `delegation_depth` | MEDIUM | Delegation and multi-hop agent tools, where identity attribution dilutes at each hop. MCP-T32 |
+| `delegation_depth` | MEDIUM | Delegation and multi-hop agent tools, where identity attribution dilutes at each hop. Bare "nested directory" / a `depth` image param is not this. MCP-T32 |
 | `sdk_cache_tamper` | CRITICAL–HIGH | A tool exposing a writable SDK token cache is HIGH; CRITICAL when a tool that consumes cached identity is present too, completing the write-then-use pair. MCP-T33 |
 | `list_cache` | HIGH–MEDIUM | SEP-2549 `ttlMs` / `cacheScope` on list results and a sample of `resources/read` (up to five URIs, skipped under `--no-invoke`). Silent when the fields are absent. Invalid TTL or cacheScope is MEDIUM. Pages of the same list that disagree on cacheScope are HIGH. Mixed scope across different resource URIs is not that finding — each read is independently cacheable. MCP-T16 |
 | `protected_resource_metadata` | HIGH–MEDIUM | RFC 9728 protected resource metadata when present: missing `authorization_servers`, non-HTTPS AS, AS `issuer` mismatch, or DCR advertised without CIMD. Silent when the document is absent. HTTP only |

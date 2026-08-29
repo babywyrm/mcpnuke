@@ -92,17 +92,17 @@ def print_report(
         table.add_column("Finding", style="white")
         table.add_column("Affected Tools", style="dim")
 
-        for r in rows:
-            color = SEV_COLOR.get(r["severity"], "white")
-            tool_str = ", ".join(r["tools"][:6])
-            if len(r["tools"]) > 6:
-                tool_str += f" +{len(r['tools']) - 6}"
+        for row in rows:
+            color = SEV_COLOR.get(row["severity"], "white")
+            tool_str = ", ".join(row["tools"][:6])
+            if len(row["tools"]) > 6:
+                tool_str += f" +{len(row['tools']) - 6}"
             table.add_row(
-                _short_target(r["target"]),
-                r["check"],
-                Text(r["severity"], style=color),
-                str(r["count"]),
-                r["title"],
+                _short_target(row["target"]),
+                row["check"],
+                Text(row["severity"], style=color),
+                str(row["count"]),
+                row["title"],
                 tool_str,
             )
         console.print(table)
@@ -128,7 +128,7 @@ def print_report(
         console.print(table)
 
     console.print("\n[bold]Per-Target Summary[/bold]")
-    ranked = sorted(results, key=lambda r: r.risk_score(), reverse=True)
+    ranked = sorted(results, key=lambda t: t.risk_score(), reverse=True)
     pt = Table(box=box.SIMPLE, show_header=True, header_style="bold")
     pt.add_column("Target", style="cyan")
     pt.add_column("Transport")
@@ -137,8 +137,8 @@ def print_report(
     pt.add_column("Score", justify="right", style="bold")
     pt.add_column("Time", justify="right")
 
-    for r in ranked:
-        score = r.risk_score()
+    for target in ranked:
+        score = target.risk_score()
         color = (
             "bold red"
             if score >= 20
@@ -149,12 +149,12 @@ def print_report(
             else "green"
         )
         pt.add_row(
-            _short_target(r.url),
-            r.transport,
-            str(len(r.tools)),
-            str(len(r.findings)),
+            _short_target(target.url),
+            target.transport,
+            str(len(target.tools)),
+            str(len(target.findings)),
             Text(str(score), style=color),
-            f"{r.timings.get('total', 0):.1f}s",
+            f"{target.timings.get('total', 0):.1f}s",
         )
     console.print(pt)
 

@@ -13,11 +13,11 @@ built to do real work, which is the harder and more honest question.
 | Server | Version | Findings | CRITICAL | HIGH | LOW |
 |--------|---------|----------|----------|------|-----|
 | server-everything | 2026.7.4 | 30 | 12 | 4 | 0 |
-| server-filesystem | 2026.7.10 | 64 | 5 | 15 | 24 |
+| server-filesystem | 2026.7.10 | 62 | 5 | 15 | 24 |
 | server-git | 2026.7.10 | 62 | 0 | 0 | 42 |
 | server-fetch | 2026.7.10 | 8 | 1 | 2 | 2 |
 | server-memory | 2026.7.4 | 6 | 0 | 3 | 0 |
-| **Total** | | **170** | **18** | **24** | **68** |
+| **Total** | | **168** | **18** | **24** | **68** |
 
 **Headline:** three fixes cut CRITICAL findings across five real servers from
 **71 to 18**, a 75% reduction, and HIGH from 34 to 24, with no true positive
@@ -29,6 +29,7 @@ lost.
 | After pattern anchoring | 187 | 49 | — |
 | After error-reflection grading | 185 | 18 | 34 |
 | After transport-aware auth | 170 | 18 | 24 |
+| After `delegation_depth` dropped bare nest/depth/hop | 168 | 18 | 24 |
 
 `server-git` is the clearest case: **14 CRITICAL and 26 HIGH became 0 and 2.**
 Not one of them described anything the server does. They described what the
@@ -39,7 +40,7 @@ both `multi_vector` CRITICALs that existed solely because they were chaining
 LOW-graded evidence. Every other change is a re-grading: 61 findings moved to
 LOW, where they remain visible and countable.
 
-This document does not claim the remaining 170 are all correct. The
+This document does not claim the remaining 168 are all correct. The
 rate-limiting class below is still unfixed.
 
 ## Two servers were not measurable at first
