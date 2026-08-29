@@ -101,7 +101,7 @@ current status — several of these are tagged now.
 | T31 | Budget Tuning — Rate Limits That Stop Attackers Without Blocking Users | *out of scope* — defensive | Skip |
 | T32 | Delegation Depth — Multi-Agent Identity Dilution | `delegation_depth` | Done |
 
-**Then:** 11 taggable, 3 defensive (skip), 3 new/extend (T22, T23, T32).
+**Then:** 11 taggable, 3 defensive (skip). T22, T23, T32 shipped.
 Coverage today is the glance row (measured, not this audit's 22).
 
 ### Tier 2 — Medium-term

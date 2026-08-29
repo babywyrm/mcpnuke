@@ -42,6 +42,18 @@ def test_flags_camazotz_shaped_name() -> None:
     assert found[0].taxonomy_id == "MCP-T32"
 
 
+def test_flags_weak_hop_with_agent() -> None:
+    r = _result([{
+        "name": "hop_to_agent",
+        "description": "Send work to another agent",
+        "inputSchema": {},
+    }])
+    check_delegation_depth(r)
+    found = _findings(r)
+    assert len(found) == 1
+    assert found[0].taxonomy_id == "MCP-T32"
+
+
 def test_silent_on_list_allowed_directories() -> None:
     r = _result([{
         "name": "list_allowed_directories",
