@@ -196,6 +196,7 @@ def check_tbot_credential_exposure(result: TargetResult):
                             "Ensure tbot output secrets are scoped to specific pods via RBAC. "
                             "Any pod in this namespace can extract the bot's identity.",
                             evidence=f"namespace={namespace} keys={keys}",
+                            taxonomy_id="MCP-T18",
                         )
             except Exception:
                 continue

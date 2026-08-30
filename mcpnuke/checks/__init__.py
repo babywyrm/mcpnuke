@@ -89,14 +89,26 @@ from mcpnuke.checks.shell_injection import check_shell_injection
 from mcpnuke.checks.ssrf_probe import check_ssrf_probe
 from mcpnuke.checks.supply_chain import check_supply_chain
 from mcpnuke.checks.taxonomy_coverage import (
+    check_agent_http_bypass,
+    check_agent_llm_function_context_leak,
+    check_agent_sdk_chain_identity_dilution,
+    check_agent_subprocess_credential_injection,
+    check_ai_governance_bypass_redirect,
+    check_auth_pattern_downgrade,
+    check_bot_identity_theft,
     check_cached_session_exposure,
+    check_code_review_subprocess_injection,
+    check_cross_tenant_memory_leak,
     check_delegation_depth,
+    check_direct_api_credential_forwarding,
     check_execution_context_forgery,
     check_host_network_loopback,
     check_native_function_identity_erasure,
     check_notification_sampling_abuse,
     check_pre_auth_injection,
+    check_rag_pipeline_injection,
     check_role_escalation_tool,
+    check_sdk_credential_cache_exposure,
     check_shell_wrapping_injection,
     check_sidecar_credential_tamper,
     check_subprocess_credential_inheritance,
@@ -203,6 +215,18 @@ _STATIC_CHECK_NAMES: tuple[str, ...] = (
     "native_function_identity_erasure",
     "execution_context_forgery",
     "sidecar_credential_tamper",
+    "bot_identity_theft",
+    "cross_tenant_memory_leak",
+    "auth_pattern_downgrade",
+    "agent_http_bypass",
+    "code_review_subprocess_injection",
+    "rag_pipeline_injection",
+    "ai_governance_bypass_redirect",
+    "direct_api_credential_forwarding",
+    "sdk_credential_cache_exposure",
+    "agent_sdk_chain_identity_dilution",
+    "agent_subprocess_credential_injection",
+    "agent_llm_function_context_leak",
     "schema_overdisclosure",
     "scope_pollution",
     "sdk_cache_tamper",
@@ -523,6 +547,18 @@ def run_all_checks(
     _run("native_function_identity_erasure", check_native_function_identity_erasure, result)
     _run("execution_context_forgery", check_execution_context_forgery, result)
     _run("sidecar_credential_tamper", check_sidecar_credential_tamper, result)
+    _run("bot_identity_theft", check_bot_identity_theft, result)
+    _run("cross_tenant_memory_leak", check_cross_tenant_memory_leak, result)
+    _run("auth_pattern_downgrade", check_auth_pattern_downgrade, result)
+    _run("agent_http_bypass", check_agent_http_bypass, result)
+    _run("code_review_subprocess_injection", check_code_review_subprocess_injection, result)
+    _run("rag_pipeline_injection", check_rag_pipeline_injection, result)
+    _run("ai_governance_bypass_redirect", check_ai_governance_bypass_redirect, result)
+    _run("direct_api_credential_forwarding", check_direct_api_credential_forwarding, result)
+    _run("sdk_credential_cache_exposure", check_sdk_credential_cache_exposure, result)
+    _run("agent_sdk_chain_identity_dilution", check_agent_sdk_chain_identity_dilution, result)
+    _run("agent_subprocess_credential_injection", check_agent_subprocess_credential_injection, result)
+    _run("agent_llm_function_context_leak", check_agent_llm_function_context_leak, result)
     _run("schema_overdisclosure", check_schema_overdisclosure, result)
     _run("scope_pollution", check_scope_pollution, result)
     _run("sdk_cache_tamper", check_sdk_cache_tamper, result)

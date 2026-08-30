@@ -17,8 +17,15 @@ from mcpnuke.core.models import TargetResult
 
 _add_l1 = lane_tagged(lane=1, transport="A")
 _add_l2 = lane_tagged(lane=2, transport="A")
+_add_l2_c = lane_tagged(lane=2, transport="C")
+_add_l2_d = lane_tagged(lane=2, transport="D")
 _add_l3 = lane_tagged(lane=3, transport="A")
+_add_l3_b = lane_tagged(lane=3, transport="B")
 _add_l4 = lane_tagged(lane=4, transport="A")
+_add_l4_b = lane_tagged(lane=4, transport="B")
+_add_l4_c = lane_tagged(lane=4, transport="C")
+_add_l4_d = lane_tagged(lane=4, transport="D")
+_add_l4_e = lane_tagged(lane=4, transport="E")
 
 # Caller-supplied identity *substitution*. Bare user_id is T35 presence, not T22.
 _FORGE_PARAMS: frozenset[str] = frozenset({
@@ -347,3 +354,336 @@ def check_sidecar_credential_tamper(result: TargetResult) -> None:
                     "Tool can reach a sidecar credential store, broker, or secret volume",
                     taxonomy_id="MCP-T23",
                 )
+
+
+_BOT_PARAMS: frozenset[str] = frozenset({
+    "bot_token",
+    "tbot_token",
+    "bot_identity",
+    "machine_cert",
+    "machine_identity",
+    "cert_serial",
+    "tbot_secret",
+})
+_BOT_RE = re.compile(r"\b(tbot|bot_identity|machine_cert|bot_token)\b", re.IGNORECASE)
+
+
+def check_bot_identity_theft(result: TargetResult) -> None:
+    """MCP-T18: Bot Identity Theft via tbot Credential Exposure."""
+    with time_check("bot_identity_theft", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _BOT_RE.search(blob) or (_param_keys(tool) & _BOT_PARAMS):
+                _add_l3(
+                    result, "bot_identity_theft", "HIGH",
+                    f"Machine/bot identity tool: '{tool.get('name', '')}'",
+                    "Tool exposes machine identity or tbot certificate credentials",
+                    taxonomy_id="MCP-T18",
+                )
+
+
+_TENANT_PARAMS: frozenset[str] = frozenset({
+    "target_tenant",
+    "other_tenant",
+    "cross_tenant",
+    "tenant_scope",
+    "all_tenants",
+    "tenant_id",
+    "workspace_id",
+})
+_TENANT_RE = re.compile(r"\b(cross[ _]tenant|all[ _]tenants|tenant[ _]isolation|across[ _]tenants)\b", re.IGNORECASE)
+
+
+def check_cross_tenant_memory_leak(result: TargetResult) -> None:
+    """MCP-T11: Cross-Tenant Memory Leak."""
+    with time_check("cross_tenant_memory_leak", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            keys = _param_keys(tool)
+            if _TENANT_RE.search(blob) or (keys & _TENANT_PARAMS):
+                _add_l1(
+                    result, "cross_tenant_memory_leak", "HIGH",
+                    f"Cross-tenant access in tool '{tool.get('name', '')}'",
+                    "Tool allows caller-specified tenant selection without strict isolation",
+                    taxonomy_id="MCP-T11",
+                )
+
+
+_AUTH_DOWNGRADE_PARAMS: frozenset[str] = frozenset({
+    "allow_unauthenticated",
+    "skip_auth",
+    "insecure_mode",
+    "bypass_auth",
+    "disable_token_validation",
+    "disable_signature_check",
+    "auth_mode",
+    "downgrade_auth",
+})
+_AUTH_DOWNGRADE_RE = re.compile(
+    r"\b(allow[ _]unauthenticated|skip[ _]auth|insecure[ _]mode|bypass[ _]auth|auth[ _]downgrade)\b",
+    re.IGNORECASE,
+)
+
+
+def check_auth_pattern_downgrade(result: TargetResult) -> None:
+    """MCP-T24: Authentication Pattern Downgrade."""
+    with time_check("auth_pattern_downgrade", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _AUTH_DOWNGRADE_RE.search(blob) or (_param_keys(tool) & _AUTH_DOWNGRADE_PARAMS):
+                _add_l2(
+                    result, "auth_pattern_downgrade", "HIGH",
+                    f"Authentication downgrade mechanism in tool '{tool.get('name', '')}'",
+                    "Tool allows disabling auth validation or downgrading to weak authentication patterns",
+                    taxonomy_id="MCP-T24",
+                )
+
+
+_HTTP_BYPASS_PARAMS: frozenset[str] = frozenset({
+    "direct_url",
+    "bypass_gateway",
+    "raw_http_client",
+    "transport_b",
+    "backend_http_url",
+    "direct_http",
+})
+_HTTP_BYPASS_RE = re.compile(
+    r"\b(bypass[ _]gateway|direct[ _]http|transport[ _]b|raw[ _]http[ _]request)\b",
+    re.IGNORECASE,
+)
+
+
+def check_agent_http_bypass(result: TargetResult) -> None:
+    """MCP-T37: Agent HTTP Bypass — Direct Transport B Access."""
+    with time_check("agent_http_bypass", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _HTTP_BYPASS_RE.search(blob) or (_param_keys(tool) & _HTTP_BYPASS_PARAMS):
+                _add_l3_b(
+                    result, "agent_http_bypass", "HIGH",
+                    f"Direct Transport B HTTP bypass in tool '{tool.get('name', '')}'",
+                    "Tool bypasses MCP gateway governance for uninspected direct HTTP calls",
+                    taxonomy_id="MCP-T37",
+                )
+
+
+_PR_SUBPROCESS_PARAMS: frozenset[str] = frozenset({
+    "pr_diff",
+    "pr_content",
+    "patch_content",
+    "apply_patch",
+    "diff_text",
+    "review_diff",
+    "git_patch",
+})
+_PR_SUBPROCESS_RE = re.compile(
+    r"\b(apply[ _]patch|review[ _]diff|pr[ _]diff|patch[ _]file|linter[ _]subprocess)\b",
+    re.IGNORECASE,
+)
+
+
+def check_code_review_subprocess_injection(result: TargetResult) -> None:
+    """MCP-T38: Code Review Agent — Subprocess Injection via PR Content."""
+    with time_check("code_review_subprocess_injection", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _PR_SUBPROCESS_RE.search(blob) or (_param_keys(tool) & _PR_SUBPROCESS_PARAMS):
+                _add_l2_d(
+                    result, "code_review_subprocess_injection", "HIGH",
+                    f"Untrusted PR content in subprocess tool '{tool.get('name', '')}'",
+                    "Tool applies unverified PR diffs/patches directly to local tool/linter subprocesses",
+                    taxonomy_id="MCP-T38",
+                )
+
+
+_RAG_INJECT_PARAMS: frozenset[str] = frozenset({
+    "ingest_document",
+    "add_to_knowledge_base",
+    "index_url",
+    "store_embedding",
+    "rag_doc",
+    "document_text",
+    "untrusted_document",
+})
+_RAG_INJECT_RE = re.compile(
+    r"\b(ingest[ _]doc|knowledge[ _]base[ _]vector|rag[ _]ingest|store[ _]embedding|index[ _]document)\b",
+    re.IGNORECASE,
+)
+
+
+def check_rag_pipeline_injection(result: TargetResult) -> None:
+    """MCP-T39: RAG Pipeline Injection — Poisoned Document Hijacks Synthesizer."""
+    with time_check("rag_pipeline_injection", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _RAG_INJECT_RE.search(blob) or (_param_keys(tool) & _RAG_INJECT_PARAMS):
+                _add_l4_c(
+                    result, "rag_pipeline_injection", "HIGH",
+                    f"RAG ingestion tool: '{tool.get('name', '')}'",
+                    "Tool ingests external untrusted documents directly into RAG retrieval index",
+                    taxonomy_id="MCP-T39",
+                )
+
+
+_GOV_REDIRECT_PARAMS: frozenset[str] = frozenset({
+    "redirect_url",
+    "forward_url",
+    "policy_override_url",
+    "governance_redirect",
+    "trusted_redirect",
+})
+_GOV_REDIRECT_RE = re.compile(
+    r"\b(governance[ _]redirect|policy[ _]override[ _]url|trusted[ _]redirect|evaluate[ _]with[ _]redirect)\b",
+    re.IGNORECASE,
+)
+
+
+def check_ai_governance_bypass_redirect(result: TargetResult) -> None:
+    """MCP-T41: AI Governance Gate Bypass via Trusted Redirect."""
+    with time_check("ai_governance_bypass_redirect", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _GOV_REDIRECT_RE.search(blob) or (_param_keys(tool) & _GOV_REDIRECT_PARAMS):
+                _add_l2(
+                    result, "ai_governance_bypass_redirect", "HIGH",
+                    f"Governance redirect in tool '{tool.get('name', '')}'",
+                    "Tool evaluates policy against a redirect or untrusted target URL",
+                    taxonomy_id="MCP-T41",
+                )
+
+
+_DIRECT_FORWARD_PARAMS: frozenset[str] = frozenset({
+    "auth_header",
+    "forward_auth",
+    "bearer_token_forward",
+    "forward_token",
+    "upstream_authorization",
+})
+_DIRECT_FORWARD_RE = re.compile(
+    r"\b(forward[ _]auth|bearer[ _]token[ _]forward|authorization[ _]header[ _]forward|direct[ _]api[ _]credential)\b",
+    re.IGNORECASE,
+)
+
+
+def check_direct_api_credential_forwarding(result: TargetResult) -> None:
+    """MCP-T45: Agent-to-Agent Identity Dilution via Direct API Credential Forwarding."""
+    with time_check("direct_api_credential_forwarding", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _DIRECT_FORWARD_RE.search(blob) or (_param_keys(tool) & _DIRECT_FORWARD_PARAMS):
+                _add_l4_b(
+                    result, "direct_api_credential_forwarding", "HIGH",
+                    f"Direct API credential forwarding in tool '{tool.get('name', '')}'",
+                    "Tool forwards raw authorization headers across direct API boundaries",
+                    taxonomy_id="MCP-T45",
+                )
+
+
+_SDK_CACHE_PARAMS: frozenset[str] = frozenset({
+    "sdk_cache",
+    "token_cache",
+    "in_memory_tokens",
+    "cache_name",
+    "dump_cache",
+    "cached_credentials",
+})
+_SDK_CACHE_RE = re.compile(
+    r"\b(sdk[ _]cache|token[ _]cache|in[ _]memory[ _]token|dump[ _]token[ _]cache)\b",
+    re.IGNORECASE,
+)
+
+
+def check_sdk_credential_cache_exposure(result: TargetResult) -> None:
+    """MCP-T46: In-Process SDK Credential Cache Exposure."""
+    with time_check("sdk_credential_cache_exposure", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _SDK_CACHE_RE.search(blob) or (_param_keys(tool) & _SDK_CACHE_PARAMS):
+                _add_l2_c(
+                    result, "sdk_credential_cache_exposure", "HIGH",
+                    f"SDK credential cache exposed in tool '{tool.get('name', '')}'",
+                    "Tool provides access to in-process SDK token caches or session credentials",
+                    taxonomy_id="MCP-T46",
+                )
+
+
+_SDK_CHAIN_PARAMS: frozenset[str] = frozenset({
+    "sdk_chain",
+    "call_sdk_function",
+    "in_process_delegate",
+    "sdk_subagent",
+    "chain_sdk",
+})
+_SDK_CHAIN_RE = re.compile(
+    r"\b(sdk[ _]chain|in[ _]process[ _]sdk|sdk[ _]delegate|sdk[ _]invocation[ _]chain)\b",
+    re.IGNORECASE,
+)
+
+
+def check_agent_sdk_chain_identity_dilution(result: TargetResult) -> None:
+    """MCP-T47: Agent Chain In-Process SDK Identity Dilution."""
+    with time_check("agent_sdk_chain_identity_dilution", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _SDK_CHAIN_RE.search(blob) or (_param_keys(tool) & _SDK_CHAIN_PARAMS):
+                _add_l4_c(
+                    result, "agent_sdk_chain_identity_dilution", "HIGH",
+                    f"In-process SDK chain tool: '{tool.get('name', '')}'",
+                    "Tool chains SDK invocations without propagating caller identity attribution",
+                    taxonomy_id="MCP-T47",
+                )
+
+
+_SUBPROC_ENV_PARAMS: frozenset[str] = frozenset({
+    "env_passthrough",
+    "inject_credentials",
+    "child_env",
+    "pass_parent_env",
+    "inject_env_token",
+})
+_SUBPROC_ENV_RE = re.compile(
+    r"\b(env[ _]passthrough|inject[ _]credential|child[ _]env|pass[ _]parent[ _]env)\b",
+    re.IGNORECASE,
+)
+
+
+def check_agent_subprocess_credential_injection(result: TargetResult) -> None:
+    """MCP-T48: Agent Chain Subprocess Credential Injection."""
+    with time_check("agent_subprocess_credential_injection", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _SUBPROC_ENV_RE.search(blob) or (_param_keys(tool) & _SUBPROC_ENV_PARAMS):
+                _add_l4_d(
+                    result, "agent_subprocess_credential_injection", "HIGH",
+                    f"Subprocess credential injection tool: '{tool.get('name', '')}'",
+                    "Tool injects parent process credentials into child process environment",
+                    taxonomy_id="MCP-T48",
+                )
+
+
+_LLM_CONTEXT_PARAMS: frozenset[str] = frozenset({
+    "full_transcript",
+    "raw_context",
+    "system_prompt_pass",
+    "conversation_history",
+    "raw_conversation",
+})
+_LLM_CONTEXT_RE = re.compile(
+    r"\b(full[ _]transcript|raw[ _]context|conversation[ _]history|system[ _]prompt[ _]pass)\b",
+    re.IGNORECASE,
+)
+
+
+def check_agent_llm_function_context_leak(result: TargetResult) -> None:
+    """MCP-T49: Agent Chain LLM Function-Calling Context Leak."""
+    with time_check("agent_llm_function_context_leak", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if _LLM_CONTEXT_RE.search(blob) or (_param_keys(tool) & _LLM_CONTEXT_PARAMS):
+                _add_l4_e(
+                    result, "agent_llm_function_context_leak", "HIGH",
+                    f"LLM context leak in tool '{tool.get('name', '')}'",
+                    "Tool forwards raw conversation history or system prompts into downstream function calls",
+                    taxonomy_id="MCP-T49",
+                )
+

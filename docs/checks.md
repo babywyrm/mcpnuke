@@ -1,7 +1,7 @@
 # Security Checks Reference
 
 Every check mcpnuke runs, with the severity it emits and what it detects.
-88 checks in total: 64 in the check inventory in `mcpnuke/checks/__init__.py`,
+100 checks in total: 76 in the check inventory in `mcpnuke/checks/__init__.py`,
 plus the 24 deep behavioral probes `_build_deep_checks()` assembles.
 
 Three conventions worth knowing before reading the tables:
@@ -128,6 +128,18 @@ but also attempts a live canary transfer when invocation is allowed.
 | `native_function_identity_erasure` | MEDIUM | No caller-identity parameter on any tool and no auth token — function calls carry no attribution. Not reported on stdio. MCP-T35 |
 | `execution_context_forgery` | HIGH | Caller-supplied execution identity (`on_behalf_of`, `as_user`, `actor_id`, …). Bare `user_id` is not this finding. MCP-T22 |
 | `sidecar_credential_tamper` | HIGH | Sidecar paired with secret/credential/broker language, or params like `secret_mount`. Not a generic volume or a logging sidecar. Not hardcoded schema secrets (`credential_in_schema`). MCP-T23 |
+| `bot_identity_theft` | HIGH | Tools exposing machine identities, tbot credentials, machine certs, or token serials. MCP-T18 |
+| `cross_tenant_memory_leak` | HIGH | Tools allowing caller-specified tenant selection or multi-tenant memory access without strict isolation. MCP-T11 |
+| `auth_pattern_downgrade` | HIGH | Tools exposing auth bypass toggles, unauthenticated mode switches, or signature check disabling. MCP-T24 |
+| `agent_http_bypass` | HIGH | Tools exposing direct HTTP client invocations bypassing MCP protocol governance. MCP-T37 |
+| `code_review_subprocess_injection` | HIGH | Tools applying unverified pull request diffs or patches directly to local tool/linter subprocesses. MCP-T38 |
+| `rag_pipeline_injection` | HIGH | Tools ingesting external untrusted documents directly into RAG retrieval index or embeddings. MCP-T39 |
+| `ai_governance_bypass_redirect` | HIGH | Tools evaluating AI governance or policy against untrusted redirect or forward URLs. MCP-T41 |
+| `direct_api_credential_forwarding` | HIGH | Tools forwarding raw bearer tokens or authorization headers across direct API boundaries. MCP-T45 |
+| `sdk_credential_cache_exposure` | HIGH | Tools exposing in-process SDK token caches, in-memory credential pools, or session stores. MCP-T46 |
+| `agent_sdk_chain_identity_dilution` | HIGH | Tools chaining in-process SDK invocations without propagating caller identity attribution. MCP-T47 |
+| `agent_subprocess_credential_injection` | HIGH | Tools injecting parent process credentials into child process environment variables. MCP-T48 |
+| `agent_llm_function_context_leak` | HIGH | Tools forwarding raw conversation history or system prompts into downstream function calls. MCP-T49 |
 | `tool_description_injection` | CRITICAL | Instruction-override language in a tool description, which manipulates any agent that loads the manifest. MCP-T36 |
 | `scope_pollution` | CRITICAL–MEDIUM | A token-minting tool accepting caller-controlled scope/audience with no narrowing is HIGH, or CRITICAL when the caller's own claims are read-class and the tool advertises privileged scopes. Shared-IdP topology disclosure alone is MEDIUM. MCP-T42 |
 | `schema_overdisclosure` | CRITICAL–LOW | Pre-auth recon in `tools/list`: a credential pattern is CRITICAL, an internal hostname HIGH, an infrastructure env-var name MEDIUM, an internal filesystem path LOW. MCP-T50 |

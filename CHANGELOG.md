@@ -35,6 +35,14 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **Taxonomy coverage expansion to 54/57 threat IDs (95%).** Added 12 static
+  and transport-aware checks covering all remaining scannable threat vectors:
+  `cross_tenant_memory_leak` (MCP-T11), `bot_identity_theft` (MCP-T18),
+  `auth_pattern_downgrade` (MCP-T24), `agent_http_bypass` (MCP-T37),
+  `code_review_subprocess_injection` (MCP-T38), `rag_pipeline_injection` (MCP-T39),
+  `ai_governance_bypass_redirect` (MCP-T41), `direct_api_credential_forwarding` (MCP-T45),
+  `sdk_credential_cache_exposure` (MCP-T46), `agent_sdk_chain_identity_dilution` (MCP-T47),
+  `agent_subprocess_credential_injection` (MCP-T48), and `agent_llm_function_context_leak` (MCP-T49).
 - **`protected_resource_metadata`** — RFC 9728 document when an HTTP MCP
   server publishes one (401 `resource_metadata` or well-known). Missing
   `authorization_servers` is HIGH; a non-HTTPS AS is MEDIUM; AS metadata

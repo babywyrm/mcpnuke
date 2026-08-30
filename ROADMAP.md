@@ -17,7 +17,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | AI-augmented analysis (Claude + Ollama ensemble) | **Strong** — 3-phase analysis, consensus mode |
 | Transport security (JWT, DPoP, scope, boundaries) | **Strong** — 8 transport checks |
 | Lane coverage (5 identity lanes) | **All 5 represented** |
-| Taxonomy coverage | **42/57 IDs (74%)** — Tier 1 complete, see gap map below |
+| Taxonomy coverage | **54/57 IDs (95%)** — Tier 1 complete, see gap map below |
 | MCP spec surface (2026-08-22 roadmap) | **Mapped** — Speak/Scan/Ready in [docs/spec-surface.md](docs/spec-surface.md) |
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy) | **Done** — see below |
@@ -72,7 +72,7 @@ fit for that ID.
 | ✅ **MCP-T05** | Cross-Tool Context Poisoning | `command_injection_broad.py` |
 | ✅ **MCP-T08** | Supply Chain via Content | `remote_package_exec.py` |
 | ✅ **MCP-T10** | Hallucination-Driven Destruction | `agentic_loop.py` |
-| **MCP-T11** | Cross-Tenant Memory Leak | Needs distinct auth contexts; still deferred |
+| ✅ **MCP-T11** | Cross-Tenant Memory Leak | `taxonomy_coverage.py` (`cross_tenant_memory_leak`) |
 | ✅ **MCP-T13** | Audit Log Evasion | `insecure_agent_comms.py` |
 | ✅ **MCP-T15** | Error Information Disclosure | `model_routing.py` |
 
