@@ -80,3 +80,15 @@ def test_multi_target_findings_merge_into_lane_buckets():
     out = build_by_lane([a, b])
     assert out["by_lane"]["2"]["finding_count"] == 2
     assert {f["target"] for f in out["by_lane"]["2"]["findings"]} == {"http://a", "http://b"}
+
+
+def test_taxonomy_id_auto_resolves_lane_and_transport():
+    r = _r()
+    r.add("llm_tool_analysis", "CRITICAL", "AI finding", taxonomy_id="MCP-T12")
+    finding = r.findings[0]
+    assert finding.lane == 2
+    assert finding.transport == "A"
+    out = build_by_lane([r])
+    assert out["by_lane"]["2"]["finding_count"] == 1
+    assert "uncategorized" not in out["by_lane"]
+

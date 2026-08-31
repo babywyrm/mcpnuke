@@ -132,7 +132,9 @@ def threat_id_to_lab(taxonomy: dict[str, Any] | None = None) -> dict[str, str]:
 def threat_metadata(threat_id: str, taxonomy: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """Return the full taxonomy entry for ``threat_id``, or ``None`` if unknown."""
     tax = taxonomy if taxonomy is not None else get_taxonomy()
-    for t in tax.get("threats", []):
-        if t["threat_id"] == threat_id:
-            return t
+    threats = tax.get("threats", [])
+    if isinstance(threats, list):
+        for t in threats:
+            if isinstance(t, dict) and t.get("threat_id") == threat_id:
+                return t
     return None

@@ -29,6 +29,20 @@ class Finding:
     taxonomy_id: str = ""
     mitre_id: str = ""
 
+    def __post_init__(self) -> None:
+        if self.taxonomy_id and (self.lane is None or self.transport is None):
+            try:
+                from mcpnuke.core.taxonomy import threat_metadata
+                meta = threat_metadata(self.taxonomy_id)
+                if meta:
+                    if self.lane is None and "lane" in meta:
+                        self.lane = meta["lane"]
+                    if self.transport is None and "transport" in meta:
+                        self.transport = meta["transport"]
+            except Exception:
+                pass
+
+
 
 @dataclass
 class AttackChain:

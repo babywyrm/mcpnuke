@@ -148,3 +148,43 @@ def test_phase2_parallel_workers_analyze_all_candidates() -> None:
 def test_resolve_phase2_workers_forces_single_in_deterministic_mode() -> None:
     workers = _resolve_phase2_workers({"claude_phase2_workers": 4, "deterministic": True})
     assert workers == 1
+
+
+def test_phase2_uses_extended_args_for_optional_params() -> None:
+    """Phase 2 should use context-aware extended args so optional parameters are populated."""
+    class _RecordingSession:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, dict]] = []
+
+        def call(self, method: str, params: dict, timeout: float = 10.0) -> dict | None:
+            self.calls.append((method, params))
+            return {"result": {"content": [{"type": "text", "text": "fetched content"}]}}
+
+    session = _RecordingSession()
+    result = TargetResult(url="http://localhost:8080/mcp")
+    result.tools = [
+        {
+            "name": "egress.fetch_url",
+            "description": "Fetch a url",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to fetch"}
+                },
+            },
+        }
+    ]
+    backend = _FakeLLMBackend()
+    run_llm_analysis(
+        session,
+        result,
+        probe_opts={"claude_max_tools": 1},
+        console=_DummyConsole(),
+        llm_backend=backend,
+    )
+    assert len(session.calls) == 1
+    call_params = session.calls[0][1]
+    assert "arguments" in call_params
+    assert "url" in call_params["arguments"]
+    assert "169.254.169.254" in call_params["arguments"]["url"]
+

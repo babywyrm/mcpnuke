@@ -46,6 +46,7 @@ logger = logging.getLogger("mcpnuke.core.llm_ollama")
 
 DEFAULT_MODEL = "qwen2.5:14b"
 DEFAULT_TIMEOUT = 180.0  # local inference can be slow for 14b
+DEFAULT_MAX_TOKENS = 4096
 
 
 # ── Ensemble types ────────────────────────────────────────────────────────────
@@ -146,7 +147,7 @@ class OllamaBackend:
         self,
         system: str,
         user_content: str,
-        max_tokens: int = 2000,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         log: Callable[[str], None] | None = None,
     ) -> str:
         """POST to Ollama /api/chat and return the assistant text."""
@@ -188,9 +189,18 @@ class OllamaBackend:
         text: str = data.get("message", {}).get("content", "") or ""
         usage = data.get("eval_count", 0)
         prompt_eval = data.get("prompt_eval_count", 0)
+        done_reason = data.get("done_reason", "")
 
         _log(f"  [dim]  │ Response: {len(text)} chars in {elapsed:.1f}s[/dim]")
         _log(f"  [dim]  │ Tokens: prompt={prompt_eval} generated={usage}[/dim]")
+        if done_reason == "length":
+            if not text and data.get("message", {}).get("thinking"):
+                _log(
+                    f"  [yellow]  ⚠ Ollama model exhausted token budget ({max_tokens} tokens) "
+                    "during thinking before completing output[/yellow]"
+                )
+            else:
+                _log(f"  [yellow]  ⚠ Ollama output truncated (hit max_tokens={max_tokens})[/yellow]")
         _log("  [dim]  └─ Response body (first 200 chars):[/dim]")
         for line in text.strip()[:200].split("\n"):
             _log(f"  [dim]    {line}[/dim]")
@@ -211,7 +221,7 @@ class OllamaBackend:
             return []
         tools_json = json.dumps(tools, indent=2, default=str)[:8000]
         system = tool_analysis_system_prompt(known_findings)
-        text = self._call(system, f"Analyze these MCP tool definitions:\n\n{tools_json}", 2000, log)
+        text = self._call(system, f"Analyze these MCP tool definitions:\n\n{tools_json}", DEFAULT_MAX_TOKENS, log)
         return _parse_findings(text)
 
     def analyze_findings(
@@ -247,7 +257,7 @@ class OllamaBackend:
             f"Tool definitions:\n{tools_summary}\n\n"
             f"Existing findings:\n{findings_summary}"
         )
-        text = self._call(system, user_content, 2000, log)
+        text = self._call(system, user_content, DEFAULT_MAX_TOKENS, log)
         return _parse_findings(text)
 
     def analyze_response(
@@ -280,7 +290,7 @@ class OllamaBackend:
             f"Description: {tool_description}\n"
             f"Response content:\n{response_text[:3000]}"
         )
-        text = self._call(system, user_content, 1000, log)
+        text = self._call(system, user_content, min(2000, DEFAULT_MAX_TOKENS), log)
         return _parse_findings(text)
 
 
@@ -370,9 +380,13 @@ def run_ensemble_analysis(
     for e in ensemble:
         merged = e.to_llm_finding()
         check_name = "llm_ensemble_consensus" if e.is_consensus else "llm_ensemble_candidate"
-        finding = result.add(check_name, merged.severity, merged.title, merged.detail)
-        if finding:
-            finding.taxonomy_id = merged.taxonomy_id
-            finding.mitre_id = merged.mitre_id
+        result.add(
+            check_name,
+            merged.severity,
+            merged.title,
+            merged.detail,
+            taxonomy_id=merged.taxonomy_id,
+            mitre_id=merged.mitre_id,
+        )
 
     return ensemble
