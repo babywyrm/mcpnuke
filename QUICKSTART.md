@@ -256,6 +256,27 @@ mcpnuke --targets https://mcp.example.com/mcp \
   --json jwt-audit.json
 ```
 
+Add DPoP proof-binding, token introspection, and JWKS metadata checks when the
+authorization server supports them:
+
+```bash
+mcpnuke --targets https://mcp.example.com/mcp \
+  --auth-token "$ACCESS_TOKEN" \
+  --dpop-proof "$DPOP_PROOF_JWT" \
+  --token-introspect-url "https://auth.example.com/oauth2/introspect" \
+  --token-introspect-client-id scanner \
+  --token-introspect-client-secret "$CLIENT_SECRET" \
+  --jwks-url "https://auth.example.com/.well-known/jwks.json" \
+  --tls-verify \
+  --json auth-flow-report.json
+```
+
+When `--auth-token` looks like a JWT, mcpnuke decodes it (without signature
+validation) and includes a safe claim summary in JSON output under
+`auth_context.jwt_claims_summary` to help validate agentic auth wiring.
+Token introspection and JWKS fetch summaries likewise land under
+`auth_context`; when those flags are not set they do not affect scan behavior.
+
 ## 11) K8s Discovery Scan
 
 Auto-discover MCP servers in a Kubernetes cluster:
