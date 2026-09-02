@@ -167,7 +167,13 @@ def _replay_with_retries(
 ) -> tuple[ChainRun, ChainVerdict]:
     """Replay a chain; on a halt, revise and retry up to *retries* times."""
     run = replay_chain(
-        session, chain, tools_by_name, safe_mode=safe_mode, oast=oast
+        session,
+        chain,
+        tools_by_name,
+        safe_mode=safe_mode,
+        oast=oast,
+        backend=backend,
+        model=model,
     )
     verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
     attempts = 0
@@ -185,7 +191,13 @@ def _replay_with_retries(
             break
         chain = revised
         run = replay_chain(
-            session, chain, tools_by_name, safe_mode=safe_mode, oast=oast
+            session,
+            chain,
+            tools_by_name,
+            safe_mode=safe_mode,
+            oast=oast,
+            backend=backend,
+            model=model,
         )
         verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
         attempts += 1

@@ -64,6 +64,7 @@ from mcpnuke.checks.jwt_validation import (
     check_jwt_ttl,
     check_jwt_weak_key,
 )
+from mcpnuke.checks.k8s_chain_probe import k8s_chain_probe
 from mcpnuke.checks.list_cache import check_list_cache
 from mcpnuke.checks.model_routing import check_model_routing
 from mcpnuke.checks.permissions import (
@@ -233,6 +234,7 @@ _STATIC_CHECK_NAMES: tuple[str, ...] = (
     "list_cache",
     "protected_resource_metadata",
     "exfil_flow",
+    "k8s_chain_probe",
 )
 
 _JWT_CHECK_NAMES: tuple[str, ...] = (
@@ -571,6 +573,7 @@ def run_all_checks(
         probe_opts=opts,
     )
     _run("exfil_flow", check_exfil_flow, result, session=session, probe_opts=opts)
+    _run("k8s_chain_probe", k8s_chain_probe, result)
 
     # JWT hardening checks (only when auth token is present)
     if has_jwt:

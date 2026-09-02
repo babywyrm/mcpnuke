@@ -1,7 +1,7 @@
 # Security Checks Reference
 
 Every check mcpnuke runs, with the severity it emits and what it detects.
-100 checks in total: 76 in the check inventory in `mcpnuke/checks/__init__.py`,
+101 checks in total: 77 in the check inventory in `mcpnuke/checks/__init__.py`,
 plus the 24 deep behavioral probes `_build_deep_checks()` assembles.
 
 Three conventions worth knowing before reading the tables:
@@ -147,6 +147,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `shell_wrapping_injection` | HIGH | Shell wrapping (`sh -c`, `subprocess(..., shell=True)`, `os.system`) in a description or schema — arguments stay injectable despite apparent validation. MCP-T53 |
 | `cached_session_exposure` | MEDIUM | Session or cache identifier parameters — session fixation and token reuse surface. MCP-T57 |
 | `host_network_loopback` | HIGH | `127.0.0.1`, `localhost`, `0.0.0.0` or `hostNetwork` references, suggesting a bridge to node-local services. MCP-T58 |
+| `k8s_chain_probe` | MEDIUM | Cross-namespace chain opportunity: read-capable and write-capable K8s tools with namespace parameters present, enabling lateral movement chains. MCP-T57 |
 
 ### Token & Identity Checks (JWT)
 

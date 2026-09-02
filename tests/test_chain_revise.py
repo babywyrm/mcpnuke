@@ -98,3 +98,32 @@ def test_retry_logs_the_repair_attempt():
         oast=None,
     )
     assert any("revis" in m.lower() or "repair" in m.lower() for m in logs)
+
+
+def test_replay_with_retries_uses_backend_adaptation():
+    class _AdaptBackend:
+        def adapt_step_args(self, tool, template_args, prior_results, model=""):
+            return {"x": "adapted_val"}
+
+    session = _Session()
+    chain = ProposedChain(
+        title="adapt_test",
+        steps=[
+            ChainStep("read_ok"),
+            ChainStep("good_tool", {"x": "{{step0.output.nonexistent}}"}),
+        ],
+    )
+    run, verdict = _replay_with_retries(
+        session,
+        chain,
+        TOOLS,
+        _AdaptBackend(),
+        model="m",
+        log=lambda _m: None,
+        retries=0,
+        safe_mode=False,
+        oast=None,
+    )
+    assert run.completed
+    assert verdict.reproduced
+

@@ -17,7 +17,7 @@ useDefault = true
 # Scoped to specific paths, never a global regex: a rule broad enough to
 # excuse these would also excuse a real key committed next to them.
 [allowlist]
-description = "Fixture credentials in the detection corpus"
+description = "Fixture credentials in the detection corpus and test plans"
 paths = [
   # The corpus itself. tests/test_credential_patterns.py is named in
   # .cursor/rules as the invariant guarding every consumer of the credential
@@ -26,6 +26,7 @@ paths = [
   '''tests/test_credential_in_description\.py''',
   '''tests/test_credential_in_schema\.py''',
   '''tests/test_response_credentials\.py''',
+  '''docs/superpowers/.*''',
 ]
 
 # mcpnuke/patterns/credentials.py is *not* path-allowlisted. It is shipping

@@ -4,8 +4,34 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-Hop Attack Chain Replay & Transform Pipeline.** Enhanced chain replay
+  executor with field-aware JSON path extraction (`{{stepN.output.field.subfield}}`),
+  index-based array access (`{{stepN.output.list[0].id}}`), and transform filters
+  (`|b64`, `|b64decode`, `|urlencode`, `|urldecode`, `|strip`, `|json`). Added
+  deterministic data movement tracking across transformed fragments (`run.tracked_fragments`),
+  OAST exfiltration data correlation in replay summaries, and dynamic LLM step
+  parameter adaptation fallback (`_adapt_step_args_with_llm`) during live multi-step execution.
+
 ### Fixed
 
+- **AI findings auto-populate identity lane and transport.** `Finding.__post_init__`
+  resolves `lane` (1–5) and `transport` (A–E) from canonical `threat_metadata()`
+  whenever `taxonomy_id` is supplied without explicit lane scoping. AI findings
+  (`llm_tool_analysis`, `llm_response_analysis`, `llm_chain_reasoning`,
+  `llm_chain_replay`, and ensemble consensus/candidate findings) now correctly
+  group into identity lanes in `--by-lane` and `--coverage-report` instead of
+  falling into `Uncategorized`.
+- **Ollama generation budget & truncation handling on reasoning models.** Default
+  token budget increased (`DEFAULT_MAX_TOKENS = 4096`) across Phase 1, 2, and 3
+  Ollama inference requests. Added detection for `done_reason == "length"` with
+  explicit warnings when models exhaust token budgets during internal thinking
+  phases.
+- **Phase 2 Extended parameter generation for tool responses.** Upgraded Phase 2
+  candidate argument building in `llm_analysis.py` to `_build_extended_args()`,
+  supplying context-aware probe values for optional parameters (URLs, queries,
+  commands, file paths) to ensure rich responses for downstream AI analysis.
 - **A JSON-RPC handshake error is no longer reported as silence.** A server
   that returns `-32001 identity verification failed` (nullfield on the NUC
   NodePort) used to emit `init` / "No response to MCP initialize" even though

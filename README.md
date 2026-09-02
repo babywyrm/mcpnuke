@@ -249,9 +249,10 @@ all of it against DVMCP, is in **[docs/methodology.md](docs/methodology.md)**.
 
 ## Security Checks
 
-mcpnuke runs 100 checks across static, behavioral, infrastructure and aggregate
-phases. See **[docs/checks.md](docs/checks.md)** for the full inventory with
-severities and detection notes.
+mcpnuke runs 101 checks across static, behavioral, infrastructure and aggregate
+phases, covering 54 of 57 threat IDs (95%) in the agentic-sec threat taxonomy.
+See **[docs/checks.md](docs/checks.md)** for the full inventory with severities
+and detection notes.
 
 ---
 
