@@ -4,8 +4,18 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.18.0] - 2026-09-02
+
 ### Added
 
+- **Docs modernization and contributor flow.** Condensed `README.md` (~370 →
+  ~300 lines) with CI / PyPI / Python / license badges; relocated the DPoP +
+  token introspection + JWKS recipe to `QUICKSTART.md` §10 and the identity
+  lane / transport tables to a new `docs/lanes.md`, both linked from the
+  README. Added a root `AGENTS.md` (build, test, and safety conventions for
+  AI coding agents such as Codex), GitHub issue forms for bug reports and
+  detection (false positive / false negative) reports, and a PR template
+  carrying the gate checklist.
 - **Multi-Hop Attack Chain Replay & Transform Pipeline.** Enhanced chain replay
   executor with field-aware JSON path extraction (`{{stepN.output.field.subfield}}`),
   index-based array access (`{{stepN.output.list[0].id}}`), and transform filters

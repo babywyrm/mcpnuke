@@ -1,6 +1,6 @@
 [project]
 name = "mcpnuke"
-version = "6.17.0"
+version = "6.18.0"
 description = "MCP red teaming & security scanner — enumerate, probe, and exploit Model Context Protocol servers"
 readme = "README.md"
 license = "MIT"

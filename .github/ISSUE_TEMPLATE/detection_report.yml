@@ -1,0 +1,63 @@
+name: Detection issue
+description: A check fired when it should not have (false positive), or missed something it should catch (false negative)
+labels: ["detection"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        False positives and false negatives are among the most useful
+        contributions — operator trust in the output is what makes the tool
+        worth running. **Redact credentials and internal hostnames first.**
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - False positive (reported, but not a real issue)
+        - False negative (missed something real)
+    validations:
+      required: true
+
+  - type: input
+    id: check-name
+    attributes:
+      label: Check name
+      description: The check that fired or should have fired (from the finding or docs/checks.md).
+      placeholder: ssrf_basic
+    validations:
+      required: true
+
+  - type: input
+    id: finding
+    attributes:
+      label: Finding title and severity
+      placeholder: "HIGH: Tool allows SSRF to internal metadata endpoint"
+
+  - type: textarea
+    id: tool-definition
+    attributes:
+      label: Tool definition
+      description: |
+        The tool that triggered it: name, description, and inputSchema.
+        Redacted as needed.
+      placeholder: |
+        name: fetch_url
+        description: Fetch a URL and return the body
+        inputSchema: { "type": "object", "properties": { "url": ... } }
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-wrong
+    attributes:
+      label: Why the verdict is wrong
+      description: What makes this a false positive, or what the scanner should have caught.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested refinement
+      description: Optional — a pattern tweak, severity change, or additional case.

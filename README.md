@@ -1,5 +1,10 @@
 # mcpnuke
 
+[![CI](https://github.com/babywyrm/mcpnuke/actions/workflows/tests.yml/badge.svg)](https://github.com/babywyrm/mcpnuke/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/mcpnuke)](https://pypi.org/project/mcpnuke/)
+[![Python](https://img.shields.io/pypi/pyversions/mcpnuke)](https://pypi.org/project/mcpnuke/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **MCP Red Teaming & Security Scanner**
 
 Security scanner for [Model Context Protocol](https://modelcontextprotocol.io)

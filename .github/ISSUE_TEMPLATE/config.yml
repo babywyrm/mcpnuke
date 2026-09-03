@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability in mcpnuke
+    url: https://github.com/babywyrm/mcpnuke/blob/main/SECURITY.md
+    about: Report vulnerabilities in mcpnuke itself privately, per SECURITY.md — not in a public issue.
