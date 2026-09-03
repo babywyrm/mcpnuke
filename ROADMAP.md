@@ -109,12 +109,12 @@ Coverage today is the glance row (measured, not this audit's 22).
 | ID | Threat | Notes |
 |----|--------|-------|
 | MCP-T16–T32 | Transport/auth/identity (17 IDs) | Many overlap jwt/dpop/transport; T22/T23 have static checks |
-| MCP-T34–T36 | Advanced delegation/chain attacks | T34/T35/T36 are attributed; multi-hop still thin |
+| MCP-T34–T36 | Advanced delegation/chain attacks | Attributed; multi-hop replay shipped 6.18.0 (`ChainGraph` DAG, conditional steps, lane templates) |
 | MCP-T37–T41 | RAG poisoning, HTTP bypass, governance redirect | Harder without internal corpus access |
-| MCP-T44–T49 | Transport identity dilution (lanes B–E) | T44 has a probe; B–E still thin |
+| MCP-T44–T49 | Transport identity dilution (lanes B–E) | T44 has a probe; lane-aware chain templates (B–E) shipped 6.18.0 |
 | MCP-T52 | Pre-Authentication Injection | `pre_auth_injection` in `taxonomy_coverage.py` |
 | MCP-T53 | Shell Command Wrapping Injection | `shell_injection.py` |
-| MCP-T57–T58 | K8s-specific (namespace escape, RBAC) | Attributed; namespace-boundary probes still thin |
+| MCP-T57–T58 | K8s-specific (namespace escape, RBAC) | Attributed; `k8s_chain_probe` namespace-boundary probe shipped 6.18.0 |
 
 ### Out of scope (other tools' lanes)
 
