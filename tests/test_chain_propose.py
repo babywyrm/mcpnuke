@@ -196,3 +196,28 @@ class TestProposeChainsReturnsProposedChains:
 
         assert isinstance(out[0], ProposedChain)
         assert out[0].steps[1].args["x"] == "{{step0.output}}"
+
+
+class TestProposalPromptBudget:
+    def test_proposal_prompt_stays_focused_with_large_tool_surface(self):
+        """138 fat tool schemas must not reach the proposal prompt whole —
+        assessment-sized contexts make local models answer with prose."""
+        tools = [
+            {"name": f"tool{i}", "description": "x" * 500} for i in range(138)
+        ]
+        findings = [
+            {"title": f"f{i}", "detail": "d" * 400, "evidence": "e" * 300}
+            for i in range(40)
+        ]
+        _, user = llm._propose_chains_prompt(tools, findings)
+        assert len(user) <= (
+            llm._PROPOSE_TOOLS_BUDGET_CHARS + llm._PROPOSE_FINDINGS_BUDGET_CHARS + 500
+        )
+
+    def test_proposal_prompt_keeps_implicated_tools_when_trimming(self):
+        tools = [
+            {"name": f"tool{i}", "description": "x" * 500} for i in range(138)
+        ]
+        findings = [{"title": "t", "detail": "d", "tool": "tool137"}]
+        _, user = llm._propose_chains_prompt(tools, findings)
+        assert "tool137" in user

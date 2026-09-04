@@ -4,6 +4,21 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Phase 4 chain replay now works with `--ollama-analysis`.** `llm_analysis`
+  discovers `propose_chains` / `judge_chain_run` / `revise_chain` via `getattr`
+  on the backend, but `OllamaBackend` never implemented them — chain replay
+  silently reported "0 of 0 proposed chains" on every Ollama scan. The three
+  hooks are now implemented, sharing prompt builders and parsers with the
+  Claude path so both backends speak the same schema.
+- **Chain proposal prompt no longer overwhelms local models.** The proposal
+  prompt inherited the assessment-sized context budgets (40k tools / 60k
+  findings), which made local models answer with prose summaries instead of
+  the JSON steps schema. Proposals now use focused budgets (6k / 4k, with
+  finding-implicated tools prioritized so trimming drops the tail) plus one
+  corrective retry when the first reply is unparseable prose.
+
 ## [6.18.0] - 2026-09-02
 
 ### Added

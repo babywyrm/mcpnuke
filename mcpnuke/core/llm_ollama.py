@@ -48,6 +48,12 @@ DEFAULT_MODEL = "qwen2.5:14b"
 DEFAULT_TIMEOUT = 180.0  # local inference can be slow for 14b
 DEFAULT_MAX_TOKENS = 4096
 
+_PROSE_NUDGE: str = (
+    "\n\nYour previous reply was prose, not JSON. That response is discarded. "
+    "Respond with ONLY a JSON array of chain objects, each with a `steps` array "
+    "of at least two entries. No summary, no markdown, no commentary."
+)
+
 
 # ── Ensemble types ────────────────────────────────────────────────────────────
 
@@ -292,6 +298,69 @@ class OllamaBackend:
         )
         text = self._call(system, user_content, min(2000, DEFAULT_MAX_TOKENS), log)
         return _parse_findings(text)
+
+    # ── Chain replay hooks (Phase 4) ─────────────────────────────────────
+    # llm_analysis getattrs these; without them --chain-replay silently
+    # proposes nothing on this backend. Prompts and parsers are shared with
+    # the Claude module so both backends speak the same schema.
+
+    def propose_chains(
+        self,
+        tools: list[dict],
+        findings: list[dict],
+        model: str | None = None,
+        log: Callable[[str], None] | None = None,
+    ) -> list:
+        """Propose executable attack chains for replay."""
+        from mcpnuke.core import llm as llm_core
+        from mcpnuke.core.chain_replay import parse_proposed_chains
+
+        if not findings:
+            return []
+        system, user = llm_core._propose_chains_prompt(tools, findings)
+        text = self._call(system, user, DEFAULT_MAX_TOKENS, log)
+        chains = parse_proposed_chains(text)
+        if not chains and text.strip():
+            # Local models sometimes answer an assessment-shaped context with a
+            # prose summary instead of the JSON schema. One corrective nudge.
+            text = self._call(system + _PROSE_NUDGE, user, DEFAULT_MAX_TOKENS, log)
+            chains = parse_proposed_chains(text)
+        return chains
+
+    def judge_chain_run(
+        self,
+        title: str,
+        transcript: str,
+        model: str | None = None,
+        log: Callable[[str], None] | None = None,
+    ) -> tuple[bool, str]:
+        """Judge whether a replay transcript shows transformed data movement."""
+        from mcpnuke.core import llm as llm_core
+
+        system, user = llm_core._judge_chain_run_prompt(title, transcript)
+        text = self._call(system, user, 300, log)
+        try:
+            obj = json.loads((text or "").strip())
+            return bool(obj.get("moved")), str(obj.get("why") or "")
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            return False, ""
+
+    def revise_chain(
+        self,
+        chain: Any,
+        transcript: str,
+        tools: list[dict],
+        model: str | None = None,
+        log: Callable[[str], None] | None = None,
+    ) -> Any:
+        """Propose one corrected chain for a halted run, or None."""
+        from mcpnuke.core import llm as llm_core
+        from mcpnuke.core.chain_replay import parse_proposed_chains
+
+        system, user = llm_core._revise_chain_prompt(chain.title, transcript, tools)
+        text = self._call(system, user, DEFAULT_MAX_TOKENS, log)
+        revised = parse_proposed_chains(text)
+        return revised[0] if revised else None
 
 
 # ── Ensemble entry point ──────────────────────────────────────────────────────

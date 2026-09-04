@@ -40,6 +40,10 @@ _ANALYSIS_MAX_TOKENS: int = 8000
 # the model can only partly see.
 _TOOLS_BUDGET_CHARS: int = 40000
 _FINDINGS_BUDGET_CHARS: int = 60000
+# Chain *proposals* need a focused prompt: assessment-sized contexts make
+# local models answer with prose summaries instead of the JSON steps schema.
+_PROPOSE_TOOLS_BUDGET_CHARS: int = 6000
+_PROPOSE_FINDINGS_BUDGET_CHARS: int = 4000
 
 _SEVERITY_ORDER: dict[str, int] = {
     "CRITICAL": 0,
@@ -457,14 +461,17 @@ def _shown_of(shown: int, total: int, noun: str) -> str:
 
 
 def _chain_context(
-    tools: list[dict], findings: list[dict]
+    tools: list[dict],
+    findings: list[dict],
+    tools_budget: int = _TOOLS_BUDGET_CHARS,
+    findings_budget: int = _FINDINGS_BUDGET_CHARS,
 ) -> tuple[str, str, int, int, int, int]:
     """Shared tool/finding digests for the two phase-3 prompts."""
     digests = [_tool_digest(t) for t in _prioritized_tools(tools, findings)]
-    shown_tools = _fit(digests, _TOOLS_BUDGET_CHARS)
+    shown_tools = _fit(digests, tools_budget)
     tools_summary = json.dumps(shown_tools, indent=2, default=str)
 
-    shown_findings = _fit(_diverse_findings(findings), _FINDINGS_BUDGET_CHARS)
+    shown_findings = _fit(_diverse_findings(findings), findings_budget)
     findings_summary = json.dumps(shown_findings, indent=2, default=str)
     return (
         tools_summary,
@@ -539,8 +546,19 @@ def propose_chains(
     if not findings:
         return []
 
+    system, user_content = _propose_chains_prompt(tools, findings)
+    text = _call_claude(system, user_content, model, _ANALYSIS_MAX_TOKENS, log=log)
+    return parse_proposed_chains(text)
+
+
+def _propose_chains_prompt(tools: list[dict], findings: list[dict]) -> tuple[str, str]:
+    """Build the (system, user) prompt for executable chain proposals.
+
+    Shared by the Claude module functions and the Ollama backend so both
+    backends ask the model the same question and parse the same schema.
+    """
     tools_summary, findings_summary, n_t, total_t, n_f, total_f = _chain_context(
-        tools, findings
+        tools, findings, _PROPOSE_TOOLS_BUDGET_CHARS, _PROPOSE_FINDINGS_BUDGET_CHARS
     )
 
     system = (
@@ -577,9 +595,7 @@ def propose_chains(
         f"Existing findings ({_shown_of(n_f, total_f, 'findings')}):\n"
         f"{findings_summary}"
     )
-
-    text = _call_claude(system, user_content, model, _ANALYSIS_MAX_TOKENS, log=log)
-    return parse_proposed_chains(text)
+    return system, user_content
 
 
 def judge_chain_run(
@@ -595,6 +611,17 @@ def judge_chain_run(
     that can be named (base64, JSON field extraction, truncation, concatenation).
     Returns ``(moved, one-line rationale)``.
     """
+    system, user = _judge_chain_run_prompt(title, transcript)
+    text = _call_claude(system, user, model, 300, log=log)
+    try:
+        obj = json.loads((text or "").strip())
+        return bool(obj.get("moved")), str(obj.get("why") or "")
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        return False, ""
+
+
+def _judge_chain_run_prompt(title: str, transcript: str) -> tuple[str, str]:
+    """Build the (system, user) prompt for semantic data-movement judging."""
     system = (
         "You judge whether a replayed tool chain actually moved data between "
         "steps. Substring matching already ran and found nothing, so only "
@@ -604,18 +631,7 @@ def judge_chain_run(
         "answer NO. Respond with a single JSON object: "
         '{"moved": true|false, "why": "one sentence"}.'
     )
-    text = _call_claude(
-        system,
-        f"Chain: {title}\n\nTranscript:\n{transcript[:4000]}",
-        model,
-        300,
-        log=log,
-    )
-    try:
-        obj = json.loads((text or "").strip())
-        return bool(obj.get("moved")), str(obj.get("why") or "")
-    except (json.JSONDecodeError, AttributeError, TypeError):
-        return False, ""
+    return system, f"Chain: {title}\n\nTranscript:\n{transcript[:4000]}"
 
 
 def revise_chain(
@@ -633,7 +649,15 @@ def revise_chain(
     """
     from mcpnuke.core.chain_replay import parse_proposed_chains
 
-    tools_summary, _, _, _, _, _ = _chain_context(tools, [{"title": chain.title}])
+    system, user = _revise_chain_prompt(chain.title, transcript, tools)
+    text = _call_claude(system, user, model, _ANALYSIS_MAX_TOKENS, log=log)
+    revised = parse_proposed_chains(text)
+    return revised[0] if revised else None
+
+
+def _revise_chain_prompt(chain_title: str, transcript: str, tools: list[dict]) -> tuple[str, str]:
+    """Build the (system, user) prompt for single-chain revision."""
+    tools_summary, _, _, _, _, _ = _chain_context(tools, [{"title": chain_title}])
     system = (
         "A proposed attack chain halted. Given the transcript and the available "
         "tools, propose ONE corrected chain that fixes the step that failed — a "
@@ -642,10 +666,7 @@ def revise_chain(
         "object carrying a `steps` array of at least two entries. Respond with "
         "ONLY the JSON array."
     )
-    user = f"Tools:\n{tools_summary}\n\nFailed transcript:\n{transcript[:4000]}"
-    text = _call_claude(system, user, model, _ANALYSIS_MAX_TOKENS, log=log)
-    revised = parse_proposed_chains(text)
-    return revised[0] if revised else None
+    return system, f"Tools:\n{tools_summary}\n\nFailed transcript:\n{transcript[:4000]}"
 
 
 def analyze_response(
