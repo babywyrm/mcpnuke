@@ -6,6 +6,12 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Semantic chain judge no longer gated on `--claude`.** The Phase 4 judge
+  that upgrades callable-but-unproven chains when data moved via a named
+  transformation only ran when the Claude flag was set, silently disabling it
+  for Ollama scans. Any backend carrying the `judge_chain_run` hook is now
+  consulted; backends without it are unaffected.
+
 - **Phase 4 chain replay now works with `--ollama-analysis`.** `llm_analysis`
   discovers `propose_chains` / `judge_chain_run` / `revise_chain` via `getattr`
   on the backend, but `OllamaBackend` never implemented them — chain replay

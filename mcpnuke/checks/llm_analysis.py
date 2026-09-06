@@ -564,7 +564,6 @@ def run_llm_analysis(
                     if (
                         not verdict.reproduced
                         and verdict.callable_end_to_end
-                        and opts.get("claude")
                     ):
                         moved, why = _judge_chain(
                             backend, chain.title, evidence, model, _log

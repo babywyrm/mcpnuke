@@ -288,3 +288,75 @@ def test_callable_unproven_chain_is_reported_as_medium():
     assert len(findings) == 1
     assert findings[0].severity == "MEDIUM"
     assert "unproven" in findings[0].title.lower() or "callable" in findings[0].title.lower()
+
+
+class _JudgingBackend(_Backend):
+    def __init__(self, chains: list[ProposedChain], moved: bool = True) -> None:
+        super().__init__(chains)
+        self.judge_calls = 0
+        self._moved = moved
+
+    def judge_chain_run(self, title, transcript, model, log=None):
+        self.judge_calls += 1
+        return self._moved, "base64 of step0 in step1"
+
+
+def _unproven_chain() -> ProposedChain:
+    return ProposedChain(
+        title="no data move",
+        steps=[
+            ChainStep("vault.read", {}),
+            ChainStep("net.send", {"body": "static"}),
+        ],
+    )
+
+
+class TestTheJudgeIsBackendDriven:
+    def test_judge_runs_without_the_claude_flag(self):
+        """Gating the judge on --claude silently disabled it for Ollama scans;
+        any backend carrying the hook should be consulted."""
+        result = _result()
+        backend = _JudgingBackend([_unproven_chain()], moved=True)
+
+        run_llm_analysis(
+            _Session(),
+            result,
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=backend,
+        )
+
+        assert backend.judge_calls == 1
+        findings = [f for f in result.findings if f.check == "llm_chain_replay"]
+        assert findings[0].severity == "HIGH"
+        assert "AI-judged" in findings[0].title
+
+    def test_judge_saying_no_movement_keeps_medium(self):
+        result = _result()
+        backend = _JudgingBackend([_unproven_chain()], moved=False)
+
+        run_llm_analysis(
+            _Session(),
+            result,
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=backend,
+        )
+
+        assert backend.judge_calls == 1
+        findings = [f for f in result.findings if f.check == "llm_chain_replay"]
+        assert findings[0].severity == "MEDIUM"
+
+    def test_backend_without_the_hook_still_works(self):
+        result = _result()
+
+        run_llm_analysis(
+            _Session(),
+            result,
+            probe_opts={"claude_max_tools": 0, "chain_replay": True},
+            console=_DummyConsole(),
+            llm_backend=_Backend([_unproven_chain()]),
+        )
+
+        findings = [f for f in result.findings if f.check == "llm_chain_replay"]
+        assert findings[0].severity == "MEDIUM"
