@@ -162,7 +162,11 @@ class JobManager:
         self._set(job_id, status=ScanStatus.running, started_at=_now())
 
         q: mp.Queue = _MP_CTX.Queue()
-        proc = _MP_CTX.Process(target=_scan_worker, args=(req.model_dump(), q), daemon=True)
+        # auth_token is Field(exclude=True) so it never serializes into API
+        # responses — re-add it here for the worker, which needs the value.
+        req_dict = req.model_dump()
+        req_dict["auth_token"] = req.auth_token
+        proc = _MP_CTX.Process(target=_scan_worker, args=(req_dict, q), daemon=True)
         proc.start()
 
         # get(timeout) drains the pipe (avoiding the large-result join deadlock)

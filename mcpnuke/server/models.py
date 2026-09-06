@@ -54,7 +54,11 @@ class ScanRequest(BaseModel):
             "cross-project coverage report vs that instance's lane taxonomy."
         ),
     )
-    auth_token: str | None = Field(None, description="Optional bearer token forwarded to the target.")
+    auth_token: str | None = Field(
+        None,
+        exclude=True,  # never serialize — GET /scans must not leak callers' tokens
+        description="Optional bearer token forwarded to the target.",
+    )
 
 
 class ScanStatus(str, Enum):

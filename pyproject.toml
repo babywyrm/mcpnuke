@@ -87,10 +87,9 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
-# No `omit`, deliberately. mcpnuke/server/* sits at 0% because it needs the
-# optional `server` extra, and mcpnuke/scanner.py is low because most tests
-# drive the pipeline directly. Both are real gaps; excluding them would raise
-# the number without covering a line. There is no fail_under for the same
+# No `omit`, deliberately. mcpnuke/scanner.py is low because most tests
+# drive the pipeline directly — a real gap; excluding it would raise the
+# number without covering a line. There is no fail_under for the same
 # reason MYPY_CEILING lives in CI rather than here — a floor that trips on a
 # focused single-file run gets switched off.
 exclude_lines = [

@@ -56,7 +56,9 @@ kubectl logs -n mcpnuke -l app.kubernetes.io/name=mcpnuke
 | **NetworkPolicy audit** | Flags namespaces with no network policies |
 | **Service fingerprinting** | Identifies frameworks (Spring Boot, Flask, Express, etc.) and probes for exposed actuator, debug, swagger, and admin endpoints |
 | **MCP discovery** | Auto-discovers MCP servers via annotations (`mcp.io/enabled`) and well-known port probing |
-| **Tool server detection** | Detects non-MCP tool-execute APIs (`POST /execute`) by probing with tool-style payloads; enumerates available tools by name |
+| **Tool server detection** | Detects non-MCP tool-execute APIs (`POST /execute`) by probing with tool-style payloads |
+| **hostNetwork loopback bridge** | Flags hostNetwork pods that can reach loopback-only services on the node (MCP-T58) |
+| **Session token exposure** | Execs into pods to check well-known paths for cached session/token files (MCP-T57) |
 
 ## Recurring scans
 

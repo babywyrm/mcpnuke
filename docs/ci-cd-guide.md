@@ -251,76 +251,51 @@ silent degradation; mcpnuke will not run a `[cloud-stub]`-style fallback.
 
 ---
 
-## mcpnuke-runner (Kubernetes / Camazotz)
+## mcpnuke-runner (HTTP job API)
 
-`mcpnuke-runner` is a lightweight sidecar that runs scheduled or on-demand
-scans within Kubernetes, integrating with the camazotz scan queue.
-
-### Architecture
+`mcpnuke-runner` is an optional FastAPI service (install the `server`
+extra) that wraps mcpnuke in an asynchronous HTTP job API. Each scan runs
+in its own subprocess with a hard wall-clock cap, so a hung target cannot
+stall the service.
 
 ```
-camazotz API → mcpnuke-runner Pod → mcpnuke scan → POST results back
-```
-
-The runner polls `camazotz /api/scan-queue` every N seconds, picks up
-pending scan jobs (target URL + profile + options), executes mcpnuke,
-and posts structured JSON results back.
-
-### Deployment (Helm)
-
-```yaml
-# values.yaml snippet
-mcpnukeRunner:
-  enabled: true
-  image: ghcr.io/babywyrm/mcpnuke:latest
-  pollIntervalSeconds: 30
-  defaultScanMode: static          # static | ai | full
-  failOn: high                     # --fail-on threshold for result tagging
-  sarifUpload: true                # attach SARIF to results payload
-  resources:
-    requests: { cpu: 100m, memory: 128Mi }
-    limits:   { cpu: 500m, memory: 512Mi }
+POST /scans → {id, status}        submit a scan (202)
+GET  /scans/{id} → ScanJob        poll; report/by_lane/coverage when done
+GET  /scans → [ScanJob]           list jobs, newest first
+GET  /health → {status, version, active_jobs}
 ```
 
 ```bash
-# Deploy or upgrade
-helm upgrade --install camazotz ./deploy/helm/camazotz \
-  --set mcpnukeRunner.enabled=true \
-  --set mcpnukeRunner.failOn=high
+# Run
+mcpnuke-runner                       # or: uvicorn mcpnuke.server.app:app
+
+# Submit + poll
+curl -X POST http://localhost:8090/scans -H "Content-Type: application/json" \
+  -d '{"target": "http://mcp-server:8080/mcp", "depth": "fast"}'
+curl http://localhost:8090/scans/<id>
 ```
 
-### Environment Variables (runner pod)
+`ScanRequest` fields: `target` (required), `depth` (`fast` | `standard` |
+`deep`), `safe_mode` (default true), `timeout` (1–120s, default 25),
+`max_seconds` (5–1800s wall-clock cap, default from env), `coverage_url`
+(optional camazotz base URL for a cross-project coverage report),
+`auth_token` (bearer token forwarded to the target; never returned by the
+API — job responses redact it).
+
+### Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CAMAZOTZ_URL` | required | camazotz API base URL |
-| `CAMAZOTZ_API_KEY` | required | API key for posting results |
-| `MCPNUKE_FAIL_ON` | `high` | Severity threshold for tagging a job as failed |
-| `MCPNUKE_SARIF` | `false` | Attach SARIF 2.1.0 to results payload |
-| `ANTHROPIC_API_KEY` | optional | Enable `--claude` AI-enhanced scans |
-| `POLL_INTERVAL` | `30` | Seconds between queue polls |
+| `MCPNUKE_RUNNER_HOST` | `0.0.0.0` | Bind address |
+| `MCPNUKE_RUNNER_PORT` | `8090` | Port |
+| `MCPNUKE_RUNNER_WORKERS` | `2` | Concurrent scan subprocesses |
+| `MCPNUKE_RUNNER_JOB_TIMEOUT` | `180` | Default wall-clock cap (seconds) |
+| `MCPNUKE_RUNNER_LOG_LEVEL` | `info` | Uvicorn log level |
+| `MCPNUKE_RUNNER_CORS` | `*` | Allowed origins (comma-separated) |
 
-### Running a manual scan via runner API
-
-```bash
-# Trigger an on-demand scan through camazotz
-curl -X POST https://camazotz.example.com/api/scan-queue \
-  -H "Authorization: Bearer $CAMAZOTZ_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "target": "http://mcp-server:8080/mcp",
-    "profile": "profiles/camazotz.json",
-    "scan_mode": "static",
-    "fail_on": "high"
-  }'
-```
-
-### Reading runner logs
-
-```bash
-kubectl logs -n camazotz deploy/mcpnuke-runner -f
-```
-
-Structured log lines include `scan_id`, `target`, `findings_count`,
-`severity_counts`, `exit_code`, and `duration_ms`.
+> **Security warning:** the runner has **no authentication** and defaults
+> to CORS `*` — it is an unauthenticated scan-execution oracle that can be
+> aimed at internal targets. Bind it to localhost, restrict
+> `MCPNUKE_RUNNER_CORS`, or front it with an authenticated proxy. Never
+> expose it directly to a network you do not control.
 

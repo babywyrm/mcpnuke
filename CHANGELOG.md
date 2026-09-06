@@ -4,7 +4,25 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **mcpnuke-runner no longer leaks callers' bearer tokens (CWE-200).**
+  `ScanJob` embedded the full `ScanRequest`, so `GET /scans` and
+  `GET /scans/{id}` returned submitted `auth_token` values unredacted — and
+  the API is unauthenticated, so anyone who could reach it could harvest
+  tokens. `auth_token` is now `Field(exclude=True)` (never serialized); the
+  scan worker handoff re-adds it internally. Regression tests pin both
+  halves of the contract.
+
 ### Added
+
+- **~280 tests closing the remaining coverage gaps.** The five untested
+  check modules (`ai_guardrail_probe`, `config_dump`, `insecure_agent_comms`,
+  `model_routing`, `remote_package_exec`), the runner service
+  (`server/app.py`, `server/runner.py`, `server/models.py` — now at 100%
+  line coverage), and the k8s/policy layer (`k8s/scanner.py`,
+  `k8s/fingerprint.py`, policy generator internals) all have dedicated
+  suites. Full suite: ~1940 passing.
 
 - **OWASP MCP Top 10 alignment report (`--owasp`).** Findings map to the
   canonical OWASP MCP Top 10 (2025) via a curated taxonomy-ID mapping owned
@@ -16,6 +34,13 @@ All notable changes to this submodule are documented here.
   without a recognized taxonomy ID. Also included in `--json` output.
 
 ### Fixed
+
+- **Docs: stale mcpnuke-runner section replaced.** The CI/CD guide
+  described a queue-polling camazotz sidecar that was never built; it now
+  documents the actual HTTP job API, its env vars, and a security warning
+  that the unauthenticated API must not be network-exposed. The Kubernetes
+  guide's check table gains the hostNetwork loopback (MCP-T58) and session
+  token exposure (MCP-T57) rows, and no longer claims tool enumeration.
 
 - **Semantic chain judge no longer gated on `--claude`.** The Phase 4 judge
   that upgrades callable-but-unproven chains when data moved via a named
