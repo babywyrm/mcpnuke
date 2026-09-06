@@ -14,6 +14,7 @@ from mcpnuke.reporting.coverage_report import (  # noqa: F401
     print_coverage_report,
 )
 from mcpnuke.reporting.json_out import write_json  # noqa: F401
+from mcpnuke.reporting.owasp import build_owasp, print_owasp  # noqa: F401
 from mcpnuke.reporting.sarif import build_sarif, write_sarif  # noqa: F401
 
 __all__ = [
@@ -23,6 +24,8 @@ __all__ = [
     "write_sarif",
     "build_by_lane",
     "print_by_lane",
+    "build_owasp",
+    "print_owasp",
     "LANE_NAMES",
     "LANE_SLUGS",
     "fetch_lane_taxonomy",

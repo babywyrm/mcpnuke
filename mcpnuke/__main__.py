@@ -891,6 +891,10 @@ def _main_inner() -> None:
         from mcpnuke.reporting import print_by_lane
         print_by_lane(results, console=console)
 
+    if getattr(args, "owasp", False):
+        from mcpnuke.reporting import print_owasp
+        print_owasp(results, console=console)
+
     if getattr(args, "coverage_report", None):
         import httpx as _httpx
 

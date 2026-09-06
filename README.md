@@ -227,6 +227,7 @@ Every lane-scoped finding carries an **identity lane** (1–5, the *who*:
 human-direct → anonymous) and a **transport** (A–E, the *how*: MCP JSON-RPC
 through native LLM function-calling), resolved automatically from the
 agentic-sec taxonomy. `--by-lane` groups findings per lane;
+`--owasp` maps them onto the OWASP MCP Top 10 (2025) alignment view;
 `--coverage-report` intersects them with a live camazotz lane corpus.
 
 Full tables and reporting guide: **[docs/lanes.md](docs/lanes.md)**.

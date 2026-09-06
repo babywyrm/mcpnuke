@@ -4,6 +4,17 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **OWASP MCP Top 10 alignment report (`--owasp`).** Findings map to the
+  canonical OWASP MCP Top 10 (2025) via a curated taxonomy-ID mapping owned
+  by this repo — the vendored lanes.yaml `owasp_mcp` field mirrors camazotz
+  scenario numbering, not the OWASP list. The report prints per-category
+  severity tallies with all ten categories present (empty buckets surface
+  coverage gaps, e.g. MCP09 Shadow MCP Servers is a deployment-governance
+  risk no tool-scan finding maps to), plus an "unmapped" bucket for findings
+  without a recognized taxonomy ID. Also included in `--json` output.
+
 ### Fixed
 
 - **Semantic chain judge no longer gated on `--claude`.** The Phase 4 judge
