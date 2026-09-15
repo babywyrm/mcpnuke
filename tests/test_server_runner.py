@@ -147,6 +147,26 @@ def test_worker_handoff_still_carries_auth_token(idle_manager, monkeypatch):
     assert proc.args[0]["auth_token"] == "tok-123"
 
 
+def test_spawn_failure_marks_job_error_instead_of_stuck_running(idle_manager, monkeypatch):
+    """If the scan subprocess cannot be started, the job must end in error.
+
+    An unhandled exception from proc.start() kills the supervision thread and
+    leaves the job 'running' forever. Observed in the full suite after an
+    unrelated test deleted mcpnuke.server.* from sys.modules, so spawn's
+    pickle lookup of _scan_worker raised PicklingError."""
+
+    class _ExplodingProcess(_FakeProcess):
+        def start(self):
+            raise RuntimeError("spawn failed")
+
+    job = idle_manager.submit(ScanRequest(target="http://x"))
+    q = _FakeQueue()
+    proc = _ExplodingProcess()
+    result = _drive_run(idle_manager, job, q, proc, monkeypatch)
+    assert result.status is ScanStatus.error
+    assert "failed to start" in (result.error or "")
+
+
 def test_list_orders_newest_first(idle_manager, monkeypatch):
     times = iter(
         [

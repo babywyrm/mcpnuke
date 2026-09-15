@@ -167,7 +167,19 @@ class JobManager:
         req_dict = req.model_dump()
         req_dict["auth_token"] = req.auth_token
         proc = _MP_CTX.Process(target=_scan_worker, args=(req_dict, q), daemon=True)
-        proc.start()
+        try:
+            proc.start()
+        except Exception as exc:
+            # A spawn failure (PicklingError from a poisoned sys.modules, fd
+            # exhaustion) must not strand the job in "running" — the thread
+            # dying silently is how the e2e tests flaked under full-suite load.
+            self._set(
+                job_id,
+                status=ScanStatus.error,
+                finished_at=_now(),
+                error=f"scan subprocess failed to start: {exc}",
+            )
+            return
 
         # get(timeout) drains the pipe (avoiding the large-result join deadlock)
         # and bounds the wall clock in one shot.

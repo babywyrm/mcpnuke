@@ -33,6 +33,17 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Runner no longer strands jobs in `running` when the scan subprocess fails
+  to spawn.** `_run` called `proc.start()` unguarded; a PicklingError (or fd
+  exhaustion) killed the supervision thread silently and the job never left
+  `running`. It now surfaces `scan subprocess failed to start: ...` as a job
+  error. This was the root cause of the two long-standing `test_server.py`
+  full-suite flakes: an unrelated shim test deleted `mcpnuke.server.*` from
+  `sys.modules` without restoring them, so spawn's pickle lookup re-imported
+  the module and failed with "not the same object". The shim test now
+  restores `sys.modules`, and the e2e tests poll on a generous
+  condition-based deadline instead of a fixed 25–30s window.
+
 - **Cross-target checks now run after the scan pool drains.** `scan_target`
   workers receive a snapshot of partial results, so `tool_shadowing`'s
   cross-server name collisions and the new `cross_server_chain` ran against

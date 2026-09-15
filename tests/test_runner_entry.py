@@ -105,11 +105,21 @@ def test_importing_the_shim_does_not_import_the_server_package():
     """The whole point: the shim sits above mcpnuke.server, whose __init__
     imports pydantic. If importing the shim pulled that in, the friendly
     error could never run."""
-    for mod in [m for m in sys.modules if m.startswith("mcpnuke.server")]:
-        del sys.modules[mod]
-    importlib.reload(_runner_entry)
+    saved = {m: sys.modules[m] for m in sys.modules if m.startswith("mcpnuke.server")}
+    try:
+        for mod in [m for m in sys.modules if m.startswith("mcpnuke.server")]:
+            del sys.modules[mod]
+        importlib.reload(_runner_entry)
 
-    assert not [m for m in sys.modules if m.startswith("mcpnuke.server")]
+        assert not [m for m in sys.modules if m.startswith("mcpnuke.server")]
+    finally:
+        # Restore the original module objects. Leaving them deleted makes the
+        # next pickle of mcpnuke.server.runner._scan_worker re-import the
+        # module fresh, and spawn then fails with "not the same object" —
+        # which stranded test_server.py jobs in 'running' under the full suite.
+        for mod in [m for m in sys.modules if m.startswith("mcpnuke.server")]:
+            del sys.modules[mod]
+        sys.modules.update(saved)
 
 
 @pytest.mark.skipif(

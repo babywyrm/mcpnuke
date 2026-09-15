@@ -27,6 +27,29 @@ from mcpnuke.server.runner import JobManager, _probe_opts_for  # noqa: E402
 client = TestClient(app)
 
 
+# Poll generously: the job's correctness is the wall-clock cap / lifecycle,
+# not boot speed. Under full-suite load the spawned scan subprocess can take
+# tens of seconds to boot (spawn re-imports the package), and a 25–30s poll
+# window made these tests flaky without any product bug.
+_POLL_DEADLINE_S = 90.0
+
+
+def _wait_for_job(job_id: str, timeout: float = _POLL_DEADLINE_S) -> dict:
+    """Poll until the job leaves queued/running; return the final job body."""
+    deadline = time.time() + timeout
+    body: dict = {}
+    while time.time() < deadline:
+        poll = client.get(f"/scans/{job_id}")
+        assert poll.status_code == 200
+        body = poll.json()
+        if body["status"] in ("done", "error"):
+            return body
+        time.sleep(0.5)
+    raise AssertionError(
+        f"job {job_id} still {body.get('status')!r} after {timeout:.0f}s"
+    )
+
+
 @pytest.fixture
 def live_manager(monkeypatch):
     """Own JobManager so the e2e subprocess tests do not share the module
@@ -94,17 +117,8 @@ def test_scan_job_hard_timeout(live_manager):
         assert resp.status_code == 202
         job_id = resp.json()["id"]
 
-        deadline = time.time() + 25
-        status = None
-        while time.time() < deadline:
-            poll = client.get(f"/scans/{job_id}")
-            status = poll.json()["status"]
-            if status in ("done", "error"):
-                break
-            time.sleep(0.5)
-
-        assert status == "error"
-        body = client.get(f"/scans/{job_id}").json()
+        body = _wait_for_job(job_id)
+        assert body["status"] == "error"
         assert "wall-clock cap" in (body["error"] or "")
     finally:
         sink.close()
@@ -120,18 +134,8 @@ def test_scan_lifecycle_unreachable_target(live_manager):
     assert resp.status_code == 202
     job_id = resp.json()["id"]
 
-    deadline = time.time() + 30
-    status = None
-    while time.time() < deadline:
-        poll = client.get(f"/scans/{job_id}")
-        assert poll.status_code == 200
-        status = poll.json()["status"]
-        if status in ("done", "error"):
-            break
-        time.sleep(0.5)
-
-    assert status == "done"
-    body = client.get(f"/scans/{job_id}").json()
+    body = _wait_for_job(job_id)
+    assert body["status"] == "done"
     assert body["report"] is not None
     assert body["report"]["summary"]["targets"] == 1
     assert body["by_lane"]["schema"] == "v1"
