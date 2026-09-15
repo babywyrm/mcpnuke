@@ -1,5 +1,6 @@
 """JSON report output."""
 
+import hashlib
 import json
 from collections import Counter
 from datetime import UTC, datetime
@@ -17,6 +18,42 @@ def _safe_auth_context(auth_context: dict) -> dict:
     return {k: v for k, v in auth_context.items() if k not in _REDACTED_KEYS}
 
 
+def _tool_surface_hash(tools: list[dict]) -> str:
+    """sha256 over the canonical tool surface (name, description, schema).
+
+    Order-independent. A description or schema change between scans — the
+    rug-pull signal — shows up as a digest mismatch.
+    """
+    canonical = json.dumps(
+        [
+            {
+                "name": str(t.get("name", "")),
+                "description": str(t.get("description", "")),
+                "inputSchema": t.get("inputSchema", {}),
+            }
+            for t in sorted(tools, key=lambda t: str(t.get("name", "")))
+        ],
+        sort_keys=True,
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _build_inventory(r: TargetResult) -> dict:
+    """AIBOM-style inventory: what was scanned, in what posture."""
+    return {
+        "server": {
+            "name": str(r.server_info.get("name", "")),
+            "version": str(r.server_info.get("version", "")),
+        },
+        "transport": r.transport,
+        "protocol_mode": r.protocol_mode,
+        "authenticated": not r.scanned_anonymously(),
+        "tools": {"count": len(r.tools), "sha256": _tool_surface_hash(r.tools)},
+        "resources": {"count": len(r.resources)},
+        "prompts": {"count": len(r.prompts)},
+    }
+
+
 def _build_target_dict(r: TargetResult) -> dict:
     tools_total = r.tools_total if r.tools_total > 0 else len(r.tools)
     tools_scanned = len(r.tools)
@@ -25,6 +62,7 @@ def _build_target_dict(r: TargetResult) -> dict:
         "transport": r.transport,
         "risk_score": r.risk_score(),
         "auth_context": _safe_auth_context(r.auth_context),
+        "inventory": _build_inventory(r),
         "tools_total": tools_total,
         "tools_scanned": tools_scanned,
         "tools_scanned_names": [t.get("name") for t in r.tools],

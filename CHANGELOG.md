@@ -4,6 +4,16 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **AIBOM-style `inventory` block in `--json` output.** Every target now
+  carries server identity (name/version), transport, protocol mode, auth
+  posture, tool/resource/prompt counts, and a sha256 over the canonical tool
+  surface (name + description + schema, order-independent). The digest pins
+  the tool list: a description or schema change between scans — the rug-pull
+  signal — is a hash mismatch without diffing full schemas. This is the
+  inventory artifact auditors ask for under EU AI Act / ISO 42001 / SOC 2.
+
 ### Fixed
 
 - **Ollama phases 2 and 3 now constrain `taxonomy_id` to the real taxonomy.**
