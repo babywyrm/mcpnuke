@@ -11,4 +11,4 @@ Usage:
     python -m mcpnuke --targets http://localhost:9090
 """
 
-__version__ = "6.19.0"
+__version__ = "6.20.0"

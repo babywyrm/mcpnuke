@@ -2,7 +2,7 @@
 
 All notable changes to this submodule are documented here.
 
-## [Unreleased]
+## [6.20.0] - 2026-09-14
 
 ### Added
 

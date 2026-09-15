@@ -136,7 +136,8 @@ finding, or run `./walkthrough/demo.sh` for the fully automated version.
   --oidc-url http://keycloak:8080/realms/myapp \
   --client-id myapp --client-secret SECRET
 
-# JSON report for CI (includes proof-ranked priority_actions + impact/fix/verify)
+# JSON report for CI (includes proof-ranked priority_actions + impact/fix/verify,
+# OWASP MCP Top 10 alignment, and an AIBOM-style inventory per target)
 ./scan --port-range localhost:9001-9010 --json report.json
 
 # Suggest a NullfieldPolicy from findings (proved chains → DENY sink + HOLD sources)
