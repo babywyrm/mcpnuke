@@ -132,6 +132,7 @@ def check_jwt_audience_target_match(result: TargetResult) -> None:
             "token replay between services in the same trust realm "
             "(MCP-T04).",
             evidence=f"token aud={auds!r}, expected one of {sorted(expected)!r}",
+            taxonomy_id="MCP-T04",
         )
 
 

@@ -193,6 +193,19 @@ class TestJwtTtl:
         check_jwt_ttl(r, probe_opts={"jwt_max_ttl": 3600})
         assert any(f.check == "jwt_ttl" for f in r.findings)
 
+    def test_excessive_ttl_carries_taxonomy_id(self):
+        now = int(time.time())
+        r = _result_with_token("dummy", {"iat": now, "exp": now + 86400})
+        check_jwt_ttl(r, probe_opts={"jwt_max_ttl": 14400})
+        findings = [f for f in r.findings if f.check == "jwt_ttl"]
+        assert findings[0].taxonomy_id == "MCP-T26"
+
+    def test_missing_exp_carries_taxonomy_id(self):
+        r = _result_with_token("dummy", {"iat": int(time.time())})
+        check_jwt_ttl(r)
+        findings = [f for f in r.findings if f.check == "jwt_ttl"]
+        assert findings[0].taxonomy_id == "MCP-T26"
+
     def test_timing_recorded(self):
         r = _result_with_token("dummy", {"exp": int(time.time()) + 3600})
         check_jwt_ttl(r)

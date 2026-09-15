@@ -72,7 +72,16 @@ def test_audience_mismatch_fires_high_finding():
     assert f.severity == "HIGH"
     assert f.lane == 1
     assert f.transport == "A"
-    assert "MCP-T04" in f.detail
+
+
+def test_audience_mismatch_carries_taxonomy_id():
+    r = _result_with_token(
+        "http://mcp.test:30080/mcp",
+        {"aud": "api://billing-service", "sub": "u1"},
+    )
+    check_jwt_audience_target_match(r)
+    assert r.findings[0].taxonomy_id == "MCP-T04"
+    assert "MCP-T04" in r.findings[0].detail
 
 
 def test_audience_missing_does_not_double_report():

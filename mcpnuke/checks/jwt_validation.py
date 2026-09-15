@@ -144,6 +144,7 @@ def check_jwt_ttl(result: TargetResult, probe_opts: dict | None = None) -> None:
                 "HIGH",
                 "JWT has no exp (expiration) claim",
                 "Tokens without expiration never become invalid",
+                taxonomy_id="MCP-T26",
             )
             return
 
@@ -168,6 +169,7 @@ def check_jwt_ttl(result: TargetResult, probe_opts: dict | None = None) -> None:
                 f"Long-lived tokens increase the window for theft and replay; "
                 f"measured TTL={ttl}s vs max={max_ttl}s",
                 evidence=f"exp={exp}, iat={iat}, ttl={ttl}s",
+                taxonomy_id="MCP-T26",
             )
 
 

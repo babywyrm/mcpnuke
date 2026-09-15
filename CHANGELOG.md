@@ -2,6 +2,17 @@
 
 All notable changes to this submodule are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- **`jwt_ttl` and `jwt_audience_target_match` now set `Finding.taxonomy_id`.**
+  Both checks named their threat in prose but never populated the field, so
+  their findings fell into the OWASP report's "unmapped" bucket. `jwt_ttl`
+  emits MCP-T26 (Token Lifecycle & Revocation Gaps) on both its findings;
+  `jwt_audience_target_match` emits MCP-T04 (Confused Deputy / Token Theft),
+  matching its docstring.
+
 ## [6.19.0] - 2026-09-07
 
 ### Security
