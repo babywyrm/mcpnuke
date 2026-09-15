@@ -70,7 +70,7 @@ def check_tool_shadowing(
                 "tool_shadowing",
                 "HIGH",
                 f"Tool shadowing: redefines common name(s): {sorted(shadows)}",
-                taxonomy_id="MCP-T25",
+                taxonomy_id="MCP-T03",
             )
 
         for other in all_results:
@@ -82,14 +82,14 @@ def check_tool_shadowing(
                     "tool_shadowing",
                     "MEDIUM",
                     f"Name collision with {other.url}: {sorted(dupes)}",
-                    taxonomy_id="MCP-T25",
+                    taxonomy_id="MCP-T03",
                 )
 
         _flag_confusable_names(result)
 
 
 def _flag_confusable_names(result: TargetResult) -> None:
-    """Report near-duplicate tool names served side by side (MCP-T25).
+    """Report near-duplicate tool names served side by side (MCP-T03).
 
     An agent routes by name, so a decoy that differs by one character can be
     selected in place of the tool the user asked for.
@@ -122,7 +122,7 @@ def _flag_confusable_names(result: TargetResult) -> None:
                 "name_similarity": round(ratio, 3),
                 "description_similarity": round(desc_ratio, 3),
             },
-            taxonomy_id="MCP-T25",
+            taxonomy_id="MCP-T03",
         )
 
 

@@ -1,4 +1,4 @@
-"""Confusable tool names on one server (DVMCP challenge 5, MCP-T25).
+"""Confusable tool names on one server (DVMCP challenge 5, MCP-T03).
 
 The challenge ships `get_user_role` alongside `get_user_roles`, whose
 description is one character different and which silently returns admin for
@@ -66,7 +66,7 @@ class TestChallenge5Shape:
     def test_it_carries_the_taxonomy_id(self) -> None:
         r = self._challenge5()
         check_tool_shadowing([r], r)
-        assert _shadow_findings(r)[0].taxonomy_id == "MCP-T25"
+        assert _shadow_findings(r)[0].taxonomy_id == "MCP-T03"
 
 
 class TestNoFalsePositives:
@@ -126,7 +126,7 @@ class TestExistingBehaviourPreserved:
         check_tool_shadowing([a, b], a)
         hits = [f for f in _shadow_findings(a) if "Name collision" in f.title]
         assert hits
-        assert all(f.taxonomy_id == "MCP-T25" for f in hits)
+        assert all(f.taxonomy_id == "MCP-T03" for f in hits)
 
     def test_confusable_check_does_not_need_other_targets(self) -> None:
         r = _result([

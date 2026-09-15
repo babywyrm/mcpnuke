@@ -6,6 +6,16 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Tool-poisoning findings now carry MCP-T03, and `tool_shadowing` is no
+  longer mis-tagged MCP-T25.** Shadowing (decoy/confusable tool names) is a
+  tool-poisoning technique — the OWASP MCP Top 10 files it under MCP03 with
+  rug pulls and schema poisoning — but the check emitted MCP-T25 (Agent
+  Delegation Chain Abuse), bucketing every shadowing finding under the wrong
+  OWASP category. `deep_rug_pull` and `rug_pull` emitted no taxonomy ID at
+  all despite being the canonical rug-pull checks. T25 is now honestly
+  uncovered (53/57); it needs a real delegation-chain check, not a borrowed
+  tag.
+
 - **`jwt_ttl` and `jwt_audience_target_match` now set `Finding.taxonomy_id`.**
   Both checks named their threat in prose but never populated the field, so
   their findings fell into the OWASP report's "unmapped" bucket. `jwt_ttl`

@@ -55,6 +55,7 @@ class TestInjectionDrift:
         ]
         assert len(drift_findings) >= 1
         assert drift_findings[0].severity == "CRITICAL"
+        assert drift_findings[0].taxonomy_id == "MCP-T03"
 
     def test_no_drift_when_always_clean(self):
         """Consistent clean responses should not trigger drift."""

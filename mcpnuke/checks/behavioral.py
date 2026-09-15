@@ -16,7 +16,14 @@ from mcpnuke.patterns.probes import RESPONSE_INJECTION_PATTERNS
 # Shallow rug pull (existing — two tools/list calls)
 # ---------------------------------------------------------------------------
 
-def _diff_tool_lists(t1: dict, t2: dict, result: TargetResult, label: str, severity: str = "HIGH"):
+def _diff_tool_lists(
+    t1: dict,
+    t2: dict,
+    result: TargetResult,
+    label: str,
+    severity: str = "HIGH",
+    taxonomy_id: str = "",
+):
     """Compare two tool-name→tool-dict maps and flag differences."""
     added = set(t2) - set(t1)
     removed = set(t1) - set(t2)
@@ -26,12 +33,14 @@ def _diff_tool_lists(t1: dict, t2: dict, result: TargetResult, label: str, sever
             label, severity,
             f"{label}: {len(added)} tool(s) appeared",
             f"New: {sorted(added)}",
+            taxonomy_id=taxonomy_id,
         )
     if removed:
         result.add(
             label, severity,
             f"{label}: {len(removed)} tool(s) disappeared",
             f"Removed: {sorted(removed)}",
+            taxonomy_id=taxonomy_id,
         )
 
     for name in set(t1) & set(t2):
@@ -41,6 +50,7 @@ def _diff_tool_lists(t1: dict, t2: dict, result: TargetResult, label: str, sever
                 f"{label}: tool '{name}' description changed",
                 f"Before: {t1[name].get('description','')[:200]}\n"
                 f"After:  {t2[name].get('description','')[:200]}",
+                taxonomy_id=taxonomy_id,
             )
         s1 = json.dumps(t1[name].get("inputSchema", {}), sort_keys=True)
         s2 = json.dumps(t2[name].get("inputSchema", {}), sort_keys=True)
@@ -49,6 +59,7 @@ def _diff_tool_lists(t1: dict, t2: dict, result: TargetResult, label: str, sever
                 label, "CRITICAL",
                 f"{label}: tool '{name}' schema changed",
                 f"Before: {s1[:200]}\nAfter:  {s2[:200]}",
+                taxonomy_id=taxonomy_id,
             )
 
 
@@ -64,7 +75,7 @@ def check_rug_pull(session: MCPSessionProtocol, result: TargetResult):
 
         t1 = {t["name"]: t for t in first.get("result", {}).get("tools", [])}
         t2 = {t["name"]: t for t in second.get("result", {}).get("tools", [])}
-        _diff_tool_lists(t1, t2, result, "rug_pull")
+        _diff_tool_lists(t1, t2, result, "rug_pull", taxonomy_id="MCP-T03")
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +163,7 @@ def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe
         snap2 = session.call("tools/list", timeout=15)
         if snap2 and "result" in snap2:
             after = {t["name"]: t for t in snap2["result"].get("tools", [])}
-            _diff_tool_lists(before, after, result, "deep_rug_pull", severity="CRITICAL")
+            _diff_tool_lists(before, after, result, "deep_rug_pull", severity="CRITICAL", taxonomy_id="MCP-T03")
 
         # Phase 4: compare first vs last responses (response-content rug pull)
         for name in first_responses:
@@ -182,6 +193,7 @@ def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe
                     f"First response: {first[:200]}\n"
                     f"Later response: {last[:200]}",
                     evidence=f"Length ratio: {len_ratio:.1f}, keyword shift: {has_shift}",
+                    taxonomy_id="MCP-T03",
                 )
 
             # Injection drift: clean on call 1 but injection patterns by call N
@@ -200,6 +212,7 @@ def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe
                     f"contains {last_injections} injection pattern(s) after {calls_per_tool} calls",
                     f"Late-trigger injection — tool was clean on call 1 but poisoned by call {calls_per_tool}",
                     evidence=last[:400],
+                    taxonomy_id="MCP-T03",
                 )
 
 

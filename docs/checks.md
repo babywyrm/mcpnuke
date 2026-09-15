@@ -106,7 +106,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `token_theft` | CRITICAL–HIGH | Tools that accept or forward credentials as parameters. MCP-T21 |
 | `supply_chain` | CRITICAL | Dynamic package install from user-controlled URLs |
 | `schema_risks` (finding: `schema_risk`) | CRITICAL–MEDIUM | Command params, unbounded strings, freeform objects |
-| `tool_shadowing` | HIGH–MEDIUM | Tool names that collide with common tools or other servers. MCP-T25 |
+| `tool_shadowing` | HIGH–MEDIUM | Tool names that collide with common tools or other servers. MCP-T03 |
 | `prompt_leakage` | HIGH | Tools that may echo, log, or expose internal prompts |
 | `rate_limit` | MEDIUM | Descriptions suggesting unbounded/unthrottled usage. MCP-T27 |
 | `webhook_persistence` | HIGH | Callback/webhook params or tool names enabling persistent re-injection |
@@ -176,7 +176,7 @@ back. All of them are skipped by `--no-invoke`.
 | Check | Severity | What It Detects |
 |-------|----------|----------------|
 | `rug_pull` | CRITICAL–HIGH | Tool list changes between two `tools/list` calls |
-| `deep_rug_pull` | CRITICAL | Tool list/schema changes **after invoking tools** — catches state-dependent rug pulls, injection pattern drift (clean → poisoned after N calls) |
+| `deep_rug_pull` | CRITICAL | Tool list/schema changes **after invoking tools** — catches state-dependent rug pulls, injection pattern drift (clean → poisoned after N calls). MCP-T03 |
 | `tool_response_injection` | CRITICAL–LOW | Calls every invocable tool with safe arguments and runs the **broad** response scan over the reply: injection payloads, exfil URLs, hidden content, invisible Unicode, semantic injection and base64-encoded attacks. The widest of the response-scanning checks. A reflection seen only in a **rejected** call reports LOW — see [error-reflection grading](#error-reflection-grading) |
 | `cross_tool_manipulation` | HIGH | Tool output that directs the LLM to invoke a different tool. Emitted by `tool_response_injection`, in the same pass |
 | `input_sanitization` | CRITICAL–LOW | Path traversal and command injection probes reflected back unsanitized. A canary that survives nowhere outside a verbatim echo of the probe, in a rejected call, reports LOW — see [error-reflection grading](#error-reflection-grading). SQL probes are sent to `query`/`sql` parameters but the reflection finding excludes them, so SQL only ever surfaces through `error_leakage`. **LLM-aware SSTI:** confirmed engine fingerprints (Jinja2/Mako/ERB/EL) stay CRITICAL; math-style template probes evaluated by the LLM (e.g. `{{7*7}}` → `49`) are downgraded to MEDIUM so LLM-backed MCP servers are not false-flagged as code SSTI. |
