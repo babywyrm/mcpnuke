@@ -122,6 +122,9 @@ def scan_stdio_target(
         log=_log,
     )
 
+    from mcpnuke.checks import run_cross_target_checks
+    run_cross_target_checks([result], verbose=verbose)
+
     if opts.get("claude"):
         from mcpnuke.checks.llm_analysis import run_llm_analysis
         run_llm_analysis(
@@ -379,5 +382,8 @@ def run_parallel(
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
             futures = [ex.submit(worker, u) for u in urls]
             concurrent.futures.wait(futures)
+
+    from mcpnuke.checks import run_cross_target_checks
+    run_cross_target_checks(results, verbose=verbose)
 
     return results

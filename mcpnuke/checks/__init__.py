@@ -187,8 +187,6 @@ def _has_dangerous_params(tools: list[dict]) -> bool:
 # so their count is exact by construction.
 
 _STATIC_CHECK_NAMES: tuple[str, ...] = (
-    "tool_shadowing",
-    "cross_server_chain",
     "prompt_injection",
     "tool_poisoning",
     "excessive_permissions",
@@ -292,6 +290,12 @@ _TELEPORT_ALWAYS_CHECK_NAMES: tuple[str, ...] = (
 )
 
 _AGGREGATE_CHECK_NAMES: tuple[str, ...] = ("multi_vector", "attack_chains")
+
+# Cross-target checks correlate findings across every target in a run, so
+# they cannot live in the per-target phase: scan_target workers only see a
+# snapshot of partial results while the pool is running. run_parallel calls
+# run_cross_target_checks after the pool drains.
+_CROSS_TARGET_CHECK_NAMES: tuple[str, ...] = ("tool_shadowing", "cross_server_chain")
 
 
 DeepCheck = tuple[str, Callable[..., Any], tuple[Any, ...], dict[str, Any]]
@@ -522,8 +526,6 @@ def run_all_checks(
     # ── Static checks (metadata only — always run) ─────────────────────
     if verbose:
         _log("  [bold cyan]── Static Analysis ──[/bold cyan]")
-    _run("tool_shadowing", check_tool_shadowing, all_results, result)
-    _run("cross_server_chain", check_cross_server_chain, all_results, result)
     _run("prompt_injection", check_prompt_injection, result)
     _run("tool_poisoning", check_tool_poisoning, result)
     _run("excessive_permissions", check_excessive_permissions, result)
@@ -691,6 +693,25 @@ def run_all_checks(
             f"\n  [bold green]  ✓ All {check_num} checks complete: "
             f"{len(result.findings)} total finding(s)[/bold green]"
         )
+
+
+def run_cross_target_checks(
+    all_results: list[TargetResult],
+    verbose: bool = False,
+    log: Callable[[str], None] | None = None,
+) -> None:
+    """Run the cross-target checks once every target's per-target phase is done.
+
+    scan_target workers see only a snapshot of partial results while the pool
+    is running, so checks that correlate across targets (tool_shadowing's
+    cross-server collisions, cross_server_chain) would fire on incomplete
+    data — or not at all. run_parallel calls this after the pool drains;
+    single-target and stdio paths call it with a one-element list, where the
+    same-server half of tool_shadowing still applies.
+    """
+    for r in all_results:
+        check_tool_shadowing(all_results, r)
+        check_cross_server_chain(all_results, r)
 
 
 def _pick_security_relevant(tools: list[dict], n: int) -> list[dict]:

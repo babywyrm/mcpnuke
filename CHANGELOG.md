@@ -33,6 +33,15 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Cross-target checks now run after the scan pool drains.** `scan_target`
+  workers receive a snapshot of partial results, so `tool_shadowing`'s
+  cross-server name collisions and the new `cross_server_chain` ran against
+  incomplete peer data and effectively never fired in multi-target scans.
+  Both moved to `run_cross_target_checks()`, called from `run_parallel` after
+  the pool drains and from the stdio path with a one-element list. Verified
+  live: a 3-target DVMCP sweep now pairs every sink target with both
+  source-carrying peers.
+
 - **OWASP fallback map covers the seven legacy checks observed unmapped on
   the DVMCP baseline.** `schema_risk` and `input_sanitization` → MCP05,
   `sse_security` and `actuator_probe` → MCP07, `tool_response_injection`,
