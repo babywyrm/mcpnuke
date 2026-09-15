@@ -44,8 +44,10 @@ After all targets in a run are scanned, correlate findings across results:
   shows the chain.
 - A cross-target `tool_shadowing` name collision **plus** a sink on either
   side upgrades to HIGH: the agent can be routed to the shadow by name.
-- Attribution: the finding lands on both results with
-  `evidence` naming the peer URL, so per-target JSON stays self-contained.
+- Attribution: the finding lands on the sink-side result with `evidence`
+  naming the peer URL. (Built 2026-09-14: sink-side only — the damage lands
+  there; the source peer is named in evidence. Landing on both results was
+  considered and dropped as double-reporting.)
 
 No new network traffic; pure post-pass over `list[TargetResult]`. This is the
 80% case and the only phase worth building first.

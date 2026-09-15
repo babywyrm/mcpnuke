@@ -6,6 +6,15 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **`cross_server_chain` check (MCP-T05) — cross-server Phase A.** After all
+  targets in a run are scanned, correlates findings across them: a peer with
+  active context-poisoning vectors (injection, tool poisoning, rug pull) plus
+  local execution/credential sinks is the documented multi-server failure mode
+  (GitHub MCP toxic flow; Unit 42's 78.3% multi-server success rate) that
+  per-target chains cannot see. Fires MEDIUM on the sink side, naming the peer
+  in evidence; upgrades to HIGH when the pair shares a tool name (shadow
+  routing). Single-target runs are unaffected.
+
 - **`delegation_chain_abuse` check (MCP-T25).** Closes the last uncovered
   offensive taxonomy ID. Fires HIGH when one tool both delegates to other
   agents (delegate/sub-agent/spawn/handoff verbs) and accepts caller

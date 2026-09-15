@@ -22,6 +22,7 @@ from mcpnuke.checks.behavioral import (
 )
 from mcpnuke.checks.chaining import (
     check_attack_chains,
+    check_cross_server_chain,
     check_multi_vector,
     check_tool_shadowing,
 )
@@ -187,6 +188,7 @@ def _has_dangerous_params(tools: list[dict]) -> bool:
 
 _STATIC_CHECK_NAMES: tuple[str, ...] = (
     "tool_shadowing",
+    "cross_server_chain",
     "prompt_injection",
     "tool_poisoning",
     "excessive_permissions",
@@ -521,6 +523,7 @@ def run_all_checks(
     if verbose:
         _log("  [bold cyan]── Static Analysis ──[/bold cyan]")
     _run("tool_shadowing", check_tool_shadowing, all_results, result)
+    _run("cross_server_chain", check_cross_server_chain, all_results, result)
     _run("prompt_injection", check_prompt_injection, result)
     _run("tool_poisoning", check_tool_poisoning, result)
     _run("excessive_permissions", check_excessive_permissions, result)

@@ -126,6 +126,78 @@ def _flag_confusable_names(result: TargetResult) -> None:
         )
 
 
+# Cross-server chain vocabulary — Phase A of
+# docs/specs/2026-09-14-cross-server-chain-design.md. Sources are the
+# context-poisoning vectors that steer an agent; sinks are the execution,
+# credential, and egress vectors the agent gets steered into.
+_CROSS_SERVER_SOURCES: frozenset[str] = frozenset({
+    "prompt_injection",
+    "active_prompt_injection",
+    "indirect_injection",
+    "tool_response_injection",
+    "tool_poisoning",
+    "resource_poisoning",
+    "deep_rug_pull",
+})
+_CROSS_SERVER_SINKS: frozenset[str] = frozenset({
+    "code_execution",
+    "token_theft",
+    "shell_injection",
+    "command_injection_broad",
+    "remote_access",
+    "exfil_flow",
+    "response_credentials",
+    "ssrf_probe",
+})
+
+
+def check_cross_server_chain(
+    all_results: list[TargetResult], result: TargetResult
+) -> None:
+    """MCP-T05: a peer's poisoned context can steer the agent into our sinks.
+
+    Per-target chains cannot see the composition: server A carries the
+    injection, server B carries the execution sink, and the agent connected
+    to both is the bridge. Fires once per source-carrying peer, on the
+    sink side, where the damage lands. Upgrades to HIGH when the pair also
+    shares a tool name — the agent can be routed to the shadow by name.
+    """
+    with time_check("cross_server_chain", result):
+        if len(all_results) < 2:
+            return
+        sinks = _active_vectors(result) & _CROSS_SERVER_SINKS
+        if not sinks:
+            return
+        my_names = {str(t.get("name", "")).lower() for t in result.tools}
+        for other in all_results:
+            if other.url == result.url:
+                continue
+            sources = _active_vectors(other) & _CROSS_SERVER_SOURCES
+            if not sources:
+                continue
+            other_names = {str(t.get("name", "")).lower() for t in other.tools}
+            collision = bool(my_names & other_names)
+            _add(
+                result,
+                "cross_server_chain",
+                "HIGH" if collision else "MEDIUM",
+                f"Cross-server chain: {other.url} can steer agents into "
+                "this server's sinks",
+                f"Peer {other.url} carries active context-poisoning vectors "
+                f"({', '.join(sorted(sources))}); this server carries "
+                f"execution/credential sinks ({', '.join(sorted(sinks))}). "
+                "An agent connected to both can be redirected from the "
+                "peer's content into local tool misuse.",
+                evidence={
+                    "peer": other.url,
+                    "sources": sorted(sources),
+                    "sinks": sorted(sinks),
+                    "name_collision": collision,
+                },
+                taxonomy_id="MCP-T05",
+            )
+
+
 def _active_vectors(result: TargetResult) -> set[str]:
     """Checks with at least one finding we graded MEDIUM or above.
 
