@@ -16,6 +16,14 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **OWASP fallback map covers the seven legacy checks observed unmapped on
+  the DVMCP baseline.** `schema_risk` and `input_sanitization` → MCP05,
+  `sse_security` and `actuator_probe` → MCP07, `tool_response_injection`,
+  `active_prompt_injection`, and `resource_poisoning` → MCP06. A live DVMCP
+  sweep had 90 of 198 findings in the "unmapped" bucket; the bucket now
+  holds only genuinely untaggable rows (e.g. transport status, untagged AI
+  output).
+
 - **Ollama phases 2 and 3 now constrain `taxonomy_id` to the real taxonomy.**
   The Ollama backend built its own prompts with the stale "MCP-T## if
   applicable" line — the exact wording that let live models invent

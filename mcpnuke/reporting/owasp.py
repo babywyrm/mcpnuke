@@ -106,6 +106,14 @@ CHECK_TO_OWASP: dict[str, str] = {
     "indirect_injection": "MCP06",
     "attack_chain": "MCP06",
     "multi_vector": "MCP06",
+    # Legacy checks observed unmapped on the DVMCP baseline (2026-09-14).
+    "schema_risk": "MCP05",  # unbounded params are the injection enabler
+    "input_sanitization": "MCP05",  # unsanitized reflection
+    "sse_security": "MCP07",  # unauthenticated stream / cross-origin POST
+    "actuator_probe": "MCP07",  # exposed management/discovery endpoints
+    "tool_response_injection": "MCP06",  # indirect injection via tool output
+    "active_prompt_injection": "MCP06",  # server follows injected instructions
+    "resource_poisoning": "MCP06",  # poisoned resource content hijacks intent
 }
 
 

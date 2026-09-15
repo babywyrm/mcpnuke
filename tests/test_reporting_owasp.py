@@ -83,6 +83,22 @@ class TestBuildOwasp:
         report = build_owasp(_results(_finding("", check="llm_tool_analysis")))
         assert report["unmapped"]["finding_count"] == 1
 
+    def test_legacy_check_fallbacks(self):
+        """Checks that predate taxonomy tagging bucket by name, not "unmapped"."""
+        expected = {
+            "schema_risk": "MCP05",
+            "sse_security": "MCP07",
+            "tool_response_injection": "MCP06",
+            "active_prompt_injection": "MCP06",
+            "actuator_probe": "MCP07",
+            "input_sanitization": "MCP05",
+            "resource_poisoning": "MCP06",
+        }
+        for check, cat in expected.items():
+            report = build_owasp(_results(_finding("", check=check)))
+            assert report["owasp_mcp"][cat]["finding_count"] == 1, check
+            assert "unmapped" not in report, check
+
     def test_total_counts_every_finding_once(self):
         report = build_owasp(
             _results(_finding("MCP-T21"), _finding(""), _finding("MCP-T53"))
