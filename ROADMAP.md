@@ -17,7 +17,7 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 | AI-augmented analysis (Claude + Ollama) | **Strong** — 4-phase analysis, ensemble consensus; Phase 4 chain replay works on Ollama as of 6.19.0 |
 | Transport security (JWT, DPoP, scope, boundaries) | **Strong** — 8 transport checks |
 | Lane coverage (5 identity lanes) | **All 5 represented** |
-| Taxonomy coverage | **53/57 IDs (93%)** — Tier 1 complete, see gap map below |
+| Taxonomy coverage | **54/57 IDs (95%)** — Tier 1 complete, see gap map below |
 | MCP spec surface (2026-08-22 roadmap) | **Mapped** — Speak/Scan/Ready in [docs/spec-surface.md](docs/spec-surface.md) |
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy, `--owasp`) | **Done** — see below |
@@ -92,7 +92,7 @@ current status — several of these are tagged now.
 | T22 | Execution Context Forgery | `execution_context_forgery` | Done |
 | T23 | Credential Isolation & Sidecar Tampering | `sidecar_credential_tamper` | Done |
 | T24 | Authentication Pattern Downgrade | `dpop_enforcement.py` | Tag |
-| T25 | Agent Delegation Chain Abuse | — | **Open** — was mis-tagged on `tool_shadowing`; shadowing is tool poisoning (T03), not delegation abuse. Needs a real delegation-chain check |
+| T25 | Agent Delegation Chain Abuse | `taxonomy_coverage.py` (`delegation_chain_abuse`) | Done |
 | T26 | Token Lifecycle & Revocation Gaps | `jwt_validation.py` | Tag |
 | T27 | LLM Cost Exhaustion & Misattribution | `rate_limit.py` + `anon_budget_exhaust.py` | Tag |
 | T28 | Teleport Role Escalation via MCP Tool | `teleport_labs.py` | Tag |

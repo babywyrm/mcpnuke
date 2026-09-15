@@ -6,6 +6,14 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **`delegation_chain_abuse` check (MCP-T25).** Closes the last uncovered
+  offensive taxonomy ID. Fires HIGH when one tool both delegates to other
+  agents (delegate/sub-agent/spawn/handoff verbs) and accepts caller
+  credential parameters — the composition that lets a delegatee act with the
+  caller's privilege, unattenuated. Delegation alone stays T32
+  (`delegation_depth`); credentials alone stay T03/T45. Lane 4. Coverage back
+  to 54/57.
+
 - **AIBOM-style `inventory` block in `--json` output.** Every target now
   carries server identity (name/version), transport, protocol mode, auth
   posture, tool/resource/prompt counts, and a sha256 over the canonical tool

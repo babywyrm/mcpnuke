@@ -1,7 +1,7 @@
 # Security Checks Reference
 
 Every check mcpnuke runs, with the severity it emits and what it detects.
-101 checks in total: 77 in the check inventory in `mcpnuke/checks/__init__.py`,
+102 checks in total: 78 in the check inventory in `mcpnuke/checks/__init__.py`,
 plus the 24 deep behavioral probes `_build_deep_checks()` assembles.
 
 Three conventions worth knowing before reading the tables:
@@ -121,6 +121,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `notification_sampling_abuse` | MEDIUM | Tools that push notifications to the client or sample the client's model — side-channel and DoS surface. MCP-T17 |
 | `role_escalation_tool` | HIGH | Tools that grant, assume, elevate or impersonate a role. MCP-T28 |
 | `delegation_depth` | MEDIUM | Delegation and multi-hop agent tools, where identity attribution dilutes at each hop. Bare "nested directory" / a `depth` image param is not this. MCP-T32 |
+| `delegation_chain_abuse` | HIGH | Tool that delegates to other agents AND carries caller credential params on the call — the delegatee acts with the caller's privilege, unattenuated. Delegation alone is T32; credentials alone are T03/T45. MCP-T25 |
 | `sdk_cache_tamper` | CRITICAL–HIGH | A tool exposing a writable SDK token cache is HIGH; CRITICAL when a tool that consumes cached identity is present too, completing the write-then-use pair. MCP-T33 |
 | `list_cache` | HIGH–MEDIUM | SEP-2549 `ttlMs` / `cacheScope` on list results and a sample of `resources/read` (up to five URIs, skipped under `--no-invoke`). Silent when the fields are absent. Invalid TTL or cacheScope is MEDIUM. Pages of the same list that disagree on cacheScope are HIGH. Mixed scope across different resource URIs is not that finding — each read is independently cacheable. MCP-T16 |
 | `protected_resource_metadata` | HIGH–MEDIUM | RFC 9728 protected resource metadata when present: missing `authorization_servers`, non-HTTPS AS, AS `issuer` mismatch, or DCR advertised without CIMD. Silent when the document is absent. HTTP only |

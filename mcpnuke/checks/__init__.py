@@ -100,6 +100,7 @@ from mcpnuke.checks.taxonomy_coverage import (
     check_cached_session_exposure,
     check_code_review_subprocess_injection,
     check_cross_tenant_memory_leak,
+    check_delegation_chain_abuse,
     check_delegation_depth,
     check_direct_api_credential_forwarding,
     check_execution_context_forgery,
@@ -206,6 +207,7 @@ _STATIC_CHECK_NAMES: tuple[str, ...] = (
     "model_routing",
     "notification_sampling_abuse",
     "delegation_depth",
+    "delegation_chain_abuse",
     "subprocess_cred_inheritance",
     "tool_description_injection",
     "pre_auth_injection",
@@ -539,6 +541,7 @@ def run_all_checks(
     _run("model_routing", check_model_routing, result)
     _run("notification_sampling_abuse", check_notification_sampling_abuse, result)
     _run("delegation_depth", check_delegation_depth, result)
+    _run("delegation_chain_abuse", check_delegation_chain_abuse, result)
     _run("subprocess_cred_inheritance", check_subprocess_credential_inheritance, result)
     _run("tool_description_injection", check_tool_description_injection, result)
     _run("pre_auth_injection", check_pre_auth_injection, result)

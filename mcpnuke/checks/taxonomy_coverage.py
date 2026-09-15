@@ -4,7 +4,7 @@ These are focused detectors for specific threat IDs that existing checks
 partially cover but under different names. Each is a minimal schema/description
 scan that tags findings with the correct taxonomy ID.
 
-Coverage targets: MCP-T17, T22, T23, T28, T32, T34, T36, T52, T53, T57, T58
+Coverage targets: MCP-T17, T22, T23, T25, T28, T32, T34, T36, T52, T53, T57, T58
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
+from mcpnuke.checks.tool_output_poisoning import _CREDENTIAL_PARAM_KEYWORDS
 from mcpnuke.core.models import TargetResult
 
 _add_l1 = lane_tagged(lane=1, transport="A")
@@ -120,6 +121,43 @@ def check_delegation_depth(result: TargetResult) -> None:
                     "Tool enables agent delegation chains — identity may dilute at each hop",
                     taxonomy_id="MCP-T32",
                 )
+
+
+_DELEGATION_VERB_RE = re.compile(
+    r"\b(delegate|delegation|sub[_-]?agent|spawn[_-]?agent|create[_-]?agent"
+    r"|forward[_-]?to[_-]?agent|hand[_-]?off|handoff|agent[_-]?chain)\b",
+    re.IGNORECASE,
+)
+
+
+def check_delegation_chain_abuse(result: TargetResult) -> None:
+    """MCP-T25: Agent Delegation Chain Abuse.
+
+    Delegation alone is T32 (delegation_depth); credentials alone are
+    T03/T45. A tool that does both — delegates to another agent AND carries
+    caller credentials on the call — lets the delegatee act with the
+    caller's privilege, unattenuated. That composition is the chain-abuse
+    vector.
+    """
+    with time_check("delegation_chain_abuse", result):
+        for tool in result.tools:
+            blob = f"{tool.get('name', '')} {tool.get('description', '') or ''}"
+            if not _DELEGATION_VERB_RE.search(blob):
+                continue
+            cred_params = sorted(
+                p for p in _param_keys(tool)
+                if any(kw in p for kw in _CREDENTIAL_PARAM_KEYWORDS)
+            )
+            if not cred_params:
+                continue
+            _add_l4(
+                result, "delegation_chain_abuse", "HIGH",
+                f"Delegation with privilege carry-over: '{tool.get('name', '')}'",
+                "Tool delegates to other agents and accepts credential "
+                f"parameter(s) ({', '.join(cred_params)}) — delegated calls "
+                "inherit caller privileges with no scope attenuation.",
+                taxonomy_id="MCP-T25",
+            )
 
 
 def check_subprocess_credential_inheritance(result: TargetResult) -> None:
