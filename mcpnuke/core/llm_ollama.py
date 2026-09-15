@@ -38,7 +38,12 @@ from typing import Any
 
 import httpx
 
-from mcpnuke.core.llm import LLMFinding, _parse_findings, tool_analysis_system_prompt
+from mcpnuke.core.llm import (
+    LLMFinding,
+    _parse_findings,
+    taxonomy_id_clause,
+    tool_analysis_system_prompt,
+)
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
@@ -261,7 +266,7 @@ class OllamaBackend:
             '  severity: "CRITICAL" | "HIGH" | "MEDIUM"\n'
             "  title: short title\n"
             "  detail: the attack chain or scenario explained step by step\n"
-            "  taxonomy_id: MCP threat taxonomy ID if applicable\n\n"
+            f"{taxonomy_id_clause()}\n\n"
             "Only report actionable insights. Respond with ONLY the JSON array, no markdown."
         )
         user_content = (
@@ -293,7 +298,7 @@ class OllamaBackend:
             '  severity: "CRITICAL" | "HIGH" | "MEDIUM"\n'
             "  title: short title\n"
             "  detail: explanation\n"
-            "  taxonomy_id: MCP-T## if applicable\n\n"
+            f"{taxonomy_id_clause()}\n\n"
             "Only report genuine threats. Respond with ONLY the JSON array, no markdown."
         )
         user_content = (

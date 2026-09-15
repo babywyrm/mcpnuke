@@ -6,6 +6,13 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Ollama phases 2 and 3 now constrain `taxonomy_id` to the real taxonomy.**
+  The Ollama backend built its own prompts with the stale "MCP-T## if
+  applicable" line — the exact wording that let live models invent
+  `MCP-2024-AUTH-001`-style ids or omit the field entirely (observed as
+  unmapped AI findings in the camazotz OWASP report). Both phases now embed
+  the shared `taxonomy_id_clause()`, matching the Claude path.
+
 - **Tool-poisoning findings now carry MCP-T03, and `tool_shadowing` is no
   longer mis-tagged MCP-T25.** Shadowing (decoy/confusable tool names) is a
   tool-poisoning technique — the OWASP MCP Top 10 files it under MCP03 with

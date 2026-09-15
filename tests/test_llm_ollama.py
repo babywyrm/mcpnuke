@@ -235,3 +235,37 @@ def test_ollama_propose_chains_no_retry_when_first_parse_succeeds():
         )
     assert mock_post.call_count == 1
     assert len(chains) == 1
+
+
+def _captured_system(callable_name: str, *args) -> str:
+    """Return the system prompt an OllamaBackend phase posts to /api/chat."""
+    backend, mock_resp = _backend_with_text("[]")
+    captured: dict[str, str] = {}
+
+    def fake_post(url, json=None, timeout=None):
+        captured["system"] = json["messages"][0]["content"]
+        return mock_resp
+
+    with patch("httpx.post", side_effect=fake_post):
+        getattr(backend, callable_name)(*args)
+    return captured["system"]
+
+
+def test_ollama_phase3_prompt_constrains_taxonomy_ids():
+    """The Ollama chain-reasoning prompt carried the stale 'if applicable'
+    line that let live models invent MCP-2024-* ids or omit the field."""
+    from mcpnuke.core.llm import taxonomy_id_clause
+
+    system = _captured_system(
+        "analyze_findings",
+        [{"name": "t", "description": "d"}],
+        [{"title": "f", "detail": "d"}],
+    )
+    assert taxonomy_id_clause() in system
+
+
+def test_ollama_phase2_prompt_constrains_taxonomy_ids():
+    from mcpnuke.core.llm import taxonomy_id_clause
+
+    system = _captured_system("analyze_response", "t", "d", "x" * 20)
+    assert taxonomy_id_clause() in system
