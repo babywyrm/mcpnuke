@@ -4,6 +4,7 @@ import hashlib
 import json
 from collections import Counter
 from datetime import UTC, datetime
+from typing import Any
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
@@ -38,24 +39,37 @@ def _tool_surface_hash(tools: list[dict]) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
-def _build_inventory(r: TargetResult) -> dict:
-    """AIBOM-style inventory: what was scanned, in what posture."""
+def _server_identity(server_info: dict[str, Any]) -> dict[str, str]:
+    """Name/version from initialize. Nested ``serverInfo`` is the MCP shape."""
+    nested = server_info.get("serverInfo")
+    src = (
+        nested
+        if isinstance(nested, dict) and (nested.get("name") or nested.get("version"))
+        else server_info
+    )
     return {
-        "server": {
-            "name": str(r.server_info.get("name", "")),
-            "version": str(r.server_info.get("version", "")),
-        },
+        "name": str(src.get("name") or ""),
+        "version": str(src.get("version") or ""),
+    }
+
+
+def _build_inventory(r: TargetResult) -> dict:
+    """AIBOM-style inventory: the enumerated surface, in what posture."""
+    catalog = r.catalog_tools()
+    return {
+        "server": _server_identity(r.server_info),
         "transport": r.transport,
         "protocol_mode": r.protocol_mode,
         "authenticated": not r.scanned_anonymously(),
-        "tools": {"count": len(r.tools), "sha256": _tool_surface_hash(r.tools)},
+        "tools": {"count": len(catalog), "sha256": _tool_surface_hash(catalog)},
         "resources": {"count": len(r.resources)},
         "prompts": {"count": len(r.prompts)},
     }
 
 
 def _build_target_dict(r: TargetResult) -> dict:
-    tools_total = r.tools_total if r.tools_total > 0 else len(r.tools)
+    catalog = r.catalog_tools()
+    tools_total = r.tools_total if r.tools_total > 0 else len(catalog)
     tools_scanned = len(r.tools)
     d = {
         "url": r.url,

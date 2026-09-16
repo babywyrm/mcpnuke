@@ -66,6 +66,35 @@ class TestInventoryBlock:
             "version": "",
         }
 
+    def test_nested_mcp_server_info_unwraps_name_and_version(self):
+        r = _result()
+        r.server_info = {
+            "protocolVersion": "2025-03-26",
+            "serverInfo": {"name": "camazotz-brain", "version": "1.0.0"},
+            "capabilities": {},
+        }
+        assert _build_target_dict(r)["inventory"]["server"] == {
+            "name": "camazotz-brain",
+            "version": "1.0.0",
+        }
+
+    def test_inventory_hashes_enumerated_catalog_not_sampled_tools(self):
+        from mcpnuke.reporting.json_out import _tool_surface_hash
+
+        r = _result()
+        catalog = r.tools + [
+            {"name": "c_tool", "description": "not in the --fast sample", "inputSchema": {}},
+        ]
+        r.tools_enumerated = catalog
+        r.tools_total = len(catalog)
+        tgt = _build_target_dict(r)
+        inv = tgt["inventory"]
+        assert inv["tools"]["count"] == 3
+        assert inv["tools"]["sha256"] == _tool_surface_hash(catalog)
+        assert tgt["tools_scanned"] == 2
+        assert tgt["tools_total"] == 3
+        assert tgt["tools_unscanned_count"] == 1
+
     def test_build_report_includes_inventory(self):
         report = build_report([_result()])
         assert "inventory" in report["targets"][0]

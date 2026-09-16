@@ -130,9 +130,9 @@ Generated from the parser, so it cannot fall behind the code.
 
 | Option | Description |
 |---|---|
-| `--baseline FILE` | Compare the live tool/resource/prompt inventory to a saved --save-baseline file. Description or schema drift on an approved tool is a CRITICAL differential finding (MCP-T03 rug pull); added or removed tools are MEDIUM. |
+| `--baseline FILE` | Compare the live tool/resource/prompt inventory to a saved --save-baseline file. Description or schema drift on an approved tool is a CRITICAL differential finding (MCP-T03 rug pull); added or removed tools are MEDIUM. Compares the full enumerated catalog even when --fast sampled tools for probes. |
 | `--diff-baseline FILE` | Path to a previous mcpnuke JSON output to diff against. The scan result will include a 'diff' block showing new, resolved, and severity-changed findings. |
-| `--save-baseline FILE` | Save current scan as baseline for future differential scans |
+| `--save-baseline FILE` | Save the enumerated tool/resource/prompt catalog as a baseline for --baseline. Records the full tools/list even under --fast. |
 
 ## Inference Backend
 

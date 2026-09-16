@@ -313,7 +313,7 @@ attack path was exercised and blocked, which is not the same as not testing it.
 |-------|----------|----------------|
 | `auth` | HIGH | Unauthenticated MCP/tool-server initialize accepted. Emitted by the enumerator during connection, not by a check, so it appears in reports without a corresponding entry in the progress count |
 | `init` | HIGH | Handshake failed. A JSON-RPC error (e.g. `-32001 identity verification failed`) names the code and message. No reply at all is still "No response to MCP initialize". Enumerator, not the check inventory |
-| `differential` | CRITICAL–MEDIUM | Tool surface changed since `--baseline`. Description or schema drift on a previously approved tool is CRITICAL (MCP-T03 rug pull). A tool added or removed since the baseline is MEDIUM. Silent when the inventory matches. Not in the progress count — post-scan, like `auth` |
+| `differential` | CRITICAL–MEDIUM | Tool surface changed since `--baseline`. Description or schema drift on a previously approved tool is CRITICAL (MCP-T03 rug pull). A tool added or removed since the baseline is MEDIUM. Silent when the inventory matches. Uses the full enumerated catalog even under `--fast`. Not in the progress count — post-scan, like `auth` |
 | `sse_security` | HIGH–MEDIUM | Unauthenticated SSE stream, CORS misconfiguration, cross-origin POST |
 | `dpop_not_enforced` | HIGH | Request accepted with no DPoP proof — a stolen bearer token replays without the paired key (RFC 9449 §7). MCP-T43 |
 | `dpop_header_not_validated` | HIGH | A malformed DPoP header is accepted, so the proof is decorative (RFC 9449 §7.1). MCP-T43 |

@@ -105,3 +105,18 @@ class TestClean:
         r = TargetResult(url="http://t")
         apply_diff_findings(r, _diff([_tool("read_file")], [_tool("read_file")], url=r.url))
         assert "differential" in r.timings
+
+
+class TestSaveBaselineCatalog:
+    def test_writes_enumerated_catalog_not_sampled_tools(self, tmp_path) -> None:
+        import json
+
+        from mcpnuke.diff import save_baseline
+
+        r = TargetResult(url="http://t")
+        r.tools = [_tool("sampled")]
+        r.tools_enumerated = [_tool("sampled"), _tool("other")]
+        path = tmp_path / "base.json"
+        save_baseline([r], path)
+        saved = json.loads(path.read_text())["targets"]["http://t"]["tools"]
+        assert {t["name"] for t in saved} == {"sampled", "other"}

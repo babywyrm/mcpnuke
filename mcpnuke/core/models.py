@@ -64,6 +64,9 @@ class TargetResult:
     server_info: dict[str, Any] = field(default_factory=dict)
     auth_context: dict[str, Any] = field(default_factory=dict)
     tools: list[dict[str, Any]] = field(default_factory=list)
+    # Full tools/list surface. ``tools`` becomes the --fast/--coverage sample
+    # after run_all_checks; inventory, --save-baseline, and --baseline hash this.
+    tools_enumerated: list[dict[str, Any]] = field(default_factory=list)
     resources: list[dict[str, Any]] = field(default_factory=list)
     prompts: list[dict[str, Any]] = field(default_factory=list)
     list_cache: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
@@ -76,6 +79,10 @@ class TargetResult:
     # every reader to guess, and json_out reached for four attributes mypy
     # could not confirm existed.
     scan_diff: ScanDiffResult | None = None
+
+    def catalog_tools(self) -> list[dict[str, Any]]:
+        """Enumerated tool surface, even when ``tools`` is a coverage sample."""
+        return self.tools_enumerated if self.tools_enumerated else self.tools
 
     def scanned_anonymously(self) -> bool:
         """True when this scan carried no credential of any kind.

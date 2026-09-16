@@ -243,3 +243,27 @@ class TestPickSecurityRelevant:
         top3 = _pick_security_relevant(tied_tools, 3)
         names = [tool["name"] for tool in top3]
         assert names == ["alpha", "mu", "zeta"]
+
+
+class TestFastModeCatalog:
+    def test_run_all_checks_keeps_enumerated_catalog(self):
+        from mcpnuke.checks import run_all_checks
+        from mcpnuke.core.models import TargetResult
+
+        result = TargetResult(url="http://t")
+        result.tools = [
+            {"name": f"tool_{i}", "description": "benign", "inputSchema": {}}
+            for i in range(12)
+        ]
+        run_all_checks(
+            object(),
+            result,
+            [result],
+            probe_opts={"fast": True, "no_invoke": True},
+        )
+        assert result.tools_total == 12
+        assert len(result.tools) == 5
+        assert len(result.tools_enumerated) == 12
+        assert {t["name"] for t in result.tools_enumerated} == {
+            f"tool_{i}" for i in range(12)
+        }

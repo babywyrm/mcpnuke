@@ -437,6 +437,9 @@ def run_all_checks(
         )
 
     # Coverage sampling: --fast is alias for --coverage 5; --coverage N overrides.
+    # Keep the enumerated catalog on the result so AIBOM / --baseline hash
+    # the real surface, not the sample checks will iterate.
+    result.tools_enumerated = result.tools
     effective_coverage = 5 if fast_mode else coverage_n
     if effective_coverage:
         _original_tools = result.tools

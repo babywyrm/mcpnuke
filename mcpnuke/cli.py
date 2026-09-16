@@ -545,7 +545,8 @@ def _add_differential_arguments(group: ArgumentGroup) -> None:
             "Compare the live tool/resource/prompt inventory to a saved "
             "--save-baseline file. Description or schema drift on an approved "
             "tool is a CRITICAL differential finding (MCP-T03 rug pull); "
-            "added or removed tools are MEDIUM."
+            "added or removed tools are MEDIUM. Compares the full enumerated "
+            "catalog even when --fast sampled tools for probes."
         ),
     )
     group.add_argument(
@@ -559,7 +560,8 @@ def _add_differential_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
         "--save-baseline",
         metavar="FILE",
-        help="Save current scan as baseline for future differential scans",
+        help="Save the enumerated tool/resource/prompt catalog as a baseline "
+             "for --baseline. Records the full tools/list even under --fast.",
     )
 
 

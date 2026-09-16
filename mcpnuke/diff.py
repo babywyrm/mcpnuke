@@ -192,7 +192,7 @@ def save_baseline(results: list, path: str | Path, console=None):
             continue
         targets[r.url] = {
             "url": r.url,
-            "tools": r.tools,
+            "tools": r.catalog_tools(),
             "resources": r.resources,
             "prompts": r.prompts,
         }

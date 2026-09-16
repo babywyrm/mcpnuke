@@ -31,6 +31,14 @@ All notable changes to this submodule are documented here.
   failed on a clean tree. A test now fails if a new test file grows a PEM
   marker without being named.
 
+- **`--fast` AIBOM and `--save-baseline` hash the full catalog.** Sampling
+  used to overwrite `result.tools` before JSON and baseline save, so a
+  138-tool camazotz scan reported `inventory.tools.count` 5 and a rug-pull
+  on an unsampled tool was invisible. The enumerated `tools/list` is kept on
+  `tools_enumerated`; probes still iterate the sample. Inventory also unwraps
+  MCP `initialize.serverInfo` so `inventory.server.name` is no longer empty
+  on a live handshake.
+
 ## [6.20.0] - 2026-09-14
 
 ### Added

@@ -794,7 +794,7 @@ def _main_inner() -> None:
             base = baseline.get(r.url, {})
             if base:
                 diff = diff_against_baseline(
-                    r.tools,
+                    r.catalog_tools(),
                     r.resources,
                     r.prompts,
                     base.get("tools", []),
