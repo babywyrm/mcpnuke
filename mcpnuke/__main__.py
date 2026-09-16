@@ -33,6 +33,7 @@ from mcpnuke.core.auth import (
 )
 from mcpnuke.core.models import TargetResult
 from mcpnuke.diff import (
+    apply_diff_findings,
     diff_against_baseline,
     load_baseline,
     print_diff_report,
@@ -40,7 +41,7 @@ from mcpnuke.diff import (
 )
 from mcpnuke.k8s import discover_services, fingerprint_services, run_k8s_checks
 from mcpnuke.reporting import print_report, write_json, write_sarif
-from mcpnuke.scanner import detect_cross_shadowing, run_parallel, scan_stdio_target, scan_target
+from mcpnuke.scanner import run_parallel, scan_stdio_target, scan_target
 
 EXIT_CLEAN = 0
 EXIT_FINDINGS = 1
@@ -786,8 +787,6 @@ def _main_inner() -> None:
             probe_opts=probe_opts,
         )
 
-    detect_cross_shadowing(results)
-
     # Differential scan: compare to baseline and add findings
     diff_results = []
     if args.baseline and baseline:
@@ -804,14 +803,7 @@ def _main_inner() -> None:
                     url=r.url,
                 )
                 diff_results.append(diff)
-                # Add findings for new tools (security regression)
-                for t in diff.added_tools:
-                    r.add(
-                        "differential",
-                        "MEDIUM",
-                        f"Added tool: {t.get('name', '?')}",
-                        "New tool since baseline — review for security impact",
-                    )
+                apply_diff_findings(r, diff)
         print_diff_report(diff_results, args.baseline, console=console)
 
     print_report(results, group_findings=args.group_findings, console=console)

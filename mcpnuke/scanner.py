@@ -2,7 +2,6 @@
 
 import threading
 import time
-from collections import defaultdict
 from collections.abc import Callable
 from urllib.parse import urlparse
 
@@ -166,24 +165,6 @@ def scan_stdio_target(
         f"findings={len(result.findings)}  score={result.risk_score()}[/dim]"
     )
     return result
-
-
-def detect_cross_shadowing(results: list[TargetResult]):
-    """Detect tool name collisions across servers."""
-    tool_map: dict[str, list[str]] = defaultdict(list)
-    for r in results:
-        for t in r.tools:
-            tool_map[t["name"]].append(r.url)
-    for name, servers in tool_map.items():
-        if len(servers) > 1:
-            for r in results:
-                if r.url in servers:
-                    r.add(
-                        "cross_shadowing",
-                        "MEDIUM",
-                        f"Tool '{name}' exists on {len(servers)} servers",
-                        f"Servers: {servers}",
-                    )
 
 
 def scan_target(

@@ -1,9 +1,15 @@
 """Differential scanning: compare current scan to baseline."""
 
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mcpnuke.core.models import TargetResult
 
 
 @dataclass
@@ -104,6 +110,61 @@ def diff_against_baseline(
     return result
 
 
+def apply_diff_findings(result: TargetResult, diff: DiffResult) -> None:
+    """Turn an inventory DiffResult into MCP-T03 findings on *result*.
+
+    Intra-scan ``rug_pull`` catches mutation *during* one scan. This is the
+    other half of MCP03: the tool surface the operator approved last time has
+    changed. Description and schema drift are the rug-pull (CRITICAL).
+    Added and removed tools are inventory deltas (MEDIUM) — review, not page.
+    """
+    from mcpnuke.checks.base import time_check
+
+    with time_check("differential", result):
+        for tool in diff.added_tools:
+            name = str(tool.get("name", "?"))
+            result.add(
+                "differential",
+                "MEDIUM",
+                f"Added tool: {name}",
+                "New tool since baseline — review for security impact",
+                evidence=name,
+                taxonomy_id="MCP-T03",
+            )
+        for tool in diff.removed_tools:
+            name = str(tool.get("name", "?"))
+            result.add(
+                "differential",
+                "MEDIUM",
+                f"Removed tool: {name}",
+                "Tool disappeared since baseline — confirm the withdrawal is intended",
+                evidence=name,
+                taxonomy_id="MCP-T03",
+            )
+        for base_tool, current in diff.modified_tools:
+            name = str(current.get("name", "?"))
+            parts: list[str] = []
+            before_desc = str(base_tool.get("description", "") or "")
+            after_desc = str(current.get("description", "") or "")
+            if before_desc != after_desc:
+                parts.append(
+                    f"Description changed.\nBefore: {before_desc[:200]}\n"
+                    f"After:  {after_desc[:200]}"
+                )
+            before_schema = json.dumps(base_tool.get("inputSchema", {}), sort_keys=True)
+            after_schema = json.dumps(current.get("inputSchema", {}), sort_keys=True)
+            if before_schema != after_schema:
+                parts.append("inputSchema changed")
+            result.add(
+                "differential",
+                "CRITICAL",
+                f"Tool '{name}' mutated since baseline",
+                "\n".join(parts) or "Tool definition changed",
+                evidence=name,
+                taxonomy_id="MCP-T03",
+            )
+
+
 def load_baseline(path: str | Path) -> dict[str, dict]:
     """Load baseline from JSON. Returns dict[url, {tools, resources, prompts}]. """
     p = Path(path)
@@ -146,7 +207,7 @@ def save_baseline(results: list, path: str | Path, console=None):
         console.print(f"\n[green]Baseline saved → {path}[/green]")
 
 
-def print_diff_report(diff_results: list["DiffResult"], baseline_path: str, console=None):
+def print_diff_report(diff_results: list[DiffResult], baseline_path: str, console=None):
     """Print differential scan report to console."""
     if not console:
         from rich.console import Console

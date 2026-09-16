@@ -114,6 +114,7 @@ CHECK_TO_OWASP: dict[str, str] = {
     "tool_response_injection": "MCP06",  # indirect injection via tool output
     "active_prompt_injection": "MCP06",  # server follows injected instructions
     "resource_poisoning": "MCP06",  # poisoned resource content hijacks intent
+    "differential": "MCP03",  # --baseline inventory drift is tool-surface mutation
 }
 
 

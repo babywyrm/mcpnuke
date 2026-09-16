@@ -541,7 +541,12 @@ def _add_differential_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
         "--baseline",
         metavar="FILE",
-        help="Compare against baseline (differential scan)",
+        help=(
+            "Compare the live tool/resource/prompt inventory to a saved "
+            "--save-baseline file. Description or schema drift on an approved "
+            "tool is a CRITICAL differential finding (MCP-T03 rug pull); "
+            "added or removed tools are MEDIUM."
+        ),
     )
     group.add_argument(
         "--diff-baseline",

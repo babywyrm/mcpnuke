@@ -26,6 +26,9 @@ paths = [
   '''tests/test_credential_in_description\.py''',
   '''tests/test_credential_in_schema\.py''',
   '''tests/test_response_credentials\.py''',
+  '''tests/test_config_dump\.py''',
+  '''tests/test_k8s\.py''',
+  '''tests/test_k8s_scanner\.py''',
   '''docs/superpowers/.*''',
 ]
 

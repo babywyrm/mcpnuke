@@ -130,7 +130,7 @@ Generated from the parser, so it cannot fall behind the code.
 
 | Option | Description |
 |---|---|
-| `--baseline FILE` | Compare against baseline (differential scan) |
+| `--baseline FILE` | Compare the live tool/resource/prompt inventory to a saved --save-baseline file. Description or schema drift on an approved tool is a CRITICAL differential finding (MCP-T03 rug pull); added or removed tools are MEDIUM. |
 | `--diff-baseline FILE` | Path to a previous mcpnuke JSON output to diff against. The scan result will include a 'diff' block showing new, resolved, and severity-changed findings. |
 | `--save-baseline FILE` | Save current scan as baseline for future differential scans |
 

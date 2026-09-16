@@ -2,6 +2,35 @@
 
 All notable changes to this submodule are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- **`--baseline` now reports description and schema drift as findings.** The
+  inventory comparison already computed modified tools (the OWASP MCP03 rug
+  pull: an approved tool's description or schema changed between scans) but
+  only ever emitted a MEDIUM finding for *added* tools, with no taxonomy_id.
+  Modified tools are now CRITICAL MCP-T03; added and removed tools stay MEDIUM
+  and are tagged too. Removed tools were console-only.
+
+- **Dropped the leftover `cross_shadowing` pass.** `run_cross_target_checks`
+  already emits tagged `tool_shadowing` collisions. `__main__` then ran
+  `detect_cross_shadowing`, which re-reported the same name collision as an
+  untagged `cross_shadowing` finding and padded the OWASP unmapped bucket.
+
+- **CI pins `actions/checkout@v7` and `astral-sh/setup-uv@v10`.** Both run
+  on Node 24. The previous pins (`checkout@v4`, `setup-uv@v3`) were the
+  remaining Node 20 deprecation warnings after the artifact/github-script
+  bumps. `enable-cache: true` is unchanged — v10's `auto` would skip the
+  cache on tag/release events.
+
+- **Gitleaks allowlist names the remaining PEM-marker test files.**
+  `test_config_dump.py`, `test_k8s.py`, and `test_k8s_scanner.py` ship
+  `-----BEGIN PRIVATE KEY-----` markers so the detector has something to
+  match. They were not in `.gitleaks.toml`, so `./scripts/secret-scan.sh`
+  failed on a clean tree. A test now fails if a new test file grows a PEM
+  marker without being named.
+
 ## [6.20.0] - 2026-09-14
 
 ### Added
