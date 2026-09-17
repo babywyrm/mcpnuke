@@ -64,6 +64,20 @@ def test_silent_on_stdio():
     assert _findings(r) == []
 
 
+def test_title_counts_enumerated_catalog_not_sample():
+    r = _result("http")
+    r.tools = [{"name": "sampled"}]
+    r.tools_enumerated = [
+        {"name": "sampled"},
+        {"name": "other"},
+        {"name": "third"},
+    ]
+    check_pre_auth_injection(r)
+    findings = _findings(r)
+    assert len(findings) == 1
+    assert "3 tools" in findings[0].title
+
+
 def test_timing_recorded():
     r = _result("http")
     check_pre_auth_injection(r)

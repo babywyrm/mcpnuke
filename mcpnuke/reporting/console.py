@@ -151,7 +151,7 @@ def print_report(
         pt.add_row(
             _short_target(target.url),
             target.transport,
-            str(len(target.tools)),
+            str(len(target.catalog_tools())),
             str(len(target.findings)),
             Text(str(score), style=color),
             f"{target.timings.get('total', 0):.1f}s",

@@ -65,6 +65,34 @@ def test_silent_on_stdio():
     assert _findings(r) == []
 
 
+def test_title_counts_enumerated_catalog_not_sample():
+    r = _result("http")
+    r.tools = [{"name": "sampled", "inputSchema": {"properties": {}}}]
+    r.tools_enumerated = [
+        {"name": "sampled", "inputSchema": {"properties": {}}},
+        {"name": "other", "inputSchema": {"properties": {}}},
+        {"name": "third", "inputSchema": {"properties": {}}},
+    ]
+    check_native_function_identity_erasure(r)
+    findings = _findings(r)
+    assert len(findings) == 1
+    assert "(3 tools)" in findings[0].title
+
+
+def test_silent_when_unsampled_tool_has_identity_param():
+    r = _result("http")
+    r.tools = [{"name": "sampled", "inputSchema": {"properties": {}}}]
+    r.tools_enumerated = [
+        {"name": "sampled", "inputSchema": {"properties": {}}},
+        {
+            "name": "as",
+            "inputSchema": {"properties": {"caller_id": {"type": "string"}}},
+        },
+    ]
+    check_native_function_identity_erasure(r)
+    assert _findings(r) == []
+
+
 def test_timing_recorded():
     r = _result("http")
     check_native_function_identity_erasure(r)

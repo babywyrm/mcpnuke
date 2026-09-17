@@ -128,7 +128,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `list_cache` | HIGH–MEDIUM | SEP-2549 `ttlMs` / `cacheScope` on list results and a sample of `resources/read` (up to five URIs, skipped under `--no-invoke`). Silent when the fields are absent. Invalid TTL or cacheScope is MEDIUM. Pages of the same list that disagree on cacheScope are HIGH. Mixed scope across different resource URIs is not that finding — each read is independently cacheable. MCP-T16 |
 | `protected_resource_metadata` | HIGH–MEDIUM | RFC 9728 protected resource metadata when present: missing `authorization_servers`, non-HTTPS AS, AS `issuer` mismatch, or DCR advertised without CIMD. Silent when the document is absent. HTTP only |
 | `subprocess_cred_inheritance` | HIGH–MEDIUM | Subprocess-spawning tools whose children may inherit parent credentials. HIGH when an env or credential parameter is exposed, MEDIUM otherwise. MCP-T34 |
-| `native_function_identity_erasure` | MEDIUM | No caller-identity parameter on any tool and no auth token — function calls carry no attribution. Not reported on stdio. MCP-T35 |
+| `native_function_identity_erasure` | MEDIUM | No caller-identity parameter on any enumerated tool and no auth token — function calls carry no attribution. Count is the full catalog, even under `--fast`. Not reported on stdio. MCP-T35 |
 | `execution_context_forgery` | HIGH | Caller-supplied execution identity (`on_behalf_of`, `as_user`, `actor_id`, …). Bare `user_id` is not this finding. MCP-T22 |
 | `sidecar_credential_tamper` | HIGH | Sidecar paired with secret/credential/broker language, or params like `secret_mount`. Not a generic volume or a logging sidecar. Not hardcoded schema secrets (`credential_in_schema`). MCP-T23 |
 | `bot_identity_theft` | HIGH | Tools exposing machine identities, tbot credentials, machine certs, or token serials. MCP-T18 |
@@ -146,7 +146,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `tool_description_injection` | CRITICAL | Instruction-override language in a tool description, which manipulates any agent that loads the manifest. MCP-T36 |
 | `scope_pollution` | CRITICAL–MEDIUM | A token-minting tool accepting caller-controlled scope/audience with no narrowing is HIGH, or CRITICAL when the caller's own claims are read-class and the tool advertises privileged scopes. Shared-IdP topology disclosure alone is MEDIUM. MCP-T42 |
 | `schema_overdisclosure` | CRITICAL–LOW | Pre-auth recon in `tools/list`: a credential pattern is CRITICAL, an internal hostname HIGH, an infrastructure env-var name MEDIUM, an internal filesystem path LOW. MCP-T50 |
-| `pre_auth_injection` | HIGH | Tools enumerated and invocable with no auth token at all — every call is pre-authentication, with no identity binding. Not reported on stdio. MCP-T52 |
+| `pre_auth_injection` | HIGH | Tools enumerated and invocable with no auth token at all — every call is pre-authentication, with no identity binding. Count is the full catalog, even under `--fast`. Not reported on stdio. MCP-T52 |
 | `shell_wrapping_injection` | HIGH | Shell wrapping (`sh -c`, `subprocess(..., shell=True)`, `os.system`) in a description or schema — arguments stay injectable despite apparent validation. MCP-T53 |
 | `cached_session_exposure` | MEDIUM | Session or cache identifier parameters — session fixation and token reuse surface. MCP-T57 |
 | `host_network_loopback` | HIGH | `127.0.0.1`, `localhost`, `0.0.0.0` or `hostNetwork` references, suggesting a bridge to node-local services. MCP-T58 |

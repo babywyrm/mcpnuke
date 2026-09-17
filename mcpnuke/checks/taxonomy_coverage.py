@@ -221,10 +221,11 @@ def check_pre_auth_injection(result: TargetResult) -> None:
     handshake succeeded unauthenticated, meaning all tool calls are pre-auth.
     """
     with time_check("pre_auth_injection", result):
-        if not result.auth_context.get("_raw_token") and result.tools:
+        catalog = result.catalog_tools()
+        if not result.auth_context.get("_raw_token") and catalog:
             _add_l2(
                 result, "pre_auth_injection", "HIGH",
-                f"Pre-auth tool access: {len(result.tools)} tools available without authentication",
+                f"Pre-auth tool access: {len(catalog)} tools available without authentication",
                 "The MCP server accepted initialize and listed tools without any auth token. "
                 "All tool invocations are pre-authentication — no identity binding.",
                 taxonomy_id="MCP-T52",
@@ -336,17 +337,18 @@ def check_native_function_identity_erasure(result: TargetResult) -> None:
     tool-call metadata (no caller_id, no auth_context pass-through).
     """
     with time_check("native_function_identity_erasure", result):
+        catalog = result.catalog_tools()
         # If the server has tools but no auth mechanism, identity is erased by default
-        if result.tools and not result.auth_context.get("_raw_token"):
+        if catalog and not result.auth_context.get("_raw_token"):
             has_identity_param = any(
                 any(kw in p.lower() for kw in ("caller_id", "user_id", "auth_context", "identity"))
-                for tool in result.tools
+                for tool in catalog
                 for p in tool.get("inputSchema", {}).get("properties", {})
             )
             if not has_identity_param:
                 _add_l4(
                     result, "native_function_identity_erasure", "MEDIUM",
-                    f"No caller identity in tool calls ({len(result.tools)} tools)",
+                    f"No caller identity in tool calls ({len(catalog)} tools)",
                     "Tools do not accept caller identity parameters and no auth token is present — "
                     "function calls have no attribution to the invoking agent or user",
                     taxonomy_id="MCP-T35",

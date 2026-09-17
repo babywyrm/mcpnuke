@@ -39,6 +39,13 @@ All notable changes to this submodule are documented here.
   MCP `initialize.serverInfo` so `inventory.server.name` is no longer empty
   on a live handshake.
 
+- **`--fast` finding titles count the catalog, not the sample.**
+  `pre_auth_injection` and `native_function_identity_erasure` used
+  `len(result.tools)` after sampling, so a 138-tool camazotz scan reported
+  "5 tools available without authentication". They now count
+  `catalog_tools()`. Identity-parameter presence is also checked on the
+  catalog. The console Per-Target Summary Tools column matches.
+
 ## [6.20.0] - 2026-09-14
 
 ### Added

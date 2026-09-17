@@ -98,3 +98,28 @@ class TestInventoryBlock:
     def test_build_report_includes_inventory(self):
         report = build_report([_result()])
         assert "inventory" in report["targets"][0]
+
+
+class TestConsoleSummaryCatalog:
+    def test_tools_column_uses_enumerated_catalog(self):
+        import re
+        from io import StringIO
+
+        from rich.console import Console
+
+        from mcpnuke.reporting.console import print_report
+
+        r = _result()
+        r.tools = [r.tools[0]]
+        r.tools_enumerated = r.tools + [
+            {"name": "c_tool", "description": "hidden", "inputSchema": {}},
+        ]
+        r.add("auth", "HIGH", "Unauthenticated MCP initialize accepted")
+        buf = StringIO()
+        print_report(
+            [r], console=Console(file=buf, force_terminal=False, width=120)
+        )
+        summary = buf.getvalue().split("Per-Target Summary", 1)[1]
+        match = re.search(r"t/mcp\s+\S+\s+(\d+)", summary)
+        assert match is not None
+        assert match.group(1) == "2"
