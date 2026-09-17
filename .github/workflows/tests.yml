@@ -181,7 +181,7 @@ jobs:
 
     steps:
       - name: Trigger agentic-sec coherence run
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ secrets.ECOSYSTEM_DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
           repository: babywyrm/agentic-sec
