@@ -55,7 +55,7 @@ bug in this file, and fix it here.
 | Static | Always. |
 | JWT / identity | Only when a token is supplied (`--auth-token`, OIDC, or an introspected token). |
 | DPoP | Only with a token **and** an HTTP-family transport whose endpoint is resolved. |
-| Light behavioral + deep probes | Unless `--no-invoke`. `--fast` drops the heavy and state-mutating ones. |
+| Light behavioral + deep probes | Unless `--no-invoke`. `--fast` and `--coverage N` sample tools for these probes only. Static checks still read the full catalog. `--fast` also drops the heavy and state-mutating probes. |
 | Transport | Only when a base URL and an SSE path were both resolved. |
 | Target surface, Teleport discovery | Only when a base URL was resolved. |
 | Inference backend | Only with `--inference` or `--inference-host`. |
@@ -205,9 +205,12 @@ back. All of them are skipped by `--no-invoke`.
 | `command_injection_broad_t05` (finding: `command_injection_broad`) | CRITICAL–LOW | Command injection through any string parameter, not just command-named ones. Shell error text keeps its HIGH even in a failed response — a shell errors *because* it parsed the payload — but a canary that only comes back inside a quoted rejection reports LOW. MCP-T05 |
 | `agentic_loop_behavioral_t10` (finding: `agentic_loop_behavioral`) | HIGH | Tool-call directives embedded in a tool's response, which drive the agent into a loop. MCP-T10 |
 
-`--fast` skips `input_sanitization`, `error_leakage`, `temporal_consistency`,
-`ssrf_probe` and `sdk_cache_poisoning`, and keeps `input_sanitization` anyway
-when a tool exposes a dangerous parameter.
+`--fast` and `--coverage N` limit **invoke probes** to a security-ranked sample
+(`--fast` is 5). Static checks read the enumerated catalog either way, so a
+poisoned description outside the sample is still reported. `--fast` also skips
+`input_sanitization`, `error_leakage`, `temporal_consistency`, `ssrf_probe`
+and `sdk_cache_poisoning`, and keeps `input_sanitization` anyway when a
+*sampled* tool exposes a dangerous parameter.
 
 ### Error-reflection grading
 
@@ -292,7 +295,7 @@ findings and runs only when a baseline is being read or written.
 
 | Check | Severity | What It Detects |
 |-------|----------|----------------|
-| `teleport_proxy_discovery` | MEDIUM | Teleport proxy endpoints reachable on the target host |
+| `teleport_proxy_discovery` | MEDIUM | Teleport `/webapi/ping` reachable on the target host, leaking cluster name and version. Not MCP-T28 (that is role escalation through an MCP tool). OWASP MCP07, same bucket as `actuator_probe`: an unauthenticated discovery endpoint |
 | `teleport_cert_validation` | HIGH | Teleport proxy serving a self-signed certificate |
 | `teleport_app_enumeration` | HIGH | MCP applications registered in Teleport, enumerable from outside |
 | `tbot_credential_exposure` | HIGH | tbot output secrets (`tbot-out`, `tbot-kube`) mounted into non-tbot pods. In-cluster only — returns immediately without a service-account token |

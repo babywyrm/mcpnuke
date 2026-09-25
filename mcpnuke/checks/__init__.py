@@ -414,7 +414,7 @@ def run_all_checks(
       no_invoke     (bool) — skip all tool-calling checks
       safe_mode     (bool) — skip invoking dangerous tools
       probe_calls   (int)  — invocations per tool for deep rug pull (default 6)
-      fast          (bool) — sample top 5 tools, skip heavy probes
+      fast          (bool) — static checks read the full catalog; invoke probes sample top 5 and skip heavy probes
       probe_workers (int)  — parallel deep behavioral probe threads (default 1)
     """
     from mcpnuke.core.constants import SEV_COLOR
@@ -436,28 +436,30 @@ def run_all_checks(
             key=lambda tool: str(tool.get("name", "")),
         )
 
-    # Coverage sampling: --fast is alias for --coverage 5; --coverage N overrides.
-    # Keep the enumerated catalog on the result so AIBOM / --baseline hash
-    # the real surface, not the sample checks will iterate.
-    result.tools_enumerated = result.tools
+    # Coverage sampling applies to invoke probes only. Static checks read the
+    # enumerated catalog; --fast used to replace result.tools first, so a
+    # poisoned description outside the top 5 was never read.
+    catalog = result.tools
+    result.tools_enumerated = catalog
     effective_coverage = 5 if fast_mode else coverage_n
     if effective_coverage:
-        _original_tools = result.tools
-        result.tools_total = len(_original_tools)
-        result.tools = _pick_security_relevant(result.tools, effective_coverage)
+        sample = _pick_security_relevant(catalog, effective_coverage)
+        result.tools_total = len(catalog)
         if verbose:
             label = "--fast" if fast_mode else f"--coverage {effective_coverage}"
             _log(
-                f"  [yellow]{label}: sampled {len(result.tools)}/"
-                f"{len(_original_tools)} security-relevant tools[/yellow]"
+                f"  [yellow]{label}: probing {len(sample)}/"
+                f"{len(catalog)} security-relevant tools; "
+                f"static checks read the full catalog[/yellow]"
             )
         if fast_mode:
             probe_workers = min(probe_workers or 2, 2)
     else:
-        result.tools_total = len(result.tools)
+        sample = catalog
+        result.tools_total = len(catalog)
 
-    # Built before anything runs so the progress denominator and the ETA both
-    # reflect the plan that will actually execute (including --fast filtering).
+    # Deep-plan filtering looks at the tools probes will actually call.
+    result.tools = sample
     deep_checks: list[DeepCheck] = []
     deep_skipped: set[str] = set()
     if not no_invoke:
@@ -467,7 +469,7 @@ def run_all_checks(
 
     if verbose:
         _emit_duration_estimate(
-            n_tools=len(result.tools),
+            n_tools=len(sample),
             session=session,
             no_invoke=no_invoke,
             fast_mode=fast_mode,
@@ -475,6 +477,7 @@ def run_all_checks(
             n_deep=len(deep_checks),
             _log=_log,
         )
+    result.tools = catalog
 
     check_num = 0
     total_checks = 0
@@ -607,6 +610,8 @@ def run_all_checks(
     static_count = len(result.findings)
     if verbose:
         _log(f"  [bold]  Static total: {static_count} finding(s)[/bold]")
+
+    result.tools = sample
 
     # ── Behavioral checks (light interaction — always run unless --no-invoke)
     if not no_invoke:

@@ -282,19 +282,23 @@ def _add_performance_arguments(group: ArgumentGroup) -> None:
         # matches --help; it does not prove --help matches behaviour, which is
         # how this list sat one probe behind the code. Guarded by
         # tests/test_docs_current.py::TestFastSkipHelp.
-        help="Fast scan: sample top 5 security-relevant tools, skip heavy "
+        help="Fast scan: static checks read the full tool catalog. Invoke "
+        "probes sample the top 5 security-relevant tools and skip heavy "
         "probes (input_sanitization, error_leakage, temporal_consistency, "
         "ssrf_probe, sdk_cache_poisoning), cap probe workers at 2. Cuts "
-        "LLM-backed scan time from ~30min to ~2min. Alias for --coverage 5.",
+        "LLM-backed scan time from ~30min to ~2min. Alias for --coverage 5 "
+        "on the probe sample.",
     )
     group.add_argument(
         "--coverage",
         type=lambda v: _positive_int_or_zero(v),
         default=None,
         metavar="N",
-        help="Sample the top N most security-relevant tools (by keyword risk "
-             "score). 0 = scan all tools. --fast is an alias for --coverage 5. "
-             "Example: --coverage 20 scans ~20%% of a 100-tool server in fast-mode time.",
+        help="Limit invoke probes to the top N most security-relevant tools "
+             "(by keyword risk score). Static checks still read the full "
+             "catalog. 0 = probe every tool. --fast is an alias for "
+             "--coverage 5 on that probe sample. "
+             "Example: --coverage 20 probes ~20%% of a 100-tool server.",
     )
     group.add_argument(
         "--probe-workers",

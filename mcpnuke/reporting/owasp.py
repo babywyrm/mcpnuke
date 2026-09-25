@@ -115,6 +115,10 @@ CHECK_TO_OWASP: dict[str, str] = {
     "active_prompt_injection": "MCP06",  # server follows injected instructions
     "resource_poisoning": "MCP06",  # poisoned resource content hijacks intent
     "differential": "MCP03",  # --baseline inventory drift is tool-surface mutation
+    # Exposed Teleport /webapi/ping. Not MCP-T28 (that is role escalation
+    # through an MCP tool). Same OWASP bucket as actuator_probe: an
+    # unauthenticated discovery endpoint.
+    "teleport_proxy_discovery": "MCP07",
 }
 
 

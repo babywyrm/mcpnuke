@@ -46,6 +46,16 @@ All notable changes to this submodule are documented here.
   `catalog_tools()`. Identity-parameter presence is also checked on the
   catalog. The console Per-Target Summary Tools column matches.
 
+- **`--fast` static checks read the full catalog.** Sampling used to replace
+  `result.tools` before the static pass, so `prompt_injection` and the other
+  metadata checks only saw the top 5. Invoke probes still sample. `--coverage
+  N` has the same split.
+
+- **`teleport_proxy_discovery` is no longer an OWASP unmapped finding.** It
+  has no taxonomy ID — the finding is an exposed proxy, not MCP-T28 role
+  escalation through an MCP tool. The check name maps to MCP07, the same
+  bucket as `actuator_probe`.
+
 ## [6.20.0] - 2026-09-14
 
 ### Added
