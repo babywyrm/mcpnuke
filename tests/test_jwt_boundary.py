@@ -106,6 +106,34 @@ def test_uses_summary_claims_when_raw_token_absent():
     check_jwt_audience_target_match(r)
     assert len(r.findings) == 1
     assert r.findings[0].check == "jwt_audience_target_match"
+    assert r.findings[0].severity == "MEDIUM"
+
+
+def test_logical_audience_does_not_claim_validation_is_disabled():
+    """A client-id audience is not a different service URL.
+
+    The policed camazotz door accepts aud=camazotz-gateway after checking
+    it. Reporting that as disabled audience validation is a false cause.
+    """
+    r = _result_with_token(
+        "http://192.168.1.252:30090/mcp",
+        {"aud": "camazotz-gateway", "sub": "u1"},
+    )
+    check_jwt_audience_target_match(r)
+    assert len(r.findings) == 1
+    finding = r.findings[0]
+    assert finding.severity == "MEDIUM"
+    assert "disabled" not in finding.detail.lower()
+
+
+def test_foreign_resource_url_stays_high():
+    r = _result_with_token(
+        "http://mcp.test:30080/mcp",
+        {"aud": "http://billing.example/mcp", "sub": "u1"},
+    )
+    check_jwt_audience_target_match(r)
+    assert r.findings[0].severity == "HIGH"
+    assert "MCP-T04" in r.findings[0].detail
 
 
 # ── cross-role replay ─────────────────────────────────────────────────────

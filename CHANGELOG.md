@@ -13,6 +13,12 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **`jwt_audience_target_match` no longer calls a logical audience a
+  disabled check.** A token whose `aud` is a client id or other name, and
+  not another URL, is MEDIUM. HIGH stays for an `aud` that names a
+  different resource. A policed gateway that allows `camazotz-gateway`
+  was reported as if it had turned audience validation off.
+
 - **`--baseline` now reports description and schema drift as findings.** The
   inventory comparison already computed modified tools (the OWASP MCP03 rug
   pull: an approved tool's description or schema changed between scans) but

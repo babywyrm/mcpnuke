@@ -83,14 +83,28 @@ def _expected_audiences(target_url: str) -> set[str]:
     return {c for c in candidates if c}
 
 
-def check_jwt_audience_target_match(result: TargetResult) -> None:
-    """MCP-T04: token ``aud`` claim must match the MCP endpoint it is sent to.
+def _is_resource_locator(value: str) -> bool:
+    """True when aud names a place rather than a logical client or role.
 
-    A token issued for ``api://billing`` that is accepted by an MCP server
-    serving ``api://identity`` indicates the server skipped audience
-    validation (PyJWT ``options={"verify_aud": False}``) or has overlap in
-    its trusted audience list. Both let a stolen token authenticate against
-    services it was never authorized for.
+    ``api://billing`` and ``other.example`` are locators. ``camazotz-gateway``
+    is a name the resource server can allow on purpose.
+    """
+    if "://" in value:
+        parsed = urlparse(value)
+        return bool(parsed.scheme and parsed.netloc)
+    host = value.split("/", 1)[0]
+    if host.count(":") == 1 and host.rsplit(":", 1)[-1].isdigit():
+        host = host.rsplit(":", 1)[0]
+    return "." in host
+
+
+def check_jwt_audience_target_match(result: TargetResult) -> None:
+    """MCP-T04: token ``aud`` claim compared to the MCP endpoint it is sent to.
+
+    An ``aud`` that is itself a different resource locator is HIGH: the
+    server accepted a token named for somewhere else. An ``aud`` that is
+    only a logical name (client id, role) is MEDIUM. That name can be the
+    audience the server intentionally allows.
     """
     with time_check("jwt_audience_target_match", result):
         claims = result.auth_context.get("jwt_claims_summary")
@@ -121,16 +135,29 @@ def check_jwt_audience_target_match(result: TargetResult) -> None:
         if matched:
             return
 
+        foreign = [aud for aud in auds if _is_resource_locator(aud)]
+        if foreign:
+            severity = "HIGH"
+            detail = (
+                "Bearer token aud names a different resource than this "
+                "endpoint. The server accepted it, which is cross-service "
+                "token replay (MCP-T04)."
+            )
+        else:
+            # A client id or api name is a normal allowed audience. It does
+            # not show that the server skipped the aud check.
+            severity = "MEDIUM"
+            detail = (
+                "Bearer token aud is a logical name and does not contain "
+                "this endpoint or its host. That is normal when the allowed "
+                "audience is a client id or api identifier (MCP-T04)."
+            )
         _add(
             result,
             "jwt_audience_target_match",
-            "HIGH",
+            severity,
             "JWT aud claim does not match the MCP endpoint",
-            "Server accepted a token whose audience does not include this "
-            "endpoint or its host. This indicates audience validation is "
-            "disabled (e.g. PyJWT verify_aud=False) and enables cross-tool "
-            "token replay between services in the same trust realm "
-            "(MCP-T04).",
+            detail,
             evidence=f"token aud={auds!r}, expected one of {sorted(expected)!r}",
             taxonomy_id="MCP-T04",
         )
