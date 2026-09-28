@@ -4,6 +4,7 @@ import argparse
 import base64
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -445,6 +446,27 @@ def fetch_client_credentials_token(
         raise RuntimeError(f"Token fetch error: {e}") from e
     finally:
         client.close()
+
+
+def read_secret_file(path: str) -> str:
+    """Read a token or client secret. Trailing whitespace is not part of it."""
+    file = Path(path)
+    if not file.is_file():
+        raise RuntimeError(f"secret file not found: {path}")
+    value = file.read_text().strip()
+    if not value:
+        raise RuntimeError(f"secret file is empty: {path}")
+    return value
+
+
+def load_auth_secret_files(args: argparse.Namespace) -> None:
+    """Fill empty auth fields from files. An explicit value wins."""
+    token_file = getattr(args, "auth_token_file", None)
+    if not getattr(args, "auth_token", None) and token_file:
+        args.auth_token = read_secret_file(token_file)
+    secret_file = getattr(args, "client_secret_file", None)
+    if not getattr(args, "client_secret", None) and secret_file:
+        args.client_secret = read_secret_file(secret_file)
 
 
 def resolve_auth_token(args: argparse.Namespace) -> str | None:

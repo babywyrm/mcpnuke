@@ -250,7 +250,7 @@ Validate scoped client-credentials and JWT hardening:
 mcpnuke --targets https://mcp.example.com/mcp \
   --oidc-url https://auth.example.com/realms/agentic \
   --client-id scanner \
-  --client-secret "$CLIENT_SECRET" \
+  --client-secret-file ./client-secret \
   --oidc-scope "mcp.read mcp.invoke" \
   --oidc-resource https://mcp.example.com/mcp \
   --tls-verify --verbose \

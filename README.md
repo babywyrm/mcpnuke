@@ -129,7 +129,7 @@ finding, or run `./walkthrough/demo.sh` for the fully automated version.
 ./scan --port-range localhost:9001-9010 --verbose
 
 # Authenticated endpoint (JWT, PAT, etc.)
-./scan --targets https://api.githubcopilot.com/mcp/ --auth-token ghp_xxx
+./scan --targets https://api.githubcopilot.com/mcp/ --auth-token-file ./token
 
 # OIDC auto-token (Keycloak, etc.)
 ./scan --targets http://localhost:9090/mcp \

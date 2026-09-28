@@ -68,7 +68,15 @@ def _add_auth_arguments(group: ArgumentGroup) -> None:
         metavar="TOKEN",
         default=os.environ.get(AUTH_TOKEN_ENV) or None,
         help="Bearer token for authenticated MCP endpoints (JWT, PAT, etc.). "
-        f"Or set {AUTH_TOKEN_ENV} env var.",
+        f"Or set {AUTH_TOKEN_ENV} env var. "
+        "Prefer --auth-token-file to avoid ps(1) exposure.",
+    )
+    group.add_argument(
+        "--auth-token-file",
+        metavar="FILE",
+        default=None,
+        help="Read the bearer token from FILE (avoids ps aux exposure). "
+        "--auth-token wins when both are set.",
     )
     group.add_argument(
         "--header",
@@ -113,7 +121,15 @@ def _add_auth_arguments(group: ArgumentGroup) -> None:
         "--client-secret",
         metavar="SECRET",
         default=os.environ.get("MCP_CLIENT_SECRET") or None,
-        help="OAuth2 client secret for client_credentials grant. Or set MCP_CLIENT_SECRET env var.",
+        help="OAuth2 client secret for client_credentials grant. Or set MCP_CLIENT_SECRET env var. "
+        "Prefer --client-secret-file to avoid ps(1) exposure.",
+    )
+    group.add_argument(
+        "--client-secret-file",
+        metavar="FILE",
+        default=None,
+        help="Read the OAuth2 client secret from FILE (avoids ps aux exposure). "
+        "--client-secret wins when both are set.",
     )
     group.add_argument(
         "--token-introspect-url",

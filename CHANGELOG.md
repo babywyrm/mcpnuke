@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **`--auth-token-file` and `--client-secret-file`.** Bearer tokens and
+  client secrets can be read from a file so they are not visible in
+  `ps`. An explicit `--auth-token` or `--client-secret` still wins.
+  An empty or missing file is an error.
+
 - **`--oidc-resource` (RFC 8707).** Client-credentials fetches can now send a
   `resource` parameter so the access token audience is the MCP endpoint, not
   the client id. Gateways that bind `aud` to the resource URL were rejecting

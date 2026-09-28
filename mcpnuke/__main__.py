@@ -25,6 +25,7 @@ from mcpnuke.core.auth import (
     detect_auth_requirements,
     fetch_jwks,
     fetch_token_introspection,
+    load_auth_secret_files,
     parse_header_kv_pairs,
     resolve_auth_token,
     summarize_introspection,
@@ -438,7 +439,12 @@ def _main_inner() -> None:
     else:
         urls = build_url_list(args)
 
-    # Resolve auth token (direct, OIDC client_credentials, or auto-detect)
+    # Resolve auth token (direct, file, OIDC client_credentials, or auto-detect)
+    try:
+        load_auth_secret_files(args)
+    except RuntimeError as e:
+        console.print(f"  [red]✗[/red] {e}")
+        sys.exit(EXIT_ERROR)
     auth_token = args.auth_token
     if not auth_token and args.client_id and args.client_secret:
         try:
