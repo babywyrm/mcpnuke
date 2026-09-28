@@ -150,7 +150,7 @@ finding, or run `./walkthrough/demo.sh` for the fully automated version.
 # Scan a local MCP server via stdin/stdout (no proxy needed)
 ./scan --stdio 'npx -y @modelcontextprotocol/server-everything'
 
-# Fast scan (~2min vs ~30min) — samples top 5 security-relevant tools, skips heavy probes
+# Fast scan (~2min vs ~30min) — static checks read the full catalog; probes sample the top 5
 ./scan --targets http://localhost:9090 --fast --verbose
 
 # AI-powered analysis (Claude, AWS Bedrock, or local Ollama)

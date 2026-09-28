@@ -14,7 +14,7 @@ or real target data to the repo.
 
 ```bash
 uv sync --all-extras          # install everything including dev
-uv run pytest tests/ -v       # full suite must pass: 1940+ passed, 0 failed
+uv run pytest tests/ -v       # full suite must pass: 0 failed
 uv run ruff check .           # must be zero
 uv run mypy mcpnuke/          # must stay at or below the CI ceiling
 ```

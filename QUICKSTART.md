@@ -430,7 +430,7 @@ custom wordlist. All static + behavioral checks run against discovered tools.
 ## 16) Authenticated endpoint (GitHub MCP)
 
 ```bash
-./scan --targets https://api.githubcopilot.com/mcp/ --auth-token ghp_xxx
+./scan --targets https://api.githubcopilot.com/mcp/ --auth-token-file ./token
 
 # Or via env var
 export MCP_AUTH_TOKEN=ghp_xxx

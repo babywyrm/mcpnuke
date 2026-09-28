@@ -6,7 +6,7 @@ five modes.
 | Mode | Flag | What Runs | Use Case |
 |------|------|-----------|----------|
 | **Full** | (default) | Static + all behavioral probes | Dev/staging, DVMCP, CTFs |
-| **Fast** | `--fast` | Static + top-5 tools (tiered scoring), skip heavy probes (risk-aware: retains `input_sanitization` when dangerous params detected), cap workers at 2 | Quick triage, large tool sets |
+| **Fast** | `--fast` | Static checks read the full catalog. Invoke probes sample the top 5 (tiered scoring), skip heavy probes (risk-aware: retains `input_sanitization` when dangerous params detected), cap probe workers at 2 | Quick triage, large tool sets |
 | **Safe** | `--safe-mode` | Static + probes on read-only tools only; skips delete/exec/send/write and outbound sinks (webhook, egress, exfil), including dotted names like `shellwrap.exec` / `shadow.register_webhook` | Prod servers with mixed tool risk |
 | **Static** | `--no-invoke` | Static checks only, no tool calls | Prod servers, zero side-effect risk |
 | **AI** | `--claude` | All checks + Claude analysis | Deep analysis, subtle vuln hunting |
@@ -19,9 +19,9 @@ was found.
 
 ## Fast Mode Scoring
 
-In `--fast` mode, mcpnuke ranks all discovered tools using a tiered weighted
-scoring algorithm (`_tool_security_score`) and selects the top 5. The scorer
-considers:
+In `--fast` mode, static checks still read every enumerated tool. Invoke
+probes rank those tools with a tiered weighted scoring algorithm
+(`_tool_security_score`) and call the top 5. The scorer considers:
 
 | Factor | How It Works |
 |--------|-------------|

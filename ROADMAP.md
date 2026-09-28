@@ -12,10 +12,10 @@ stoneburner's, and runtime policy enforcement is nullfield's.
 
 | Area | State |
 |------|-------|
-| Static metadata analysis (schema, permissions, credentials) | **Strong** — 17 static checks |
-| Behavioral probes (tool invocation, SSRF, injection, exfil) | **Strong** — 12 behavioral checks |
+| Static metadata analysis (schema, permissions, credentials) | **Strong** — 50 static checks |
+| Behavioral probes (tool invocation, SSRF, injection, exfil) | **Strong** — 4 light + 24 deep probes |
 | AI-augmented analysis (Claude + Ollama) | **Strong** — 4-phase analysis, ensemble consensus; Phase 4 chain replay works on Ollama as of 6.19.0 |
-| Transport security (JWT, DPoP, scope, boundaries) | **Strong** — 8 transport checks |
+| Transport security (JWT, DPoP, SSE) | **Strong** — 8 JWT, 3 DPoP, 1 SSE |
 | Lane coverage (5 identity lanes) | **All 5 represented** |
 | Taxonomy coverage | **54/57 IDs (95%)** — Tier 1 complete, see gap map below |
 | MCP spec surface (2026-08-22 roadmap) | **Mapped** — Speak/Scan/Ready in [docs/spec-surface.md](docs/spec-surface.md) |

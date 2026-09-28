@@ -18,6 +18,13 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Living guidance matches the inventory.** Cursor rules still said 6.13.0
+  and a 1040-test suite. The roadmap glance still said 17 static, 12
+  behavioral, and 8 transport checks. Those counts now follow the check
+  inventory (50 static, 4 light + 24 deep, 8 JWT / 3 DPoP / 1 SSE).
+  `docs/scan-modes.md` no longer says `--fast` limits static checks to
+  the top 5.
+
 - **`jwt_audience_target_match` no longer calls a logical audience a
   disabled check.** A token whose `aud` is a client id or other name, and
   not another URL, is MEDIUM. HIGH stays for an `aud` that names a

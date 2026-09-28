@@ -37,6 +37,13 @@ def test_cli_reports_the_version(capsys):
     assert mcpnuke.__version__ in capsys.readouterr().out
 
 
+def test_cursor_rule_names_the_package_version():
+    """The always-applied rule is what an agent reads first. A stale version
+    there outranks pyproject.toml in practice."""
+    rule = (_ROOT / ".cursor/rules/mcpnuke-development.mdc").read_text()
+    assert f"Version {mcpnuke.__version__}." in rule
+
+
 def test_changelog_documents_the_current_version():
     """A release that ships without a changelog entry cannot be diffed by the
     people it affects."""

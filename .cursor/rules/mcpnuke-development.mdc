@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Project Identity
 
-mcpnuke is an MCP red teaming and security scanner. Version 6.13.0. Python 3.11+.
+mcpnuke is an MCP red teaming and security scanner. Version 6.20.0. Python 3.11+.
 Package manager: `uv`. Test runner: `uv run pytest tests/ -v`.
 
 ## Superpowers Workflow (mandatory)
@@ -36,7 +36,7 @@ All development on mcpnuke follows the superpowers skills framework:
 - Every new check needs a dedicated `tests/test_<check_name>.py`
 - Minimum 3 tests per check: positive detection, clean/negative, timing recorded
 - Use `conftest.py` fixtures: `result_with_tools([{...}])`
-- Full suite must pass before any commit: 1040+ passed, 37 skipped, 0 failed
+- Full suite must pass before any commit: 0 failed. Do not cite a hardcoded pass count.
 - Also green before committing: `ruff check .` at zero, `mypy mcpnuke/` at or below the CI ceiling. `mcpnuke.core.*` additionally enforces `disallow_untyped_defs`
 - DVMCP live tests gated behind `DVMCP_LIVE=1`
 
@@ -71,6 +71,8 @@ These exist because each one broke once. Do not route around them:
   and stdio never gains `post_raw`.
 - `tests/test_check_progress.py` — the progress denominator is derived from the
   check inventory, never hardcoded.
+- `tests/test_docs_current.py` — README, checks, scan modes, and the roadmap
+  glance counts match the registry. Stated check counts are not handwritten.
 
 ## Project-Specific Skills
 

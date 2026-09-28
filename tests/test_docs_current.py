@@ -12,7 +12,15 @@ from mcpnuke import _docsgen
 from mcpnuke import checks as checks_pkg
 from mcpnuke.__main__ import _build_diff_parser
 from mcpnuke._docsgen import render_cli_reference
-from mcpnuke.checks import FAST_SKIP_CHECKS, _build_deep_checks
+from mcpnuke.checks import (
+    _DPOP_CHECK_NAMES,
+    _JWT_CHECK_NAMES,
+    _LIGHT_BEHAVIORAL_CHECK_NAMES,
+    _STATIC_CHECK_NAMES,
+    _TRANSPORT_CHECK_NAMES,
+    FAST_SKIP_CHECKS,
+    _build_deep_checks,
+)
 from mcpnuke.cli import build_parser, parse_args
 from mcpnuke.core.constants import ATTACK_CHAIN_PATTERNS
 from mcpnuke.core.models import TargetResult
@@ -1064,3 +1072,40 @@ class TestChainReplayDocsCurrency:
         text = (_docsgen.REPO_ROOT / "QUICKSTART.md").read_text().lower()
         assert "proved chain sink" in text or "deny on the sink" in text
         assert "hold" in text and "source" in text
+
+
+class TestLivingGuidance:
+    """Counts and mode descriptions outside the generated CLI reference.
+
+    The check inventory and `--help` are already pinned. The roadmap glance,
+    scan-modes, and the agent rules are not, and they kept the 6.13.0 picture
+    after the catalog grew and `--fast` stopped sampling static checks.
+    """
+
+    def test_roadmap_glance_counts_match_the_inventory(self) -> None:
+        text = (_docsgen.REPO_ROOT / "ROADMAP.md").read_text()
+        deep = len(_deep_probe_names())
+        assert f"{len(_STATIC_CHECK_NAMES)} static checks" in text
+        assert f"{len(_LIGHT_BEHAVIORAL_CHECK_NAMES)} light + {deep} deep probes" in text
+        assert (
+            f"{len(_JWT_CHECK_NAMES)} JWT, {len(_DPOP_CHECK_NAMES)} DPoP, "
+            f"{len(_TRANSPORT_CHECK_NAMES)} SSE"
+        ) in text
+
+    def test_fast_mode_doc_reads_the_full_catalog(self) -> None:
+        modes = (_docsgen.REPO_ROOT / "docs" / "scan-modes.md").read_text()
+        readme = (_docsgen.REPO_ROOT / "README.md").read_text()
+        assert "Static checks read the full catalog" in modes
+        assert "Static + top-5" not in modes
+        assert "static checks read the full catalog" in readme
+
+    def test_agent_guidance_does_not_cite_the_old_suite(self) -> None:
+        for rel in (
+            "AGENTS.md",
+            ".cursor/rules/mcpnuke-development.mdc",
+            ".cursor/rules/mcpnuke-tests.mdc",
+        ):
+            text = (_docsgen.REPO_ROOT / rel).read_text()
+            assert "1040" not in text, rel
+            assert "1940" not in text, rel
+            assert "6.13.0" not in text, rel
