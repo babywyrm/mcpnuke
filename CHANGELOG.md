@@ -4,6 +4,13 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **`--oidc-resource` (RFC 8707).** Client-credentials fetches can now send a
+  `resource` parameter so the access token audience is the MCP endpoint, not
+  the client id. Gateways that bind `aud` to the resource URL were rejecting
+  otherwise valid tokens. Env var: `MCP_OIDC_RESOURCE`.
+
 ### Fixed
 
 - **`--baseline` now reports description and schema drift as findings.** The

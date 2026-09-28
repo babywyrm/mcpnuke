@@ -134,7 +134,8 @@ finding, or run `./walkthrough/demo.sh` for the fully automated version.
 # OIDC auto-token (Keycloak, etc.)
 ./scan --targets http://localhost:9090/mcp \
   --oidc-url http://keycloak:8080/realms/myapp \
-  --client-id myapp --client-secret SECRET
+  --client-id myapp --client-secret SECRET \
+  --oidc-resource http://localhost:9090/mcp
 
 # JSON report for CI (includes proof-ranked priority_actions + impact/fix/verify,
 # OWASP MCP Top 10 alignment, and an AIBOM-style inventory per target)

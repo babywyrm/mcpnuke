@@ -240,7 +240,9 @@ Scan commands:
 ./scan --port-range <cluster-node>:30901-30910 --verbose
 
 # Camazotz (needs OIDC token — use portal flow or --oidc-url)
-./scan --targets http://<cluster-node>:30080/sse --oidc-url http://zitadel:8080 --client-id <id> --client-secret <secret>
+./scan --targets http://<cluster-node>:30090/mcp \
+  --oidc-url http://zitadel:8080 --client-id <id> --client-secret <secret> \
+  --oidc-scope api --oidc-resource <mcp-url>
 
 # Full with AI analysis
 ./scan --port-range <cluster-node>:30901-30910 --ollama-analysis http://<ollama-host>:11434 --ollama-model qwen2.5:14b

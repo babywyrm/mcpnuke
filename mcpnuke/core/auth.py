@@ -367,6 +367,7 @@ def fetch_client_credentials_token(
     client_secret: str,
     timeout: float = 10.0,
     scope: str | None = None,
+    resource: str | None = None,
     verify_tls: bool = False,
     extra_headers: dict[str, str] | None = None,
 ) -> str:
@@ -415,6 +416,9 @@ def fetch_client_credentials_token(
     }
     if scope:
         data["scope"] = scope
+    # RFC 8707. Issuers that honor it set aud to this URI instead of the client id.
+    if resource:
+        data["resource"] = resource
 
     headers: dict[str, str] = {"Content-Type": "application/x-www-form-urlencoded"}
     if extra_headers:
@@ -457,6 +461,7 @@ def resolve_auth_token(args: argparse.Namespace) -> str | None:
     oidc_url = getattr(args, "oidc_url", None)
     verify_tls = bool(getattr(args, "tls_verify", False))
     scope = getattr(args, "oidc_scope", None)
+    resource = getattr(args, "oidc_resource", None)
     extra_headers = parse_header_kv_pairs(getattr(args, "header", None))
     if not oidc_url:
         # Try to auto-detect from the first target
@@ -482,6 +487,7 @@ def resolve_auth_token(args: argparse.Namespace) -> str | None:
         client_id,
         client_secret,
         scope=scope,
+        resource=resource,
         verify_tls=verify_tls,
         extra_headers=extra_headers,
     )

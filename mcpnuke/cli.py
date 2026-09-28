@@ -96,6 +96,14 @@ def _add_auth_arguments(group: ArgumentGroup) -> None:
         help="Optional OAuth2 scope for client_credentials token requests.",
     )
     group.add_argument(
+        "--oidc-resource",
+        metavar="URL",
+        default=os.environ.get("MCP_OIDC_RESOURCE") or None,
+        help="Optional RFC 8707 resource indicator for client_credentials "
+        "token requests. Asks the issuer to set the access token audience "
+        "to this URI (the MCP endpoint). Or set MCP_OIDC_RESOURCE env var.",
+    )
+    group.add_argument(
         "--client-id",
         metavar="ID",
         default=os.environ.get("MCP_CLIENT_ID") or None,

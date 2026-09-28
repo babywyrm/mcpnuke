@@ -25,6 +25,7 @@ Generated from the parser, so it cannot fall behind the code.
 | `--tls-verify` | Enable TLS certificate verification for outbound HTTP calls. Default is disabled for lab/self-signed targets. |
 | `--oidc-url URL` | OIDC issuer URL for token fetch (e.g. http://keycloak:8080/realms/myapp). Used with --client-id and --client-secret for automatic token acquisition. |
 | `--oidc-scope SCOPE` | Optional OAuth2 scope for client_credentials token requests. |
+| `--oidc-resource URL` | Optional RFC 8707 resource indicator for client_credentials token requests. Asks the issuer to set the access token audience to this URI (the MCP endpoint). Or set MCP_OIDC_RESOURCE env var. |
 | `--client-id ID` | OAuth2 client ID for client_credentials grant. Or set MCP_CLIENT_ID env var. |
 | `--client-secret SECRET` | OAuth2 client secret for client_credentials grant. Or set MCP_CLIENT_SECRET env var. |
 | `--token-introspect-url URL` | Optional OAuth2 token introspection endpoint URL. |
@@ -183,6 +184,7 @@ Each variable supplies the default for one flag; passing the flag wins. Only nam
 | `MCP_INTROSPECT_CLIENT_SECRET` | `--token-introspect-client-secret` |
 | `MCP_INTROSPECT_URL` | `--token-introspect-url` |
 | `MCP_JWKS_URL` | `--jwks-url` |
+| `MCP_OIDC_RESOURCE` | `--oidc-resource` |
 | `MCP_OIDC_SCOPE` | `--oidc-scope` |
 | `MCP_OIDC_URL` | `--oidc-url` |
 | `NO_COLOR` | `--no-color` |

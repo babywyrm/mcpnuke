@@ -252,6 +252,7 @@ mcpnuke --targets https://mcp.example.com/mcp \
   --client-id scanner \
   --client-secret "$CLIENT_SECRET" \
   --oidc-scope "mcp.read mcp.invoke" \
+  --oidc-resource https://mcp.example.com/mcp \
   --tls-verify --verbose \
   --json jwt-audit.json
 ```
