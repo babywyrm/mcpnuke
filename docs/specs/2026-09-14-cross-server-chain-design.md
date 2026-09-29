@@ -73,6 +73,10 @@ Feed cross-target shadowing collisions into chain grading: a replayed chain
 whose first step resolves to a shadowed name scores higher, because the agent
 may invoke the decoy without any injection at all.
 
+Built (2026-09-28): a callable chain whose first tool name collides with
+another target in the run is HIGH. Proved chains stay CRITICAL. A collision
+on a later step does not raise the grade, and a halted chain stays silent.
+
 ## 4. Safety
 
 Cross-server replay multiplies blast radius: a payload planted on A is

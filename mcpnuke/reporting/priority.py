@@ -141,6 +141,14 @@ _PROOF_GUIDANCE: dict[str, tuple[str, str, str]] = {
         "Treat the composition as real: break the source→sink link and redact sensitive fields.",
         "Re-scan with --claude --chain-replay; AI-judged movement for this path should clear.",
     ),
+    "callable chain starts on a shadowed tool": (
+        "The chain ran, and its first tool name also exists on another server, "
+        "so an agent can be routed to the decoy without an injection.",
+        "Rename or remove the colliding tool so each server owns a distinct name, "
+        "and require the agent to pin the server rather than the bare tool name.",
+        "Re-scan the same targets with --chain-replay --cross-server; the "
+        "'shadowed tool' Priority action for this path should clear.",
+    ),
     "live exfil path (egress unconfirmed)": (
         "A source→sink path accepted a canary end-to-end, but egress was not observed.",
         "Still treat as high risk: remove the sink or require strong auth; do not rely on "
@@ -256,6 +264,8 @@ def _tier(finding: Finding) -> tuple[int, str]:
         return 600, "AI-judged transformed data movement"
     if check == "exfil_flow" and "live exfil path" in title_l:
         return 500, "live exfil path (egress unconfirmed)"
+    if check == "llm_chain_replay" and "shadowed tool" in title_l:
+        return 450, "callable chain starts on a shadowed tool"
     if check in _HIGH_SIGNAL_BEHAVIORAL and sev in ("CRITICAL", "HIGH"):
         return 400, "high-signal behavioral finding"
     if sev == "CRITICAL":

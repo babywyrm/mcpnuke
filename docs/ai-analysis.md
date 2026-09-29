@@ -84,7 +84,7 @@ Claude runs four phases after deterministic + behavioral checks:
 | **Tool analysis** | Reads definitions for subtle poisoning, social engineering, logical risks | "These tools chain into a privilege escalation path" |
 | **Response analysis** | Reads actual tool output for manipulation, hidden intent, credential leakage | "Tool response is a fake paywall — social engineering the LLM" |
 | **Chain reasoning** | Connects all findings into multi-step attack scenarios | "Unauthenticated access → command injection → lateral movement → persistence" |
-| **Chain replay** (`--chain-replay`) | Proposes executable steps, runs them on the target, and grades the transcript | "Chain reproduced" / "exfiltrated out-of-band" CRITICAL; callable-but-unproven MEDIUM |
+| **Chain replay** (`--chain-replay`) | Proposes executable steps, runs them on the target, and grades the transcript | "Chain reproduced" / "exfiltrated out-of-band" CRITICAL; callable-but-unproven MEDIUM, or HIGH when the first tool name collides across targets |
 
 **Phase 4 (`--chain-replay`) in brief:**
 
@@ -96,6 +96,9 @@ previous output. `--safe-mode` still refuses dangerous tools on every target.
 When the run has more than one target, proposal waits until every catalog
 exists, then each server is told the others' URLs and tool names.
 A step whose target is not one of those URLs is refused and not opened.
+A callable chain whose first tool name also exists on another server in the
+run is HIGH (`shadowed tool`): the agent can be routed to that decoy by name.
+Proved chains stay CRITICAL.
 - Honours `--safe-mode` and `--no-invoke` (dangerous steps refused before call).
   Namespaced tools count: `shellwrap.exec` / `sdk.write_cache` /
   `shadow.register_webhook` / `egress.fetch_url` are refused the same way as

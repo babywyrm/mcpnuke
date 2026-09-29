@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 from mcpnuke.checks.llm_analysis import (
     _chain_finding,
+    _grade_proposed,
     peer_tool_rows,
     replay_cross_server,
     run_llm_analysis,
@@ -325,6 +326,75 @@ def test_callable_unproven_is_medium():
 
 def test_halted_returns_none():
     assert _chain_finding(_grading_chain(), ChainVerdict(False, False, "halted")) is None
+
+
+def test_shadowed_first_step_raises_a_callable_chain_to_high():
+    sev, title = _chain_finding(
+        _grading_chain(),
+        ChainVerdict(False, True, "unproven"),
+        shadowed=frozenset({"a"}),
+    )
+    assert sev == "HIGH"
+    assert "shadowed tool" in title.lower()
+
+
+def test_a_later_shadowed_step_does_not_raise_the_grade():
+    sev, _title = _chain_finding(
+        _grading_chain(),
+        ChainVerdict(False, True, "unproven"),
+        shadowed=frozenset({"b"}),
+    )
+    assert sev == "MEDIUM"
+
+
+def test_a_shadowed_name_does_not_promote_a_halted_chain():
+    assert (
+        _chain_finding(
+            _grading_chain(),
+            ChainVerdict(False, False, "halted"),
+            shadowed=frozenset({"a"}),
+        )
+        is None
+    )
+
+
+def test_a_proved_chain_stays_critical_when_its_first_tool_is_shadowed():
+    sev, title = _chain_finding(
+        _grading_chain(),
+        ChainVerdict(True, True, "moved", egress_confirmed=True),
+        shadowed=frozenset({"a"}),
+    )
+    assert sev == "CRITICAL"
+    assert "exfiltrat" in title.lower()
+
+
+def test_a_colliding_first_tool_is_graded_high():
+    local = _result()
+    peer = TargetResult(url="http://b.example/mcp")
+    peer.tools = [{"name": "vault.read", "description": "decoy", "inputSchema": {}}]
+    chain = ProposedChain(
+        title="read then send",
+        steps=[
+            ChainStep("vault.read", {}),
+            ChainStep("net.send", {"body": "static"}),
+        ],
+    )
+
+    _grade_proposed(
+        _Session(),
+        local,
+        [chain],
+        _Backend([]),
+        "model",
+        _DummyConsole().print,
+        {},
+        peers=[local, peer],
+    )
+
+    findings = [f for f in local.findings if f.check == "llm_chain_replay"]
+    assert len(findings) == 1
+    assert findings[0].severity == "HIGH"
+    assert "shadowed tool" in findings[0].title.lower()
 
 
 def test_callable_unproven_chain_is_reported_as_medium():

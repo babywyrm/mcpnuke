@@ -268,14 +268,42 @@ def _transcript(run: ChainRun, verdict: ChainVerdict) -> str:
     return "\n".join(lines)
 
 
-def _chain_finding(chain, verdict) -> tuple[str, str] | None:
+def _cross_target_shadows(
+    result: TargetResult,
+    peers: list[TargetResult],
+) -> frozenset[str]:
+    """Lowercased tool names this server shares with another target."""
+    mine = {str(tool.get("name") or "").lower() for tool in result.tools if tool.get("name")}
+    if not mine:
+        return frozenset()
+    others: set[str] = set()
+    for other in peers:
+        if other.url == result.url:
+            continue
+        others.update(
+            str(tool.get("name") or "").lower() for tool in other.tools if tool.get("name")
+        )
+    return frozenset(mine & others)
+
+
+def _chain_finding(
+    chain,
+    verdict,
+    shadowed: frozenset[str] | None = None,
+) -> tuple[str, str] | None:
     """Severity and title for a replayed chain, or None to skip a halted one.
 
     Three reportable tiers, worst first: an out-of-band callback (data left
     the target), an in-band data move (composition proven), and a chain that
     ran end to end without provable movement (reachable, unproven). A halted
     chain is not a result — nothing composed — so it is dropped as noise.
+    A callable chain whose first tool name also exists on another server in
+    the run is HIGH: an agent can be routed to that decoy by name alone.
+    Proved chains stay CRITICAL.
     """
+    names = shadowed or frozenset()
+    first = chain.steps[0].tool.lower() if chain.steps else ""
+    via_shadow = bool(first) and first in names
     if verdict.egress_confirmed:
         return (
             "CRITICAL",
@@ -284,6 +312,12 @@ def _chain_finding(chain, verdict) -> tuple[str, str] | None:
     if verdict.reproduced:
         return "CRITICAL", f"Chain reproduced: {chain.title}"
     if verdict.callable_end_to_end:
+        if via_shadow:
+            return (
+                "HIGH",
+                f"Chain callable via shadowed tool '{chain.steps[0].tool}' "
+                f"(composition unproven): {chain.title}",
+            )
         return (
             "MEDIUM",
             f"Chain callable end-to-end (composition unproven): {chain.title}",
@@ -431,6 +465,7 @@ def _grade_proposed(
     allowed_targets: frozenset[str] | None = None,
 ) -> None:
     tools_by_name = _tools_for_replay(result, peers or [])
+    shadowed = _cross_target_shadows(result, peers or [])
     oast = opts.get("oast")
     open_session = _cross_server_opener(result, opts) if opts.get("cross_server") else None
     reported = 0
@@ -449,7 +484,7 @@ def _grade_proposed(
             open_session=open_session,
             allowed_targets=allowed_targets,
         )
-        graded = _chain_finding(chain, verdict)
+        graded = _chain_finding(chain, verdict, shadowed=shadowed)
         if graded is None:
             continue
         severity, title = graded

@@ -68,6 +68,22 @@ def test_collapse_excessive_permissions():
     assert "10 findings" in actions[0].title
 
 
+def test_shadowed_callable_chain_ranks_above_a_generic_high():
+    findings = [
+        _f("code_execution", "HIGH", "Tool can run a shell"),
+        _f(
+            "llm_chain_replay",
+            "HIGH",
+            "[AI] Chain callable via shadowed tool 'lookup' (composition unproven): decoy",
+        ),
+    ]
+    actions = rank_priority_actions(findings)
+    assert actions[0].check == "llm_chain_replay"
+    assert "shadow" in actions[0].reason.lower()
+    assert actions[0].score > actions[1].score
+    assert "decoy" in actions[0].impact.lower() or "name" in actions[0].impact.lower()
+
+
 def test_reproduced_ranks_above_ai_judged():
     findings = [
         _f(

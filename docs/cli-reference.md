@@ -56,7 +56,7 @@ Generated from the parser, so it cannot fall behind the code.
 
 | Option | Description |
 |---|---|
-| `--chain-replay` | After AI chain reasoning, propose executable multi-step chains and replay them against the target. Graded: out-of-band egress or proven data movement is CRITICAL; callable-but-unproven is MEDIUM; halted chains stay silent. Implies tool invocation; ignored under --no-invoke. Requires --claude (or another AI backend). |
+| `--chain-replay` | After AI chain reasoning, propose executable multi-step chains and replay them against the target. Graded: out-of-band egress or proven data movement is CRITICAL; callable-but-unproven is MEDIUM, or HIGH when the first tool name collides across targets; halted chains stay silent. Implies tool invocation; ignored under --no-invoke. Requires --claude (or another AI backend). |
 | `--chain-replay-retries N` | When a replayed chain halts, feed the failing transcript back to the model and retry up to N times (default: 1). 0 disables revision. Each revise/retry attempt is logged under --verbose. |
 | `--cross-server` | When replaying a chain, a step that names a target URL is sent to that server. Each such step opens a session and closes it before the next step. Requires --chain-replay. Off by default. --safe-mode still refuses dangerous tools on every target. |
 | `--oast` | Run a callback listener and plant a per-probe URL in exfiltration payloads (and in chain-replay {{oast.url}} steps). A request for that URL proves egress: data left the target, rather than the sink merely accepting it. Chain replay awaits a short grace period for queued callbacks before grading. Off by default because it opens a listening socket and induces the target to send data outward. |

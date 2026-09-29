@@ -222,7 +222,8 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
         action="store_true",
         help="After AI chain reasoning, propose executable multi-step chains and "
         "replay them against the target. Graded: out-of-band egress or proven "
-        "data movement is CRITICAL; callable-but-unproven is MEDIUM; halted "
+        "data movement is CRITICAL; callable-but-unproven is MEDIUM, or HIGH "
+        "when the first tool name collides across targets; halted "
         "chains stay silent. Implies tool invocation; ignored under "
         "--no-invoke. Requires --claude (or another AI backend).",
     )

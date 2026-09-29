@@ -14,7 +14,9 @@ All notable changes to this submodule are documented here.
   still refuses dangerous tools before the connection. When more than
   one target is in the run, proposals wait until every catalog exists,
   then each server sees the others' tool names. A step whose
-  target is not one of the scanned URLs is refused and not opened.
+  target is not one of the scanned URLs is refused and not opened. A
+  callable chain whose first tool name also exists on another server in
+  the run is HIGH; proved chains stay CRITICAL.
 
 - **`--auth-token-file` and `--client-secret-file`.** Bearer tokens and
   client secrets can be read from a file so they are not visible in
