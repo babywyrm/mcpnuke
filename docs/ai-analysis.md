@@ -95,6 +95,7 @@ flag the step is refused and is not sent to the server that produced the
 previous output. `--safe-mode` still refuses dangerous tools on every target.
 When the run has more than one target, proposal waits until every catalog
 exists, then each server is told the others' URLs and tool names.
+A step whose target is not one of those URLs is refused and not opened.
 - Honours `--safe-mode` and `--no-invoke` (dangerous steps refused before call).
   Namespaced tools count: `shellwrap.exec` / `sdk.write_cache` /
   `shadow.register_webhook` / `egress.fetch_url` are refused the same way as

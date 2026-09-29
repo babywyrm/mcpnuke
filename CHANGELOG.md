@@ -13,7 +13,8 @@ All notable changes to this submodule are documented here.
   step is refused rather than sent to the wrong server. `--safe-mode`
   still refuses dangerous tools before the connection. When more than
   one target is in the run, proposals wait until every catalog exists,
-  then each server sees the others' tool names.
+  then each server sees the others' tool names. A step whose
+  target is not one of the scanned URLs is refused and not opened.
 
 - **`--auth-token-file` and `--client-secret-file`.** Bearer tokens and
   client secrets can be read from a file so they are not visible in

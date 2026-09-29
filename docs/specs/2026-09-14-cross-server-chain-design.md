@@ -64,7 +64,8 @@ Slice 1 (2026-09-28): a step's `target` URL is opened for that step and
 closed before the next one. Sessions are not held past the step. With the
 flag off, a step that names a target is refused rather than sent to the
 session that produced the previous output. `--safe-mode` is checked before
-the peer connection.
+the peer connection. A target that is not one of the scanned URLs is
+refused before any connection.
 
 ### Phase C — shadow-aware chain scoring
 

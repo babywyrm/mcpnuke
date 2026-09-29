@@ -466,6 +466,7 @@ def replay_chain(
     backend: Any = None,
     model: str = "",
     open_session: Callable[[str], MCPSessionProtocol | None] | None = None,
+    allowed_targets: frozenset[str] | None = None,
 ) -> ChainRun:
     """Execute *chain* against *session*, threading outputs into later args.
 
@@ -481,6 +482,8 @@ def replay_chain(
     A step with ``target`` set is sent to the session *open_session* returns
     for that URL. The peer is closed before the next step. With no opener
     the step is refused and is not sent to *session*.
+    When *allowed_targets* is set, a target outside that set is refused
+    before any connection.
     """
     run = ChainRun(chain=chain)
     oast_url = ""
@@ -520,6 +523,18 @@ def replay_chain(
         active: MCPSessionProtocol = session
         peer: MCPSessionProtocol | None = None
         if step.target:
+            if allowed_targets is not None and step.target not in allowed_targets:
+                run.results.append(
+                    StepResult(
+                        tool=step.tool,
+                        request_args={},
+                        response_text="",
+                        failed=True,
+                        reason="target is not in this scan",
+                        target=step.target,
+                    )
+                )
+                break
             if open_session is None:
                 run.results.append(
                     StepResult(

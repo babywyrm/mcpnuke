@@ -209,6 +209,7 @@ def _replay_with_retries(
     oast: Any,
     oast_wait: float = 2.0,
     open_session: Any = None,
+    allowed_targets: frozenset[str] | None = None,
 ) -> tuple[ChainRun, ChainVerdict]:
     """Replay a chain; on a halt, revise and retry up to *retries* times."""
     run = replay_chain(
@@ -220,6 +221,7 @@ def _replay_with_retries(
         backend=backend,
         model=model,
         open_session=open_session,
+        allowed_targets=allowed_targets,
     )
     verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
     attempts = 0
@@ -245,6 +247,7 @@ def _replay_with_retries(
             backend=backend,
             model=model,
             open_session=open_session,
+            allowed_targets=allowed_targets,
         )
         verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
         attempts += 1
@@ -425,6 +428,7 @@ def _grade_proposed(
     log: Callable[[str], None],
     opts: dict,
     peers: list[TargetResult] | None = None,
+    allowed_targets: frozenset[str] | None = None,
 ) -> None:
     tools_by_name = _tools_for_replay(result, peers or [])
     oast = opts.get("oast")
@@ -443,6 +447,7 @@ def _grade_proposed(
             oast=oast,
             oast_wait=float(opts.get("oast_wait", 2.0)),
             open_session=open_session,
+            allowed_targets=allowed_targets,
         )
         graded = _chain_finding(chain, verdict)
         if graded is None:
@@ -525,7 +530,15 @@ def replay_cross_server(
             continue
         try:
             _grade_proposed(
-                session, result, proposed, backend, model, log, opts, peers=results
+                session,
+                result,
+                proposed,
+                backend,
+                model,
+                log,
+                opts,
+                peers=results,
+                allowed_targets=frozenset(item.url for item in results),
             )
         finally:
             session.close()
@@ -725,7 +738,19 @@ def run_llm_analysis(
                     if not f.check.startswith("llm_")
                 ]
                 proposed = _propose_chains(backend, result.tools, existing, model, _log)
-                _grade_proposed(session, result, proposed, backend, model, _log, opts)
+                allowed = (
+                    frozenset({result.url}) if opts.get("cross_server") else None
+                )
+                _grade_proposed(
+                    session,
+                    result,
+                    proposed,
+                    backend,
+                    model,
+                    _log,
+                    opts,
+                    allowed_targets=allowed,
+                )
             except KeyboardInterrupt:
                 _log("  [yellow]  Phase 4 interrupted[/yellow]")
             except Exception as e:
