@@ -532,6 +532,7 @@ def propose_chains(
     findings: list[dict],
     model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
+    peers: list[tuple[str, list[str]]] | None = None,
 ) -> list:
     """Ask for chains as executable steps the prober can replay.
 
@@ -546,12 +547,16 @@ def propose_chains(
     if not findings:
         return []
 
-    system, user_content = _propose_chains_prompt(tools, findings)
+    system, user_content = _propose_chains_prompt(tools, findings, peers=peers)
     text = _call_claude(system, user_content, model, _ANALYSIS_MAX_TOKENS, log=log)
     return parse_proposed_chains(text)
 
 
-def _propose_chains_prompt(tools: list[dict], findings: list[dict]) -> tuple[str, str]:
+def _propose_chains_prompt(
+    tools: list[dict],
+    findings: list[dict],
+    peers: list[tuple[str, list[str]]] | None = None,
+) -> tuple[str, str]:
     """Build the (system, user) prompt for executable chain proposals.
 
     Shared by the Claude module functions and the Ollama backend so both
@@ -595,6 +600,18 @@ def _propose_chains_prompt(tools: list[dict], findings: list[dict]) -> tuple[str
         f"Existing findings ({_shown_of(n_f, total_f, 'findings')}):\n"
         f"{findings_summary}"
     )
+    if peers:
+        # Other servers are listed only after every target has been enumerated.
+        # A step sets "target" to one of these URLs and names one of its tools.
+        listed = "\n".join(
+            f"- {url}: {', '.join(names)}" for url, names in peers if names
+        )
+        system += (
+            "\nOther MCP servers are in scope. A step that must run on one of "
+            'them sets "target" to that server\'s URL and names only a tool '
+            "listed for it. Steps on the current server omit target.\n"
+        )
+        user_content += f"\n\nOther servers:\n{listed}"
     return system, user_content
 
 

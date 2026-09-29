@@ -221,3 +221,22 @@ class TestProposalPromptBudget:
         findings = [{"title": "t", "detail": "d", "tool": "tool137"}]
         _, user = llm._propose_chains_prompt(tools, findings)
         assert "tool137" in user
+
+
+def test_peers_are_listed_and_steps_may_set_target() -> None:
+    system, user = llm._propose_chains_prompt(
+        [{"name": "vault.read", "description": "read"}],
+        [{"title": "t", "detail": "d"}],
+        peers=[("http://b.example/mcp", ["net.deliver"])],
+    )
+    assert 'sets "target"' in system
+    assert "http://b.example/mcp" in user
+    assert "net.deliver" in user
+
+
+def test_prompt_without_peers_does_not_ask_for_a_target_field() -> None:
+    system, _user = llm._propose_chains_prompt(
+        [{"name": "vault.read", "description": "read"}],
+        [{"title": "t", "detail": "d"}],
+    )
+    assert 'sets "target"' not in system

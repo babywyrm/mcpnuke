@@ -367,4 +367,7 @@ def run_parallel(
     from mcpnuke.checks import run_cross_target_checks
     run_cross_target_checks(results, verbose=verbose)
 
+    from mcpnuke.checks.llm_analysis import replay_cross_server
+    replay_cross_server(results, probe_opts, console=console if verbose else None)
+
     return results

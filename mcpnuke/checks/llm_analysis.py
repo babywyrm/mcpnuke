@@ -102,17 +102,43 @@ def _known_finding_lines(result: TargetResult) -> list[str]:
     ]
 
 
+def peer_tool_rows(
+    results: list[TargetResult],
+    current_url: str,
+) -> list[tuple[str, list[str]]]:
+    """Tool names on every other target. Empty catalogs are omitted."""
+    rows: list[tuple[str, list[str]]] = []
+    for other in results:
+        if other.url == current_url:
+            continue
+        names = [str(tool.get("name") or "") for tool in other.tools if tool.get("name")]
+        if names:
+            rows.append((other.url, names))
+    return rows
+
+
+def _defer_cross_server(opts: dict) -> bool:
+    """Multi-target cross-server replay waits until every catalog exists."""
+    return bool(opts.get("cross_server")) and int(opts.get("target_count") or 1) > 1
+
+
 def _propose_chains(
     backend: Any,
     tools: list[dict],
     findings: list[dict],
     model: str,
     log: Callable[[str], None],
+    peers: list[tuple[str, list[str]]] | None = None,
 ) -> list:
     """Ask the backend for executable chains, or return [] if it cannot."""
     propose = getattr(backend, "propose_chains", None)
     if propose is None:
         return []
+    if peers:
+        try:
+            return list(propose(tools, findings, model=model, log=log, peers=peers) or [])
+        except TypeError:
+            pass
     return list(propose(tools, findings, model=model, log=log) or [])
 
 
@@ -370,6 +396,141 @@ def _default_backend() -> LLMBackend:
     return llm_core
 
 
+def _tools_for_replay(
+    result: TargetResult,
+    peers: list[TargetResult],
+) -> dict[str, dict]:
+    """Local schemas win when a name exists on more than one server."""
+    merged: dict[str, dict] = {}
+    for other in peers:
+        if other.url == result.url:
+            continue
+        for tool in other.tools:
+            name = str(tool.get("name") or "")
+            if name:
+                merged.setdefault(name, tool)
+    for tool in result.tools:
+        name = str(tool.get("name") or "")
+        if name:
+            merged[name] = tool
+    return merged
+
+
+def _grade_proposed(
+    session: MCPSessionProtocol,
+    result: TargetResult,
+    proposed: list,
+    backend: Any,
+    model: str,
+    log: Callable[[str], None],
+    opts: dict,
+    peers: list[TargetResult] | None = None,
+) -> None:
+    tools_by_name = _tools_for_replay(result, peers or [])
+    oast = opts.get("oast")
+    open_session = _cross_server_opener(result, opts) if opts.get("cross_server") else None
+    reported = 0
+    for chain in proposed:
+        run, verdict = _replay_with_retries(
+            session,
+            chain,
+            tools_by_name,
+            backend,
+            model=model,
+            log=log,
+            retries=int(opts.get("chain_replay_retries", 1)),
+            safe_mode=opts.get("safe_mode", False),
+            oast=oast,
+            oast_wait=float(opts.get("oast_wait", 2.0)),
+            open_session=open_session,
+        )
+        graded = _chain_finding(chain, verdict)
+        if graded is None:
+            continue
+        severity, title = graded
+        evidence = _transcript(run, verdict)
+        if not verdict.reproduced and verdict.callable_end_to_end:
+            moved, why = _judge_chain(backend, chain.title, evidence, model, log)
+            if moved:
+                severity = "HIGH"
+                title = f"[AI-judged] Chain moved data (transformed): {chain.title}"
+                verdict = replace(verdict, detail=f"{verdict.detail} Judge: {why}")
+        tax = f" [{chain.taxonomy_id}]" if chain.taxonomy_id else ""
+        result.add(
+            "llm_chain_replay",
+            severity,
+            f"[AI]{tax} {title}",
+            f"{verdict.detail} {chain.detail}".strip(),
+            evidence=evidence,
+            taxonomy_id=chain.taxonomy_id,
+        )
+        reported += 1
+    log(
+        f"  [green]  Phase 4 complete: {reported} of "
+        f"{len(proposed)} proposed chain(s) reported[/green]"
+    )
+
+
+def replay_cross_server(
+    results: list[TargetResult],
+    probe_opts: dict | None = None,
+    *,
+    backend: Any = None,
+    console: Any = None,
+) -> None:
+    """Propose and replay chains once every target in the run has a catalog."""
+    opts = probe_opts or {}
+    if not opts.get("cross_server") or not opts.get("chain_replay"):
+        return
+    if opts.get("no_invoke") or len(results) < 2:
+        return
+    if backend is None and not (opts.get("claude") or opts.get("ollama_analysis")):
+        return
+    log = console.print if console else (lambda _msg: None)
+    if backend is None and opts.get("ollama_analysis"):
+        from mcpnuke.core.llm_ollama import OllamaBackend
+
+        model = str(opts.get("ollama_model") or "qwen2.5:14b")
+        backend = OllamaBackend(host=str(opts["ollama_analysis"]), model=model)
+    elif backend is None:
+        backend = _default_backend()
+        model = str(opts.get("claude_model") or DEFAULT_CLAUDE_MODEL)
+    else:
+        model = str(opts.get("claude_model") or opts.get("ollama_model") or DEFAULT_CLAUDE_MODEL)
+
+    from mcpnuke.core.session import detect_transport
+
+    for result in results:
+        peers = peer_tool_rows(results, result.url)
+        if not peers:
+            continue
+        findings = [
+            _finding_digest(f)
+            for f in result.findings
+            if not f.check.startswith("llm_")
+        ]
+        proposed = _propose_chains(backend, result.tools, findings, model, log, peers=peers)
+        if not proposed:
+            continue
+        token = result.auth_context.get("_raw_token")
+        headers = opts.get("extra_headers")
+        session = detect_transport(
+            result.url,
+            auth_token=token if isinstance(token, str) else None,
+            verify_tls=bool(opts.get("tls_verify", False)),
+            extra_headers=headers if isinstance(headers, dict) else None,
+        )
+        if session is None:
+            log(f"  [yellow]  Cross-server replay skipped: could not reconnect to {result.url}[/yellow]")
+            continue
+        try:
+            _grade_proposed(
+                session, result, proposed, backend, model, log, opts, peers=results
+            )
+        finally:
+            session.close()
+
+
 def run_llm_analysis(
     session: MCPSessionProtocol,
     result: TargetResult,
@@ -549,7 +710,12 @@ def run_llm_analysis(
     # Phase 4: Propose executable chains and replay them against the target.
     # Opt-in: it calls tools in sequence, so it inherits the same safety gate
     # as phase 2 and stays off unless --chain-replay is set.
-    if opts.get("chain_replay") and not opts.get("no_invoke") and session is not None:
+    if (
+        opts.get("chain_replay")
+        and not opts.get("no_invoke")
+        and session is not None
+        and not _defer_cross_server(opts)
+    ):
         with time_check("llm_chain_replay", result):
             _log("  [cyan]AI Phase 4: Proposing and replaying attack chains...[/cyan]")
             try:
@@ -559,66 +725,12 @@ def run_llm_analysis(
                     if not f.check.startswith("llm_")
                 ]
                 proposed = _propose_chains(backend, result.tools, existing, model, _log)
-                tools_by_name = {
-                    str(t.get("name") or ""): t for t in result.tools if t.get("name")
-                }
-                oast = opts.get("oast")
-                open_session = (
-                    _cross_server_opener(result, opts) if opts.get("cross_server") else None
-                )
-                reported = 0
-                for chain in proposed:
-                    run, verdict = _replay_with_retries(
-                        session,
-                        chain,
-                        tools_by_name,
-                        backend,
-                        model=model,
-                        log=_log,
-                        retries=int(opts.get("chain_replay_retries", 1)),
-                        safe_mode=opts.get("safe_mode", False),
-                        oast=oast,
-                        oast_wait=float(opts.get("oast_wait", 2.0)),
-                        open_session=open_session,
-                    )
-                    graded = _chain_finding(chain, verdict)
-                    if graded is None:
-                        continue
-                    severity, title = graded
-                    evidence = _transcript(run, verdict)
-                    if (
-                        not verdict.reproduced
-                        and verdict.callable_end_to_end
-                    ):
-                        moved, why = _judge_chain(
-                            backend, chain.title, evidence, model, _log
-                        )
-                        if moved:
-                            severity = "HIGH"
-                            title = (
-                                f"[AI-judged] Chain moved data (transformed): "
-                                f"{chain.title}"
-                            )
-                            verdict = replace(
-                                verdict, detail=f"{verdict.detail} Judge: {why}"
-                            )
-                    tax = f" [{chain.taxonomy_id}]" if chain.taxonomy_id else ""
-                    result.add(
-                        "llm_chain_replay",
-                        severity,
-                        f"[AI]{tax} {title}",
-                        f"{verdict.detail} {chain.detail}".strip(),
-                        evidence=evidence,
-                        taxonomy_id=chain.taxonomy_id,
-                    )
-                    reported += 1
-                _log(
-                    f"  [green]  Phase 4 complete: {reported} of "
-                    f"{len(proposed)} proposed chain(s) reported[/green]"
-                )
+                _grade_proposed(session, result, proposed, backend, model, _log, opts)
             except KeyboardInterrupt:
                 _log("  [yellow]  Phase 4 interrupted[/yellow]")
             except Exception as e:
                 _log(f"  [yellow]  Phase 4 failed: {type(e).__name__}: {e}[/yellow]")
+    elif _defer_cross_server(opts):
+        _log("  [dim]  Phase 4 waits until every target is enumerated[/dim]")
     elif opts.get("chain_replay") and opts.get("no_invoke"):
         _log("  [dim]  Phase 4 skipped (--no-invoke)[/dim]")

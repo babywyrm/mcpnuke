@@ -320,6 +320,7 @@ class OllamaBackend:
         findings: list[dict],
         model: str | None = None,
         log: Callable[[str], None] | None = None,
+        peers: list[tuple[str, list[str]]] | None = None,
     ) -> list:
         """Propose executable attack chains for replay."""
         from mcpnuke.core import llm as llm_core
@@ -327,7 +328,7 @@ class OllamaBackend:
 
         if not findings:
             return []
-        system, user = llm_core._propose_chains_prompt(tools, findings)
+        system, user = llm_core._propose_chains_prompt(tools, findings, peers=peers)
         text = self._call(system, user, DEFAULT_MAX_TOKENS, log)
         chains = parse_proposed_chains(text)
         if not chains and text.strip():

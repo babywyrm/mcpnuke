@@ -608,6 +608,7 @@ def _main_inner() -> None:
         "chain_replay": getattr(args, "chain_replay", False),
         "chain_replay_retries": getattr(args, "chain_replay_retries", 1),
         "cross_server": getattr(args, "cross_server", False),
+        "target_count": len(urls),
         "claude_model": args.claude_model,
         "bedrock": args.bedrock,
         "bedrock_region": args.bedrock_region,

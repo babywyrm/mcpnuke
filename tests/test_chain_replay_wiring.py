@@ -11,7 +11,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mcpnuke.checks.llm_analysis import _chain_finding, run_llm_analysis
+from mcpnuke.checks.llm_analysis import (
+    _chain_finding,
+    peer_tool_rows,
+    replay_cross_server,
+    run_llm_analysis,
+)
 from mcpnuke.core.chain_replay import ChainStep, ChainVerdict, ProposedChain
 from mcpnuke.core.models import TargetResult
 
@@ -94,6 +99,45 @@ def _chain() -> ProposedChain:
     )
 
 
+class _RecordingBackend(_Backend):
+    def __init__(self) -> None:
+        super().__init__([])
+        self.seen: list = []
+
+    def propose_chains(self, tools, findings, model, log, peers=None):
+        self.seen.append(peers)
+        self.propose_calls += 1
+        return []
+
+
+def test_post_pass_names_the_other_servers_tools() -> None:
+    local = _result()
+    peer = TargetResult(url="http://b.example/mcp")
+    peer.tools = [{"name": "net.deliver", "description": "deliver", "inputSchema": {}}]
+    peer.add("code_execution", "HIGH", "sink")
+    backend = _RecordingBackend()
+
+    replay_cross_server(
+        [local, peer],
+        {"chain_replay": True, "cross_server": True, "claude": True},
+        backend=backend,
+        console=_DummyConsole(),
+    )
+
+    assert backend.propose_calls == 2
+    assert ("http://b.example/mcp", ["net.deliver"]) in backend.seen[0]
+    assert ("http://localhost:8080/mcp", ["vault.read", "net.send"]) in backend.seen[1]
+
+
+def test_peer_rows_skip_the_current_server_and_empty_catalogs() -> None:
+    local = _result()
+    empty = TargetResult(url="http://empty.example/mcp")
+    peer = TargetResult(url="http://b.example/mcp")
+    peer.tools = [{"name": "net.deliver"}]
+    rows = peer_tool_rows([local, empty, peer], local.url)
+    assert rows == [("http://b.example/mcp", ["net.deliver"])]
+
+
 class TestItIsOptIn:
     def test_off_by_default(self):
         backend = _Backend([_chain()])
@@ -120,6 +164,24 @@ class TestItIsOptIn:
         )
 
         assert backend.propose_calls == 1
+
+    def test_multi_target_cross_server_defers_proposal(self):
+        backend = _Backend([_chain()])
+
+        run_llm_analysis(
+            _Session(),
+            _result(),
+            probe_opts={
+                "claude_max_tools": 0,
+                "chain_replay": True,
+                "cross_server": True,
+                "target_count": 2,
+            },
+            console=_DummyConsole(),
+            llm_backend=backend,
+        )
+
+        assert backend.propose_calls == 0
 
     def test_no_invoke_suppresses_it(self):
         backend = _Backend([_chain()])
