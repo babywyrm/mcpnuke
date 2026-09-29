@@ -707,6 +707,7 @@ def run_cross_target_checks(
     all_results: list[TargetResult],
     verbose: bool = False,
     log: Callable[[str], None] | None = None,
+    trust_sets: list[frozenset[str]] | None = None,
 ) -> None:
     """Run the cross-target checks once every target's per-target phase is done.
 
@@ -717,9 +718,12 @@ def run_cross_target_checks(
     single-target and stdio paths call it with a one-element list, where the
     same-server half of tool_shadowing still applies.
     """
+    from mcpnuke.core.trust import trusted_with
+
     for r in all_results:
-        check_tool_shadowing(all_results, r)
-        check_cross_server_chain(all_results, r)
+        visible = [r, *trusted_with(r.url, all_results, trust_sets)]
+        check_tool_shadowing(visible, r)
+        check_cross_server_chain(visible, r)
 
 
 def _pick_security_relevant(tools: list[dict], n: int) -> list[dict]:

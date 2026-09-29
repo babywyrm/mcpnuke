@@ -97,8 +97,10 @@ When the run has more than one target, proposal waits until every catalog
 exists, then each server is told the others' URLs and tool names.
 A step whose target is not one of those URLs is refused and not opened.
 A callable chain whose first tool name also exists on another server in the
-run is HIGH (`shadowed tool`): the agent can be routed to that decoy by name.
-Proved chains stay CRITICAL.
+same trust set is HIGH (`shadowed tool`): the agent can be routed to that
+decoy by name. Proved chains stay CRITICAL. `--trust-set URL,URL` (repeatable)
+limits peers, shadow grades, and replay to servers that share an agent. A
+target in no set is not chained. With no `--trust-set`, the run is one set.
 - Honours `--safe-mode` and `--no-invoke` (dangerous steps refused before call).
   Namespaced tools count: `shellwrap.exec` / `sdk.write_cache` /
   `shadow.register_webhook` / `egress.fetch_url` are refused the same way as

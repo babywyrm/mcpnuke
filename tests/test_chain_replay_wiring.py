@@ -130,6 +130,34 @@ def test_post_pass_names_the_other_servers_tools() -> None:
     assert ("http://localhost:8080/mcp", ["vault.read", "net.send"]) in backend.seen[1]
 
 
+def test_replay_peers_stay_inside_the_trust_set() -> None:
+    local = _result()
+    peer = TargetResult(url="http://b.example/mcp")
+    peer.tools = [{"name": "net.deliver", "description": "deliver", "inputSchema": {}}]
+    peer.add("code_execution", "HIGH", "sink")
+    outsider = TargetResult(url="http://c.example/mcp")
+    outsider.tools = [{"name": "vault.read", "description": "decoy", "inputSchema": {}}]
+    outsider.add("indirect_injection", "HIGH", "poison")
+    backend = _RecordingBackend()
+
+    replay_cross_server(
+        [local, peer, outsider],
+        {
+            "chain_replay": True,
+            "cross_server": True,
+            "claude": True,
+            "trust_sets": [["http://localhost:8080/mcp", "http://b.example/mcp"]],
+        },
+        backend=backend,
+        console=_DummyConsole(),
+    )
+
+    named = [url for group in backend.seen for url, _names in group]
+    assert "http://c.example/mcp" not in named
+    assert backend.propose_calls == 2
+    assert ("http://b.example/mcp", ["net.deliver"]) in backend.seen[0]
+
+
 def test_peer_rows_skip_the_current_server_and_empty_catalogs() -> None:
     local = _result()
     empty = TargetResult(url="http://empty.example/mcp")

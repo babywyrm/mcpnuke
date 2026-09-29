@@ -245,6 +245,16 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
         "--safe-mode still refuses dangerous tools on every target.",
     )
     group.add_argument(
+        "--trust-set",
+        action="append",
+        metavar="URL,URL",
+        help="Comma-separated MCP URLs that share one agent. Repeat for "
+        "another agent. Cross-server chains, name collisions, shadow "
+        "grades, and --cross-server replay stay inside a set. A target "
+        "in no set is not chained. With no --trust-set, every target in "
+        "the run is one set.",
+    )
+    group.add_argument(
         "--oast",
         action="store_true",
         help="Run a callback listener and plant a per-probe URL in exfiltration "

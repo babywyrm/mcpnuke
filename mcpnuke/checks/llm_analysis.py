@@ -539,9 +539,12 @@ def replay_cross_server(
         model = str(opts.get("claude_model") or opts.get("ollama_model") or DEFAULT_CLAUDE_MODEL)
 
     from mcpnuke.core.session import detect_transport
+    from mcpnuke.core.trust import trust_sets_from_opts, trusted_with
 
+    sets = trust_sets_from_opts(opts)
     for result in results:
-        peers = peer_tool_rows(results, result.url)
+        cohort = [result, *trusted_with(result.url, results, sets)]
+        peers = peer_tool_rows(cohort, result.url)
         if not peers:
             continue
         findings = [
@@ -572,8 +575,8 @@ def replay_cross_server(
                 model,
                 log,
                 opts,
-                peers=results,
-                allowed_targets=frozenset(item.url for item in results),
+                peers=cohort,
+                allowed_targets=frozenset(item.url for item in cohort),
             )
         finally:
             session.close()

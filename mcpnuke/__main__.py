@@ -33,6 +33,7 @@ from mcpnuke.core.auth import (
     summarize_jwt_claims,
 )
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.trust import parse_trust_sets
 from mcpnuke.diff import (
     apply_diff_findings,
     diff_against_baseline,
@@ -440,6 +441,12 @@ def _main_inner() -> None:
     else:
         urls = build_url_list(args)
 
+    try:
+        trust_sets = parse_trust_sets(getattr(args, "trust_set", None), targets=urls)
+    except ValueError as exc:
+        console.print(f"  [red]✗[/red] {exc}")
+        sys.exit(EXIT_ERROR)
+
     # Resolve auth token (direct, file, OIDC client_credentials, or auto-detect)
     try:
         load_auth_secret_files(args)
@@ -608,6 +615,7 @@ def _main_inner() -> None:
         "chain_replay": getattr(args, "chain_replay", False),
         "chain_replay_retries": getattr(args, "chain_replay_retries", 1),
         "cross_server": getattr(args, "cross_server", False),
+        "trust_sets": [sorted(group) for group in trust_sets],
         "target_count": len(urls),
         "claude_model": args.claude_model,
         "bedrock": args.bedrock,

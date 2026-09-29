@@ -365,7 +365,13 @@ def run_parallel(
             concurrent.futures.wait(futures)
 
     from mcpnuke.checks import run_cross_target_checks
-    run_cross_target_checks(results, verbose=verbose)
+    from mcpnuke.core.trust import trust_sets_from_opts
+
+    run_cross_target_checks(
+        results,
+        verbose=verbose,
+        trust_sets=trust_sets_from_opts(probe_opts),
+    )
 
     from mcpnuke.checks.llm_analysis import replay_cross_server
     replay_cross_server(results, probe_opts, console=console if verbose else None)

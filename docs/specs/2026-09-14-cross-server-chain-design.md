@@ -99,6 +99,7 @@ OAST canaries per-target so egress is attributable.
   instead of landing on both targets? (Both-targets is simpler and keeps
   per-target JSON honest; run-level reads better. Decide at Phase A.)
 - Session pooling for Phase B: keep-alive vs reconnect per step.
-- Does the run need a declared "agent trust set" (these N servers share one
-  agent) so single-run multi-target scans don't over-correlate unrelated
-  targets? Probably yes for Phase B; Phase A can document the assumption.
+- Agent trust set (2026-09-29): `--trust-set URL,URL` is repeatable. Phase A
+  chains, cross-server name collisions, shadow grades, and Phase B replay
+  stay inside a set. A target in no set is not chained. With no flag, the
+  run is still one set, so existing multi-target scans do not go silent.

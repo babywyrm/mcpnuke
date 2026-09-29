@@ -18,6 +18,11 @@ All notable changes to this submodule are documented here.
   callable chain whose first tool name also exists on another server in
   the run is HIGH; proved chains stay CRITICAL.
 
+- **`--trust-set`.** Repeatable groups of URLs that share one agent.
+  Cross-server chains, cross-server name collisions, shadow grades, and
+  `--cross-server` replay stay inside a set. A target in no set is not
+  chained. With no `--trust-set`, every target in the run is still one set.
+
 - **`--auth-token-file` and `--client-secret-file`.** Bearer tokens and
   client secrets can be read from a file so they are not visible in
   `ps`. An explicit `--auth-token` or `--client-secret` still wins.
