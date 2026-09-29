@@ -6,6 +6,13 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **`--cross-server` chain replay.** A proposed step may name another MCP
+  server with `target`. With `--chain-replay --cross-server`, that step
+  opens a session, receives values captured from the previous server, and
+  the session is closed before the next step. Off by default: a targeted
+  step is refused rather than sent to the wrong server. `--safe-mode`
+  still refuses dangerous tools before the connection.
+
 - **`--auth-token-file` and `--client-secret-file`.** Bearer tokens and
   client secrets can be read from a file so they are not visible in
   `ps`. An explicit `--auth-token` or `--client-secret` still wins.

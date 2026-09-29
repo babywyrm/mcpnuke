@@ -152,6 +152,24 @@ def _revise_chain(
         return None
 
 
+def _cross_server_opener(result: TargetResult, opts: dict):
+    """Open one peer session per step. The caller closes it."""
+    from mcpnuke.core.session import detect_transport
+
+    token = result.auth_context.get("_raw_token")
+    headers = opts.get("extra_headers")
+
+    def open_session(url: str) -> MCPSessionProtocol | None:
+        return detect_transport(
+            url,
+            auth_token=token if isinstance(token, str) else None,
+            verify_tls=bool(opts.get("tls_verify", False)),
+            extra_headers=headers if isinstance(headers, dict) else None,
+        )
+
+    return open_session
+
+
 def _replay_with_retries(
     session: MCPSessionProtocol,
     chain: Any,
@@ -164,6 +182,7 @@ def _replay_with_retries(
     safe_mode: bool,
     oast: Any,
     oast_wait: float = 2.0,
+    open_session: Any = None,
 ) -> tuple[ChainRun, ChainVerdict]:
     """Replay a chain; on a halt, revise and retry up to *retries* times."""
     run = replay_chain(
@@ -174,6 +193,7 @@ def _replay_with_retries(
         oast=oast,
         backend=backend,
         model=model,
+        open_session=open_session,
     )
     verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
     attempts = 0
@@ -198,6 +218,7 @@ def _replay_with_retries(
             oast=oast,
             backend=backend,
             model=model,
+            open_session=open_session,
         )
         verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
         attempts += 1
@@ -542,6 +563,9 @@ def run_llm_analysis(
                     str(t.get("name") or ""): t for t in result.tools if t.get("name")
                 }
                 oast = opts.get("oast")
+                open_session = (
+                    _cross_server_opener(result, opts) if opts.get("cross_server") else None
+                )
                 reported = 0
                 for chain in proposed:
                     run, verdict = _replay_with_retries(
@@ -555,6 +579,7 @@ def run_llm_analysis(
                         safe_mode=opts.get("safe_mode", False),
                         oast=oast,
                         oast_wait=float(opts.get("oast_wait", 2.0)),
+                        open_session=open_session,
                     )
                     graded = _chain_finding(chain, verdict)
                     if graded is None:

@@ -236,6 +236,14 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
         "Each revise/retry attempt is logged under --verbose.",
     )
     group.add_argument(
+        "--cross-server",
+        action="store_true",
+        help="When replaying a chain, a step that names a target URL is sent "
+        "to that server. Each such step opens a session and closes it before "
+        "the next step. Requires --chain-replay. Off by default. "
+        "--safe-mode still refuses dangerous tools on every target.",
+    )
+    group.add_argument(
         "--oast",
         action="store_true",
         help="Run a callback listener and plant a per-probe URL in exfiltration "

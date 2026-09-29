@@ -18,6 +18,7 @@ import contextlib
 import json
 import re
 import urllib.parse
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -49,10 +50,16 @@ _EVIDENCE_CHARS: int = 400
 
 @dataclass(frozen=True)
 class ChainStep:
-    """One tool invocation in a proposed chain."""
+    """One tool invocation in a proposed chain.
+
+    ``target`` is the MCP URL for this step. Empty means the session the
+    replay was given. A non-empty target is opened for this step and closed
+    after it, and only when the caller passed an opener.
+    """
 
     tool: str
     args: dict = field(default_factory=dict)
+    target: str = ""
 
 
 @dataclass(frozen=True)
@@ -81,6 +88,7 @@ class StepResult:
     response_text: str
     failed: bool
     reason: str = ""
+    target: str = ""
 
 
 @dataclass
@@ -165,7 +173,8 @@ def parse_proposed_chains(text: str) -> list[ProposedChain]:
                 break
             raw_args = raw.get("args")
             args = dict(raw_args) if isinstance(raw_args, dict) else {}
-            steps.append(ChainStep(tool=tool, args=args))
+            target = str(raw.get("target") or "").strip()
+            steps.append(ChainStep(tool=tool, args=args, target=target))
         if not valid or len(steps) < 2:
             continue
         chains.append(
@@ -456,6 +465,7 @@ def replay_chain(
     oast: CanaryListener | None = None,
     backend: Any = None,
     model: str = "",
+    open_session: Callable[[str], MCPSessionProtocol | None] | None = None,
 ) -> ChainRun:
     """Execute *chain* against *session*, threading outputs into later args.
 
@@ -468,6 +478,9 @@ def replay_chain(
     fresh canary URL so a later callback can confirm egress.
     When *backend* is provided, dynamic LLM parameter adaptation extracts
     values when deterministic templating fails or leaves unresolved placeholders.
+    A step with ``target`` set is sent to the session *open_session* returns
+    for that URL. The peer is closed before the next step. With no opener
+    the step is refused and is not sent to *session*.
     """
     run = ChainRun(chain=chain)
     oast_url = ""
@@ -497,57 +510,99 @@ def replay_chain(
                     response_text="",
                     failed=True,
                     reason="refused under safe-mode: dangerous tool",
+                    target=step.target,
                 )
             )
             break
 
-        args = _build_safe_args(tool)
-        args.update(_resolve_args(step.args, run.results, oast_url, run.tracked_fragments))
+        # A named target is another server. Refuse it before falling through
+        # to the session that produced the previous step.
+        active: MCPSessionProtocol = session
+        peer: MCPSessionProtocol | None = None
+        if step.target:
+            if open_session is None:
+                run.results.append(
+                    StepResult(
+                        tool=step.tool,
+                        request_args={},
+                        response_text="",
+                        failed=True,
+                        reason="cross-server replay is off",
+                        target=step.target,
+                    )
+                )
+                break
+            peer = open_session(step.target)
+            if peer is None:
+                run.results.append(
+                    StepResult(
+                        tool=step.tool,
+                        request_args={},
+                        response_text="",
+                        failed=True,
+                        reason=f"could not connect to {step.target}",
+                        target=step.target,
+                    )
+                )
+                break
+            active = peer
 
-        has_unresolved = any(
-            isinstance(v, str) and _PLACEHOLDER_RE.search(v)
-            for v in args.values()
-        )
-        if has_unresolved and backend is not None:
-            adapted = _adapt_step_args_with_llm(backend, tool, step.args, run.results, model=model)
-            if adapted:
-                args.update(adapted)
-                for val in adapted.values():
-                    if isinstance(val, str) and len(val.strip()) >= 4:
-                        run.tracked_fragments.append(val.strip())
+        try:
+            args = _build_safe_args(tool)
+            args.update(_resolve_args(step.args, run.results, oast_url, run.tracked_fragments))
 
-        resp = _call_tool(session, step.tool, args)
-        text = _response_text(resp)
-        failed = response_is_error(resp)
-
-        if failed and not has_unresolved and backend is not None:
-            adapted = _adapt_step_args_with_llm(backend, tool, step.args, run.results, model=model)
-            if adapted and adapted != args:
-                retry_args = _build_safe_args(tool)
-                retry_args.update(adapted)
-                retry_resp = _call_tool(session, step.tool, retry_args)
-                retry_text = _response_text(retry_resp)
-                retry_failed = response_is_error(retry_resp)
-                if not retry_failed:
-                    args = retry_args
-                    resp = retry_resp
-                    text = retry_text
-                    failed = False
+            has_unresolved = any(
+                isinstance(v, str) and _PLACEHOLDER_RE.search(v)
+                for v in args.values()
+            )
+            if has_unresolved and backend is not None:
+                adapted = _adapt_step_args_with_llm(
+                    backend, tool, step.args, run.results, model=model
+                )
+                if adapted:
+                    args.update(adapted)
                     for val in adapted.values():
                         if isinstance(val, str) and len(val.strip()) >= 4:
                             run.tracked_fragments.append(val.strip())
 
-        run.results.append(
-            StepResult(
-                tool=step.tool,
-                request_args=args,
-                response_text=text,
-                failed=failed,
-                reason="tool returned an error" if failed else "",
+            resp = _call_tool(active, step.tool, args)
+            text = _response_text(resp)
+            failed = response_is_error(resp)
+
+            if failed and not has_unresolved and backend is not None:
+                adapted = _adapt_step_args_with_llm(
+                    backend, tool, step.args, run.results, model=model
+                )
+                if adapted and adapted != args:
+                    retry_args = _build_safe_args(tool)
+                    retry_args.update(adapted)
+                    retry_resp = _call_tool(active, step.tool, retry_args)
+                    retry_text = _response_text(retry_resp)
+                    retry_failed = response_is_error(retry_resp)
+                    if not retry_failed:
+                        args = retry_args
+                        resp = retry_resp
+                        text = retry_text
+                        failed = False
+                        for val in adapted.values():
+                            if isinstance(val, str) and len(val.strip()) >= 4:
+                                run.tracked_fragments.append(val.strip())
+
+            run.results.append(
+                StepResult(
+                    tool=step.tool,
+                    request_args=args,
+                    response_text=text,
+                    failed=failed,
+                    reason="tool returned an error" if failed else "",
+                    target=step.target,
+                )
             )
-        )
-        if failed:
-            break
+            if failed:
+                break
+        finally:
+            if peer is not None:
+                peer.close()
     return run
 
 

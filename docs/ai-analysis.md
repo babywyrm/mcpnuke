@@ -87,6 +87,12 @@ Claude runs four phases after deterministic + behavioral checks:
 | **Chain replay** (`--chain-replay`) | Proposes executable steps, runs them on the target, and grades the transcript | "Chain reproduced" / "exfiltrated out-of-band" CRITICAL; callable-but-unproven MEDIUM |
 
 **Phase 4 (`--chain-replay`) in brief:**
+
+A step may name another server with `"target": "<mcp-url>"`. That step runs
+only when `--cross-server` is also set: mcpnuke opens a session for the URL,
+sends the call, and closes the session before the next step. Without the
+flag the step is refused and is not sent to the server that produced the
+previous output. `--safe-mode` still refuses dangerous tools on every target.
 - Honours `--safe-mode` and `--no-invoke` (dangerous steps refused before call).
   Namespaced tools count: `shellwrap.exec` / `sdk.write_cache` /
   `shadow.register_webhook` / `egress.fetch_url` are refused the same way as

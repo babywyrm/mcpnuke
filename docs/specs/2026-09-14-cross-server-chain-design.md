@@ -60,6 +60,12 @@ to hold sessions open past enumeration (today the session lifecycle is
 per-target), so this is a real architectural change, not a flag flip.
 Gate: `--chain-replay --cross-server`, off by default.
 
+Slice 1 (2026-09-28): a step's `target` URL is opened for that step and
+closed before the next one. Sessions are not held past the step. With the
+flag off, a step that names a target is refused rather than sent to the
+session that produced the previous output. `--safe-mode` is checked before
+the peer connection.
+
 ### Phase C — shadow-aware chain scoring
 
 Feed cross-target shadowing collisions into chain grading: a replayed chain
