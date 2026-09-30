@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.21.0] - 2026-09-29
+
 ### Added
 
 - **`--cross-server` chain replay.** A proposed step may name another MCP
@@ -60,11 +62,10 @@ All notable changes to this submodule are documented here.
   `detect_cross_shadowing`, which re-reported the same name collision as an
   untagged `cross_shadowing` finding and padded the OWASP unmapped bucket.
 
-- **CI pins `actions/checkout@v7` and `astral-sh/setup-uv@v10.1.0`.** Both
-  run on Node 24. A floating `@v10` tag does not exist on that action (only
-  `v10.0.0` / `v10.1.0`), so the first pin failed to resolve. `enable-cache:
-  true` is unchanged — v10's `auto` would skip the cache on tag/release
-  events.
+- **CI pins `actions/checkout@v7` and `astral-sh/setup-uv@v10.2.0`.** Both
+  run on Node 24. A floating `@v10` tag does not exist on that action, so
+  the pin is an exact release. `enable-cache: true` is unchanged — v10's
+  `auto` would skip the cache on tag/release events.
 
 - **Gitleaks allowlist names the remaining PEM-marker test files.**
   `test_config_dump.py`, `test_k8s.py`, and `test_k8s_scanner.py` ship
