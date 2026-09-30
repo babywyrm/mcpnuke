@@ -1099,6 +1099,11 @@ class TestLivingGuidance:
         assert "Static + top-5" not in modes
         assert "static checks read the full catalog" in readme
 
+    def test_scan_modes_names_the_trust_set(self) -> None:
+        modes = (_docsgen.REPO_ROOT / "docs" / "scan-modes.md").read_text()
+        assert "--trust-set" in modes
+        assert "not chained" in modes
+
     def test_agent_guidance_does_not_cite_the_old_suite(self) -> None:
         for rel in (
             "AGENTS.md",

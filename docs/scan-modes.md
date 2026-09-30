@@ -17,6 +17,11 @@ optionally `--oast`) feed the strongest ranks when chains reproduce or egress
 is confirmed; static/safe modes still get an honest priority list from whatever
 was found.
 
+A run with more than one target treats every target as one agent unless
+`--trust-set URL,URL` says otherwise. Repeat the flag for another agent.
+Cross-server chains, name collisions, shadow grades, and `--cross-server`
+replay stay inside a set. A target named in no set is scanned and not chained.
+
 ## Fast Mode Scoring
 
 In `--fast` mode, static checks still read every enumerated tool. Invoke

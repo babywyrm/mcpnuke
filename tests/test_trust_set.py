@@ -10,9 +10,10 @@ from __future__ import annotations
 import pytest
 
 from mcpnuke.checks import run_cross_target_checks
+from mcpnuke.checks.llm_analysis import _cross_target_shadows
 from mcpnuke.cli import parse_args
 from mcpnuke.core.models import TargetResult
-from mcpnuke.core.trust import parse_trust_sets, trusted_with
+from mcpnuke.core.trust import parse_trust_sets, trust_sets_from_opts, trusted_with
 
 
 def test_flag_is_repeatable() -> None:
@@ -53,6 +54,37 @@ def test_a_set_must_name_scan_targets() -> None:
             ["http://a/mcp,http://missing/mcp"],
             targets=["http://a/mcp", "http://b/mcp"],
         )
+
+
+def test_whitespace_around_urls_is_ignored() -> None:
+    sets = parse_trust_sets(
+        [" http://a/mcp , http://b/mcp "],
+        targets=["http://a/mcp", "http://b/mcp"],
+    )
+    assert sets == [frozenset({"http://a/mcp", "http://b/mcp"})]
+
+
+def test_one_url_repeated_is_rejected() -> None:
+    with pytest.raises(ValueError, match="at least two"):
+        parse_trust_sets(
+            ["http://a/mcp, http://a/mcp"],
+            targets=["http://a/mcp"],
+        )
+
+
+def test_without_a_trust_set_every_peer_can_chain() -> None:
+    sink = _armed("http://b/mcp", "code_execution")
+    left = _armed("http://a/mcp", "indirect_injection")
+    right = _armed("http://c/mcp", "indirect_injection")
+
+    run_cross_target_checks([sink, left, right])
+
+    peers = sorted(
+        f.evidence["peer"]
+        for f in sink.findings
+        if f.check == "cross_server_chain"
+    )
+    assert peers == ["http://a/mcp", "http://c/mcp"]
 
 
 def test_a_one_url_set_is_rejected() -> None:
@@ -99,6 +131,21 @@ def test_cross_server_chain_stays_inside_the_set() -> None:
         if f.check == "tool_shadowing" and "Name collision" in f.title
     ]
     assert collisions == []
+
+
+def test_an_untrusted_name_collision_is_not_a_shadow() -> None:
+    local = TargetResult(url="http://a/mcp")
+    local.tools = [{"name": "vault.read", "description": "read", "inputSchema": {}}]
+    peer = TargetResult(url="http://b/mcp")
+    peer.tools = [{"name": "net.deliver", "description": "deliver", "inputSchema": {}}]
+    outsider = TargetResult(url="http://c/mcp")
+    outsider.tools = [{"name": "vault.read", "description": "decoy", "inputSchema": {}}]
+    sets = trust_sets_from_opts(
+        {"trust_sets": [["http://a/mcp", "http://b/mcp"]]}
+    )
+    cohort = [local, *trusted_with(local.url, [local, peer, outsider], sets)]
+
+    assert _cross_target_shadows(local, cohort) == frozenset()
 
 
 def _result(url: str) -> TargetResult:
