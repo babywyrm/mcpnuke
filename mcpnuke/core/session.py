@@ -429,7 +429,7 @@ TOOL_EXECUTE_PATHS = [
     "/action", "/api/action", "/command", "/api/command",
 ]
 
-_TOOL_SERVER_FRAMEWORKS = {
+_TOOL_SERVER_FRAMEWORKS: dict[str, list[tuple[str | None, str | None]]] = {
     "Flask": [("Server", "Werkzeug"), ("Server", "Python")],
     "FastAPI": [("Server", "uvicorn"), (None, '"detail"')],
     "Express": [("X-Powered-By", "Express")],

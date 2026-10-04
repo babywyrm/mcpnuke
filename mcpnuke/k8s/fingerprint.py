@@ -8,7 +8,7 @@ Supports parallel probing for clusters with many services.
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from mcpnuke.core.models import Finding
 
@@ -27,7 +27,7 @@ _DEBUG_PATHS = [
     "/console", "/admin", "/dashboard",
 ]
 
-_FRAMEWORK_SIGNATURES = {
+_FRAMEWORK_SIGNATURES: dict[str, list[tuple[str | None, str | None]]] = {
     "Spring Boot": [("X-Application-Context", None), (None, "Whitelabel Error Page")],
     "Express": [("X-Powered-By", "Express")],
     "FastAPI": [(None, '"openapi"'), (None, "FastAPI")],
@@ -46,14 +46,8 @@ class ServiceFingerprint:
     namespace: str
     port: int
     framework: str = ""
-    exposed_paths: list[str] | None = None
-    findings: list[Finding] | None = None
-
-    def __post_init__(self):
-        if self.exposed_paths is None:
-            self.exposed_paths = []
-        if self.findings is None:
-            self.findings = []
+    exposed_paths: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
 
 def _http_probe(url: str, timeout: float = 3.0) -> tuple[int, dict, str]:

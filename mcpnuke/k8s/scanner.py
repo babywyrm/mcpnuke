@@ -446,6 +446,7 @@ def _check_session_token_exposure(
         return
 
     import ssl
+    import urllib.parse
     import urllib.request
 
     base_url = api_url or "https://kubernetes.default"
@@ -465,7 +466,7 @@ def _check_session_token_exposure(
             exec_url = (
                 f"{base_url}/api/v1/namespaces/{namespace}/pods/{pod_name}"
                 f"/exec?container={container_name}"
-                f"&command=sh&command=-c&command={urllib.request.quote(exec_cmd)}"
+                f"&command=sh&command=-c&command={urllib.parse.quote(exec_cmd)}"
                 f"&stdout=true&stderr=false"
             )
             headers = {}
@@ -581,7 +582,7 @@ def run_k8s_checks(namespace: str, console=None, api_url: str | None = None, tok
 
     if console:
         sev_counts: dict[str, int] = {}
-        for f in GLOBAL_K8S_FINDINGS:
-            sev_counts[f.severity] = sev_counts.get(f.severity, 0) + 1
+        for finding in GLOBAL_K8S_FINDINGS:
+            sev_counts[finding.severity] = sev_counts.get(finding.severity, 0) + 1
         console.print(f"  [bold]K8s findings: {len(GLOBAL_K8S_FINDINGS)}[/bold] "
                       f"({', '.join(f'{s}={c}' for s, c in sorted(sev_counts.items()))})")

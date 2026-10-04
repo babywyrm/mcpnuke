@@ -11,6 +11,11 @@ All notable changes to this submodule are documented here.
   swallowed it, and an exposed management endpoint was never reported.
   The probe now uses `request("DELETE", ..., json=)`.
 
+- **`MYPY_CEILING` 30 → 18.** Framework signature tables and service
+  fingerprint lists were untyped, the pod-exec URL quoted through
+  `urllib.request` (missing from the stubs), and the K8s summary reused
+  the service-account file handle's name. Cold `mypy mcpnuke/` is 18.
+
 - **Cross-server chain proposal prompt.** The step schema now shows a
   `target`-bearing example anchored to a real peer URL and tool, because
   models mirror the example and ignore a prose-only instruction. Prior

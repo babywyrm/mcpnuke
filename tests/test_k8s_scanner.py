@@ -425,8 +425,11 @@ class TestSessionTokenExposure:
     def test_session_file_flagged(self):
         hit = self._text_response("/tmp/.sessions/session_1.json\n")
         empty = self._text_response("")
-        with patch("urllib.request.urlopen", side_effect=[hit, empty, empty]):
+        with patch("urllib.request.urlopen", side_effect=[hit, empty, empty]) as opened:
             _check_session_token_exposure(self._pods(), "default", "tok")
+        req = opened.call_args_list[0].args[0]
+        assert "find%20" in req.full_url
+        assert " " not in req.full_url.split("command=", 1)[-1].split("&stdout", 1)[0]
         assert len(GLOBAL_K8S_FINDINGS) == 1
         f = GLOBAL_K8S_FINDINGS[0]
         assert f.check == "session_token_exposure"
