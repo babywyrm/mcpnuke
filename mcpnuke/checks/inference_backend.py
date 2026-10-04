@@ -320,7 +320,11 @@ def _check_management_endpoints(
                 if method == "POST":
                     r = client.post(url, json={})
                 elif method == "DELETE":
-                    r = client.delete(url, json={"name": "nonexistent-probe-model"})
+                    # Client.delete() has no json= parameter; the TypeError
+                    # used to be swallowed and this probe never fired.
+                    r = client.request(
+                        "DELETE", url, json={"name": "nonexistent-probe-model"}
+                    )
                 else:
                     r = client.request(method, url)
 

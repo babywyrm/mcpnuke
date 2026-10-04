@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Ollama model-delete probe.** `Client.delete()` does not accept a JSON
+  body, so the `DELETE /api/delete` check raised `TypeError`, the handler
+  swallowed it, and an exposed management endpoint was never reported.
+  The probe now uses `request("DELETE", ..., json=)`.
+
 - **Cross-server chain proposal prompt.** The step schema now shows a
   `target`-bearing example anchored to a real peer URL and tool, because
   models mirror the example and ignore a prose-only instruction. Prior

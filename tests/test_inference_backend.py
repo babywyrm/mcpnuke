@@ -281,6 +281,36 @@ class TestCheckInferenceBackend:
         assert len(mgmt_findings) > 0
         assert all(f.taxonomy_id == "MCP-T54" for f in mgmt_findings)
 
+    def test_ollama_delete_probe_sends_a_json_body(self):
+        # httpx.Client.delete() does not accept json=. A MagicMock hides that:
+        # the TypeError is swallowed and DELETE /api/delete is never reported.
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(400, text="name is required")
+
+        # Patching inference_backend.httpx.Client replaces the class on the
+        # httpx module, so keep a handle on the real constructor.
+        real_client = httpx.Client
+
+        def _make_client(**kwargs: object) -> httpx.Client:
+            return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+        result = TargetResult(url="http://target:3000/sse")
+        with patch("mcpnuke.checks.inference_backend.httpx.Client", side_effect=_make_client):
+            inference_backend._check_management_endpoints(
+                "http://gpu:11434",
+                InferenceBackend.OLLAMA,
+                result,
+            )
+
+        deletes = [r for r in seen if r.method == "DELETE"]
+        assert len(deletes) == 1
+        assert deletes[0].url.path == "/api/delete"
+        assert b"nonexistent-probe-model" in deletes[0].content
+        assert any("DELETE /api/delete" in f.title for f in result.findings)
+
 
 # ── CLI flag parsing ──────────────────────────────────────────────────
 
