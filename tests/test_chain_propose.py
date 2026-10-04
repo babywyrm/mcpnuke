@@ -229,9 +229,22 @@ def test_peers_are_listed_and_steps_may_set_target() -> None:
         [{"title": "t", "detail": "d"}],
         peers=[("http://b.example/mcp", ["net.deliver"])],
     )
-    assert 'sets "target"' in system
+    assert 'sets "target"' in system or '"target":' in system
     assert "http://b.example/mcp" in user
     assert "net.deliver" in user
+
+
+def test_peer_prompt_shows_target_in_the_step_schema() -> None:
+    system, _user = llm._propose_chains_prompt(
+        [{"name": "vault.read", "description": "read"}],
+        [{"title": "t", "detail": "d"}],
+        peers=[("http://b.example/mcp", ["net.deliver"])],
+    )
+    # The model mirrors the schema example, so target must appear there,
+    # anchored to a real peer, not only in the prose instruction.
+    assert '"target":' in system
+    assert "http://b.example/mcp" in system
+    assert "net.deliver" in system
 
 
 def test_prompt_without_peers_does_not_ask_for_a_target_field() -> None:
@@ -240,3 +253,4 @@ def test_prompt_without_peers_does_not_ask_for_a_target_field() -> None:
         [{"title": "t", "detail": "d"}],
     )
     assert 'sets "target"' not in system
+    assert '"target":' not in system

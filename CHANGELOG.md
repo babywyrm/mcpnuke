@@ -4,6 +4,14 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Cross-server chain proposal prompt.** The step schema now shows a
+  `target`-bearing example anchored to a real peer URL and tool, because
+  models mirror the example and ignore a prose-only instruction. Prior
+  wording described `target` but never demonstrated it in the schema, so
+  proposers rarely emitted cross-server steps.
+
 ## [6.21.0] - 2026-09-29
 
 ### Added

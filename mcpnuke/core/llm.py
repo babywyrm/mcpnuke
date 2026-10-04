@@ -602,14 +602,22 @@ def _propose_chains_prompt(
     )
     if peers:
         # Other servers are listed only after every target has been enumerated.
-        # A step sets "target" to one of these URLs and names one of its tools.
+        # The schema example shows the "target" field anchored to a real peer,
+        # because models mirror the example and ignore a prose-only instruction.
         listed = "\n".join(
             f"- {url}: {', '.join(names)}" for url, names in peers if names
         )
+        example_url, example_names = next(
+            ((url, names) for url, names in peers if names), ("", [])
+        )
+        example_tool = example_names[0] if example_names else "tool_name"
         system += (
-            "\nOther MCP servers are in scope. A step that must run on one of "
-            'them sets "target" to that server\'s URL and names only a tool '
-            "listed for it. Steps on the current server omit target.\n"
+            "\nOther MCP servers are in scope. To run a step on one of them, "
+            'add a "target" field to that step set to the server URL and name '
+            "only a tool listed for it. Steps on the current server omit "
+            'target. A cross-server step looks like:\n'
+            f'  {{"tool": "{example_tool}", "args": {{"x": "{{{{step0.output}}}}"}}, '
+            f'"target": "{example_url}"}}\n'
         )
         user_content += f"\n\nOther servers:\n{listed}"
     return system, user_content
