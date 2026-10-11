@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Cross-server chain revision.** A halted chain is revised with the same
+  peer list and `target` step example as the original proposal. The
+  revision prompt used to list only the current server, so a retry could
+  not repair a step onto a peer.
+
 - **`MYPY_CEILING` 18 → 0.** JSON bodies, auth tokens, claim summaries,
   and package versions are returned only when they match the declared
   type. A JSON array is no longer treated as an object.

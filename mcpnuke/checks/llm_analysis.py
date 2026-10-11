@@ -167,12 +167,18 @@ def _revise_chain(
     tools: list[dict],
     model: str,
     log: Callable[[str], None],
+    peers: list[tuple[str, list[str]]] | None = None,
 ) -> Any:
     """Ask the backend to revise a halted chain, or None."""
     revise = getattr(backend, "revise_chain", None)
     if revise is None:
         return None
     try:
+        if peers:
+            try:
+                return revise(chain, transcript, tools, model=model, log=log, peers=peers)
+            except TypeError:
+                pass
         return revise(chain, transcript, tools, model=model, log=log)
     except Exception:
         return None
@@ -210,6 +216,7 @@ def _replay_with_retries(
     oast_wait: float = 2.0,
     open_session: Any = None,
     allowed_targets: frozenset[str] | None = None,
+    peer_rows: list[tuple[str, list[str]]] | None = None,
 ) -> tuple[ChainRun, ChainVerdict]:
     """Replay a chain; on a halt, revise and retry up to *retries* times."""
     run = replay_chain(
@@ -232,7 +239,13 @@ def _replay_with_retries(
             f"(attempt {attempts + 1}/{retries})…[/dim]"
         )
         revised = _revise_chain(
-            backend, chain, _transcript(run, verdict), tools_list, model, log
+            backend,
+            chain,
+            _transcript(run, verdict),
+            tools_list,
+            model,
+            log,
+            peers=peer_rows,
         )
         if revised is None:
             log("  [dim]  No revision produced; keeping halted result[/dim]")
@@ -483,6 +496,7 @@ def _grade_proposed(
             oast_wait=float(opts.get("oast_wait", 2.0)),
             open_session=open_session,
             allowed_targets=allowed_targets,
+            peer_rows=peer_tool_rows([result, *(peers or [])], result.url),
         )
         graded = _chain_finding(chain, verdict, shadowed=shadowed)
         if graded is None:

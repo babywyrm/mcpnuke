@@ -600,27 +600,8 @@ def _propose_chains_prompt(
         f"Existing findings ({_shown_of(n_f, total_f, 'findings')}):\n"
         f"{findings_summary}"
     )
-    if peers:
-        # Other servers are listed only after every target has been enumerated.
-        # The schema example shows the "target" field anchored to a real peer,
-        # because models mirror the example and ignore a prose-only instruction.
-        listed = "\n".join(
-            f"- {url}: {', '.join(names)}" for url, names in peers if names
-        )
-        example_url, example_names = next(
-            ((url, names) for url, names in peers if names), ("", [])
-        )
-        example_tool = example_names[0] if example_names else "tool_name"
-        system += (
-            "\nOther MCP servers are in scope. To run a step on one of them, "
-            'add a "target" field to that step set to the server URL and name '
-            "only a tool listed for it. Steps on the current server omit "
-            'target. A cross-server step looks like:\n'
-            f'  {{"tool": "{example_tool}", "args": {{"x": "{{{{step0.output}}}}"}}, '
-            f'"target": "{example_url}"}}\n'
-        )
-        user_content += f"\n\nOther servers:\n{listed}"
-    return system, user_content
+    extra_system, extra_user = _peer_prompt_suffix(peers)
+    return system + extra_system, user_content + extra_user
 
 
 def judge_chain_run(
@@ -659,12 +640,43 @@ def _judge_chain_run_prompt(title: str, transcript: str) -> tuple[str, str]:
     return system, f"Chain: {title}\n\nTranscript:\n{transcript[:4000]}"
 
 
+def _peer_prompt_suffix(
+    peers: list[tuple[str, list[str]]] | None,
+) -> tuple[str, str]:
+    """System and user text that shows a target-bearing step, or empty strings.
+
+    Models mirror the schema example and ignore a prose-only instruction, so
+    the example is anchored to a real peer URL and tool.
+    """
+    if not peers:
+        return "", ""
+    listed = "\n".join(
+        f"- {url}: {', '.join(names)}" for url, names in peers if names
+    )
+    if not listed:
+        return "", ""
+    example_url, example_names = next(
+        ((url, names) for url, names in peers if names), ("", [])
+    )
+    example_tool = example_names[0] if example_names else "tool_name"
+    system = (
+        "\nOther MCP servers are in scope. To run a step on one of them, "
+        'add a "target" field to that step set to the server URL and name '
+        "only a tool listed for it. Steps on the current server omit "
+        'target. A cross-server step looks like:\n'
+        f'  {{"tool": "{example_tool}", "args": {{"x": "{{{{step0.output}}}}"}}, '
+        f'"target": "{example_url}"}}\n'
+    )
+    return system, f"\n\nOther servers:\n{listed}"
+
+
 def revise_chain(
     chain: Any,
     transcript: str,
     tools: list[dict],
     model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
+    peers: list[tuple[str, list[str]]] | None = None,
 ) -> Any:
     """Given a chain that halted and the transcript of why, propose one revision.
 
@@ -674,13 +686,18 @@ def revise_chain(
     """
     from mcpnuke.core.chain_replay import parse_proposed_chains
 
-    system, user = _revise_chain_prompt(chain.title, transcript, tools)
+    system, user = _revise_chain_prompt(chain.title, transcript, tools, peers=peers)
     text = _call_claude(system, user, model, _ANALYSIS_MAX_TOKENS, log=log)
     revised = parse_proposed_chains(text)
     return revised[0] if revised else None
 
 
-def _revise_chain_prompt(chain_title: str, transcript: str, tools: list[dict]) -> tuple[str, str]:
+def _revise_chain_prompt(
+    chain_title: str,
+    transcript: str,
+    tools: list[dict],
+    peers: list[tuple[str, list[str]]] | None = None,
+) -> tuple[str, str]:
     """Build the (system, user) prompt for single-chain revision."""
     tools_summary, _, _, _, _, _ = _chain_context(tools, [{"title": chain_title}])
     system = (
@@ -691,7 +708,9 @@ def _revise_chain_prompt(chain_title: str, transcript: str, tools: list[dict]) -
         "object carrying a `steps` array of at least two entries. Respond with "
         "ONLY the JSON array."
     )
-    return system, f"Tools:\n{tools_summary}\n\nFailed transcript:\n{transcript[:4000]}"
+    extra_system, extra_user = _peer_prompt_suffix(peers)
+    user = f"Tools:\n{tools_summary}\n\nFailed transcript:\n{transcript[:4000]}"
+    return system + extra_system, user + extra_user
 
 
 def analyze_response(

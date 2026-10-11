@@ -363,12 +363,15 @@ class OllamaBackend:
         tools: list[dict],
         model: str | None = None,
         log: Callable[[str], None] | None = None,
+        peers: list[tuple[str, list[str]]] | None = None,
     ) -> Any:
         """Propose one corrected chain for a halted run, or None."""
         from mcpnuke.core import llm as llm_core
         from mcpnuke.core.chain_replay import parse_proposed_chains
 
-        system, user = llm_core._revise_chain_prompt(chain.title, transcript, tools)
+        system, user = llm_core._revise_chain_prompt(
+            chain.title, transcript, tools, peers=peers
+        )
         text = self._call(system, user, DEFAULT_MAX_TOKENS, log)
         revised = parse_proposed_chains(text)
         return revised[0] if revised else None

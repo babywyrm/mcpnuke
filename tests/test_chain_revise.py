@@ -84,6 +84,29 @@ def test_zero_retries_does_not_revise():
     assert not run.completed
 
 
+def test_revision_is_told_which_peers_are_in_scope():
+    seen: dict[str, object] = {}
+
+    class _PeerBackend:
+        def revise_chain(self, chain, transcript, tools, model, log=None, peers=None):
+            seen["peers"] = peers
+            return None
+
+    _replay_with_retries(
+        _Session(),
+        _halting_chain(),
+        TOOLS,
+        _PeerBackend(),
+        model="m",
+        log=lambda _m: None,
+        retries=1,
+        safe_mode=False,
+        oast=None,
+        peer_rows=[("http://b.example/mcp", ["net.deliver"])],
+    )
+    assert seen["peers"] == [("http://b.example/mcp", ["net.deliver"])]
+
+
 def test_retry_logs_the_repair_attempt():
     logs: list[str] = []
     _replay_with_retries(

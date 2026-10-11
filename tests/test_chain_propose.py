@@ -247,6 +247,29 @@ def test_peer_prompt_shows_target_in_the_step_schema() -> None:
     assert "net.deliver" in system
 
 
+def test_revision_prompt_shows_target_when_peers_are_in_scope() -> None:
+    system, user = llm._revise_chain_prompt(
+        "halted",
+        "step1 failed",
+        [{"name": "vault.read", "description": "read"}],
+        peers=[("http://b.example/mcp", ["net.deliver"])],
+    )
+    assert '"target":' in system
+    assert "http://b.example/mcp" in system
+    assert "net.deliver" in system
+    assert "http://b.example/mcp" in user
+    assert "net.deliver" in user
+
+
+def test_revision_prompt_without_peers_does_not_ask_for_a_target_field() -> None:
+    system, _user = llm._revise_chain_prompt(
+        "halted",
+        "step1 failed",
+        [{"name": "vault.read", "description": "read"}],
+    )
+    assert '"target":' not in system
+
+
 def test_prompt_without_peers_does_not_ask_for_a_target_field() -> None:
     system, _user = llm._propose_chains_prompt(
         [{"name": "vault.read", "description": "read"}],
