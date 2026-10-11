@@ -38,6 +38,7 @@ from typing import Any
 
 import httpx
 
+from mcpnuke.core.chain_replay import ProposedChain
 from mcpnuke.core.llm import (
     LLMFinding,
     _parse_findings,
@@ -58,6 +59,23 @@ _PROSE_NUDGE: str = (
     "Respond with ONLY a JSON array of chain objects, each with a `steps` array "
     "of at least two entries. No summary, no markdown, no commentary."
 )
+
+_PEER_NUDGE: str = (
+    "\n\nYour previous chains set every target to the current server. "
+    "That response is discarded. At least one step must set \"target\" to "
+    "a peer URL from the list above, and that step's tool must be one listed "
+    "for that server. Other steps may use an empty string. "
+    "Respond with ONLY the JSON array."
+)
+
+
+def _proposal_names_peer(
+    chains: list[ProposedChain],
+    peers: list[tuple[str, list[str]]],
+) -> bool:
+    """True when some step's target is one of the peer URLs."""
+    urls = {url for url, _names in peers if url}
+    return any(step.target in urls for chain in chains for step in chain.steps)
 
 
 # ── Ensemble types ────────────────────────────────────────────────────────────
@@ -379,6 +397,14 @@ class OllamaBackend:
                 system + _PROSE_NUDGE, user, DEFAULT_MAX_TOKENS, log, response_format=schema
             )
             chains = parse_proposed_chains(text)
+        if peers and chains and not _proposal_names_peer(chains, peers):
+            # "" satisfies the schema, and local models take it on every step.
+            text = self._call(
+                system + _PEER_NUDGE, user, DEFAULT_MAX_TOKENS, log, response_format=schema
+            )
+            revised = parse_proposed_chains(text)
+            if revised:
+                chains = revised
         return chains
 
     def judge_chain_run(

@@ -88,10 +88,12 @@ Claude runs four phases after deterministic + behavioral checks:
 
 **Phase 4 (`--chain-replay`) in brief:**
 
-A step may name another server with `"target": "<mcp-url>"`. That step runs
-only when `--cross-server` is also set: mcpnuke opens a session for the URL,
-sends the call, and closes the session before the next step. Without the
-flag the step is refused and is not sent to the server that produced the
+A step may name another server with `"target": "<mcp-url>"`. That step's
+tool is resolved on that server's catalog, then mcpnuke opens a session for
+the URL, sends the call, and closes the session before the next step. An
+empty target uses only the current server's tools, so a peer-only name is
+not sent there. This runs only when `--cross-server` is also set. Without
+the flag the step is refused and is not sent to the server that produced the
 previous output. `--safe-mode` still refuses dangerous tools on every target.
 When the run has more than one target, proposal waits until every catalog
 exists, then each server is told the others' URLs and tool names.
@@ -114,7 +116,8 @@ target in no set is not chained. With no `--trust-set`, the run is one set.
 - Any backend implementing `judge_chain_run` (Claude **or** Ollama) can
   upgrade transformed data movement to HIGH. It is not gated on `--claude`.
 - `--chain-replay-retries N` (default 1) revises a halted chain from its
-  transcript and retries. Each revise/retry attempt is logged under `--verbose`.
+  transcript and retries. The transcript includes the halt reason, and
+  `--verbose` prints it. A halted chain is still not a finding.
 
 **Ollama (`--ollama-analysis`):** drop-in for Claude — same four phases, no
 API key. `--chain-replay` uses the same propose / judge / revise hooks.
@@ -122,7 +125,9 @@ Structured chat payloads send `think: false` so thinking models emit the
 JSON the phases parse instead of spending the HTTP timeout inside
 chain-of-thought. Chain proposal and revision also send a JSON schema.
 When other servers are in scope, each step must include `target` (`""`
-for the current server, or the peer URL). Phase 1 does not use that schema.
+for the current server, or the peer URL). If every step still leaves
+`target` empty, proposal asks once more for a step that names a peer.
+Phase 1 does not use that schema.
 
 **Priority actions (every report):** after the severity counts, mcpnuke prints
 a short **Priority actions (fix these first)** list and writes matching

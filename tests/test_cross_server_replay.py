@@ -121,6 +121,88 @@ def test_safe_mode_refuses_the_peer_before_connecting() -> None:
     assert "safe-mode" in run.results[1].reason
 
 
+def test_a_peer_only_tool_runs_on_that_server() -> None:
+    """The proposer's catalog must not hide a tool that exists only on the peer."""
+    server_a = _ScriptedSession({"vault.read": _text("AKIA-secret")})
+    server_b = _ScriptedSession({"net.deliver": _text("ok")})
+    opened: list[str] = []
+
+    def open_session(url: str) -> _ScriptedSession:
+        opened.append(url)
+        return server_b
+
+    chain = ProposedChain(
+        "cross",
+        [
+            ChainStep("vault.read", {"key": "token"}),
+            ChainStep("net.deliver", {"body": "{{step0.output}}"}, target=_B),
+        ],
+    )
+    local = {"vault.read": TOOLS["vault.read"]}
+    run = replay_chain(
+        server_a,
+        chain,
+        local,
+        open_session=open_session,
+        catalogs={_B: {"net.deliver": TOOLS["net.deliver"]}},
+    )
+
+    assert opened == [_B]
+    assert server_a.calls == [("vault.read", {"key": "token"})]
+    assert server_b.calls == [("net.deliver", {"body": "AKIA-secret"})]
+    assert run.completed
+
+
+def test_an_empty_target_does_not_call_a_peer_only_tool() -> None:
+    primary = _ScriptedSession({"vault.read": _text("x"), "net.deliver": _text("ok")})
+    chain = ProposedChain(
+        "local",
+        [
+            ChainStep("vault.read", {}),
+            ChainStep("net.deliver", {"body": "{{step0.output}}"}),
+        ],
+    )
+    run = replay_chain(
+        primary,
+        chain,
+        {"vault.read": TOOLS["vault.read"]},
+        catalogs={_B: {"net.deliver": TOOLS["net.deliver"]}},
+    )
+
+    assert [name for name, _ in primary.calls] == ["vault.read"]
+    assert run.results[1].failed
+    assert "unknown tool" in run.results[1].reason
+
+
+def test_safe_mode_uses_the_peer_catalog_before_connecting() -> None:
+    primary = _ScriptedSession({"vault.read": _text("x")})
+    opened: list[str] = []
+
+    def open_session(url: str) -> _ScriptedSession:
+        opened.append(url)
+        return primary
+
+    chain = ProposedChain(
+        "cross",
+        [
+            ChainStep("vault.read", {}),
+            ChainStep("exec", {"cmd": "{{step0.output}}"}, target=_B),
+        ],
+    )
+    run = replay_chain(
+        primary,
+        chain,
+        {"vault.read": TOOLS["vault.read"]},
+        safe_mode=True,
+        open_session=open_session,
+        catalogs={_B: {"exec": TOOLS["exec"]}},
+    )
+
+    assert opened == []
+    assert run.results[1].failed
+    assert "safe-mode" in run.results[1].reason
+
+
 def test_a_target_outside_the_scan_is_not_opened() -> None:
     primary = _ScriptedSession({"vault.read": _text("x"), "net.deliver": _text("ok")})
     opened: list[str] = []

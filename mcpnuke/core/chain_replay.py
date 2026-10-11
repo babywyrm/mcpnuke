@@ -467,6 +467,7 @@ def replay_chain(
     model: str = "",
     open_session: Callable[[str], MCPSessionProtocol | None] | None = None,
     allowed_targets: frozenset[str] | None = None,
+    catalogs: dict[str, dict[str, dict]] | None = None,
 ) -> ChainRun:
     """Execute *chain* against *session*, threading outputs into later args.
 
@@ -484,6 +485,9 @@ def replay_chain(
     the step is refused and is not sent to *session*.
     When *allowed_targets* is set, a target outside that set is refused
     before any connection.
+    *catalogs* maps a server URL to that server's tools. A step with
+    ``target`` set is resolved there, so a peer-only tool is not rejected
+    for being absent locally and is not invoked on the current session.
     """
     run = ChainRun(chain=chain)
     oast_url = ""
@@ -492,7 +496,10 @@ def replay_chain(
         oast_url = oast.url_for(run.oast_token)
 
     for step in chain.steps:
-        tool = tools.get(step.tool)
+        catalog = tools
+        if step.target and catalogs is not None and step.target in catalogs:
+            catalog = catalogs[step.target]
+        tool = catalog.get(step.tool)
         if tool is None:
             run.results.append(
                 StepResult(

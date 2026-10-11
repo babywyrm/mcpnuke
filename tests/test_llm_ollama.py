@@ -118,6 +118,58 @@ def test_chain_schema_requires_target_only_when_peers_are_in_scope():
     assert crossed["think"] is False
 
 
+def test_propose_reasks_once_when_no_step_names_a_peer():
+    """An empty target satisfies the schema, so a local model can stay on
+    the current server. One corrective ask, then keep whatever came back."""
+    backend = OllamaBackend(host="http://localhost:11434")
+    peers = [("http://b.example/mcp", ["net.deliver"])]
+    local = (
+        '[{"steps":[{"tool":"read_file","args":{},"target":""},'
+        '{"tool":"read_file","args":{"x":"{{step0.output}}"},"target":""}]}]'
+    )
+    hopped = (
+        '[{"steps":[{"tool":"read_file","args":{},"target":""},'
+        '{"tool":"net.deliver","args":{"x":"{{step0.output}}"},'
+        '"target":"http://b.example/mcp"}]}]'
+    )
+    bodies = [local, hopped]
+
+    def _respond(*_args, **_kwargs):
+        resp = MagicMock()
+        resp.json.return_value = {"message": {"content": bodies.pop(0)}}
+        return resp
+
+    with patch("httpx.post", side_effect=_respond) as post:
+        chains = backend.propose_chains(
+            [{"name": "read_file"}],
+            [{"title": "f", "detail": "d"}],
+            peers=peers,
+        )
+    assert post.call_count == 2
+    nudge = post.call_args_list[1].kwargs["json"]["messages"][0]["content"]
+    assert "http://b.example/mcp" in nudge
+    assert chains[0].steps[1].target == "http://b.example/mcp"
+
+
+def test_propose_does_not_reask_when_a_step_names_a_peer():
+    backend = OllamaBackend(host="http://localhost:11434")
+    hopped = (
+        '[{"steps":[{"tool":"read_file","args":{},"target":""},'
+        '{"tool":"net.deliver","args":{"x":"{{step0.output}}"},'
+        '"target":"http://b.example/mcp"}]}]'
+    )
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"message": {"content": hopped}}
+    with patch("httpx.post", return_value=mock_resp) as post:
+        chains = backend.propose_chains(
+            [{"name": "read_file"}],
+            [{"title": "f", "detail": "d"}],
+            peers=[("http://b.example/mcp", ["net.deliver"])],
+        )
+    assert post.call_count == 1
+    assert chains[0].steps[1].target == "http://b.example/mcp"
+
+
 def test_cluster_findings_consensus():
     per_model = {
         "qwen3:14b": [

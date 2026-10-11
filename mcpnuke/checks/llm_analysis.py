@@ -217,6 +217,7 @@ def _replay_with_retries(
     open_session: Any = None,
     allowed_targets: frozenset[str] | None = None,
     peer_rows: list[tuple[str, list[str]]] | None = None,
+    catalogs: dict[str, dict[str, dict]] | None = None,
 ) -> tuple[ChainRun, ChainVerdict]:
     """Replay a chain; on a halt, revise and retry up to *retries* times."""
     run = replay_chain(
@@ -229,8 +230,11 @@ def _replay_with_retries(
         model=model,
         open_session=open_session,
         allowed_targets=allowed_targets,
+        catalogs=catalogs,
     )
     verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
+    if not run.completed:
+        log(f"  [dim]  {verdict.detail}[/dim]")
     attempts = 0
     tools_list = list(tools_by_name.values())
     while attempts < retries and not run.completed:
@@ -261,8 +265,11 @@ def _replay_with_retries(
             model=model,
             open_session=open_session,
             allowed_targets=allowed_targets,
+            catalogs=catalogs,
         )
         verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
+        if not run.completed:
+            log(f"  [dim]  {verdict.detail}[/dim]")
         attempts += 1
         if run.completed:
             log("  [dim]  Revised chain completed on retry[/dim]")
@@ -274,8 +281,9 @@ def _transcript(run: ChainRun, verdict: ChainVerdict) -> str:
     lines = [verdict.evidence] if verdict.evidence else []
     for index, step in enumerate(run.results):
         status = "FAIL" if step.failed else "ok"
+        reason = f" ({step.reason})" if step.failed and step.reason else ""
         lines.append(
-            f"[{status}] step{index} {step.tool} args={step.request_args!r} "
+            f"[{status}] step{index} {step.tool}{reason} args={step.request_args!r} "
             f"→ {step.response_text[:200]!r}"
         )
     return "\n".join(lines)
@@ -446,24 +454,18 @@ def _default_backend() -> LLMBackend:
     return llm_core
 
 
-def _tools_for_replay(
-    result: TargetResult,
-    peers: list[TargetResult],
-) -> dict[str, dict]:
-    """Local schemas win when a name exists on more than one server."""
-    merged: dict[str, dict] = {}
-    for other in peers:
-        if other.url == result.url:
-            continue
-        for tool in other.tools:
+def _catalogs_by_url(results: list[TargetResult]) -> dict[str, dict[str, dict]]:
+    """Each server's tools, keyed by URL. Names are not merged across servers."""
+    catalogs: dict[str, dict[str, dict]] = {}
+    for item in results:
+        by_name: dict[str, dict] = {}
+        for tool in item.tools:
             name = str(tool.get("name") or "")
             if name:
-                merged.setdefault(name, tool)
-    for tool in result.tools:
-        name = str(tool.get("name") or "")
-        if name:
-            merged[name] = tool
-    return merged
+                by_name[name] = tool
+        if item.url:
+            catalogs[item.url] = by_name
+    return catalogs
 
 
 def _grade_proposed(
@@ -477,7 +479,8 @@ def _grade_proposed(
     peers: list[TargetResult] | None = None,
     allowed_targets: frozenset[str] | None = None,
 ) -> None:
-    tools_by_name = _tools_for_replay(result, peers or [])
+    catalogs = _catalogs_by_url([result, *(peers or [])])
+    tools_by_name = catalogs.get(result.url, {})
     shadowed = _cross_target_shadows(result, peers or [])
     oast = opts.get("oast")
     open_session = _cross_server_opener(result, opts) if opts.get("cross_server") else None
@@ -497,6 +500,7 @@ def _grade_proposed(
             open_session=open_session,
             allowed_targets=allowed_targets,
             peer_rows=peer_tool_rows([result, *(peers or [])], result.url),
+            catalogs=catalogs,
         )
         graded = _chain_finding(chain, verdict, shadowed=shadowed)
         if graded is None:

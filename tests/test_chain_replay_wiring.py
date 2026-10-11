@@ -42,6 +42,9 @@ class _Session:
             return {"result": {"content": [{"type": "text", "text": "queued"}]}}
         return {"result": {"isError": True, "content": [{"type": "text", "text": "no"}]}}
 
+    def close(self) -> None:
+        return
+
 
 @dataclass
 class _FakeFinding:
@@ -394,6 +397,75 @@ def test_a_proved_chain_stays_critical_when_its_first_tool_is_shadowed():
     )
     assert sev == "CRITICAL"
     assert "exfiltrat" in title.lower()
+
+
+def test_a_peer_only_tool_is_not_called_on_the_local_session():
+    local = _result()
+    peer = TargetResult(url="http://b.example/mcp")
+    peer.tools = [
+        {
+            "name": "net.deliver",
+            "description": "deliver",
+            "inputSchema": {"properties": {"body": {"type": "string"}}},
+        }
+    ]
+    session = _Session()
+    chain = ProposedChain(
+        title="wrong server",
+        steps=[
+            ChainStep("vault.read", {}),
+            ChainStep("net.deliver", {"body": "{{step0.output}}"}),
+        ],
+    )
+    _grade_proposed(
+        session,
+        local,
+        [chain],
+        _Backend(),
+        "model",
+        lambda _msg: None,
+        {"chain_replay_retries": 0},
+        peers=[local, peer],
+    )
+    assert session.calls == ["vault.read"]
+
+
+def test_a_peer_only_tool_is_called_on_the_named_server(monkeypatch) -> None:
+    local = _result()
+    peer = TargetResult(url="http://b.example/mcp")
+    peer.tools = [
+        {
+            "name": "net.deliver",
+            "description": "deliver",
+            "inputSchema": {"properties": {"body": {"type": "string"}}},
+        }
+    ]
+    peer_session = _Session()
+
+    def _open(url: str, **_kwargs: object) -> _Session:
+        assert url == peer.url
+        return peer_session
+
+    monkeypatch.setattr("mcpnuke.core.session.detect_transport", _open)
+    chain = ProposedChain(
+        title="cross",
+        steps=[
+            ChainStep("vault.read", {}),
+            ChainStep("net.deliver", {"body": "{{step0.output}}"}, target=peer.url),
+        ],
+    )
+    _grade_proposed(
+        _Session(),
+        local,
+        [chain],
+        _Backend(),
+        "model",
+        lambda _msg: None,
+        {"cross_server": True, "chain_replay_retries": 0},
+        peers=[local, peer],
+        allowed_targets=frozenset({local.url, peer.url}),
+    )
+    assert peer_session.calls == ["net.deliver"]
 
 
 def test_a_colliding_first_tool_is_graded_high():

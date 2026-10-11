@@ -6,6 +6,20 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Cross-server tool lookup.** A chain step is resolved on the server
+  named by `target`. An empty target uses only the current server's
+  catalog. Peer tools used to be merged in, so a peer-only name was
+  called on the server that proposed the chain.
+
+- **Halted chain reasons.** A replay that stops logs why (unknown tool,
+  target not in the scan, tool error) and includes that reason in the
+  revision transcript. Halted chains are still not findings.
+
+- **Ollama peer reask.** When peers are in scope and every proposed step
+  leaves `target` empty, proposal asks once more for a step that names a
+  peer. `""` satisfies the schema, and local models were taking it on
+  every step.
+
 - **Ollama chain grammar.** Proposal and revision send a JSON schema.
   When peers are in scope, each step must include `target` (`""` for the
   current server). Leaving the field optional meant local models never

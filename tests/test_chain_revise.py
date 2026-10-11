@@ -107,6 +107,46 @@ def test_revision_is_told_which_peers_are_in_scope():
     assert seen["peers"] == [("http://b.example/mcp", ["net.deliver"])]
 
 
+def test_halt_reason_reaches_the_log_and_the_reviser():
+    logs: list[str] = []
+    seen: dict[str, str] = {}
+
+    class _Told:
+        def revise_chain(self, chain, transcript, tools, model, log=None, peers=None):
+            seen["transcript"] = transcript
+            return None
+
+    _replay_with_retries(
+        _Session(),
+        _halting_chain(),
+        TOOLS,
+        _Told(),
+        model="m",
+        log=logs.append,
+        retries=1,
+        safe_mode=False,
+        oast=None,
+    )
+    assert any("tool returned an error" in msg for msg in logs)
+    assert "tool returned an error" in seen["transcript"]
+
+
+def test_halt_reason_is_logged_when_retries_are_off():
+    logs: list[str] = []
+    _replay_with_retries(
+        _Session(),
+        _halting_chain(),
+        TOOLS,
+        _Backend(),
+        model="m",
+        log=logs.append,
+        retries=0,
+        safe_mode=False,
+        oast=None,
+    )
+    assert any("tool returned an error" in msg for msg in logs)
+
+
 def test_retry_logs_the_repair_attempt():
     logs: list[str] = []
     _replay_with_retries(
