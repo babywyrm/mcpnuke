@@ -178,6 +178,21 @@ class TestTheVerdict:
 
         assert "AKIA-secret"[:8] in verdict.evidence or "step 0" in verdict.detail
 
+    def test_an_undeclared_argument_does_not_prove_composition(self):
+        """A fragment in a key the tool does not declare did not move."""
+        run = self._run(
+            {"vault.read": _text("AKIA-secret"), "net.send": _text("ok")},
+            [
+                ChainStep("vault.read", {}),
+                ChainStep("net.send", {"body": "static", "input": "{{step0.output}}"}),
+            ],
+        )
+
+        verdict = summarize_run(run)
+
+        assert not verdict.reproduced
+        assert verdict.callable_end_to_end
+
     def test_a_completed_chain_that_threads_nothing_is_only_callable(self):
         """Every step ran, but no output fed a later input: reachable, not proven."""
         run = self._run(

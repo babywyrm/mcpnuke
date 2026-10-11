@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Chain replay evidence.** The transcript names the server a step ran
+  on when `target` is set. A chain is reproduced only when an earlier
+  output appears in a parameter the later tool declares. A fragment
+  parked in an undeclared argument is not composition.
+
 - **Cross-server replay handshake.** The reconnect used for chain replay
   opened the stream and called a tool. The server rejects `tools/call`
   before `initialize`. The replay session now completes the same

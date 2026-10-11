@@ -14,11 +14,12 @@ from dataclasses import dataclass
 from mcpnuke.checks.llm_analysis import (
     _chain_finding,
     _grade_proposed,
+    _transcript,
     peer_tool_rows,
     replay_cross_server,
     run_llm_analysis,
 )
-from mcpnuke.core.chain_replay import ChainStep, ChainVerdict, ProposedChain
+from mcpnuke.core.chain_replay import ChainRun, ChainStep, ChainVerdict, ProposedChain, StepResult
 from mcpnuke.core.models import TargetResult
 
 
@@ -254,6 +255,35 @@ def test_reconnect_handshakes_before_a_tool_call(monkeypatch) -> None:
         assert "tools/list" not in events
     auth_after = sum(f.check == "auth" for item in (local, peer) for f in item.findings)
     assert auth_after == auth_before
+
+
+def test_the_transcript_names_the_server_a_step_ran_on() -> None:
+    run = ChainRun(
+        chain=ProposedChain(
+            "hop",
+            [
+                ChainStep("get_config", {"config_name": "x"}),
+                ChainStep("get_user_role", {"username": "probe_user"}, target="http://peer/sse"),
+            ],
+        ),
+        results=[
+            StepResult("get_config", {"config_name": "x"}, "cfg", False),
+            StepResult(
+                "get_user_role",
+                {"username": "probe_user"},
+                "role",
+                False,
+                target="http://peer/sse",
+            ),
+        ],
+    )
+
+    text = _transcript(run, ChainVerdict(False, True, "detail"))
+
+    local, peer = text.splitlines()
+    assert "get_config" in local
+    assert "target=" not in local
+    assert "target=http://peer/sse" in peer
 
 
 def test_peer_rows_skip_the_current_server_and_empty_catalogs() -> None:

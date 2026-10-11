@@ -90,6 +90,7 @@ class StepResult:
     failed: bool
     reason: str = ""
     target: str = ""
+    declared_params: frozenset[str] | None = None
 
 
 @dataclass
@@ -633,6 +634,7 @@ def replay_chain(
                     failed=failed,
                     reason="tool returned an error" if failed else "",
                     target=step.target,
+                    declared_params=_declared_params(tool),
                 )
             )
             if failed:
@@ -643,12 +645,33 @@ def replay_chain(
     return run
 
 
+def _declared_params(tool: dict) -> frozenset[str] | None:
+    """Property names the tool's input schema declares.
+
+    None when the tool has no properties object: there is no list to
+    check, so every argument still counts. An empty properties object
+    declares nothing, so an extra argument does not count.
+    """
+    schema = tool.get("inputSchema")
+    props = schema.get("properties") if isinstance(schema, dict) else None
+    if not isinstance(props, dict):
+        return None
+    return frozenset(str(name) for name in props)
+
+
 def _data_moved(run: ChainRun) -> list[tuple[int, int, str]]:
-    """Pairs of (source_step, sink_step, fragment) where an earlier output fed a later input."""
+    """Pairs of (source_step, sink_step, fragment) where an earlier output fed a later input.
+
+    When the sink records the parameters its tool declares, a fragment in
+    any other argument did not move: the tool never read it.
+    """
     moves: list[tuple[int, int, str]] = []
     for sink_index, result in enumerate(run.results):
         sink_strings: list[str] = []
-        for value in result.request_args.values():
+        args = result.request_args
+        if result.declared_params is not None:
+            args = {key: value for key, value in args.items() if key in result.declared_params}
+        for value in args.values():
             if isinstance(value, str):
                 sink_strings.append(value)
             elif isinstance(value, (dict, list)):
@@ -737,7 +760,8 @@ def summarize_run(
             callable_end_to_end=True,
             detail=(
                 "Every step completed without error, but no earlier output "
-                "appeared in a later request, so composition is unproven."
+                "appeared in a declared parameter of a later step, so composition "
+                "is unproven."
             ),
         )
 
@@ -870,6 +894,7 @@ def replay_chain_graph(
                 response_text=text,
                 failed=failed,
                 reason="tool returned an error" if failed else "",
+                declared_params=_declared_params(tool),
             )
         )
         node_to_result[node_idx] = len(run.results) - 1

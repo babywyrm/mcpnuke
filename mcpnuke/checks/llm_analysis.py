@@ -314,9 +314,10 @@ def _transcript(run: ChainRun, verdict: ChainVerdict) -> str:
     lines = [verdict.evidence] if verdict.evidence else []
     for index, step in enumerate(run.results):
         status = "FAIL" if step.failed else "ok"
+        where = f" target={step.target}" if step.target else ""
         reason = f" ({step.reason})" if step.failed and step.reason else ""
         lines.append(
-            f"[{status}] step{index} {step.tool}{reason} args={step.request_args!r} "
+            f"[{status}] step{index} {step.tool}{where}{reason} args={step.request_args!r} "
             f"→ {step.response_text[:200]!r}"
         )
     return "\n".join(lines)

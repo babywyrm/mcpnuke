@@ -99,7 +99,10 @@ When the run has more than one target, proposal waits until every catalog
 exists, then each server is told the others' URLs and tool names. The
 reconnect that replays those chains completes `initialize` and, for a
 legacy server, `notifications/initialized` before the first tool call.
-It does not list tools again.
+It does not list tools again. The transcript names that server on the
+step that set `target`. A chain is reproduced only when an earlier
+output appears in a parameter the later tool declares. A fragment in
+any other argument did not move.
 A step whose target is not one of those URLs is refused and not opened.
 A callable chain whose first tool name also exists on another server in the
 same trust set is HIGH (`shadowed tool`): the agent can be routed to that
