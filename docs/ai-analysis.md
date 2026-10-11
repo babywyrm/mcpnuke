@@ -117,11 +117,12 @@ target in no set is not chained. With no `--trust-set`, the run is one set.
   upgrade transformed data movement to HIGH. It is not gated on `--claude`.
 - `--chain-replay-retries N` (default 1) revises a halted chain from its
   transcript and retries. The transcript includes the halt reason, and
-  `--verbose` prints the failing tool and a short slice of its response.
-  A first call the server rejects is retried once with schema-valid
-  arguments, so a bad opening payload does not end the chain. A later
-  step keeps the value threaded from the previous output. A halted chain
-  is still not a finding.
+  `--verbose` prints the failing tool, the arguments sent, and a short
+  slice of its response. A first call the server rejects is retried once
+  with the same argument filler Phase 2 uses, including optional strings,
+  so a bad opening payload does not end the chain. A later step keeps
+  the value threaded from the previous output. A halted chain is still
+  not a finding.
 
 **Ollama (`--ollama-analysis`):** drop-in for Claude — same four phases, no
 API key. `--chain-replay` uses the same propose / judge / revise hooks.

@@ -7,11 +7,12 @@ All notable changes to this submodule are documented here.
 ### Fixed
 
 - **Rejected first chain step.** A first call the server marks as an
-  error is retried once with schema-valid arguments. The model's
-  payload was the only attempt, and argument repair required a prior
-  step, so every chain died before the second tool. A later step still
-  keeps the value threaded from the previous output. The halt line
-  names the tool and includes a short slice of the response.
+  error is retried once with the argument filler Phase 2 uses, including
+  optional strings such as `username`. Required-only defaults omit those
+  fields, the server rejects the empty call, and the chain dies on the
+  first tool. A later step still keeps the value threaded from the
+  previous output. The halt line names the tool, the arguments sent,
+  and a short slice of the response.
 
 - **Cross-server tool lookup.** A chain step is resolved on the server
   named by `target`. An empty target uses only the current server's

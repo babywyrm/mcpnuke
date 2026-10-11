@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 from mcpnuke.checks.base import response_is_error
 from mcpnuke.checks.tool_probes import (
+    _build_extended_args,
     _build_safe_args,
     _call_tool,
     _is_dangerous_tool,
@@ -592,16 +593,17 @@ def replay_chain(
             failed = response_is_error(resp)
 
             # The model's first arguments are often a payload the tool
-            # rejects, and argument repair needs a prior step. One retry
-            # with the schema defaults lets the rest of the chain run.
+            # rejects. Required-only defaults omit optional strings such as
+            # username, so the retry uses the same filler Phase 2 does.
             if failed and not run.results:
-                safe = _build_safe_args(tool)
-                if safe != args:
-                    retry_resp = _call_tool(active, step.tool, safe)
+                filled = _build_extended_args(tool)
+                if filled != args:
+                    retry_resp = _call_tool(active, step.tool, filled)
+                    retry_text = _response_text(retry_resp)
+                    args = filled
+                    text = retry_text
                     if not response_is_error(retry_resp):
-                        args = safe
                         resp = retry_resp
-                        text = _response_text(retry_resp)
                         failed = False
 
             if failed and not has_unresolved and backend is not None:

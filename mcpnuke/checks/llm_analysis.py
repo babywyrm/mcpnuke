@@ -282,7 +282,9 @@ def _halt_message(run: ChainRun, verdict: ChainVerdict) -> str:
     if failed is None:
         return verdict.detail
     snippet = " ".join((failed.response_text or "").split())[:120]
-    tail = f"{failed.tool}: {snippet}" if snippet else failed.tool
+    tail = f"{failed.tool} args={failed.request_args!r}"
+    if snippet:
+        tail = f"{tail}: {snippet}"
     return f"{verdict.detail} {tail}"
 
 

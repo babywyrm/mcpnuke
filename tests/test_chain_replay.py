@@ -115,7 +115,9 @@ class TestFailureStopsTheChain:
 
         run = replay_chain(session, chain, TOOLS)
 
-        assert [name for name, _ in session.calls] == ["vault.read"]
+        names = [name for name, _ in session.calls]
+        assert names[0] == "vault.read"
+        assert "net.send" not in names
         assert not run.completed
 
     def test_the_failing_step_is_marked(self):
@@ -303,3 +305,34 @@ class TestRejectedFirstStep:
         assert [name for name, _ in session.calls] == ["vault.read", "vault.read"]
         assert not run.completed
         assert "bad key" in run.results[0].response_text
+
+    def test_an_optional_string_is_filled_the_way_phase_2_fills_it(self):
+        """Required-only defaults omit username, and the server rejects {}."""
+
+        def read(args: dict) -> dict:
+            if args.get("username") == "probe_user":
+                return _text("role-user")
+            return _error("Invalid request parameters")
+
+        session = _ScriptedSession({"get_user_role": read, "net.send": _text("ok")})
+        tools = {
+            "get_user_role": {
+                "name": "get_user_role",
+                "inputSchema": {"properties": {"username": {"type": "string"}}},
+            },
+            "net.send": _ENUM_TOOLS["net.send"],
+        }
+        chain = ProposedChain(
+            "c",
+            [
+                ChainStep("get_user_role", {"username": "test; echo MCPNUKE_T05_SEMICOLON"}),
+                ChainStep("net.send", {"body": "{{step0.output}}"}),
+            ],
+        )
+
+        run = replay_chain(session, chain, tools)
+
+        assert session.calls[0][1] == {"username": "test; echo MCPNUKE_T05_SEMICOLON"}
+        assert session.calls[1] == ("get_user_role", {"username": "probe_user"})
+        assert session.calls[2] == ("net.send", {"body": "role-user"})
+        assert run.completed
