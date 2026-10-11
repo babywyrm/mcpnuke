@@ -96,7 +96,10 @@ not sent there. This runs only when `--cross-server` is also set. Without
 the flag the step is refused and is not sent to the server that produced the
 previous output. `--safe-mode` still refuses dangerous tools on every target.
 When the run has more than one target, proposal waits until every catalog
-exists, then each server is told the others' URLs and tool names.
+exists, then each server is told the others' URLs and tool names. The
+reconnect that replays those chains completes `initialize` and, for a
+legacy server, `notifications/initialized` before the first tool call.
+It does not list tools again.
 A step whose target is not one of those URLs is refused and not opened.
 A callable chain whose first tool name also exists on another server in the
 same trust set is HIGH (`shadowed tool`): the agent can be routed to that

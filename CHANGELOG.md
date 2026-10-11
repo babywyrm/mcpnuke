@@ -6,6 +6,12 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Cross-server replay handshake.** The reconnect used for chain replay
+  opened the stream and called a tool. The server rejects `tools/call`
+  before `initialize`. The replay session now completes the same
+  handshake as the scan, including `notifications/initialized` on a
+  legacy server, and does not list tools or add another auth finding.
+
 - **Rejected first chain step.** A first call the server marks as an
   error is retried once with the argument filler Phase 2 uses, including
   optional strings such as `username`. Required-only defaults omit those

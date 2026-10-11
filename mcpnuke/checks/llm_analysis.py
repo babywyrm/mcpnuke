@@ -7,6 +7,7 @@ context-dependent risks.
 """
 
 import json
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, replace
@@ -184,6 +185,22 @@ def _revise_chain(
         return None
 
 
+def _prepare_replay_session(session: MCPSessionProtocol, result: TargetResult) -> None:
+    """Finish the handshake. detect_transport only opens the stream.
+
+    A tools/call before initialize is rejected. The scan already listed
+    tools, so this reconnect does not list them again. An auth finding is
+    recorded by enumerate_server, not by this handshake.
+    """
+    from mcpnuke.core.enumerator import negotiate_protocol
+    from mcpnuke.core.protocol import LEGACY
+
+    mode = negotiate_protocol(session, result)
+    if mode == LEGACY:
+        session.notify("notifications/initialized")
+        time.sleep(0.5)
+
+
 def _cross_server_opener(result: TargetResult, opts: dict):
     """Open one peer session per step. The caller closes it."""
     from mcpnuke.core.session import detect_transport
@@ -192,12 +209,16 @@ def _cross_server_opener(result: TargetResult, opts: dict):
     headers = opts.get("extra_headers")
 
     def open_session(url: str) -> MCPSessionProtocol | None:
-        return detect_transport(
+        session = detect_transport(
             url,
             auth_token=token if isinstance(token, str) else None,
             verify_tls=bool(opts.get("tls_verify", False)),
             extra_headers=headers if isinstance(headers, dict) else None,
         )
+        if session is None:
+            return None
+        _prepare_replay_session(session, TargetResult(url=url))
+        return session
 
     return open_session
 
@@ -596,6 +617,7 @@ def replay_cross_server(
         if session is None:
             log(f"  [yellow]  Cross-server replay skipped: could not reconnect to {result.url}[/yellow]")
             continue
+        _prepare_replay_session(session, result)
         try:
             _grade_proposed(
                 session,

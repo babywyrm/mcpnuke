@@ -31,9 +31,16 @@ class _Session:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def call(self, method: str, params: dict, timeout: float = 10.0) -> dict | None:
+    def call(
+        self,
+        method: str,
+        params: dict | None = None,
+        timeout: float = 10.0,
+        retries: int = 2,
+    ) -> dict | None:
         if method != "tools/call":
             return None
+        params = params or {}
         name = params.get("name", "")
         self.calls.append(name)
         if name == "vault.read":
@@ -159,6 +166,94 @@ def test_replay_peers_stay_inside_the_trust_set() -> None:
     assert "http://c.example/mcp" not in named
     assert backend.propose_calls == 2
     assert ("http://b.example/mcp", ["net.deliver"]) in backend.seen[0]
+
+
+class _HandshakeSession:
+    """Records the order of handshake and tool calls."""
+
+    def __init__(self) -> None:
+        self.events: list[str] = []
+        self.protocol_mode = ""
+
+    def call(self, method: str, params: dict | None = None, timeout: float = 10.0, retries: int = 2) -> dict | None:
+        self.events.append(method)
+        if method == "initialize":
+            return {
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "serverInfo": {"name": "lab", "version": "1"},
+                    "capabilities": {},
+                }
+            }
+        if method == "tools/call":
+            return {"result": {"content": [{"type": "text", "text": "ok"}]}}
+        return None
+
+    def notify(self, method: str, params: dict | None = None) -> None:
+        self.events.append(method)
+
+    def close(self) -> None:
+        return
+
+
+def test_reconnect_handshakes_before_a_tool_call(monkeypatch) -> None:
+    """detect_transport only opens the SSE stream. tools/call before
+    initialize is rejected, and a second initialize must not add an auth finding."""
+    local = _result()
+    peer = TargetResult(url="http://b.example/mcp")
+    peer.tools = [
+        {
+            "name": "net.deliver",
+            "description": "deliver",
+            "inputSchema": {"properties": {"body": {"type": "string"}}},
+        }
+    ]
+    peer.add("code_execution", "HIGH", "sink")
+    auth_before = sum(f.check == "auth" for item in (local, peer) for f in item.findings)
+    opened: dict[str, _HandshakeSession] = {}
+
+    def _open(url: str, **_kwargs: object) -> _HandshakeSession:
+        session = opened.get(url)
+        if session is None:
+            session = _HandshakeSession()
+            opened[url] = session
+        return session
+
+    monkeypatch.setattr("mcpnuke.core.session.detect_transport", _open)
+    chain = ProposedChain(
+        "cross",
+        [
+            ChainStep("vault.read", {}),
+            ChainStep("net.deliver", {"body": "{{step0.output}}"}, target=peer.url),
+        ],
+    )
+
+    class _One(_Backend):
+        def propose_chains(self, tools, findings, model, log, peers=None):
+            self.propose_calls += 1
+            if any(tool.get("name") == "vault.read" for tool in tools):
+                return [chain]
+            return []
+
+    replay_cross_server(
+        [local, peer],
+        {
+            "chain_replay": True,
+            "cross_server": True,
+            "claude": True,
+            "chain_replay_retries": 0,
+        },
+        backend=_One(),
+        console=_DummyConsole(),
+    )
+
+    for url in (local.url, peer.url):
+        events = opened[url].events
+        assert events.index("initialize") < events.index("notifications/initialized")
+        assert events.index("notifications/initialized") < events.index("tools/call")
+        assert "tools/list" not in events
+    auth_after = sum(f.check == "auth" for item in (local, peer) for f in item.findings)
+    assert auth_after == auth_before
 
 
 def test_peer_rows_skip_the_current_server_and_empty_catalogs() -> None:
