@@ -234,7 +234,7 @@ def _replay_with_retries(
     )
     verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
     if not run.completed:
-        log(f"  [dim]  {verdict.detail}[/dim]")
+        log(f"  [dim]  {_halt_message(run, verdict)}[/dim]")
     attempts = 0
     tools_list = list(tools_by_name.values())
     while attempts < retries and not run.completed:
@@ -269,11 +269,21 @@ def _replay_with_retries(
         )
         verdict = summarize_run(run, oast=oast, oast_wait=oast_wait)
         if not run.completed:
-            log(f"  [dim]  {verdict.detail}[/dim]")
+            log(f"  [dim]  {_halt_message(run, verdict)}[/dim]")
         attempts += 1
         if run.completed:
             log("  [dim]  Revised chain completed on retry[/dim]")
     return run, verdict
+
+
+def _halt_message(run: ChainRun, verdict: ChainVerdict) -> str:
+    """Halt line with the failing tool and a short slice of its response."""
+    failed = next((step for step in run.results if step.failed), None)
+    if failed is None:
+        return verdict.detail
+    snippet = " ".join((failed.response_text or "").split())[:120]
+    tail = f"{failed.tool}: {snippet}" if snippet else failed.tool
+    return f"{verdict.detail} {tail}"
 
 
 def _transcript(run: ChainRun, verdict: ChainVerdict) -> str:

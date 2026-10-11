@@ -591,6 +591,19 @@ def replay_chain(
             text = _response_text(resp)
             failed = response_is_error(resp)
 
+            # The model's first arguments are often a payload the tool
+            # rejects, and argument repair needs a prior step. One retry
+            # with the schema defaults lets the rest of the chain run.
+            if failed and not run.results:
+                safe = _build_safe_args(tool)
+                if safe != args:
+                    retry_resp = _call_tool(active, step.tool, safe)
+                    if not response_is_error(retry_resp):
+                        args = safe
+                        resp = retry_resp
+                        text = _response_text(retry_resp)
+                        failed = False
+
             if failed and not has_unresolved and backend is not None:
                 adapted = _adapt_step_args_with_llm(
                     backend, tool, step.args, run.results, model=model

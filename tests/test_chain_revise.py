@@ -127,7 +127,9 @@ def test_halt_reason_reaches_the_log_and_the_reviser():
         safe_mode=False,
         oast=None,
     )
-    assert any("tool returned an error" in msg for msg in logs)
+    halt = next(msg for msg in logs if "tool returned an error" in msg)
+    assert "bad_tool" in halt
+    assert "nope" in halt
     assert "tool returned an error" in seen["transcript"]
 
 

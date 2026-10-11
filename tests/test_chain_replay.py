@@ -230,3 +230,76 @@ class TestSafeArgsAreFilledIn:
         replay_chain(session, chain, tools)
 
         assert dict(session.calls)["vault.read"]["key"] == "chosen"
+
+
+_ENUM_TOOLS = {
+    "vault.read": {
+        "name": "vault.read",
+        "inputSchema": {
+            "properties": {"key": {"type": "string", "enum": ["alpha"]}},
+            "required": ["key"],
+        },
+    },
+    "net.send": {
+        "name": "net.send",
+        "inputSchema": {"properties": {"body": {"type": "string"}}, "required": ["body"]},
+    },
+}
+
+
+class TestRejectedFirstStep:
+    def test_schema_args_replace_a_rejected_first_call(self):
+        def read(args: dict) -> dict:
+            if args.get("key") == "alpha":
+                return _text("AKIA-secret")
+            return _error("bad key")
+
+        session = _ScriptedSession({"vault.read": read, "net.send": _text("ok")})
+        chain = ProposedChain(
+            "c",
+            [
+                ChainStep("vault.read", {"key": "semicolon_chain"}),
+                ChainStep("net.send", {"body": "{{step0.output}}"}),
+            ],
+        )
+
+        run = replay_chain(session, chain, _ENUM_TOOLS)
+
+        assert session.calls[0] == ("vault.read", {"key": "semicolon_chain"})
+        assert session.calls[1] == ("vault.read", {"key": "alpha"})
+        assert session.calls[2] == ("net.send", {"body": "AKIA-secret"})
+        assert run.completed
+
+    def test_a_later_step_keeps_the_threaded_argument(self):
+        session = _ScriptedSession(
+            {"vault.read": _text("AKIA-secret"), "net.send": _error("rejected")}
+        )
+        chain = ProposedChain(
+            "c",
+            [
+                ChainStep("vault.read", {"key": "alpha"}),
+                ChainStep("net.send", {"body": "{{step0.output}}"}),
+            ],
+        )
+
+        run = replay_chain(session, chain, _ENUM_TOOLS)
+
+        sends = [args for name, args in session.calls if name == "net.send"]
+        assert sends == [{"body": "AKIA-secret"}]
+        assert not run.completed
+
+    def test_both_attempts_failing_stops_the_chain(self):
+        session = _ScriptedSession({"vault.read": _error("bad key"), "net.send": _text("ok")})
+        chain = ProposedChain(
+            "c",
+            [
+                ChainStep("vault.read", {"key": "semicolon_chain"}),
+                ChainStep("net.send", {"body": "{{step0.output}}"}),
+            ],
+        )
+
+        run = replay_chain(session, chain, _ENUM_TOOLS)
+
+        assert [name for name, _ in session.calls] == ["vault.read", "vault.read"]
+        assert not run.completed
+        assert "bad key" in run.results[0].response_text
