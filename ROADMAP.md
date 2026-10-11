@@ -196,7 +196,6 @@ and checks both console scripts before anything is uploaded.
 - **`--coverage-report` improvements** — show per-taxonomy-ID coverage with pass/fail/untested status
 - **Profile library** — curated scan profiles for common MCP server types (Cursor MCP, Claude Desktop, generic stdio)
 - **Watch mode** — continuous scanning for runtime monitoring (sidecar use case)
-- **Multi-target orchestration** — scan a fleet of MCP servers in parallel
 
 ### Horizon
 

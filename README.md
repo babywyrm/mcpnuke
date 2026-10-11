@@ -204,7 +204,7 @@ The scanner runs checks in a deliberate order:
 | **Deep Probes** | Active tool invocation with safe payloads. Analyze responses for threats. |
 | **Transport** | CORS, unauthenticated SSE, cross-origin POST. |
 | **Aggregate** | Cross-reference all prior findings to detect compound threats. |
-| **AI** (optional) | Claude reads definitions, tool output, and all findings to identify subtle risks and multi-step attack chains. Requires `--claude`. |
+| **AI** (optional) | Claude or Ollama reads definitions, tool output, and findings, and can replay proposed chains. Requires `--claude` or `--ollama-analysis`. |
 
 Which checks run in each phase, and under what conditions, is in
 **[docs/checks.md](docs/checks.md)**.

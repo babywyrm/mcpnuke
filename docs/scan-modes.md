@@ -9,13 +9,13 @@ five modes.
 | **Fast** | `--fast` | Static checks read the full catalog. Invoke probes sample the top 5 (tiered scoring), skip heavy probes (risk-aware: retains `input_sanitization` when dangerous params detected), cap probe workers at 2 | Quick triage, large tool sets |
 | **Safe** | `--safe-mode` | Static + probes on read-only tools only; skips delete/exec/send/write and outbound sinks (webhook, egress, exfil), including dotted names like `shellwrap.exec` / `shadow.register_webhook` | Prod servers with mixed tool risk |
 | **Static** | `--no-invoke` | Static checks only, no tool calls | Prod servers, zero side-effect risk |
-| **AI** | `--claude` | All checks + Claude analysis | Deep analysis, subtle vuln hunting |
+| **AI** | `--claude` or `--ollama-analysis` | All checks plus the same four LLM phases on either backend | Deep analysis, subtle vuln hunting |
 
 Every mode that produces findings also emits **Priority actions** (console +
-JSON): a proof-ranked top-N fix list. Deep AI modes (`--claude --chain-replay`,
-optionally `--oast`) feed the strongest ranks when chains reproduce or egress
-is confirmed; static/safe modes still get an honest priority list from whatever
-was found.
+JSON): a proof-ranked top-N fix list. Deep AI modes (`--chain-replay` with
+`--claude` or `--ollama-analysis`, optionally `--oast`) feed the strongest
+ranks when chains reproduce or egress is confirmed; static/safe modes still
+get an honest priority list from whatever was found.
 
 A run with more than one target treats every target as one agent unless
 `--trust-set URL,URL` says otherwise. Repeat the flag for another agent.

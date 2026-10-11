@@ -1,6 +1,12 @@
 # Cross-Server Attack Chains — Design
 
-Date: 2026-09-14. Status: proposed, not scheduled.
+Date: 2026-09-14. Status: implemented — shipped in 6.21.0.
+Phases A–C and `--trust-set` are in the tree. Replay fixes after that
+release (per-server catalogs, `initialize` before `tools/call`, a
+rejected first step retried with the Phase 2 argument filler, halt
+reasons, and the Ollama peer reask) are in the unreleased changelog
+and [docs/ai-analysis.md](../ai-analysis.md). The sections below are
+the design as written.
 
 ## 1. Problem
 
@@ -17,7 +23,7 @@ as cross-server phenomena: the blast radius lives in the composition, not in
 any single server.
 
 A scanner that only ever looks at one server at a time cannot see the
-composition. Ours currently cannot.
+composition. On the date of this spec, this scanner could not.
 
 ## 2. What exists today
 
@@ -93,13 +99,13 @@ OAST canaries per-target so egress is attributable.
 - FP harness: the OSS-target snapshots must not gain `cross_server_chain`
   findings (single-target baselines have no peer, which is itself the guard).
 
-## 6. Open questions
+## 6. Decisions
 
-- Should a cross-server finding deduplicate to a run-level report section
-  instead of landing on both targets? (Both-targets is simpler and keeps
-  per-target JSON honest; run-level reads better. Decide at Phase A.)
-- Session pooling for Phase B: keep-alive vs reconnect per step.
-- Agent trust set (2026-09-29): `--trust-set URL,URL` is repeatable. Phase A
-  chains, cross-server name collisions, shadow grades, and Phase B replay
-  stay inside a set. A target in no set is not chained. With no flag, the
-  run is still one set, so existing multi-target scans do not go silent.
+- A cross-server finding lands on the sink side only. The source peer is
+  named in evidence. There is no run-level section.
+- Phase B reconnects per step and closes that session before the next
+  one. The reconnect completes `initialize`, and `notifications/initialized`
+  on a legacy server, before `tools/call`.
+- `--trust-set URL,URL` is repeatable. Phase A chains, cross-server name
+  collisions, shadow grades, and Phase B replay stay inside a set. A
+  target in no set is not chained. With no flag, the run is still one set.
