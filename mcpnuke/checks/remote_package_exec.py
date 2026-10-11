@@ -11,6 +11,7 @@ Lane 4 (Agent Chain) / Transport A (MCP JSON-RPC).
 from __future__ import annotations
 
 import re
+from typing import TypedDict
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
@@ -18,8 +19,15 @@ from mcpnuke.core.models import TargetResult
 
 _add = lane_tagged(lane=4, transport="A")
 
+class _RemoteExecPattern(TypedDict):
+    pattern: re.Pattern[str]
+    category: str
+    severity: str
+    detail: str
+
+
 # Patterns in tool descriptions/names that indicate remote fetch+exec
-_REMOTE_EXEC_PATTERNS = [
+_REMOTE_EXEC_PATTERNS: list[_RemoteExecPattern] = [
     {
         "pattern": re.compile(r"npx\s+[@a-z]", re.IGNORECASE),
         "category": "npx_remote_package",

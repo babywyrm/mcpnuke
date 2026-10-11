@@ -6,6 +6,10 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **`MYPY_CEILING` 18 → 0.** JSON bodies, auth tokens, claim summaries,
+  and package versions are returned only when they match the declared
+  type. A JSON array is no longer treated as an object.
+
 - **Ollama model-delete probe.** `Client.delete()` does not accept a JSON
   body, so the `DELETE /api/delete` check raised `TypeError`, the handler
   swallowed it, and an exposed management endpoint was never reported.

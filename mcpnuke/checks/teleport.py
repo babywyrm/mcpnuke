@@ -27,7 +27,8 @@ def _probe_url(url: str, timeout: float = 3.0) -> dict | None:
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
-            return json.loads(resp.read())
+            parsed = json.loads(resp.read())
+            return parsed if isinstance(parsed, dict) else None
     except Exception:
         return None
 

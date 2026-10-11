@@ -39,6 +39,10 @@ def fetch_lane_taxonomy(camazotz_url: str, *, timeout: float = 10.0) -> dict[str
     resp = httpx.get(endpoint, timeout=timeout)
     resp.raise_for_status()
     payload = resp.json()
+    if not isinstance(payload, dict):
+        raise SchemaMismatchError(
+            f"camazotz /api/lanes returned {type(payload).__name__}, expected an object"
+        )
     schema = payload.get("schema")
     if schema != SUPPORTED_SCHEMA:
         raise SchemaMismatchError(

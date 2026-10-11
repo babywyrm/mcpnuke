@@ -59,7 +59,8 @@ def _k8s_api(path: str, token: str, api_url: str | None = None) -> dict | None:
     ctx.verify_mode = ssl.CERT_NONE
     try:
         with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
-            return json.loads(r.read())
+            parsed = json.loads(r.read())
+            return parsed if isinstance(parsed, dict) else None
     except Exception:
         return None
 
@@ -209,7 +210,9 @@ def discover_services(
     probe_candidates: list[tuple[str, int, str, str, str]] = []
 
     for ns in namespaces:
-        svc_data = _k8s_api(f"/api/v1/namespaces/{ns}/services", token, api_url=api_url)
+        svc_data = _k8s_api(
+            f"/api/v1/namespaces/{ns}/services", token or "", api_url=api_url
+        )
         if not svc_data:
             if console:
                 console.print(f"  [red]✗[/red] Cannot list services in {ns}")
@@ -303,8 +306,9 @@ def discover_services(
             for fut in as_completed(futures):
                 dns_name, port_num = futures[fut]
                 try:
-                    ep = fut.result()
-                    if ep and ep.url not in seen_urls:
+                    found = fut.result()
+                    if found and found.url not in seen_urls:
+                        ep = found
                         seen_urls.add(ep.url)
                         endpoints.append(ep)
                         if console:

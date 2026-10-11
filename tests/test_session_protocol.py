@@ -18,6 +18,7 @@ from mcpnuke.core.session import (
     MCPSession,
     StdioSession,
     ToolServerSession,
+    _parse_sse_json,
 )
 from mcpnuke.core.transports.base import HTTPCapableSession, MCPSessionProtocol
 
@@ -81,3 +82,8 @@ class TestProtocolShape:
         session = HTTPSession("http://mcp.test", "http://mcp.test/mcp")
         assert isinstance(session, MCPSessionProtocol)
         assert isinstance(session, HTTPCapableSession)
+
+
+def test_sse_json_ignores_a_non_object():
+    assert _parse_sse_json('data: {"id": 1, "result": {}}\n') == {"id": 1, "result": {}}
+    assert _parse_sse_json("data: [1, 2]\n") is None

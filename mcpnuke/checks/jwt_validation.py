@@ -33,7 +33,7 @@ def _get_auth_token(result: TargetResult) -> str | None:
 
 def _get_jwt_claims(result: TargetResult) -> dict | None:
     summary = result.auth_context.get("jwt_claims_summary")
-    if summary:
+    if isinstance(summary, dict) and summary:
         return summary
     token = _get_auth_token(result)
     if token:

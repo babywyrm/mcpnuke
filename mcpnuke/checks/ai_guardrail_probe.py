@@ -64,7 +64,9 @@ def _find_message_param(tool: dict) -> str | None:
         if name in props:
             return name
     for name in props:
-        if any(kw in name.lower() for kw in ("message", "query", "prompt", "input")):
+        if isinstance(name, str) and any(
+            kw in name.lower() for kw in ("message", "query", "prompt", "input")
+        ):
             return name
     return None
 

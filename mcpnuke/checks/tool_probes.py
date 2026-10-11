@@ -431,7 +431,8 @@ def _response_text(resp: dict | None) -> str:
             return "\n".join(parts)
         # error responses
         if "message" in result:
-            return result["message"]
+            message = result["message"]
+            return message if isinstance(message, str) else str(message)
         return json.dumps(result)[:2000] if result else ""
     return str(result) if result else ""
 

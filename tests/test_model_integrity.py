@@ -174,6 +174,12 @@ class TestBaselineIO:
             manifest = _load_manifest(f.name)
             assert manifest == {}
 
+    def test_load_non_object_is_empty(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("[1, 2]")
+            f.flush()
+            assert _load_manifest(f.name) == {}
+
 
 # ── Model integrity checks ───────────────────────────────────────────
 

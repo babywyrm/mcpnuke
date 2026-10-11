@@ -31,7 +31,8 @@ def _k8s_get(path: str, token: str, api_url: str | None = None) -> dict | None:
     ctx.verify_mode = ssl.CERT_NONE
     try:
         with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
-            return json.loads(r.read())
+            parsed = json.loads(r.read())
+            return parsed if isinstance(parsed, dict) else None
     except Exception:
         return None
 

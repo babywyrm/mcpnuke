@@ -96,7 +96,7 @@ def _run_doctor(console: Console) -> None:
         try:
             mod = __import__(name)
             ver = getattr(mod, "__version__", None)
-            if ver:
+            if isinstance(ver, str) and ver:
                 return ver
         except ImportError:
             return "missing"

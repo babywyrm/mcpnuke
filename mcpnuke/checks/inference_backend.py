@@ -425,7 +425,8 @@ def _load_manifest(path: str) -> dict:
         logger.warning("Inference baseline file not found: %s", path)
         return {}
     try:
-        return json.loads(p.read_text())
+        loaded = json.loads(p.read_text())
+        return loaded if isinstance(loaded, dict) else {}
     except (json.JSONDecodeError, OSError) as e:
         logger.warning("Failed to load inference baseline %s: %s", path, e)
         return {}
@@ -739,8 +740,16 @@ def _guardrail_probe_model(
         if resp.status_code != 200:
             return None
         data = resp.json()
+        if not isinstance(data, dict):
+            return None
         if backend == InferenceBackend.OLLAMA:
-            return data.get("message", {}).get("content", "")
-        return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            message = data.get("message")
+            content = message.get("content", "") if isinstance(message, dict) else ""
+        else:
+            choices = data.get("choices")
+            first = choices[0] if isinstance(choices, list) and choices else {}
+            message = first.get("message") if isinstance(first, dict) else None
+            content = message.get("content", "") if isinstance(message, dict) else ""
+        return content if isinstance(content, str) else None
     except Exception:
         return None

@@ -264,7 +264,9 @@ def _parse_sse_json(text: str, req_id: int | None = None) -> dict | None:
             if data:
                 try:
                     msg = json.loads(data)
-                    if req_id is None or msg.get("id") == req_id:
+                    if isinstance(msg, dict) and (
+                        req_id is None or msg.get("id") == req_id
+                    ):
                         return msg
                 except json.JSONDecodeError:
                     pass
@@ -373,13 +375,17 @@ class HTTPSession:
                 if r.status_code in (200, 202):
                     ct = r.headers.get("content-type", "")
                     if "application/json" in ct:
-                        return r.json()
+                        body = r.json()
+                        if isinstance(body, dict):
+                            return body
                     if "text/event-stream" in ct or "jsonrpc" in r.text:
                         parsed = _parse_sse_json(r.text, self._req_id)
                         if parsed:
                             return parsed
                         try:
-                            return r.json()
+                            body = r.json()
+                            if isinstance(body, dict):
+                                return body
                         except Exception:
                             pass
             except Exception:

@@ -471,8 +471,9 @@ def load_auth_secret_files(args: argparse.Namespace) -> None:
 
 def resolve_auth_token(args: argparse.Namespace) -> str | None:
     """Resolve the auth token from CLI args (direct token or OIDC client credentials)."""
-    if getattr(args, "auth_token", None):
-        return args.auth_token
+    token = getattr(args, "auth_token", None)
+    if isinstance(token, str) and token:
+        return token
 
     client_id = getattr(args, "client_id", None)
     client_secret = getattr(args, "client_secret", None)
