@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Ollama chain grammar.** Proposal and revision send a JSON schema.
+  When peers are in scope, each step must include `target` (`""` for the
+  current server). Leaving the field optional meant local models never
+  emitted it. Phase 1 is unchanged.
+
 - **Cross-server chain revision.** A halted chain is revised with the same
   peer list and `target` step example as the original proposal. The
   revision prompt used to list only the current server, so a retry could

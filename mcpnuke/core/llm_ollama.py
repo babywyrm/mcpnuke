@@ -136,6 +136,41 @@ def cluster_findings(
     return results
 
 
+def chain_response_schema(*, require_target: bool) -> dict[str, object]:
+    """Ollama response grammar for a proposed chain.
+
+    ``target`` is required only when other servers are in scope. An empty
+    string is the current server. Optional target was omitted by every
+    local model that was shown the field only in the prompt.
+    """
+    step_required: list[str] = ["tool", "args"]
+    if require_target:
+        step_required.append("target")
+    step: dict[str, object] = {
+        "type": "object",
+        "properties": {
+            "tool": {"type": "string"},
+            "args": {"type": "object"},
+            "target": {"type": "string"},
+        },
+        "required": step_required,
+    }
+    return {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "severity": {"type": "string"},
+                "title": {"type": "string"},
+                "detail": {"type": "string"},
+                "taxonomy_id": {"type": "string"},
+                "steps": {"type": "array", "minItems": 2, "items": step},
+            },
+            "required": ["steps"],
+        },
+    }
+
+
 class OllamaBackend:
     """LLM analysis backend that routes to a local/networked Ollama instance.
 
@@ -160,6 +195,7 @@ class OllamaBackend:
         user_content: str,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         log: Callable[[str], None] | None = None,
+        response_format: dict[str, object] | None = None,
     ) -> str:
         """POST to Ollama /api/chat and return the assistant text."""
         _log = log or (lambda msg: None)
@@ -181,6 +217,10 @@ class OllamaBackend:
                 {"role": "user", "content": user_content},
             ],
         }
+        # Chain proposal only. Phase 1 findings are a different shape, and an
+        # optional "target" is omitted by every local model we tried.
+        if response_format is not None:
+            payload["format"] = response_format
 
         t0 = time.time()
         try:
@@ -329,12 +369,15 @@ class OllamaBackend:
         if not findings:
             return []
         system, user = llm_core._propose_chains_prompt(tools, findings, peers=peers)
-        text = self._call(system, user, DEFAULT_MAX_TOKENS, log)
+        schema = chain_response_schema(require_target=bool(peers))
+        text = self._call(system, user, DEFAULT_MAX_TOKENS, log, response_format=schema)
         chains = parse_proposed_chains(text)
         if not chains and text.strip():
             # Local models sometimes answer an assessment-shaped context with a
             # prose summary instead of the JSON schema. One corrective nudge.
-            text = self._call(system + _PROSE_NUDGE, user, DEFAULT_MAX_TOKENS, log)
+            text = self._call(
+                system + _PROSE_NUDGE, user, DEFAULT_MAX_TOKENS, log, response_format=schema
+            )
             chains = parse_proposed_chains(text)
         return chains
 
@@ -372,7 +415,13 @@ class OllamaBackend:
         system, user = llm_core._revise_chain_prompt(
             chain.title, transcript, tools, peers=peers
         )
-        text = self._call(system, user, DEFAULT_MAX_TOKENS, log)
+        text = self._call(
+            system,
+            user,
+            DEFAULT_MAX_TOKENS,
+            log,
+            response_format=chain_response_schema(require_target=bool(peers)),
+        )
         revised = parse_proposed_chains(text)
         return revised[0] if revised else None
 

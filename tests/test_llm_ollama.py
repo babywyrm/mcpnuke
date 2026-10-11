@@ -86,6 +86,38 @@ def test_ollama_disables_thinking_for_structured_json():
     assert payload["stream"] is False
 
 
+def _step_required(payload: dict) -> list[str]:
+    schema = payload["format"]
+    return schema["items"]["properties"]["steps"]["items"]["required"]
+
+
+def test_chain_schema_requires_target_only_when_peers_are_in_scope():
+    """Local models omit target unless the response grammar requires it.
+    Phase 1 must not inherit that grammar."""
+    backend = OllamaBackend(host="http://localhost:11434")
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"message": {"content": "[]"}}
+    tools = [{"name": "read_file"}]
+    findings = [{"title": "f", "detail": "d"}]
+    peers = [("http://b.example/mcp", ["net.deliver"])]
+    chain = MagicMock()
+    chain.title = "broken"
+    with patch("httpx.post", return_value=mock_resp) as post:
+        backend.analyze_tools(tools)
+        phase1 = post.call_args.kwargs["json"]
+        backend.propose_chains(tools, findings)
+        plain = post.call_args.kwargs["json"]
+        backend.propose_chains(tools, findings, peers=peers)
+        crossed = post.call_args.kwargs["json"]
+        backend.revise_chain(chain, "halted", tools, peers=peers)
+        revised = post.call_args.kwargs["json"]
+    assert "format" not in phase1
+    assert "target" not in _step_required(plain)
+    assert "target" in _step_required(crossed)
+    assert "target" in _step_required(revised)
+    assert crossed["think"] is False
+
+
 def test_cluster_findings_consensus():
     per_model = {
         "qwen3:14b": [

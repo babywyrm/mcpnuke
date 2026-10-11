@@ -120,7 +120,9 @@ target in no set is not chained. With no `--trust-set`, the run is one set.
 API key. `--chain-replay` uses the same propose / judge / revise hooks.
 Structured chat payloads send `think: false` so thinking models emit the
 JSON the phases parse instead of spending the HTTP timeout inside
-chain-of-thought.
+chain-of-thought. Chain proposal and revision also send a JSON schema.
+When other servers are in scope, each step must include `target` (`""`
+for the current server, or the peer URL). Phase 1 does not use that schema.
 
 **Priority actions (every report):** after the severity counts, mcpnuke prints
 a short **Priority actions (fix these first)** list and writes matching

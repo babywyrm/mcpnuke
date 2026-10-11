@@ -660,10 +660,10 @@ def _peer_prompt_suffix(
     )
     example_tool = example_names[0] if example_names else "tool_name"
     system = (
-        "\nOther MCP servers are in scope. To run a step on one of them, "
-        'add a "target" field to that step set to the server URL and name '
-        "only a tool listed for it. Steps on the current server omit "
-        'target. A cross-server step looks like:\n'
+        "\nOther MCP servers are in scope. Every step must include "
+        '"target": an empty string for the current server, or the peer URL '
+        "to run the step there, naming only a tool listed for that server. "
+        "A cross-server step looks like:\n"
         f'  {{"tool": "{example_tool}", "args": {{"x": "{{{{step0.output}}}}"}}, '
         f'"target": "{example_url}"}}\n'
     )
