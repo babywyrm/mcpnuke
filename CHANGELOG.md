@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.21.1] - 2026-10-11
+
 ### Fixed
 
 - **Chain replay evidence.** The transcript names the server a step ran

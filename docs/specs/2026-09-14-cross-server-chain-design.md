@@ -4,8 +4,9 @@ Date: 2026-09-14. Status: implemented — shipped in 6.21.0.
 Phases A–C and `--trust-set` are in the tree. Replay fixes after that
 release (per-server catalogs, `initialize` before `tools/call`, a
 rejected first step retried with the Phase 2 argument filler, halt
-reasons, and the Ollama peer reask) are in the unreleased changelog
-and [docs/ai-analysis.md](../ai-analysis.md). The sections below are
+reasons, and the Ollama peer reask) shipped in 6.21.1.
+Current behavior is also in
+[docs/ai-analysis.md](../ai-analysis.md). The sections below are
 the design as written.
 
 ## 1. Problem
