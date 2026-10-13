@@ -6,6 +6,30 @@ is the coverage target. mcpnuke's lane is **outside-in runtime scanning** of liv
 MCP endpoints — static config scanning is skillseraph's job, model resistance is
 stoneburner's, and runtime policy enforcement is nullfield's.
 
+**mcpnuke and [stoneburner](https://github.com/babywyrm/stoneburner) meet at
+the agent.** mcpnuke scans the MCP server — whether the tools will do the
+dangerous thing. stoneburner grades the model — whether the model will ask
+them to. An attack chain needs both halves, so the tools complement rather
+than overlap: mcpnuke's `--chain-replay` proves the server half, stoneburner's
+`adversarial` / `toolcall` suites measure the model half. Neither scans the
+other's layer. A model-resistance idea goes to stoneburner, not into a new
+mcpnuke check.
+
+## What's not done yet
+
+The coverage atlas below is what mcpnuke scans today. These are the open
+build items, highest value first:
+
+1. **PyPI trusted publisher** — register the publisher and set `PYPI_PUBLISH`
+   (account steps, detailed under Infrastructure roadmap). Until then a
+   `vX.Y.Z` tag builds and verifies but does not upload.
+2. **Scan profiles** — `--profile cursor-mcp` / `claude-desktop` / `stdio`:
+   a named set of defaults so the quickstart recipes become one flag.
+3. **`--coverage-report` per taxonomy ID** — pass/fail/untested per MCP-T ID,
+   not only per lane.
+4. **Watch mode** — continuous scanning for runtime monitoring.
+5. **SARIF remediation** — carry Priority Action impact/fix/verify into SARIF.
+
 ---
 
 ## Coverage at a glance
@@ -191,15 +215,9 @@ version (`scripts/check-tag-version.sh`), because a PyPI version can never be
 replaced or reused. It then installs the built wheel into a clean environment
 and checks both console scripts before anything is uploaded.
 
-### Medium-term
+The open build items are listed under **What's not done yet** at the top.
+One more, further out:
 
-- **`--coverage-report` improvements** — show per-taxonomy-ID coverage with pass/fail/untested status
-- **Profile library** — curated scan profiles for common MCP server types (Cursor MCP, Claude Desktop, generic stdio)
-- **Watch mode** — continuous scanning for runtime monitoring (sidecar use case)
-
-### Horizon
-
-- **SARIF remediation** — carry Priority Action impact/fix/verify into SARIF `fixes` / help text
 - **Camazotz lab coverage tracking** — which labs exercise which checks
 
 ---

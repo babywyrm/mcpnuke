@@ -64,6 +64,14 @@ for training, or point at any MCP server in dev/staging/prod.
 [agentic-sec](https://github.com/babywyrm/agentic-sec) — architecture,
 walkthroughs and cross-project guides for camazotz + nullfield + mcpnuke.
 
+**mcpnuke and [stoneburner](https://github.com/babywyrm/stoneburner) meet at
+the agent.** mcpnuke scans the MCP server — whether the tools will do the
+dangerous thing. stoneburner grades the model — whether the model will ask
+them to. An attack chain needs both halves, so the tools complement rather
+than overlap: mcpnuke's `--chain-replay` proves the server half, stoneburner's
+`adversarial` / `toolcall` suites measure the model half. Neither scans the
+other's layer.
+
 ---
 
 ## Install

@@ -10,6 +10,13 @@ manager `uv`. It actively probes MCP servers, so all code and docs must
 assume authorized-use context — never add exploit PoCs, live credentials,
 or real target data to the repo.
 
+mcpnuke and [stoneburner](https://github.com/babywyrm/stoneburner) meet at
+the agent. mcpnuke scans the MCP server — whether the tools will do the
+dangerous thing. stoneburner grades the model — whether the model will ask
+them to. `--chain-replay` proves the server half; stoneburner's `adversarial`
+/ `toolcall` suites measure the model half. A model-resistance idea belongs in
+stoneburner, not in a new mcpnuke check.
+
 ## Setup and verification
 
 ```bash
