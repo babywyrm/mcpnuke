@@ -53,7 +53,7 @@ for training, or point at any MCP server in dev/staging/prod.
 | [docs/kubernetes.md](docs/kubernetes.md) | In-cluster deployment and posture checks |
 | [docs/methodology.md](docs/methodology.md) | Probing methodology, risk scoring, attack chains |
 | [docs/spec-surface.md](docs/spec-surface.md) | MCP 2026-08-22 roadmap: what we speak, scan, and can probe next |
-| [QUICKSTART.md](QUICKSTART.md) | End-to-end scenarios |
+| [QUICKSTART.md](QUICKSTART.md) | Recipes by goal, then the lab notes |
 | [docs/ci-cd-guide.md](docs/ci-cd-guide.md) | Integrating scans into your pipeline |
 | [walkthrough/README.md](walkthrough/README.md) | Guided DVMCP scan, finding by finding |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, check-authoring recipe, test invariants |
@@ -275,9 +275,10 @@ A scan that reports only LOW findings exits `0` under the default threshold.
 
 ## Authorized Use
 
-mcpnuke actively probes targets. By default it calls tools, sends injection and
-SSRF payloads, and attempts multi-step chains — which on a real server can
-create data, trigger outbound requests, or move data between systems.
+mcpnuke actively probes targets. By default it calls tools and sends
+injection and SSRF payloads, which on a real server can create data or
+trigger outbound requests. Multi-step chain replay (`--chain-replay`) is
+off unless you ask for it.
 
 **Only scan systems you own or have written authorization to test.**
 

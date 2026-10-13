@@ -26,7 +26,7 @@ jobs:
     with:
       target: http://mcp-staging.internal:8080/mcp
       scan-mode: static        # static | claude | full
-      fail-on: critical        # critical | high | medium | any
+      fail-on: critical        # critical | high | medium | low | any | none
       generate-policy: true
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

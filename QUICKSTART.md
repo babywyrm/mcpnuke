@@ -1,6 +1,146 @@
-# mcpnuke Quickstart Scenarios
+# mcpnuke Quickstart
 
-Practical command recipes for common workflows.
+Recipe-first guide to **mcpnuke**. Every block below is copy-pasteable.
+Pitch and install: [`README.md`](README.md). Full flags:
+[`docs/cli-reference.md`](docs/cli-reference.md). Scan modes:
+[`docs/scan-modes.md`](docs/scan-modes.md).
+
+> **Mental model:** point mcpnuke at an MCP server you are allowed to
+> scan, pick a goal (triage, prove, policy, CI), run the matching
+> command, then read the priority actions. Exit `1` means findings at
+> the `--fail-on` threshold (default `high`), not a crashed scan.
+
+---
+
+## 1. Launch
+
+From a clone, `uv sync --all-extras`, then prefix commands with
+`uv run`. An installed copy is just `mcpnuke`.
+
+```bash
+uv run mcpnuke --doctor
+uv run mcpnuke --targets http://<mcp-host>/mcp --no-invoke --verbose
+```
+
+`--doctor` checks the install and does not scan. `--no-invoke` reads
+the catalog and does not call tools. Replace `<mcp-host>` with a
+server you own. A host with no MCP endpoint still finishes: the
+finding is "No MCP endpoint found" and the exit is `1`. DVMCP's lab
+ports are in [section 8](#8-dvmcp-challenge-scan), after those servers
+are started. Later goals are in section 3.
+
+---
+
+## 2. Choose how hard to press
+
+The same target takes any of these. `--fast` still reads the full
+catalog; it only samples invoke probes.
+
+| Goal | Flags |
+|------|-------|
+| Catalog only | `--no-invoke` |
+| Quick triage | `--fast` |
+| Prod, mixed tools | `--safe-mode` |
+| Full probes | (default) |
+| AI on top | `--claude` or `--ollama-analysis URL` |
+
+AI phases, including chain replay, are in
+[`docs/ai-analysis.md`](docs/ai-analysis.md).
+
+---
+
+## 3. Recipes by goal
+
+### "Is this server quiet enough to look at?"
+
+```bash
+mcpnuke --targets http://<mcp-host>/mcp --no-invoke --verbose --json triage.json
+```
+
+Static checks only. Use this on a production endpoint before any tool
+call. Add `--safe-mode` when a later pass may invoke tools and some of
+them write, send, or fetch.
+
+### "What did the tools actually do?"
+
+```bash
+mcpnuke --targets http://<mcp-host>/mcp --verbose --json probe.json
+```
+
+Calls tools with the scanner's payloads and grades the responses.
+`--fast` keeps that to the top five security-relevant tools.
+
+### "Do these servers compose?"
+
+```bash
+A=http://<mcp-host>/sse
+B=http://<other-host>/sse
+mcpnuke --targets "$A" "$B" \
+  --trust-set "$A,$B" \
+  --chain-replay --cross-server --chain-replay-retries 1 \
+  --ollama-analysis http://<ollama-host>:11434 --ollama-model qwen2.5:14b \
+  --verbose --json replay.json
+```
+
+`--claude` is the same four phases when you are not on a local model.
+A step may name the other server with `target`. The transcript names
+that server. A chain is reproduced only when an earlier output lands
+in a parameter the later tool declares. Exit `1` here is the fail-on
+threshold.
+
+### "Turn a proved chain into a policy"
+
+```bash
+mcpnuke --targets http://<mcp-host>/mcp --generate-policy fix.yaml
+```
+
+A proved chain becomes **DENY on the sink** and **HOLD on earlier
+sources**. Edit the YAML before you apply it. The full loop, including
+the example policy, is in [section 4](#4-generate-nullfield-policy-from-findings).
+
+### "Gate a pipeline on the result"
+
+```bash
+mcpnuke --targets http://<mcp-host>/mcp --json report.json --fail-on high
+```
+
+`0` is clean at that threshold, `1` is findings, `2` is a scan that
+did not finish. `--coverage-report` does not change the exit code.
+
+### "Did the tool surface change?"
+
+```bash
+mcpnuke --targets http://<mcp-host>/mcp --save-baseline baseline.json
+mcpnuke --targets http://<mcp-host>/mcp --baseline baseline.json
+```
+
+Description or schema drift on a tool that was already approved is
+CRITICAL. A tool added or removed is MEDIUM.
+
+### "The server is a local process"
+
+```bash
+mcpnuke --stdio 'npx -y @modelcontextprotocol/server-everything'
+```
+
+No URL and no proxy. Auth-shaped findings that need an HTTP boundary
+are not reported on stdio.
+
+### "The server wants a token"
+
+```bash
+mcpnuke --targets https://mcp.example.com/mcp --auth-token-file ./token --tls-verify
+```
+
+The token stays in the file, not in the process list. OIDC, DPoP, and
+JWKS are in [section 10](#10-oauthjwt-validation).
+
+---
+
+## Lab scenarios
+
+The blocks above are the goals. The numbered sections are the longer
+lab notes (Camazotz, DVMCP, Teleport, Kubernetes) those goals came from.
 
 ## 0) Setup
 
@@ -14,15 +154,15 @@ cd mcpnuke
 
 ## 1) Basic Scan (Local Camazotz)
 
-Fastest way to scan an MCP server. Static analysis only — no tool invocation.
+Catalog only. `--no-invoke` does not call tools, and `--fast` does not
+shrink that catalog. The top-five sample applies when probes run.
 
 ```bash
 mcpnuke --targets http://localhost:8080/mcp --fast --no-invoke --verbose
 ```
 
-Expected output: 30+ findings including prompt injection, code execution,
-webhook persistence, and credential exposure across the 5 most security-relevant
-tools.
+On Camazotz this still reports the static set: prompt injection, code
+execution, webhook persistence, and credential exposure.
 
 ## 2) Full Scan (Invoke Tools)
 
@@ -45,7 +185,7 @@ When camazotz runs behind nullfield on Kubernetes:
 mcpnuke --targets http://<cluster-node>:30080/mcp --fast --no-invoke --verbose
 
 # Via ClusterIP (from inside the cluster)
-mcpnuke --targets http://10.43.254.192:8080/mcp --fast --no-invoke --verbose
+mcpnuke --targets http://<cluster-ip>:8080/mcp --fast --no-invoke --verbose
 ```
 
 nullfield intercepts the scan — unregistered tools return `-32003`. The scan
@@ -381,7 +521,9 @@ mcpnuke --targets http://localhost:8080/mcp \
   --baseline baseline.json
 ```
 
-New findings not in the baseline are flagged as regressions.
+This compares the catalog. Description or schema drift on a tool that
+was in the baseline is CRITICAL. A tool added or removed is MEDIUM.
+`--diff-baseline` is the finding diff.
 
 ---
 
@@ -455,8 +597,9 @@ Use `/mcp` (Streamable HTTP), not `/sse`.
 ./scan --targets http://localhost:9001 --baseline baseline.json
 ```
 
-Reports added/removed/modified tools, resources, prompts. New tools
-flagged as MEDIUM for review.
+Reports added, removed, and modified tools, resources, and prompts.
+Description or schema drift is CRITICAL. A tool added or removed is
+MEDIUM.
 
 ## 19) JSON report for CI
 
@@ -464,9 +607,10 @@ flagged as MEDIUM for review.
 ./scan --port-range localhost:9001-9010 --json report.json
 ```
 
-Exit code is `1` if the scan completes and reports findings, `0` if clean,
-and `2` on scan errors. Use in CI pipelines to gate deployments and to
-separate “findings” from “scanner failure.”
+Exit `0` means nothing at or above `--fail-on` (default `high`), so a
+report that is only LOW or MEDIUM still exits `0`. Exit `1` means a
+finding at that threshold. Exit `2` means the scan did not finish.
+`--fail-on none` always exits `0`.
 
 ## 20) Run tests
 

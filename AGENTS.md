@@ -81,6 +81,40 @@ These exist because each one broke once. Do not route around them:
 - `tests/test_docs_current.py` — README/docs structure, link resolution, and
   stated check counts are all asserted. Update docs with code.
 
+## What To Use When
+
+The copy-paste forms are in [QUICKSTART.md](QUICKSTART.md). Use the goal,
+not a lab name, to pick the command.
+
+- `mcpnuke --doctor`: install health. Does not scan.
+- `--no-invoke`: catalog and static checks. Production, before any tool call.
+- `--fast`: full catalog, invoke probes sampled to the top five.
+- `--safe-mode`: skip tools classified as delete, exec, send, write, or egress.
+- `--chain-replay --cross-server` with `--trust-set`: replay a proposed chain,
+  including a step that names another server in the set. Needs `--claude` or
+  `--ollama-analysis`. Halted chains are not findings. A reproduced chain is
+  one whose earlier output landed in a parameter the later tool declares.
+- `--generate-policy FILE`: proved chains become DENY on the sink and HOLD on
+  earlier sources. Edit the YAML before applying it.
+- `--json FILE` and `--fail-on`: CI gate. Exit `1` is findings at the
+  threshold, not a crashed scan. `--coverage-report` does not change it.
+- `--save-baseline` / `--baseline`: schema or description drift on an approved
+  tool is CRITICAL; a tool added or removed is MEDIUM.
+- `--stdio CMD`: a local MCP process. No HTTP auth boundary, so those
+  findings stay off.
+- `--auth-token-file`: a token without putting it on the command line.
+- `--by-lane`: group findings by identity lane.
+
+## Project Skills
+
+Use these project skills when available:
+
+- `mcpnuke-add-check`: a new check, end to end, test first.
+- `mcpnuke-add-patterns`: a new regex in the shared pattern libraries.
+- `mcpnuke-add-transport`: a new session transport.
+- `mcpnuke-extend-dvmcp`: a new DVMCP challenge test class.
+- `mcpnuke-run-tests`: run the suite and read a failure.
+
 ## Security rules for contributors
 
 - Never commit secrets, tokens, flags, or live credentials. Synthetic test

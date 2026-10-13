@@ -48,9 +48,10 @@ quality are genuinely welcome; they just are not handled through this channel.
 
 ## Authorized use
 
-mcpnuke actively probes targets. Default behavior calls tools, sends injection
-and SSRF payloads, and attempts multi-step chains. On a real server, that can
-create data, trigger outbound requests, or move data between systems.
+mcpnuke actively probes targets. Default behavior calls tools and sends
+injection and SSRF payloads. On a real server, that can create data or
+trigger outbound requests. Multi-step chain replay (`--chain-replay`) is
+off unless you ask for it.
 
 **Only scan systems you own or have written authorization to test.**
 Unauthorized scanning is likely illegal in your jurisdiction regardless of
@@ -62,7 +63,7 @@ intent, and the finding quality is not worth the exposure.
 |------|--------|
 | `--no-invoke` | Static-only. Enumerates and analyzes metadata; never calls a tool. |
 | `--safe-mode` | Calls tools, but refuses ones classified dangerous (delete, send, exec, write, webhook, egress, exfil). |
-| `--fast` | Samples the most security-relevant tools instead of the full inventory. |
+| `--fast` | Static checks still read the full catalog. Invoke probes sample the top five. |
 
 `--no-invoke` is the safest starting point against anything you do not control.
 Add invocation only once you know the blast radius.

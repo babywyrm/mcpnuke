@@ -4,6 +4,21 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **Quickstart is recipe-first.** Goals (triage, prove, policy, CI) come
+  before the lab notes, and the agent guide says which flag matches
+  each goal. A launch URL with no MCP endpoint is exit 1, finding
+  "No MCP endpoint found". Exit `1` is the `--fail-on` threshold
+  (default `high`), not any finding. `--fast` still reads the full
+  catalog. Chain replay stays off unless asked.
+
+### Fixed
+
+- **CI `fail-on: medium`.** The reusable workflow treated every finding
+  as a medium failure, including LOW. `medium` is now medium and above.
+  `low` and `none` match the CLI.
+
 ## [6.21.1] - 2026-10-11
 
 ### Fixed
