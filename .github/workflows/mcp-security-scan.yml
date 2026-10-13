@@ -25,7 +25,7 @@ on:
         type: string
         default: 'static'
       fail-on:
-        description: 'Fail PR on: critical, high, medium, any'
+        description: 'Fail PR on: critical, high, medium, low, any, none'
         required: false
         type: string
         default: 'critical'
@@ -122,6 +122,8 @@ jobs:
           # Parse results
           CRITICAL=$(python3 -c "import json; d=json.load(open('scan-report.json')); print(sum(1 for f in d['targets'][0]['findings'] if f['severity']=='CRITICAL'))" 2>/dev/null || echo 0)
           HIGH=$(python3 -c "import json; d=json.load(open('scan-report.json')); print(sum(1 for f in d['targets'][0]['findings'] if f['severity']=='HIGH'))" 2>/dev/null || echo 0)
+          MEDIUM=$(python3 -c "import json; d=json.load(open('scan-report.json')); print(sum(1 for f in d['targets'][0]['findings'] if f['severity']=='MEDIUM'))" 2>/dev/null || echo 0)
+          LOW=$(python3 -c "import json; d=json.load(open('scan-report.json')); print(sum(1 for f in d['targets'][0]['findings'] if f['severity']=='LOW'))" 2>/dev/null || echo 0)
           TOTAL=$(python3 -c "import json; d=json.load(open('scan-report.json')); print(len(d['targets'][0]['findings']))" 2>/dev/null || echo 0)
 
           echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
@@ -133,8 +135,10 @@ jobs:
           case "$FAIL_ON" in
             critical) [ "$CRITICAL" -gt 0 ] && SHOULD_FAIL=true ;;
             high)     [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] && SHOULD_FAIL=true ;;
-            medium)   [ "$TOTAL" -gt 0 ] && SHOULD_FAIL=true ;;
+            medium)   [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] && SHOULD_FAIL=true ;;
+            low)      [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ] && SHOULD_FAIL=true ;;
             any)      [ "$TOTAL" -gt 0 ] && SHOULD_FAIL=true ;;
+            none)     ;;
           esac
 
           echo "should_fail=$SHOULD_FAIL" >> $GITHUB_OUTPUT
