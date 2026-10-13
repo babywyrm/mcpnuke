@@ -135,6 +135,16 @@ mcpnuke --targets https://mcp.example.com/mcp --auth-token-file ./token --tls-ve
 The token stays in the file, not in the process list. OIDC, DPoP, and
 JWKS are in [section 10](#10-oauthjwt-validation).
 
+### "I just want the right defaults for a known host"
+
+```bash
+mcpnuke --targets https://mcp.example.com/mcp --scan-profile cursor-mcp
+```
+
+`--scan-profile` applies a named set of defaults: `cursor-mcp` and
+`claude-desktop` turn on safe-mode and fast, `stdio` turns on safe-mode.
+Any flag you pass explicitly still wins over the profile.
+
 ---
 
 ## Lab scenarios

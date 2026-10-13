@@ -19,6 +19,19 @@ AUTH_TOKEN_ENV = "MCP_AUTH_TOKEN"
 # Built-in public targets (DVMCP, demo servers — run locally)
 PUBLIC_TARGETS_FILE = Path(__file__).parent / "data" / "public_targets.txt"
 
+# Named sets of flag defaults, selected with --profile. A profile only fills a
+# flag the user left at its parser default; an explicit flag always wins. Keys
+# are argparse dests; test_scan_profiles asserts they are all real.
+SCAN_PROFILES: dict[str, dict[str, object]] = {
+    # A server your MCP client is configured to use — scan it hard but never
+    # fire a destructive tool at something you actually run against.
+    "cursor-mcp": {"safe_mode": True, "fast": True},
+    "claude-desktop": {"safe_mode": True, "fast": True},
+    # A local stdio process: no HTTP auth boundary, so keep it safe but let
+    # the full catalog get probed.
+    "stdio": {"safe_mode": True},
+}
+
 
 def _positive_int_or_zero(v: str) -> int:
     """argparse type: accept non-negative int, reject negatives."""
@@ -313,6 +326,14 @@ def _add_safety_arguments(group: ArgumentGroup) -> None:
         default=10,
         metavar="N",
         help="Number of tool invocations per tool for deep rug pull detection (default: 10)",
+    )
+    group.add_argument(
+        "--scan-profile",
+        choices=sorted(SCAN_PROFILES),
+        default=None,
+        help="Apply a named set of defaults for a known MCP host: "
+        "cursor-mcp / claude-desktop (safe-mode + fast), stdio (safe-mode). "
+        "An explicit flag always overrides the profile.",
     )
 
 
@@ -743,7 +764,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="mcpnuke",
         # argparse does not group the usage line, so the generated one lists all
-        # 76 flags and pushes the first group heading 31 lines down.
+        # 77 flags and pushes the first group heading 31 lines down.
         usage="mcpnuke [--targets URL ...] [options]",
         description="mcpnuke — MCP Red Teaming & Security Scanner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -766,8 +787,28 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _apply_profile(
+    args: argparse.Namespace,
+    parser: argparse.ArgumentParser,
+    overrides: dict[str, object],
+) -> None:
+    """Fill each override whose dest the user left at the parser default.
+
+    ponytail: a user who explicitly passes the default value (e.g. the value
+    --probe-calls already defaults to) looks unset and the profile wins. Harmless
+    — the result is the value they asked for — and avoids per-flag sentinels.
+    """
+    for dest, value in overrides.items():
+        if getattr(args, dest) == parser.get_default(dest):
+            setattr(args, dest, value)
+
+
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
-    return build_parser().parse_args(args)
+    parser = build_parser()
+    ns = parser.parse_args(args)
+    if ns.scan_profile:
+        _apply_profile(ns, parser, SCAN_PROFILES[ns.scan_profile])
+    return ns
 
 
 def _load_urls_from_file(path: Path) -> list[str]:

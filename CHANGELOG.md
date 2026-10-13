@@ -4,6 +4,12 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **`--scan-profile`.** Named sets of defaults for a known MCP host:
+  `cursor-mcp` / `claude-desktop` (safe-mode + fast), `stdio` (safe-mode).
+  A profile only fills a flag left at its default; an explicit flag wins.
+
 ### Changed
 
 - **Quickstart is recipe-first.** Goals (triage, prove, policy, CI) come

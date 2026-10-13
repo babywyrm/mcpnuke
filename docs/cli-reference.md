@@ -67,6 +67,7 @@ Generated from the parser, so it cannot fall behind the code.
 | `--safe-mode` | Skip invoking tools classified as dangerous (delete, send, exec, write, webhook, egress, exfil, …). Namespaced names like shellwrap.exec and shadow.register_webhook count too. Behavioral probes still run on read-only / low-risk tools. |
 | `--error-reflection POLICY` | How to score a payload reflected in a server's error message. A server that refuses bad input and names it is behaving correctly. 'downgrade' (default) reports it at LOW and says so in the title, 'keep' restores pre-6.15 severities for baseline diffs, 'suppress' drops the finding. |
 | `--probe-calls N` | Number of tool invocations per tool for deep rug pull detection (default: 10) |
+| `--scan-profile {claude-desktop,cursor-mcp,stdio}` | Apply a named set of defaults for a known MCP host: cursor-mcp / claude-desktop (safe-mode + fast), stdio (safe-mode). An explicit flag always overrides the profile. |
 
 ## Performance
 

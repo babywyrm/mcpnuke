@@ -111,6 +111,8 @@ not a lab name, to pick the command.
   findings stay off.
 - `--auth-token-file`: a token without putting it on the command line.
 - `--by-lane`: group findings by identity lane.
+- `--scan-profile cursor-mcp|claude-desktop|stdio`: the right defaults for a
+  known MCP host in one flag. An explicit flag still overrides it.
 
 ## Project Skills
 
