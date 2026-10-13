@@ -23,12 +23,14 @@ build items, highest value first:
 1. **PyPI trusted publisher** — register the publisher and set `PYPI_PUBLISH`
    (account steps, detailed under Infrastructure roadmap). Until then a
    `vX.Y.Z` tag builds and verifies but does not upload.
-2. **Scan profiles** — `--profile cursor-mcp` / `claude-desktop` / `stdio`:
-   a named set of defaults so the quickstart recipes become one flag.
-3. **`--coverage-report` per taxonomy ID** — pass/fail/untested per MCP-T ID,
+2. **`--coverage-report` per taxonomy ID** — pass/fail/untested per MCP-T ID,
    not only per lane.
-4. **Watch mode** — continuous scanning for runtime monitoring.
-5. **SARIF remediation** — carry Priority Action impact/fix/verify into SARIF.
+3. **Watch mode** — continuous scanning for runtime monitoring.
+4. **SARIF remediation** — carry Priority Action impact/fix/verify into SARIF.
+
+Shipped since this list was drawn up: **`--scan-profile`**
+(`cursor-mcp` / `claude-desktop` / `stdio`) — one flag applies the right
+defaults for a known host; an explicit flag still wins.
 
 ---
 
