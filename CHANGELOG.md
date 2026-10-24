@@ -19,6 +19,13 @@ All notable changes to this submodule are documented here.
   (default `high`), not any finding. `--fast` still reads the full
   catalog. Chain replay stays off unless asked.
 
+### Security
+
+- **Locked dependencies patched.** `pip-audit` found 18 advisories in
+  transitive packages: starlette 1.9.0 (runner request path and form
+  limits), anyio 4.15.1 (IDN TLS), aiohttp 3.14.5, pygments 2.21.0, and
+  oauthlib 4.0.0. The lockfile now audits clean.
+
 ### Fixed
 
 - **CI `fail-on: medium`.** The reusable workflow treated every finding
