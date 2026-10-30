@@ -185,3 +185,38 @@ def print_by_lane(results: list[TargetResult], console=None) -> None:
             _write(f"Uncategorized (no lane scope — {uncat['finding_count']} finding(s))")
         for f in uncat["findings"][:10]:
             _write(f"    {f['severity']:8s} {f['check']:25s} {f['title']}")
+
+
+_DELTA_SEVERITIES: tuple[str, ...] = ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO")
+_DELTA_LANE_ORDER: tuple[str, ...] = ("1", "2", "3", "4", "5", "uncategorized")
+
+
+def format_lane_delta(before: dict[str, Any], after: dict[str, Any]) -> str:
+    """Lines for lanes whose finding count or severity tally changed.
+
+    An unchanged pair is the single line ``no lane change``. Counts missing
+    from a report are zero, so a lane that appears or disappears is a change.
+    """
+    before_lanes = before.get("by_lane", {})
+    after_lanes = after.get("by_lane", {})
+    lines: list[str] = []
+    for key in _DELTA_LANE_ORDER:
+        if key not in before_lanes and key not in after_lanes:
+            continue
+        old = before_lanes.get(key, {})
+        new = after_lanes.get(key, {})
+        old_count = int(old.get("finding_count", 0))
+        new_count = int(new.get("finding_count", 0))
+        old_tally = old.get("severity_tally", {})
+        new_tally = new.get("severity_tally", {})
+        severity_lines = [
+            f"  {severity}: {int(old_tally.get(severity, 0))} -> {int(new_tally.get(severity, 0))}"
+            for severity in _DELTA_SEVERITIES
+            if int(old_tally.get(severity, 0)) != int(new_tally.get(severity, 0))
+        ]
+        if old_count == new_count and not severity_lines:
+            continue
+        name = str(new.get("slug") or old.get("slug") or key)
+        lines.append(f"{name}: {old_count} -> {new_count}")
+        lines.extend(severity_lines)
+    return "\n".join(lines) if lines else "no lane change"

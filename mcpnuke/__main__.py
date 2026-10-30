@@ -291,6 +291,69 @@ def _emit_taxonomy_coverage(
     return report
 
 
+def _watch_lanes(
+    args: argparse.Namespace,
+    results: list[TargetResult],
+    urls: list[str],
+    auth_token: str | None,
+    probe_opts: dict,
+    baseline: dict,
+    console: Console,
+) -> None:
+    """Re-scan until interrupted. Print only the lane delta each pass."""
+    from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
+    from mcpnuke.reporting.by_lane import build_by_lane, format_lane_delta
+
+    previous = build_by_lane(results)
+    console.print(f"\n[dim]Watching every {args.watch}s. Interrupt to stop.[/dim]")
+    try:
+        while True:
+            time.sleep(args.watch)
+            # The k8s scanner appends to a process global. A repeat scan
+            # would otherwise stack the same findings forever.
+            GLOBAL_K8S_FINDINGS.clear()
+            if len(urls) == 1:
+                scanned = [
+                    scan_target(
+                        urls[0],
+                        [],
+                        timeout=args.timeout,
+                        verbose=args.verbose,
+                        auth_token=auth_token,
+                        probe_opts=probe_opts,
+                    )
+                ]
+            else:
+                scanned = run_parallel(
+                    urls,
+                    timeout=args.timeout,
+                    workers=args.workers,
+                    verbose=args.verbose,
+                    auth_token=auth_token,
+                    probe_opts=probe_opts,
+                )
+            if args.baseline and baseline:
+                for result in scanned:
+                    base = baseline.get(result.url, {})
+                    if not base:
+                        continue
+                    diff = diff_against_baseline(
+                        result.catalog_tools(),
+                        result.resources,
+                        result.prompts,
+                        base.get("tools", []),
+                        base.get("resources", []),
+                        base.get("prompts", []),
+                        url=result.url,
+                    )
+                    apply_diff_findings(result, diff)
+            current = build_by_lane(scanned)
+            console.print(format_lane_delta(previous, current))
+            previous = current
+    except KeyboardInterrupt:
+        console.print("\n[dim]Watch stopped.[/dim]")
+
+
 def _main_inner() -> None:
     # Handle `mcpnuke diff a.json b.json` before full arg parse
     if len(sys.argv) >= 2 and sys.argv[1] == "diff":
@@ -982,6 +1045,10 @@ def _main_inner() -> None:
             console.print(f"\n[red]--taxonomy: {exc}[/red]")
         except Exception as exc:  # noqa: BLE001 - surface any taxonomy load issue clearly
             console.print(f"\n[red]--taxonomy: failed to load: {exc}[/red]")
+
+    if getattr(args, "watch", None):
+        _watch_lanes(args, results, urls, auth_token, probe_opts, baseline, console)
+        return
 
     all_findings = [f for r in results for f in r.findings]
     if _should_fail(all_findings, getattr(args, "fail_on", "high")):

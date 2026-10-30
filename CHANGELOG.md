@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **`--watch SECONDS`.** Re-scan a target until interrupted and print
+  the lane finding-count delta, or `no lane change`. The exit is 0.
+  `--fail-on` does not apply while it is looping. The k8s finding list
+  is cleared between passes so repeats do not stack.
+
 - **`--taxonomy-coverage`.** Pass, fail, or untested for each vendored
   threat ID. A finding fails the ID. A check that can attribute it and
   ran, without a finding, passes it. Otherwise the ID is untested. It

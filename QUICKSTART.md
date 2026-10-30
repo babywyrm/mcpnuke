@@ -107,6 +107,16 @@ mcpnuke --targets http://<mcp-host>/mcp --json report.json --fail-on high
 `0` is clean at that threshold, `1` is findings, `2` is a scan that
 did not finish. `--coverage-report` does not change the exit code.
 
+### "Watch a server that stays up"
+
+```bash
+mcpnuke --targets http://<mcp-host>/mcp --no-invoke --watch 60
+```
+
+The first pass is a normal scan. Each later pass prints only the lane
+finding-count delta, or `no lane change`. Interrupt it to stop. The
+exit is 0, and `--fail-on` does not apply while it is looping.
+
 ### "Which threats did this scan touch?"
 
 ```bash

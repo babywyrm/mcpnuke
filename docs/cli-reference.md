@@ -126,6 +126,7 @@ Generated from the parser, so it cannot fall behind the code.
 
 | Option | Description |
 |---|---|
+| `--watch SECONDS` | Re-scan every SECONDS and print the lane finding-count delta. Runs until interrupted, then exits 0. Does not apply --fail-on. Minimum 1. |
 | `--by-lane` | Group scan findings by agentic-identity lane (1..5) and print a per-lane severity tally. Also emitted to --json when both are set. |
 | `--owasp` | Map findings to the OWASP MCP Top 10 (2025) via taxonomy ID and print a per-category alignment report, including categories with no coverage. Also emitted to --json. |
 | `--coverage-report CAMAZOTZ_URL` | Fetch camazotz /api/lanes (schema v1) from CAMAZOTZ_URL, intersect with this scan's findings, and print a cross-project coverage report. Example: --coverage-report http://localhost:3000 |

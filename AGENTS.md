@@ -113,6 +113,8 @@ not a lab name, to pick the command.
 - `--by-lane`: group findings by identity lane.
 - `--scan-profile cursor-mcp|claude-desktop|stdio`: the right defaults for a
   known MCP host in one flag. An explicit flag still overrides it.
+- `--watch SECONDS`: re-scan until interrupted and print the lane
+  finding-count delta. The exit is 0. `--fail-on` does not apply.
 - `--taxonomy-coverage`: pass, fail, or untested for each vendored MCP-T ID.
   `--coverage-report` is the per-lane camazotz comparison, and it needs a URL.
 

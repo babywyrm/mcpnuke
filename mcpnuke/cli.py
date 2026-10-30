@@ -33,6 +33,14 @@ SCAN_PROFILES: dict[str, dict[str, object]] = {
 }
 
 
+def _positive_int(v: str) -> int:
+    """argparse type: accept a positive int, reject zero and negatives."""
+    val = int(v)
+    if val < 1:
+        raise argparse.ArgumentTypeError(f"must be >= 1, got {val}")
+    return val
+
+
 def _positive_int_or_zero(v: str) -> int:
     """argparse type: accept non-negative int, reject negatives."""
     val = int(v)
@@ -567,6 +575,15 @@ def _add_policy_arguments(group: ArgumentGroup) -> None:
 
 def _add_lane_arguments(group: ArgumentGroup) -> None:
     group.add_argument(
+        "--watch",
+        type=_positive_int,
+        metavar="SECONDS",
+        default=None,
+        help="Re-scan every SECONDS and print the lane finding-count delta. "
+        "Runs until interrupted, then exits 0. Does not apply --fail-on. "
+        "Minimum 1.",
+    )
+    group.add_argument(
         "--by-lane",
         action="store_true",
         help="Group scan findings by agentic-identity lane (1..5) and print "
@@ -772,7 +789,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="mcpnuke",
         # argparse does not group the usage line, so the generated one lists all
-        # 77 flags and pushes the first group heading 31 lines down.
+        # 78 flags and pushes the first group heading 31 lines down.
         usage="mcpnuke [--targets URL ...] [options]",
         description="mcpnuke — MCP Red Teaming & Security Scanner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
