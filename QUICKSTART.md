@@ -107,6 +107,18 @@ mcpnuke --targets http://<mcp-host>/mcp --json report.json --fail-on high
 `0` is clean at that threshold, `1` is findings, `2` is a scan that
 did not finish. `--coverage-report` does not change the exit code.
 
+### "Which threats did this scan touch?"
+
+```bash
+mcpnuke --targets http://<mcp-host>/mcp --no-invoke --taxonomy-coverage
+```
+
+Each vendored MCP-T ID is `fail` (a finding carries it), `pass` (a
+check that can attribute it ran and stayed quiet), or `untested` (that
+check did not run). It does not call camazotz, and it does not change
+the exit code. `--coverage-report` is still the per-lane comparison,
+and that one needs a camazotz URL.
+
 ### "Did the tool surface change?"
 
 ```bash

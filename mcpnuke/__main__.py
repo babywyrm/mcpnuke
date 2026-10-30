@@ -269,6 +269,28 @@ def _start_oast(args: argparse.Namespace, console: Console):
     return listener
 
 
+def _emit_taxonomy_coverage(
+    args: argparse.Namespace,
+    results: list[TargetResult],
+    console: Console,
+) -> dict | None:
+    """Print the per-ID report when asked. None leaves the JSON unchanged."""
+    if not getattr(args, "taxonomy_coverage", False):
+        return None
+    from mcpnuke.core.taxonomy import get_taxonomy
+    from mcpnuke.reporting.taxonomy_coverage import (
+        build_taxonomy_coverage,
+        check_taxonomy_catalog,
+        print_taxonomy_coverage,
+    )
+
+    report = build_taxonomy_coverage(
+        results, taxonomy=get_taxonomy(), catalog=check_taxonomy_catalog()
+    )
+    print_taxonomy_coverage(report, console=console)
+    return report
+
+
 def _main_inner() -> None:
     # Handle `mcpnuke diff a.json b.json` before full arg parse
     if len(sys.argv) >= 2 and sys.argv[1] == "diff":
@@ -415,8 +437,11 @@ def _main_inner() -> None:
             probe_opts=probe_opts,
         )
         print_report([result], group_findings=args.group_findings, console=console)
+        taxonomy_coverage = _emit_taxonomy_coverage(args, [result], console)
         if args.json_out:
-            write_json([result], args.json_out, console=console)
+            write_json(
+                [result], args.json_out, console=console, taxonomy_coverage=taxonomy_coverage
+            )
         if getattr(args, "sarif_out", None):
             write_sarif([result], args.sarif_out, console=console)
         if _should_fail(result.findings, getattr(args, "fail_on", "high")):
@@ -750,8 +775,9 @@ def _main_inner() -> None:
         print_report(results, group_findings=args.group_findings, console=console)
         if probe_opts.get("save_inference_baseline"):
             console.print(f"\n  [green]✓[/green] Inference baseline saved to {probe_opts['save_inference_baseline']}")
+        taxonomy_coverage = _emit_taxonomy_coverage(args, results, console)
         if args.json_out:
-            write_json(results, args.json_out, console=console)
+            write_json(results, args.json_out, console=console, taxonomy_coverage=taxonomy_coverage)
         if getattr(args, "sarif_out", None):
             write_sarif(results, args.sarif_out, console=console)
         if _should_fail(result.findings, getattr(args, "fail_on", "high")):
@@ -828,8 +854,9 @@ def _main_inner() -> None:
     if args.save_baseline:
         save_baseline(results, args.save_baseline, console=console)
 
+    taxonomy_coverage = _emit_taxonomy_coverage(args, results, console)
     if args.json_out:
-        write_json(results, args.json_out, console=console)
+        write_json(results, args.json_out, console=console, taxonomy_coverage=taxonomy_coverage)
 
     if getattr(args, "sarif_out", None):
         write_sarif(results, args.sarif_out, console=console)
@@ -846,7 +873,7 @@ def _main_inner() -> None:
                 console.print("\n[bold cyan]── Diff vs baseline ──[/bold cyan]")
                 console.print(format_diff_terminal(scan_diff))
                 # Re-write JSON with diff block attached
-                write_json(results, args.json_out, console=None)
+                write_json(results, args.json_out, console=None, taxonomy_coverage=taxonomy_coverage)
             except FileNotFoundError as exc:
                 console.print(f"[yellow]--diff-baseline: {exc}[/yellow]")
         else:

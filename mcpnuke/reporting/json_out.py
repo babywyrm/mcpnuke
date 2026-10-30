@@ -160,8 +160,16 @@ def build_report(results: list[TargetResult], *, include_k8s: bool = True) -> di
     return report
 
 
-def write_json(results: list[TargetResult], path: str, console=None):
+def write_json(
+    results: list[TargetResult],
+    path: str,
+    console=None,
+    *,
+    taxonomy_coverage: dict | None = None,
+):
     report = build_report(results)
+    if taxonomy_coverage is not None:
+        report["taxonomy_coverage"] = taxonomy_coverage
     with open(path, "w") as fh:
         json.dump(report, fh, indent=2)
     if console:

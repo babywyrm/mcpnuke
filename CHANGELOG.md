@@ -6,6 +6,12 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **`--taxonomy-coverage`.** Pass, fail, or untested for each vendored
+  threat ID. A finding fails the ID. A check that can attribute it and
+  ran, without a finding, passes it. Otherwise the ID is untested. It
+  does not call camazotz and does not change the exit code.
+  `--coverage-report` remains the per-lane comparison.
+
 - **`--scan-profile`.** Named sets of defaults for a known MCP host:
   `cursor-mcp` / `claude-desktop` (safe-mode + fast), `stdio` (safe-mode).
   A profile only fills a flag left at its default; an explicit flag wins.

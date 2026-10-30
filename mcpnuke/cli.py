@@ -587,6 +587,14 @@ def _add_lane_arguments(group: ArgumentGroup) -> None:
         "coverage report. Example: --coverage-report http://localhost:3000",
     )
     group.add_argument(
+        "--taxonomy-coverage",
+        action="store_true",
+        help="Print pass/fail/untested for each vendored threat ID. "
+        "fail: a finding carries the ID. pass: a check that can attribute "
+        "it ran and stayed quiet. untested: that check did not run. "
+        "Does not call camazotz. Does not change the exit code.",
+    )
+    group.add_argument(
         "--taxonomy",
         metavar="PATH_OR_URL",
         default=None,

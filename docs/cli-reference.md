@@ -129,6 +129,7 @@ Generated from the parser, so it cannot fall behind the code.
 | `--by-lane` | Group scan findings by agentic-identity lane (1..5) and print a per-lane severity tally. Also emitted to --json when both are set. |
 | `--owasp` | Map findings to the OWASP MCP Top 10 (2025) via taxonomy ID and print a per-category alignment report, including categories with no coverage. Also emitted to --json. |
 | `--coverage-report CAMAZOTZ_URL` | Fetch camazotz /api/lanes (schema v1) from CAMAZOTZ_URL, intersect with this scan's findings, and print a cross-project coverage report. Example: --coverage-report http://localhost:3000 |
+| `--taxonomy-coverage` | Print pass/fail/untested for each vendored threat ID. fail: a finding carries the ID. pass: a check that can attribute it ran and stayed quiet. untested: that check did not run. Does not call camazotz. Does not change the exit code. |
 | `--taxonomy PATH_OR_URL` | Override the vendored agentic-sec threat taxonomy (mcpnuke/data/taxonomy/lanes.yaml). Accepts a filesystem path or http(s) URL. Used to validate finding threat_ids and to surface lane/transport metadata. The vendored copy is used when not set. |
 | `--profile FILE` | Path to a target profile JSON (maps tool names to lane, transport, threat ID, and notes). Enriches AI prompts and finding attribution. Bundled profiles: profiles/camazotz.json, profiles/dvmcp.json. |
 
