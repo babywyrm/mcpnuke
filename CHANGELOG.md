@@ -44,6 +44,12 @@ All notable changes to this submodule are documented here.
 
 ### Security
 
+- **Chain conditions are not evaluated as Python.** A condition is
+  model output, and a scanned server can influence what the model
+  writes. The matcher accepts only the documented comparisons
+  (`contains`, `==` / `!=` on response text, `failed`, and `len`).
+  Any other expression, including attribute access, is false.
+
 - **CI audits the lockfile.** A `pip-audit` job fails the build when a
   locked package, direct or transitive, has a known advisory. Dependabot
   alerts are off, and it only opens PRs for direct dependencies.

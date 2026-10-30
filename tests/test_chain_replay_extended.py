@@ -106,6 +106,13 @@ class TestConditionalExecution:
         prior = [StepResult(tool="a", request_args={}, response_text="count: 5", failed=False)]
         assert _evaluate_condition("len(step0.response_text) > 3", prior) is True
 
+    def test_a_condition_cannot_read_attributes_outside_the_grammar(self):
+        from mcpnuke.core.chain_replay import StepResult, _evaluate_condition
+
+        prior = [StepResult(tool="a", request_args={}, response_text="admin", failed=False)]
+        assert _evaluate_condition("step0.__class__", prior) is False
+        assert _evaluate_condition("step0.response_text.__class__", prior) is False
+
 
 class TestDAGExecution:
     def test_3hop_chain_executes_in_order(self):

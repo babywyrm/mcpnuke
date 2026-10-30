@@ -240,32 +240,82 @@ def _topological_sort(nodes: list[ChainNode]) -> list[int]:
     return order
 
 
+# Conditions arrive from model output, which a scanned server can influence.
+# Match the documented grammar exactly. Anything else, including attribute
+# walks, is false. Do not eval this string.
+_CONDITION_CONTAINS_RE: re.Pattern[str] = re.compile(
+    r"^step(\d+)\.response_text contains ('[^']*'|\"[^\"]*\")$"
+)
+_CONDITION_TEXT_RE: re.Pattern[str] = re.compile(
+    r"^step(\d+)\.response_text (==|!=) ('[^']*'|\"[^\"]*\")$"
+)
+_CONDITION_FAILED_RE: re.Pattern[str] = re.compile(
+    r"^step(\d+)\.failed == (True|False)$"
+)
+_CONDITION_LEN_RE: re.Pattern[str] = re.compile(
+    r"^len\(step(\d+)\.response_text\) (==|!=|<=|>=|<|>) (\d+)$"
+)
+_LEN_OPS: dict[str, Callable[[int, int], bool]] = {
+    "==": lambda left, right: left == right,
+    "!=": lambda left, right: left != right,
+    "<": lambda left, right: left < right,
+    ">": lambda left, right: left > right,
+    "<=": lambda left, right: left <= right,
+    ">=": lambda left, right: left >= right,
+}
+
+
+def _unquote(literal: str) -> str:
+    return literal[1:-1]
+
+
 def _evaluate_condition(condition: str, prior: list[StepResult]) -> bool:
     """Evaluate a condition expression against prior step results.
 
-    Supports a restricted expression language:
-    - stepN.response_text <op> <value>
-    - stepN.failed == True/False
+    The grammar is only:
+    - stepN.response_text contains 'value'
+    - stepN.response_text == 'value' or !=
+    - stepN.failed == True or False
     - len(stepN.response_text) <op> <number>
-    - 'contains' for substring matching
 
-    Returns False on any evaluation error (safe default).
+    Anything else is false. An empty condition is true.
     """
     if not condition:
         return True
+    text = condition.strip()
 
-    # Build safe evaluation context
-    context: dict[str, Any] = {"len": len}
-    for i, result in enumerate(prior):
-        context[f"step{i}"] = result
+    matched = _CONDITION_CONTAINS_RE.fullmatch(text)
+    if matched:
+        index = int(matched.group(1))
+        if index >= len(prior):
+            return False
+        return _unquote(matched.group(2)) in prior[index].response_text
 
-    # Replace 'contains' with 'in' for Python evaluation
-    expr = condition.replace(" contains ", " in ")
+    matched = _CONDITION_TEXT_RE.fullmatch(text)
+    if matched:
+        index = int(matched.group(1))
+        if index >= len(prior):
+            return False
+        actual = prior[index].response_text
+        expected = _unquote(matched.group(3))
+        return actual == expected if matched.group(2) == "==" else actual != expected
 
-    try:
-        return bool(eval(expr, {"__builtins__": {}}, context))
-    except Exception:
-        return False
+    matched = _CONDITION_FAILED_RE.fullmatch(text)
+    if matched:
+        index = int(matched.group(1))
+        if index >= len(prior):
+            return False
+        want_failed = matched.group(2) == "True"
+        return prior[index].failed is want_failed
+
+    matched = _CONDITION_LEN_RE.fullmatch(text)
+    if matched:
+        index = int(matched.group(1))
+        if index >= len(prior):
+            return False
+        return _LEN_OPS[matched.group(2)](len(prior[index].response_text), int(matched.group(3)))
+
+    return False
 
 
 def _parse_json_safe(text: str) -> Any:
