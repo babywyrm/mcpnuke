@@ -7,6 +7,14 @@ mcpnuke's own CI (`tests.yml`) dogfoods the CLI against the in-repo
 reference target (`tests/test_cli_dogfood.py`). The reusable workflow
 below is for scanning *your* MCP server; it is `workflow_call` only.
 
+`--sarif` writes SARIF 2.1.0. CRITICAL and HIGH are `error`, MEDIUM is
+`warning`, LOW is `note`. Each result's `properties` carries `impact`,
+`fix`, and `verify`: the same static text as the console priority
+action. The rule `help.text` repeats it for the first finding of that
+check. Those words come from fixed templates, not from the finding's
+title, detail, or evidence. There is no `fixes` edit. In the SARIF spec
+a fix is a source change, and these findings describe a remote server.
+
 ---
 
 ## GitHub Actions (Recommended)

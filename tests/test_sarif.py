@@ -130,6 +130,26 @@ class TestBuildSarif:
         assert guide.fix in help_text
         assert guide.verify in help_text
 
+    def test_remediation_does_not_copy_finding_text(self):
+        canary = "sk-canary-SECRET-value"
+        result = _make_result()
+        _add_finding(
+            result,
+            "tool_poisoning",
+            "CRITICAL",
+            f"title {canary}",
+            detail=f"detail {canary}",
+            evidence=f"evidence {canary}",
+        )
+        sarif = build_sarif([result])
+        run = sarif["runs"][0]
+        props = run["results"][0]["properties"]
+        blobs = (props["impact"], props["fix"], props["verify"],
+                 run["tool"]["driver"]["rules"][0]["help"]["text"])
+        for blob in blobs:
+            assert canary not in blob
+        assert canary in run["results"][0]["message"]["text"]
+
 
 class TestWriteSarif:
     def test_writes_valid_json(self, tmp_path):
