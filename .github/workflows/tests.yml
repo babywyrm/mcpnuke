@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.2
         with:
           enable-cache: true
 
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.2
         with:
           enable-cache: true
 
@@ -112,7 +112,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.2
         with:
           enable-cache: true
 
@@ -134,7 +134,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.2
         with:
           enable-cache: true
 
@@ -173,10 +173,33 @@ jobs:
           print("OK — generated policy parses back into the v1alpha1 shape")
           PY
 
+  audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      # Dependabot only opens PRs for direct dependencies, and alerts are off
+      # on this repo, so a vulnerable transitive package would otherwise ship
+      # unnoticed. The export is the full locked set, extras included.
+      - name: Audit the lockfile
+        run: |
+          uv export --all-extras --frozen --no-hashes --no-emit-project -o /tmp/reqs.txt
+          uvx pip-audit==2.10.0 -r /tmp/reqs.txt --disable-pip --no-deps
+
   notify-coherence:
     name: Notify ecosystem coherence workflow
     runs-on: ubuntu-latest
-    needs: [pytest, policy-yaml-roundtrip, dogfood]
+    needs: [pytest, policy-yaml-roundtrip, dogfood, audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:

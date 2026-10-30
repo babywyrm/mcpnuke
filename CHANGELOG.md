@@ -21,6 +21,10 @@ All notable changes to this submodule are documented here.
 
 ### Security
 
+- **CI audits the lockfile.** A `pip-audit` job fails the build when a
+  locked package, direct or transitive, has a known advisory. Dependabot
+  alerts are off, and it only opens PRs for direct dependencies.
+
 - **Locked dependencies patched.** `pip-audit` found 18 advisories in
   transitive packages: starlette 1.9.0 (runner request path and form
   limits), anyio 4.15.1 (IDN TLS), aiohttp 3.14.5, pygments 2.21.0, and
