@@ -7,7 +7,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from mcpnuke import __version__
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.reporting.priority import guidance_for_finding
 
 _SARIF_SCHEMA = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
 _SARIF_VERSION = "2.1.0"
@@ -27,7 +28,21 @@ _SECURITY_SEVERITY_MAP: dict[str, str] = {
 }
 
 
-def _make_rule(check: str, title: str, severity: str, detail: str, taxonomy_id: str, mitre_id: str) -> dict[str, Any]:
+def _remediation_text(finding: Finding) -> str:
+    """Plain-text impact, fix, and verify for one finding."""
+    guide = guidance_for_finding(finding)
+    return f"Impact: {guide.impact}\nFix: {guide.fix}\nVerify: {guide.verify}"
+
+
+def _make_rule(
+    check: str,
+    title: str,
+    severity: str,
+    detail: str,
+    taxonomy_id: str,
+    mitre_id: str,
+    finding: Finding,
+) -> dict[str, Any]:
     tags: list[str] = ["security", "mcp"]
     if taxonomy_id:
         tags.append(taxonomy_id)
@@ -46,6 +61,10 @@ def _make_rule(check: str, title: str, severity: str, detail: str, taxonomy_id: 
             "security-severity": _SECURITY_SEVERITY_MAP.get(severity.upper(), "5.0"),
         },
         "helpUri": f"https://github.com/babywyrm/mcpnuke/blob/main/mcpnuke/checks/{check}.py",
+        # A SARIF fix is a source edit. These findings describe a remote MCP
+        # server, so the remediation is help text. The first finding of a
+        # check sets it; each result repeats its own in properties.
+        "help": {"text": _remediation_text(finding)},
     }
 
 
@@ -65,8 +84,10 @@ def build_sarif(results: list[TargetResult]) -> dict[str, Any]:
                     detail=finding.detail,
                     taxonomy_id=getattr(finding, "taxonomy_id", ""),
                     mitre_id=getattr(finding, "mitre_id", ""),
+                    finding=finding,
                 )
 
+            guide = guidance_for_finding(finding)
             message_parts = [finding.detail or finding.title]
             if finding.evidence:
                 message_parts.append(f"Evidence: {finding.evidence}")
@@ -99,6 +120,9 @@ def build_sarif(results: list[TargetResult]) -> dict[str, Any]:
                     "lane": finding.lane,
                     "taxonomy_id": getattr(finding, "taxonomy_id", ""),
                     "mitre_id": getattr(finding, "mitre_id", ""),
+                    "impact": guide.impact,
+                    "fix": guide.fix,
+                    "verify": guide.verify,
                 },
             })
 

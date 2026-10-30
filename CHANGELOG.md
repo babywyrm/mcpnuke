@@ -12,6 +12,11 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
+- **SARIF carries the remediation.** Each result has the priority
+  action's impact, fix, and verify, and the rule help repeats them.
+  A SARIF fix is a source edit, and these findings describe a remote
+  server, so the text is help and properties rather than a `fixes` edit.
+
 - **Quickstart is recipe-first.** Goals (triage, prove, policy, CI) come
   before the lab notes, and the agent guide says which flag matches
   each goal. A launch URL with no MCP endpoint is exit 1, finding

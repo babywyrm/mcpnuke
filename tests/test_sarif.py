@@ -3,6 +3,7 @@
 import json
 
 from mcpnuke.core.models import TargetResult
+from mcpnuke.reporting.priority import guidance_for_finding
 from mcpnuke.reporting.sarif import build_sarif, write_sarif
 
 
@@ -112,6 +113,22 @@ class TestBuildSarif:
                 for r in sarif["runs"][0]["results"]}
         assert "http://target1/mcp" in urls
         assert "http://target2/mcp" in urls
+
+    def test_each_result_carries_the_priority_remediation(self):
+        result = _make_result()
+        _add_finding(
+            result, "tool_poisoning", "CRITICAL", "Tool Poisoning Detected", detail="desc"
+        )
+        sarif = build_sarif([result])
+        guide = guidance_for_finding(result.findings[0])
+        props = sarif["runs"][0]["results"][0]["properties"]
+        assert props["impact"] == guide.impact
+        assert props["fix"] == guide.fix
+        assert props["verify"] == guide.verify
+        help_text = sarif["runs"][0]["tool"]["driver"]["rules"][0]["help"]["text"]
+        assert guide.impact in help_text
+        assert guide.fix in help_text
+        assert guide.verify in help_text
 
 
 class TestWriteSarif:

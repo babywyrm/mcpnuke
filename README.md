@@ -181,7 +181,9 @@ above it, `2` scan error. Full table under [Exit Code](#exit-code).
 
 **SARIF output:** Use `--sarif results.sarif` to emit a SARIF 2.1.0 report
 for GitHub Code Scanning, VS Code, and IDE integration. Findings map as:
-CRITICAL/HIGH — `error`, MEDIUM — `warning`, LOW — `note`.
+CRITICAL/HIGH — `error`, MEDIUM — `warning`, LOW — `note`. Each result
+carries the same impact, fix, and verify text as the console priority
+action, and the rule help repeats it.
 
 See [CI/CD Integration Guide](docs/ci-cd-guide.md) for GitHub Actions, GitLab CI,
 and mcpnuke-runner setup.

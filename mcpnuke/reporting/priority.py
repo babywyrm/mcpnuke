@@ -246,6 +246,16 @@ def guidance_for(
     return ActionGuidance(impact=impact, fix=fix, verify=verify)
 
 
+def guidance_for_finding(finding: Finding) -> ActionGuidance:
+    """Impact, fix, and verify for one finding.
+
+    Same words a priority action uses for that finding. Collapse grouping
+    stays in rank_priority_actions; a SARIF result is one finding.
+    """
+    _, reason = _tier(finding)
+    return guidance_for(finding.check, reason, taxonomy_id=finding.taxonomy_id)
+
+
 def _tier(finding: Finding) -> tuple[int, str]:
     """Return (score, reason) for the first matching proof tier."""
     title_l = finding.title.lower()
