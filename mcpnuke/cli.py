@@ -584,6 +584,14 @@ def _add_lane_arguments(group: ArgumentGroup) -> None:
         "Minimum 1.",
     )
     group.add_argument(
+        "--lab-coverage",
+        metavar="PROFILE",
+        default=None,
+        help="Read a target profile JSON and print which labs have a check "
+        "that can attribute their threat ID. A lab is the tool-name prefix "
+        "before the first dot. Does not scan. Does not need --targets.",
+    )
+    group.add_argument(
         "--by-lane",
         action="store_true",
         help="Group scan findings by agentic-identity lane (1..5) and print "
@@ -789,7 +797,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="mcpnuke",
         # argparse does not group the usage line, so the generated one lists all
-        # 78 flags and pushes the first group heading 31 lines down.
+        # 79 flags and pushes the first group heading 31 lines down.
         usage="mcpnuke [--targets URL ...] [options]",
         description="mcpnuke — MCP Red Teaming & Security Scanner",
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -107,6 +107,16 @@ mcpnuke --targets http://<mcp-host>/mcp --json report.json --fail-on high
 `0` is clean at that threshold, `1` is findings, `2` is a scan that
 did not finish. `--coverage-report` does not change the exit code.
 
+### "Which labs have no check?"
+
+```bash
+mcpnuke --lab-coverage profiles/dvmcp.json
+```
+
+No target and no scan. A lab is the tool-name prefix before the first
+dot. A lab is a gap when none of its threat IDs have a check that can
+attribute them. `--json report.json` writes the same rows.
+
 ### "Watch a server that stays up"
 
 ```bash

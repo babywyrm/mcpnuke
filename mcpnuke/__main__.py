@@ -69,6 +69,33 @@ def _should_fail(findings: list, fail_on: str) -> bool:
     )
 
 
+def _run_lab_coverage(path: str, console: Console, json_out: str | None) -> None:
+    """Print which labs in a profile have a check. No scan, no target."""
+    import json
+    from pathlib import Path
+
+    from mcpnuke.reporting.lab_coverage import build_lab_coverage, print_lab_coverage
+    from mcpnuke.reporting.taxonomy_coverage import check_taxonomy_catalog
+
+    profile_path = Path(path)
+    if not profile_path.is_file():
+        console.print(f"[red]lab-coverage: file not found: {profile_path}[/red]")
+        sys.exit(EXIT_ERROR)
+    try:
+        profile = json.loads(profile_path.read_text())
+    except json.JSONDecodeError as exc:
+        console.print(f"[red]lab-coverage: {profile_path} is not JSON: {exc}[/red]")
+        sys.exit(EXIT_ERROR)
+    if not isinstance(profile, dict):
+        console.print(f"[red]lab-coverage: {profile_path} must be an object[/red]")
+        sys.exit(EXIT_ERROR)
+    report = build_lab_coverage(profile, check_taxonomy_catalog())
+    print_lab_coverage(report, console=console)
+    if json_out:
+        Path(json_out).write_text(json.dumps(report, indent=2))
+        console.print(f"\n[green]JSON report written → {json_out}[/green]")
+
+
 def _run_doctor(console: Console) -> None:
     """Check installation health and report missing deps / config."""
     import shutil
@@ -374,6 +401,10 @@ def _main_inner() -> None:
 
     if args.doctor:
         _run_doctor(console)
+        sys.exit(EXIT_CLEAN)
+
+    if getattr(args, "lab_coverage", None):
+        _run_lab_coverage(args.lab_coverage, console, getattr(args, "json_out", None))
         sys.exit(EXIT_CLEAN)
 
     if args.ollama_analysis:

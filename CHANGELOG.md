@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **`--lab-coverage PROFILE`.** Print which labs in a target profile
+  have a check that can attribute their threat ID. A lab is the
+  tool-name prefix before the first dot. A lab is a gap when none of
+  its IDs have a check. No scan and no `--targets`.
+
 - **`--watch SECONDS`.** Re-scan a target until interrupted and print
   the lane finding-count delta, or `no lane change`. The exit is 0.
   `--fail-on` does not apply while it is looping. The k8s finding list
@@ -13,9 +18,11 @@ All notable changes to this submodule are documented here.
 
 - **`--taxonomy-coverage`.** Pass, fail, or untested for each vendored
   threat ID. A finding fails the ID. A check that can attribute it and
-  ran, without a finding, passes it. Otherwise the ID is untested. It
-  does not call camazotz and does not change the exit code.
-  `--coverage-report` remains the per-lane comparison.
+  ran, without a finding, passes it. Otherwise the ID is untested. An
+  ID counts only for the function that writes it, or for the check that
+  calls the helper where it is written. It does not call camazotz and
+  does not change the exit code. `--coverage-report` remains the
+  per-lane comparison.
 
 - **`--scan-profile`.** Named sets of defaults for a known MCP host:
   `cursor-mcp` / `claude-desktop` (safe-mode + fast), `stdio` (safe-mode).

@@ -51,6 +51,20 @@ def test_a_finding_beats_a_ran_check() -> None:
     assert by_id["MCP-T02"]["status"] == "fail"
 
 
+def test_an_id_stays_inside_the_function_that_attributes_it() -> None:
+    catalog = check_taxonomy_catalog()
+    assert "MCP-T17" in catalog["notification_sampling_abuse"]
+    assert "MCP-T11" not in catalog["notification_sampling_abuse"]
+    assert "MCP-T11" in catalog["cross_tenant_memory_leak"]
+    assert "MCP-T17" not in catalog["cross_tenant_memory_leak"]
+
+
+def test_an_id_in_a_helper_reaches_the_check_that_calls_it() -> None:
+    catalog = check_taxonomy_catalog()
+    assert "MCP-T44" in catalog["input_sanitization"]
+    assert "MCP-T44" not in catalog["notification_sampling_abuse"]
+
+
 def test_the_catalog_attributes_a_real_check() -> None:
     catalog = check_taxonomy_catalog()
     attributed = set().union(*catalog.values())

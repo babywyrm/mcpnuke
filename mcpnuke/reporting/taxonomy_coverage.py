@@ -5,9 +5,8 @@ pass: a check that can attribute the ID has a timing, and none of them fired.
 untested: no such check ran. An ID with no check in the tree is untested
 until a finding attributes it anyway.
 
-ponytail: the catalog is per module. If one module attributes two IDs and
-records two timings, either timing marks both IDs tested. Split the module
-to make the two checks independent.
+ponytail: an ID attaches to the time_check calls in the same function.
+Two checks in one function still share IDs. Split the function to separate them.
 """
 
 from __future__ import annotations
@@ -28,20 +27,56 @@ _CONST_RE: re.Pattern[str] = re.compile(
 _TIMING_RE: re.Pattern[str] = re.compile(r'time_check\(\s*["\']([^"\']+)["\']')
 
 
+def _constants(text: str) -> dict[str, str]:
+    return {name: value for name, value in _CONST_RE.findall(text)}
+
+
+def _ids_in(text: str, constants: dict[str, str]) -> set[str]:
+    ids = set(_LITERAL_RE.findall(text))
+    for name, value in constants.items():
+        if re.search(rf"taxonomy_id\s*=\s*{name}\b", text):
+            ids.add(value)
+    return ids
+
+
+_CALL_RE: re.Pattern[str] = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+
+
 def check_taxonomy_catalog() -> dict[str, frozenset[str]]:
-    """Map each recorded timing name to the threat IDs that module can attribute."""
+    """Map each timing name to the threat IDs that check can attribute.
+
+    An ID counts when it is written in the same function as the
+    ``time_check``, or in a same-file helper that function calls and that
+    helper has no ``time_check`` of its own.
+    """
     catalog: dict[str, set[str]] = defaultdict(set)
     for path in sorted(_CHECKS_DIR.glob("*.py")):
         text = path.read_text(encoding="utf-8")
-        ids = set(_LITERAL_RE.findall(text))
-        for name, value in _CONST_RE.findall(text):
-            if re.search(rf"taxonomy_id\s*=\s*{name}\b", text):
-                ids.add(value)
-        if not ids:
-            continue
-        timings = _TIMING_RE.findall(text) or [path.stem]
-        for timing in timings:
-            catalog[timing].update(ids)
+        constants = _constants(text)
+        chunks = re.split(r"(?m)^def ", text)[1:]
+        records: list[dict[str, Any]] = []
+        for chunk in chunks:
+            name_match = re.match(r"(\w+)", chunk)
+            records.append(
+                {
+                    "name": name_match.group(1) if name_match else "",
+                    "ids": _ids_in(chunk, constants),
+                    "timings": _TIMING_RE.findall(chunk),
+                    "calls": set(_CALL_RE.findall(chunk)),
+                }
+            )
+        by_name = {str(record["name"]): record for record in records}
+        for record in records:
+            timings = record["timings"]
+            if not timings:
+                continue
+            ids = set(record["ids"])
+            for called in record["calls"]:
+                helper = by_name.get(called)
+                if helper and not helper["timings"]:
+                    ids.update(helper["ids"])
+            for timing in timings:
+                catalog[str(timing)].update(ids)
     return {name: frozenset(ids) for name, ids in catalog.items()}
 
 

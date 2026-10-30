@@ -31,7 +31,8 @@ remediation** — each result carries the priority action's impact, fix,
 and verify, and the rule help repeats them. **`--taxonomy-coverage`**
 — pass, fail, or untested for each vendored MCP-T ID, with no camazotz.
 **`--watch SECONDS`** — re-scan until interrupted and print the lane
-finding-count delta.
+finding-count delta. **`--lab-coverage`** — which labs in a target
+profile have a check for their threat ID.
 
 ---
 
@@ -219,9 +220,6 @@ replaced or reused. It then installs the built wheel into a clean environment
 and checks both console scripts before anything is uploaded.
 
 The open build items are listed under **What's not done yet** at the top.
-One more, further out:
-
-- **Camazotz lab coverage tracking** — which labs exercise which checks
 
 ---
 
