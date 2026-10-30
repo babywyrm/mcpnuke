@@ -300,10 +300,11 @@ API — job responses redact it).
 | `MCPNUKE_RUNNER_JOB_TIMEOUT` | `180` | Default wall-clock cap (seconds) |
 | `MCPNUKE_RUNNER_LOG_LEVEL` | `info` | Uvicorn log level |
 | `MCPNUKE_RUNNER_CORS` | `*` | Allowed origins (comma-separated) |
+| `MCPNUKE_RUNNER_TOKEN` | unset | When set, `/scans` requires `Authorization: Bearer <token>`. `/health` stays open |
 
-> **Security warning:** the runner has **no authentication** and defaults
-> to CORS `*` — it is an unauthenticated scan-execution oracle that can be
-> aimed at internal targets. Bind it to localhost, restrict
-> `MCPNUKE_RUNNER_CORS`, or front it with an authenticated proxy. Never
-> expose it directly to a network you do not control.
+> **Security warning:** with `MCPNUKE_RUNNER_TOKEN` unset the runner has
+> **no authentication** and defaults to CORS `*` — it is an unauthenticated
+> scan-execution oracle that can be aimed at internal targets. Set the
+> token, bind it to localhost, or front it with an authenticated proxy.
+> Never expose it directly to a network you do not control.
 

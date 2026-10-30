@@ -44,6 +44,11 @@ All notable changes to this submodule are documented here.
 
 ### Security
 
+- **`MCPNUKE_RUNNER_TOKEN`.** When set, `/scans` requires
+  `Authorization: Bearer <token>`. `/health` stays open. Unset keeps
+  the previous open behavior, so an existing deploy does not lock
+  itself out.
+
 - **Chain conditions are not evaluated as Python.** A condition is
   model output, and a scanned server can influence what the model
   writes. The matcher accepts only the documented comparisons

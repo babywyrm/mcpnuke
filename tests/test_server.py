@@ -276,6 +276,42 @@ def test_list_scans_newest_first(stub_manager):
     assert [j["request"]["target"] for j in resp.json()] == ["http://b", "http://a"]
 
 
+def test_a_runner_token_rejects_a_missing_bearer(monkeypatch, stub_manager):
+    monkeypatch.setenv("MCPNUKE_RUNNER_TOKEN", "lab-token")
+    resp = client.post("/scans", json={"target": "http://x"})
+    assert resp.status_code == 401
+    assert client.get("/scans").status_code == 401
+    assert client.get("/scans/stub").status_code == 401
+    assert stub_manager.submitted == []
+
+
+def test_a_runner_token_rejects_the_wrong_bearer(monkeypatch, stub_manager):
+    monkeypatch.setenv("MCPNUKE_RUNNER_TOKEN", "lab-token")
+    resp = client.post(
+        "/scans",
+        json={"target": "http://x"},
+        headers={"Authorization": "Bearer other-token"},
+    )
+    assert resp.status_code == 401
+    assert stub_manager.submitted == []
+
+
+def test_a_runner_token_accepts_the_bearer(monkeypatch, stub_manager):
+    monkeypatch.setenv("MCPNUKE_RUNNER_TOKEN", "lab-token")
+    resp = client.post(
+        "/scans",
+        json={"target": "http://x"},
+        headers={"Authorization": "Bearer lab-token"},
+    )
+    assert resp.status_code == 202
+    assert len(stub_manager.submitted) == 1
+
+
+def test_health_stays_open_when_a_runner_token_is_set(monkeypatch):
+    monkeypatch.setenv("MCPNUKE_RUNNER_TOKEN", "lab-token")
+    assert client.get("/health").status_code == 200
+
+
 def test_auth_token_never_leaves_the_api(stub_manager):
     """CWE-200 regression: a caller's bearer token must not be readable back
     through job responses — the API is unauthenticated, so anyone who can
