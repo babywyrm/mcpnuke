@@ -7,6 +7,7 @@ import os
 from typing import Any
 
 from mcpnuke.core.models import Finding
+from mcpnuke.k8s.discovery import k8s_ssl_context
 
 GLOBAL_K8S_FINDINGS: list[Finding] = []
 
@@ -18,7 +19,6 @@ _DANGEROUS_CAPABILITIES = {"NET_RAW", "SYS_ADMIN", "SYS_PTRACE", "NET_ADMIN",
 
 
 def _k8s_get(path: str, token: str, api_url: str | None = None) -> dict | None:
-    import ssl
     import urllib.request
 
     base = api_url or "https://kubernetes.default"
@@ -26,9 +26,7 @@ def _k8s_get(path: str, token: str, api_url: str | None = None) -> dict | None:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(f"{base}{path}", headers=headers)
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx = k8s_ssl_context(api_url)
     try:
         with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
             parsed = json.loads(r.read())
@@ -187,7 +185,6 @@ def _check_sa_blast_radius(namespace: str, token: str, console=None, api_url: st
             "kind": "SelfSubjectRulesReview",
             "spec": {"namespace": namespace},
         }
-        import ssl
         import urllib.request
         _base = api_url or "https://kubernetes.default"
         _headers: dict[str, str] = {
@@ -202,9 +199,7 @@ def _check_sa_blast_radius(namespace: str, token: str, console=None, api_url: st
             headers=_headers,
             method="POST",
         )
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        ctx = k8s_ssl_context(api_url)
 
         rules = []
         try:
@@ -446,14 +441,11 @@ def _check_session_token_exposure(
     if not pods_data:
         return
 
-    import ssl
     import urllib.parse
     import urllib.request
 
     base_url = api_url or "https://kubernetes.default"
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx = k8s_ssl_context(api_url)
 
     for pod in pods_data.get("items", []):
         pod_name = pod.get("metadata", {}).get("name", "?")

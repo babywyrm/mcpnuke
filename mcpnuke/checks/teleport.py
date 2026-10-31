@@ -14,6 +14,7 @@ import urllib.request
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
+from mcpnuke.k8s.discovery import k8s_ssl_context
 
 # Teleport infra findings are Lane 3 (Machine), Transport A.
 _add = lane_tagged(lane=3, transport="A")
@@ -173,9 +174,7 @@ def check_tbot_credential_exposure(result: TargetResult):
         except Exception:
             namespace = "default"
 
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        ctx = k8s_ssl_context()
 
         tbot_secret_names = ["tbot-out", "tbot-kube", "tbot"]
         for secret_name in tbot_secret_names:
@@ -228,9 +227,7 @@ def check_teleport_bot_overprivilege(result: TargetResult):
             return
 
         api_base = f"https://{k8s_host}:{k8s_port}"
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        ctx = k8s_ssl_context()
 
         url = f"{api_base}/apis/rbac.authorization.k8s.io/v1/clusterrolebindings"
         req = urllib.request.Request(url, headers={

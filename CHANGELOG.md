@@ -70,6 +70,11 @@ All notable changes to this submodule are documented here.
 
 ### Security
 
+- **In-cluster Kubernetes calls verify TLS.** The k8s scanner,
+  discovery, and Teleport checks send the pod's service-account token.
+  They now verify the API server against the mounted
+  `serviceaccount/ca.crt`. An explicit `--k8s-api-url` stays
+  unverified, as before, for self-signed lab clusters.
 - **`MCPNUKE_RUNNER_TOKEN`.** When set, `/scans` requires
   `Authorization: Bearer <token>`. `/health` stays open. Unset keeps
   the previous open behavior, so an existing deploy does not lock

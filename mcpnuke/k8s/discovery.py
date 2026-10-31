@@ -34,7 +34,22 @@ PROBE_PATHS = [
 
 SA_TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 SA_NS_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+SA_CA_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 K8S_API = "https://kubernetes.default"
+
+
+def k8s_ssl_context(api_url: str | None = None) -> ssl.SSLContext:
+    """Verify the in-cluster API against the mounted CA.
+
+    An explicit ``api_url`` is often a self-signed lab cluster, so it
+    stays unverified.
+    """
+    if api_url is None and os.path.exists(SA_CA_PATH):
+        return ssl.create_default_context(cafile=SA_CA_PATH)
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
 
 
 @dataclass
@@ -54,9 +69,7 @@ def _k8s_api(path: str, token: str, api_url: str | None = None) -> dict | None:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(f"{base}{path}", headers=headers)
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx = k8s_ssl_context(api_url)
     try:
         with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
             parsed = json.loads(r.read())
