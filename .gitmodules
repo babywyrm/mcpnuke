@@ -1,0 +1,3 @@
+[submodule "tests/test_targets/DVMCP"]
+	path = tests/test_targets/DVMCP
+	url = https://github.com/harishsg993010/damn-vulnerable-MCP-server.git
