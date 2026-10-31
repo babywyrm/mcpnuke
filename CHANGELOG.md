@@ -106,6 +106,10 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **CI coherence dispatch no longer fails silently.** Without
+  `ECOSYSTEM_DISPATCH_TOKEN` it fell back to `GITHUB_TOKEN`, which cannot
+  dispatch to another repo, and `continue-on-error` hid the failure on
+  every main build. The step now skips with a visible notice.
 - **CI `fail-on: medium`.** The reusable workflow treated every finding
   as a medium failure, including LOW. `medium` is now medium and above.
   `low` and `none` match the CLI.

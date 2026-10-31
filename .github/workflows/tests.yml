@@ -206,12 +206,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [pytest, policy-yaml-roundtrip, dogfood, audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # GITHUB_TOKEN cannot dispatch to another repo, so without the PAT
+    # the step is skipped visibly instead of failing behind continue-on-error.
+    env:
+      HAS_DISPATCH_TOKEN: ${{ secrets.ECOSYSTEM_DISPATCH_TOKEN != '' }}
 
     steps:
+      - name: Note the skipped dispatch
+        if: env.HAS_DISPATCH_TOKEN != 'true'
+        run: echo "::notice::ECOSYSTEM_DISPATCH_TOKEN is not set; agentic-sec coherence dispatch skipped"
+
       - name: Trigger agentic-sec coherence run
+        if: env.HAS_DISPATCH_TOKEN == 'true'
         uses: peter-evans/repository-dispatch@v4
         with:
-          token: ${{ secrets.ECOSYSTEM_DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ECOSYSTEM_DISPATCH_TOKEN }}
           repository: babywyrm/agentic-sec
           event-type: ecosystem-changed
           client-payload: '{"source": "mcpnuke", "sha": "${{ github.sha }}"}'
