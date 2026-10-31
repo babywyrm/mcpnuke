@@ -8,6 +8,7 @@ own, the same way the quiet reference target is scanned.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -47,10 +48,14 @@ def test_cli_owasp_report_lights_every_category(tmp_path: Path) -> None:
         server.stop()
 
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert "OWASP MCP Top 10 alignment" in proc.stdout
-    assert "(no findings fired)" not in proc.stdout
+    # Rich wraps the header on CI's narrow console and paints it with ANSI,
+    # so the words are not one contiguous substring of the raw stream.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", proc.stdout)
+    plain = re.sub(r"\s+", " ", plain)
+    assert "OWASP MCP Top 10 alignment" in plain
+    assert "(no findings fired)" not in plain
     for code in OWASP_MCP_TOP10:
-        assert f"{code} —" in proc.stdout
+        assert f"{code} —" in plain
 
     report = json.loads(report_path.read_text())
     buckets = report["owasp_mcp"]["owasp_mcp"]
