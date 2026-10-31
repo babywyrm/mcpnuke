@@ -1,5 +1,7 @@
 """Tests for Round 1 fixes: evidence filtering, multi-vector expansion, deep rug pull priority."""
 
+import pytest
+
 from mcpnuke.core.models import TargetResult
 
 # ---------------------------------------------------------------------------
@@ -114,6 +116,10 @@ class TestMultiVectorExpanded:
 # ---------------------------------------------------------------------------
 
 class TestDeepRugPullPrioritySorting:
+    @pytest.fixture(autouse=True)
+    def _no_sleep(self, monkeypatch):
+        monkeypatch.setattr("mcpnuke.checks.behavioral.time.sleep", lambda _s: None)
+
     def test_mutation_tools_sorted_first(self):
         from unittest.mock import MagicMock
 
