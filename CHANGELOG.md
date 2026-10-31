@@ -6,6 +6,13 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **DVMCP's submodule URL is recorded.** The pin was a gitlink with no
+  `.gitmodules` entry, so every CI job logged `git` exit 128. The
+  commit pin is unchanged, and CI still does not fetch the tree.
+
+- **The OWASP dogfood step shows the alignment.** The lab scan prints
+  the report and appends a category table to the Actions job summary.
+
 - **CI dogfood runs `--owasp` against the lab.** The pytest job
   already imports `tests/test_owasp_lab.py`. The dogfood job now also
   runs `python -m mcpnuke --owasp` and checks every category in the

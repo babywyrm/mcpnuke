@@ -5,8 +5,9 @@ CRITICAL findings, generate nullfield policy, and track regressions.
 
 mcpnuke's own CI (`tests.yml`) dogfoods the CLI against the in-repo
 reference target (`tests/test_cli_dogfood.py`) and the OWASP lab
-(`tests/test_owasp_cli.py`). The reusable workflow below is for
-scanning *your* MCP server; it is `workflow_call` only.
+(`tests/test_owasp_cli.py`). The lab step prints the alignment and
+appends a category table to the job summary. The reusable workflow
+below is for scanning *your* MCP server; it is `workflow_call` only.
 
 `--sarif` writes SARIF 2.1.0. CRITICAL and HIGH are `error`, MEDIUM is
 `warning`, LOW is `note`. Each result's `properties` carries `impact`,

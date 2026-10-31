@@ -122,8 +122,13 @@ jobs:
       - name: Install project
         run: uv sync --frozen --extra dev
 
-      - name: Scan the in-repo reference target and OWASP lab via the CLI
-        run: uv run pytest tests/test_cli_dogfood.py tests/test_owasp_cli.py -v --tb=short
+      - name: Scan the in-repo reference target via the CLI
+        run: uv run pytest tests/test_cli_dogfood.py -v --tb=short
+
+      # -s keeps the alignment table in the log. The test also appends a
+      # short markdown table to the job summary when Actions sets one.
+      - name: Scan the OWASP lab and publish the alignment
+        run: uv run pytest tests/test_owasp_cli.py -v --tb=short -s
 
   policy-yaml-roundtrip:
     name: --generate-policy YAML round-trip
