@@ -6,6 +6,11 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **CI dogfood runs `--owasp` against the lab.** The pytest job
+  already imports `tests/test_owasp_lab.py`. The dogfood job now also
+  runs `python -m mcpnuke --owasp` and checks every category in the
+  JSON report.
+
 - **OWASP lab and `shadow_mcp_server`.** `tests/owasp_lab` is an
   unauthenticated stdlib server with one planted marker per OWASP MCP
   Top 10 category. It is not the hardened reference target, and
