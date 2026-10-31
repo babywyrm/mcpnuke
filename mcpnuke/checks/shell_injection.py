@@ -14,6 +14,7 @@ Lane 3 (Machine Identity) / Transport D (Subprocess).
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
@@ -156,7 +157,7 @@ def _probe_dangerous_base(
     result: TargetResult,
     tool: dict,
     base_args: dict,
-    _log,
+    _log: Callable[[str], None],
 ) -> None:
     """Test if the tool allows dangerous base commands (bash, sh)."""
     props = tool.get("inputSchema", {}).get("properties", {})

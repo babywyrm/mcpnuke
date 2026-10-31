@@ -35,7 +35,7 @@ INFRA_LEAK_PATTERNS: list[tuple[str, str, str]] = [
 ]
 
 
-def check_config_dump(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_config_dump(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
     """Detect tools that dump internal configuration, service topology, or secret paths."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)

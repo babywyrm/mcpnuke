@@ -363,8 +363,8 @@ def _emit_duration_estimate(
     fast_mode: bool,
     probe_workers: int,
     n_deep: int,
-    _log,
-):
+    _log: Callable[[str], None],
+) -> None:
     """Print a rough scan-time estimate so operators know what to expect.
 
     *n_deep* is the size of the already-filtered deep probe plan, so the
@@ -405,8 +405,8 @@ def run_all_checks(
     sse_path: str = "",
     verbose: bool = False,
     probe_opts: dict | None = None,
-    log=None,
-):
+    log: Callable[[str], None] | None = None,
+) -> None:
     """Run all security checks against a target result.
 
     Ordering: static checks first (fast, no side-effects), then behavioral
@@ -485,7 +485,7 @@ def run_all_checks(
     total_checks = 0
     _findings_lock = threading.Lock()
 
-    def _run(name, fn, *args, **kwargs):
+    def _run(name: str, fn: Callable[..., object], *args: object, **kwargs: object) -> None:
         nonlocal check_num
         with _findings_lock:
             check_num += 1

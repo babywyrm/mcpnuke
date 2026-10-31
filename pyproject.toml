@@ -122,11 +122,10 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 
-# core/ is fully annotated, so it holds the stricter line: a new function here
-# must declare its types. The checks/ layer is not there yet — 74 untyped defs
-# at last count — and gets the same treatment once that is cleared.
+# core/ and checks/ are fully annotated, so they hold the stricter line: a new
+# function there must declare its types.
 [[tool.mypy.overrides]]
-module = ["mcpnuke.core.*"]
+module = ["mcpnuke.core.*", "mcpnuke.checks.*"]
 disallow_untyped_defs = true
 
 # Optional extras (ai, k8s, server). These are imported lazily inside

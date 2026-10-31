@@ -7,7 +7,7 @@ from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.rules import SUPPLY_CHAIN_PATTERNS
 
 
-def check_supply_chain(result: TargetResult):
+def check_supply_chain(result: TargetResult) -> None:
     """Flag tools that install packages from user-controlled or dynamic URLs."""
     with time_check("supply_chain", result):
         for tool in result.tools:

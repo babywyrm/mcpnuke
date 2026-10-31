@@ -38,7 +38,7 @@ CONFIG_PARAM_PATTERNS = [
 ]
 
 
-def check_config_tampering(result: TargetResult):
+def check_config_tampering(result: TargetResult) -> None:
     with time_check("config_tampering", result):
         for tool in result.tools:
             name = tool.get("name", "")

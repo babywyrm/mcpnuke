@@ -50,6 +50,7 @@ bucket in ``--by-lane`` output.
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Callable
 
 from mcpnuke.core.models import Finding, TargetResult
@@ -61,8 +62,4 @@ def lane_tagged(lane: int, transport: str = "A") -> Callable[..., Finding | None
     Per-call kwargs win — passing an explicit ``lane=`` or ``transport=`` to
     the returned function overrides the defaults set here.
     """
-    def _add(result: TargetResult, *args, **kwargs) -> Finding | None:
-        kwargs.setdefault("lane", lane)
-        kwargs.setdefault("transport", transport)
-        return result.add(*args, **kwargs)
-    return _add
+    return functools.partial(TargetResult.add, lane=lane, transport=transport)

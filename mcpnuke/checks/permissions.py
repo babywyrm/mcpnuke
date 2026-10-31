@@ -13,7 +13,7 @@ _add = lane_tagged(lane=1, transport="A")
 _TAXONOMY_ID: str = "MCP-T20"
 
 
-def check_excessive_permissions(result: TargetResult):
+def check_excessive_permissions(result: TargetResult) -> None:
     with time_check("excessive_permissions", result):
         for tool in result.tools:
             # Normalize before lowercasing: the camelCase split needs the
@@ -78,7 +78,7 @@ def check_excessive_permissions(result: TargetResult):
                         )
 
 
-def check_schema_risks(result: TargetResult):
+def check_schema_risks(result: TargetResult) -> None:
     with time_check("schema_risks", result):
         for tool in result.tools:
             schema = tool.get("inputSchema", {})

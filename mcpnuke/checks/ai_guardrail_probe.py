@@ -71,7 +71,7 @@ def _find_message_param(tool: dict) -> str | None:
     return None
 
 
-def check_ai_guardrail(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_ai_guardrail(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
     """Probe AI-gated tools with social-engineering strategies."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)

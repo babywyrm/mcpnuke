@@ -102,7 +102,7 @@ _ACTUATOR_WRITE_PROBES = [
 _ACTUATOR_HEAPDUMP_PATH = "/actuator/heapdump"
 
 
-def check_actuator_probe(base_url: str, result: TargetResult, auth_token: str | None = None):
+def check_actuator_probe(base_url: str, result: TargetResult, auth_token: str | None = None) -> None:
     """Probe for exposed debug/admin endpoints on the target's base URL."""
     with time_check("actuator_probe", result):
         headers = {}

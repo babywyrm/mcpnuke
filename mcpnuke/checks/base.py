@@ -2,6 +2,8 @@
 
 import json
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from mcpnuke.core.models import TargetResult
 
@@ -90,15 +92,11 @@ def payload_echo_removed(text: str, payload: str) -> str:
     return text.replace(payload, "")
 
 
-def time_check(name: str, result: TargetResult):
+@contextmanager
+def time_check(name: str, result: TargetResult) -> Iterator[None]:
     """Context manager to record check timing."""
-
-    class _T:
-        def __enter__(self):
-            self.t0 = time.time()
-            return self
-
-        def __exit__(self, *_):
-            result.timings[name] = time.time() - self.t0
-
-    return _T()
+    t0 = time.time()
+    try:
+        yield
+    finally:
+        result.timings[name] = time.time() - t0

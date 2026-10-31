@@ -60,7 +60,7 @@ def _confusable_pairs(tools: list[dict]) -> list[tuple[dict, dict, float]]:
 
 def check_tool_shadowing(
     all_results: list[TargetResult], result: TargetResult
-):
+) -> None:
     with time_check("tool_shadowing", result):
         my_names = {t["name"].lower() for t in result.tools}
 
@@ -212,7 +212,7 @@ def _active_vectors(result: TargetResult) -> set[str]:
     return {f.check for f in result.findings if f.severity in _VECTOR_SEVERITY_FLOOR}
 
 
-def check_multi_vector(result: TargetResult):
+def check_multi_vector(result: TargetResult) -> None:
     with time_check("multi_vector", result):
         checks_hit = _active_vectors(result)
         dangerous = {
@@ -311,7 +311,7 @@ def _grade_linkage(
     )
 
 
-def check_attack_chains(result: TargetResult):
+def check_attack_chains(result: TargetResult) -> None:
     with time_check("attack_chains", result):
         checks = _active_vectors(result)
         tool_names = {t["name"] for t in result.tools}

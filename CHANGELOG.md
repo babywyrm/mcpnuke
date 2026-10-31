@@ -56,6 +56,10 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
+- **`mcpnuke.checks.*` enforces `disallow_untyped_defs`.** Every check
+  and helper now declares its types, so mypy also checks the bodies it
+  used to skip. `time_check` is a typed `contextmanager`; the lane
+  wrapper is a `functools.partial` over `TargetResult.add`.
 - **SARIF carries the remediation.** Each result has the priority
   action's impact, fix, and verify, and the rule help repeats them.
   A SARIF fix is a source edit, and these findings describe a remote

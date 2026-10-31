@@ -15,6 +15,7 @@ import contextlib
 import json
 import re
 import time
+from collections.abc import Callable
 
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
@@ -500,7 +501,11 @@ def _scan_response_threats(text: str) -> list[tuple[str, str, str]]:
 # Check: Tool Response Injection
 # ---------------------------------------------------------------------------
 
-def check_tool_response_injection(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_tool_response_injection(
+    session: MCPSessionProtocol,
+    result: TargetResult,
+    probe_opts: dict | None = None,
+) -> None:
     """Call each tool with safe inputs and scan responses for injection / manipulation.
 
     Also detects input reflection — if a tool echoes user input back in the
@@ -706,7 +711,7 @@ def _fuzz_single_tool(
     tool: dict,
     result: TargetResult,
     opts: dict,
-    _log,
+    _log: Callable[[str], None],
     idx: int,
     total: int,
 ) -> None:
@@ -869,7 +874,7 @@ def _fuzz_single_tool(
                 break
 
 
-def check_input_sanitization(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_input_sanitization(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
     """Send injection probe payloads and detect missing sanitization."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
@@ -916,7 +921,7 @@ def _extract_json_strings(text: str) -> list[str]:
 
     strings: list[str] = []
 
-    def _recurse(v):
+    def _recurse(v: object) -> None:
         if isinstance(v, str):
             strings.append(v)
         elif isinstance(v, dict):
@@ -940,7 +945,7 @@ def _match_error_patterns(texts: list[str]) -> re.Match | None:
     return None
 
 
-def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
     """Send malformed inputs to tools and look for information disclosure in errors."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
@@ -1010,7 +1015,11 @@ def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe
 # Check: Temporal Consistency
 # ---------------------------------------------------------------------------
 
-def check_temporal_consistency(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_temporal_consistency(
+    session: MCPSessionProtocol,
+    result: TargetResult,
+    probe_opts: dict | None = None,
+) -> None:
     """Call the same tool repeatedly and detect behavioral drift or escalation."""
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
@@ -1077,7 +1086,7 @@ def check_temporal_consistency(session: MCPSessionProtocol, result: TargetResult
 # Check: Resource Content Deep Analysis (poisoning beyond simple regex)
 # ---------------------------------------------------------------------------
 
-def check_resource_poisoning(session: MCPSessionProtocol, result: TargetResult):
+def check_resource_poisoning(session: MCPSessionProtocol, result: TargetResult) -> None:
     """Deep content analysis of resources for obfuscated injection payloads."""
     with time_check("resource_poisoning", result):
         from mcpnuke.patterns.rules import INJECTION_PATTERNS, POISON_PATTERNS

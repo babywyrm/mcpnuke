@@ -30,10 +30,10 @@ from mcpnuke.patterns.rules import (
 _add = lane_tagged(lane=2, transport="A")
 
 
-def check_prompt_injection(result: TargetResult):
+def check_prompt_injection(result: TargetResult) -> None:
     with time_check("prompt_injection", result):
 
-        def _scan(text: str, location: str):
+        def _scan(text: str, location: str) -> None:
             for pat in INJECTION_PATTERNS:
                 if re.search(pat, text, re.IGNORECASE):
                     _add(result,
@@ -73,7 +73,7 @@ def check_prompt_injection(result: TargetResult):
             _scan(p.get("name", ""), "prompt name")
 
 
-def check_tool_poisoning(result: TargetResult):
+def check_tool_poisoning(result: TargetResult) -> None:
     with time_check("tool_poisoning", result):
         for tool in result.tools:
             name = tool.get("name", "")
@@ -104,7 +104,7 @@ def check_tool_poisoning(result: TargetResult):
                     break
 
 
-def check_indirect_injection(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_indirect_injection(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
     with time_check("indirect_injection", result):
         # Phase 1: scan resource contents (original behavior)
         for resource in result.resources:
@@ -201,7 +201,11 @@ def check_indirect_injection(session: MCPSessionProtocol, result: TargetResult, 
                         break
 
 
-def check_active_prompt_injection(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_active_prompt_injection(
+    session: MCPSessionProtocol,
+    result: TargetResult,
+    probe_opts: dict | None = None,
+) -> None:
     """Send injection payloads as tool inputs and confirm the server follows them.
 
     Goes beyond static prompt_injection (metadata-only) by actively testing whether

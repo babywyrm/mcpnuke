@@ -9,7 +9,7 @@ from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import CREDENTIAL_CONTENT_PATTERNS
 
 
-def _scan_text_for_creds(text: str, source: str, result: TargetResult):
+def _scan_text_for_creds(text: str, source: str, result: TargetResult) -> None:
     """Scan a text blob for credential patterns, adding findings."""
     for pat, cred_type in CREDENTIAL_CONTENT_PATTERNS:
         m = re.search(pat, text, re.IGNORECASE)
@@ -25,7 +25,11 @@ def _scan_text_for_creds(text: str, source: str, result: TargetResult):
             break
 
 
-def check_response_credentials(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_response_credentials(
+    session: MCPSessionProtocol,
+    result: TargetResult,
+    probe_opts: dict | None = None,
+) -> None:
     """Scan tool responses and resource content for credential patterns.
 
     Goes beyond error_leakage by checking ALL responses (success and error)

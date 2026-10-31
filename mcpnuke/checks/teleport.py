@@ -34,7 +34,7 @@ def _probe_url(url: str, timeout: float = 3.0) -> dict | None:
         return None
 
 
-def check_teleport_proxy_discovery(base: str, result: TargetResult):
+def check_teleport_proxy_discovery(base: str, result: TargetResult) -> None:
     """Probe for Teleport proxy endpoints on the target host.
 
     Discovers version, cluster name, and auth configuration. A publicly
@@ -70,7 +70,7 @@ def check_teleport_proxy_discovery(base: str, result: TargetResult):
                 return
 
 
-def check_teleport_cert_validation(base: str, result: TargetResult):
+def check_teleport_cert_validation(base: str, result: TargetResult) -> None:
     """Test if the Teleport proxy uses self-signed certificates.
 
     Self-signed certs in production mean clients must use --insecure,
@@ -108,7 +108,7 @@ def check_teleport_cert_validation(base: str, result: TargetResult):
                 continue
 
 
-def check_teleport_app_enumeration(base: str, result: TargetResult):
+def check_teleport_app_enumeration(base: str, result: TargetResult) -> None:
     """Attempt to enumerate MCP applications registered in Teleport.
 
     Misconfigured Teleport clusters may expose the application list to
@@ -141,7 +141,7 @@ def check_teleport_app_enumeration(base: str, result: TargetResult):
                         return
 
 
-def check_tbot_credential_exposure(result: TargetResult):
+def check_tbot_credential_exposure(result: TargetResult) -> None:
     """Check for tbot credential secrets exposed in Kubernetes.
 
     When running in-cluster, scans for tbot output secrets (tbot-out,
@@ -202,7 +202,7 @@ def check_tbot_credential_exposure(result: TargetResult):
                 continue
 
 
-def check_teleport_bot_overprivilege(result: TargetResult):
+def check_teleport_bot_overprivilege(result: TargetResult) -> None:
     """Check if Teleport bot service accounts have excessive K8s RBAC.
 
     Scans ClusterRoleBindings for service accounts matching tbot patterns

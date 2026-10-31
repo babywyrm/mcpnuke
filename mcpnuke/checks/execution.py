@@ -36,7 +36,7 @@ _EXECUTION_CONTEXT = re.compile(
 # with the pattern rules — see mcpnuke/patterns/tokens.py.
 
 
-def check_code_execution(result: TargetResult):
+def check_code_execution(result: TargetResult) -> None:
     with time_check("code_execution", result):
         for tool in result.tools:
             name = tool.get("name", "")
@@ -72,7 +72,7 @@ def check_code_execution(result: TargetResult):
                     )
 
 
-def check_remote_access(result: TargetResult):
+def check_remote_access(result: TargetResult) -> None:
     with time_check("remote_access", result):
         for tool in result.tools:
             name = tool.get("name", "")

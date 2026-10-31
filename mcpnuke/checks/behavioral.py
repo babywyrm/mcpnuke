@@ -23,7 +23,7 @@ def _diff_tool_lists(
     label: str,
     severity: str = "HIGH",
     taxonomy_id: str = "",
-):
+) -> None:
     """Compare two tool-name→tool-dict maps and flag differences."""
     added = set(t2) - set(t1)
     removed = set(t1) - set(t2)
@@ -63,7 +63,7 @@ def _diff_tool_lists(
             )
 
 
-def check_rug_pull(session: MCPSessionProtocol, result: TargetResult):
+def check_rug_pull(session: MCPSessionProtocol, result: TargetResult) -> None:
     """Shallow rug pull: two tools/list calls with a pause between them."""
     with time_check("rug_pull", result):
         first = session.call("tools/list", timeout=15)
@@ -88,7 +88,7 @@ def check_rug_pull(session: MCPSessionProtocol, result: TargetResult):
 _extract_text = _response_text
 
 
-def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
     """Invoke tools between tool-list snapshots to trigger state-dependent rug pulls.
 
     Detects two flavours:
@@ -260,7 +260,7 @@ def _build_args(tool: dict, canary: str | None = None) -> dict:
     return args
 
 
-def check_state_mutation(session: MCPSessionProtocol, result: TargetResult):
+def check_state_mutation(session: MCPSessionProtocol, result: TargetResult) -> None:
     """Detect if tool invocations silently mutate server state.
 
     Phase 1 (resource-based): snapshot resources, invoke tools, diff.
@@ -360,7 +360,7 @@ def check_state_mutation(session: MCPSessionProtocol, result: TargetResult):
 # Notification / sampling abuse (NEW)
 # ---------------------------------------------------------------------------
 
-def check_notification_abuse(session: MCPSessionProtocol, result: TargetResult):
+def check_notification_abuse(session: MCPSessionProtocol, result: TargetResult) -> None:
     """Detect unsolicited server-initiated messages (sampling, roots, etc.).
 
     Malicious servers can use MCP's bidirectional nature to send sampling/createMessage
@@ -427,7 +427,7 @@ def check_notification_abuse(session: MCPSessionProtocol, result: TargetResult):
 # Protocol robustness (existing, unchanged)
 # ---------------------------------------------------------------------------
 
-def check_protocol_robustness(session: MCPSessionProtocol, result: TargetResult):
+def check_protocol_robustness(session: MCPSessionProtocol, result: TargetResult) -> None:
     with time_check("protocol_robustness", result):
         resp = session.call("nonexistent/method/xyz", timeout=8)
         if resp and "error" not in resp:

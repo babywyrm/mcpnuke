@@ -13,6 +13,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
+from rich.console import Console
+
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.chaining import _TOOL_NAME_RE
 from mcpnuke.checks.tool_probes import (
@@ -21,9 +23,15 @@ from mcpnuke.checks.tool_probes import (
     _response_text,
     _should_invoke,
 )
-from mcpnuke.core.chain_replay import ChainRun, ChainVerdict, replay_chain, summarize_run
+from mcpnuke.core.chain_replay import (
+    ChainRun,
+    ChainVerdict,
+    ProposedChain,
+    replay_chain,
+    summarize_run,
+)
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 # Enough of each field to carry the substance without letting one verbose
@@ -201,7 +209,9 @@ def _prepare_replay_session(session: MCPSessionProtocol, result: TargetResult) -
         time.sleep(0.5)
 
 
-def _cross_server_opener(result: TargetResult, opts: dict):
+def _cross_server_opener(
+    result: TargetResult, opts: dict
+) -> Callable[[str], MCPSessionProtocol | None]:
     """Open one peer session per step. The caller closes it."""
     from mcpnuke.core.session import detect_transport
 
@@ -342,8 +352,8 @@ def _cross_target_shadows(
 
 
 def _chain_finding(
-    chain,
-    verdict,
+    chain: ProposedChain,
+    verdict: ChainVerdict,
     shadowed: frozenset[str] | None = None,
 ) -> tuple[str, str] | None:
     """Severity and title for a replayed chain, or None to skip a halted one.
@@ -417,7 +427,7 @@ def _clip_text(value: object, limit: int) -> str:
     return text[:limit]
 
 
-def _finding_digest(finding) -> dict:
+def _finding_digest(finding: Finding) -> dict:
     """What chain reasoning needs from a finding to argue about a data path.
 
     The title alone says a class of problem exists somewhere; the detail,
@@ -640,9 +650,9 @@ def run_llm_analysis(
     result: TargetResult,
     probe_opts: dict | None = None,
     model: str = DEFAULT_CLAUDE_MODEL,
-    console=None,
+    console: Console | None = None,
     llm_backend: LLMBackend | None = None,
-):
+) -> None:
     """Run all LLM-powered analysis phases against a scan result.
 
     Phase 1: Analyze tool definitions for subtle issues

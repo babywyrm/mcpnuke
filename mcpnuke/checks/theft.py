@@ -12,7 +12,7 @@ from mcpnuke.patterns.rules import TOKEN_THEFT_PATTERNS
 _add = lane_tagged(lane=2, transport="A")
 
 
-def check_token_theft(result: TargetResult):
+def check_token_theft(result: TargetResult) -> None:
     with time_check("token_theft", result):
         for tool in result.tools:
             name = tool.get("name", "")

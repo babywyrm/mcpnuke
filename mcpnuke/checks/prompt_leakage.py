@@ -7,7 +7,7 @@ from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.rules import PROMPT_LEAKAGE_PATTERNS
 
 
-def check_prompt_leakage(result: TargetResult):
+def check_prompt_leakage(result: TargetResult) -> None:
     """Flag tools that may echo, log, or expose user prompts or internal instructions."""
     with time_check("prompt_leakage", result):
         for tool in result.tools:

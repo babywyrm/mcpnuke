@@ -32,7 +32,7 @@ WEBHOOK_NAME_PATTERNS = [
 ]
 
 
-def check_webhook_persistence(result: TargetResult):
+def check_webhook_persistence(result: TargetResult) -> None:
     with time_check("webhook_persistence", result):
         for tool in result.tools:
             name = tool.get("name", "")

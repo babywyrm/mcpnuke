@@ -46,7 +46,7 @@ _WRITE_TOOL_KEYWORDS: frozenset[str] = frozenset({
 })
 
 
-def _normalize_audiences(aud_claim) -> list[str]:
+def _normalize_audiences(aud_claim: object) -> list[str]:
     """RFC 9068: aud may be string or array of strings. Normalize to list."""
     if isinstance(aud_claim, str):
         return [aud_claim]

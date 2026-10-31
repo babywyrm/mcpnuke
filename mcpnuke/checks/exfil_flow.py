@@ -118,7 +118,7 @@ def check_exfil_flow(
     result: TargetResult,
     session: MCPSessionProtocol | None = None,
     probe_opts: dict | None = None,
-):
+) -> None:
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
     with time_check("exfil_flow", result):

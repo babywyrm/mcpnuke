@@ -48,7 +48,7 @@ INTERNAL_INDICATORS = [
 ]
 
 
-def check_ssrf_probe(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None):
+def check_ssrf_probe(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
     opts = probe_opts or {}
     _log = opts.get("_log", lambda msg: None)
     with time_check("ssrf_probe", result):
