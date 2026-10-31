@@ -37,9 +37,6 @@ dev = [
     "mypy>=1.13",
     "types-PyYAML>=6.0",
 ]
-k8s = [
-    "kubernetes>=31.0",
-]
 ai = [
     "anthropic>=0.40",
     "boto3>=1.35",
@@ -50,7 +47,7 @@ server = [
     "pydantic>=2.9",
 ]
 all = [
-    "mcpnuke[ai,k8s,server]",
+    "mcpnuke[ai,server]",
 ]
 
 [project.scripts]
@@ -128,7 +125,7 @@ warn_unused_configs = true
 module = ["mcpnuke.core.*", "mcpnuke.checks.*"]
 disallow_untyped_defs = true
 
-# Optional extras (ai, k8s, server). These are imported lazily inside
+# Optional extras (ai, server). These are imported lazily inside
 # functions and are absent from the base install and from CI, so mypy cannot
 # resolve them. pyyaml is a core dependency and gets real stubs instead, via
 # types-PyYAML in the dev extra.
@@ -138,7 +135,6 @@ module = [
     "boto3.*",
     "botocore.*",
     "fastapi.*",
-    "kubernetes.*",
     "pydantic.*",
     "uvicorn.*",
 ]

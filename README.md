@@ -100,9 +100,9 @@ pip install --user mcpnuke
 mcpnuke --doctor
 ```
 
-Optional extras: `ai` (Claude analysis), `k8s` (Kubernetes checks), `server`
-(the `mcpnuke-runner` HTTP job API), `all` (everything). The scanner itself
-needs none of them — `uv tool install 'mcpnuke[all]'` if you want the lot.
+Optional extras: `ai` (Claude analysis), `server` (the `mcpnuke-runner` HTTP
+job API), `all` (everything). The scanner itself, Kubernetes checks
+included, needs none of them — `uv tool install 'mcpnuke[all]'` if you want the lot.
 
 ### To work on mcpnuke
 

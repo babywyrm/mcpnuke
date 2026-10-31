@@ -8,6 +8,7 @@ hit one would be someone who just ran `pip install mcpnuke`.
 from __future__ import annotations
 
 import importlib
+import re
 import tomllib
 from pathlib import Path
 
@@ -19,7 +20,7 @@ _PYPROJECT = _ROOT / "pyproject.toml"
 # Distribution names supplied only by optional extras. A console script that
 # needs one of these at import time is broken in a base install.
 _OPTIONAL_MODULES: frozenset[str] = frozenset({
-    "anthropic", "boto3", "botocore", "fastapi", "kubernetes", "pydantic", "uvicorn",
+    "anthropic", "boto3", "botocore", "fastapi", "pydantic", "uvicorn",
 })
 
 
@@ -91,3 +92,29 @@ def test_version_is_a_release_number_not_a_local_or_dev_marker():
     version = _config()["project"]["version"]
     assert "+" not in version, f"local version identifier: {version}"
     assert not version.endswith((".dev", "dev0")), version
+
+
+def _extra_requirements() -> list[str]:
+    extras = _config()["project"]["optional-dependencies"]
+    return [
+        re.split(r"[<>=!~\[;\s]", req, maxsplit=1)[0].lower()
+        for name, reqs in extras.items()
+        if name not in {"dev", "all"}
+        for req in reqs
+    ]
+
+
+@pytest.mark.parametrize("dist", _extra_requirements())
+def test_every_extra_dependency_is_imported_by_the_package(dist):
+    """An extra nobody imports is install weight and supply-chain surface.
+
+    ``--doctor`` probing for a module is not a use, so ``__main__`` does
+    not count.
+    """
+    module = dist.replace("-", "_")
+    pattern = re.compile(rf"^\s*(?:import|from)\s+{re.escape(module)}\b", re.M)
+    users = [
+        p for p in (_ROOT / "mcpnuke").rglob("*.py")
+        if p.name != "__main__.py" and pattern.search(p.read_text())
+    ]
+    assert users, f"extra dependency {dist!r} is never imported by mcpnuke/"

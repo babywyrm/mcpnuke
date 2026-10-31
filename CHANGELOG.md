@@ -56,6 +56,11 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
+- **The `k8s` extra is gone.** It installed the `kubernetes` client and
+  22 transitive packages, but every Kubernetes code path uses `urllib`.
+  Kubernetes checks work in a base install. `--doctor` no longer warns
+  that they are disabled without it. `mcpnuke[all]` is now `ai` and
+  `server`.
 - **`mcpnuke.checks.*` enforces `disallow_untyped_defs`.** Every check
   and helper now declares its types, so mypy also checks the bodies it
   used to skip. `time_check` is a typed `contextmanager`; the lane

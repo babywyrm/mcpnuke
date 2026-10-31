@@ -42,7 +42,7 @@ Usage:
   install.sh [options]
 
 Options:
-  --extras <list>   Optional extras to install, e.g. all, ai, k8s, server
+  --extras <list>   Optional extras to install, e.g. all, ai, server
   --version <ver>   Install an exact version instead of the latest
   --from <spec>     Install from an explicit source: a local wheel, a git
                     URL, any pip requirement. Overrides --version.

@@ -172,15 +172,6 @@ def _run_doctor(console: Console) -> None:
     except ImportError:
         _warn("boto3 not installed — --bedrock disabled", "uv pip install 'mcpnuke[ai]'  or:  pip install boto3")
 
-    # Optional: K8s
-    try:
-        import kubernetes
-        ver = getattr(kubernetes, "__version__", "?")
-        _ok(f"kubernetes {ver}  [dim](extra: k8s)[/dim]")
-    except ImportError:
-        _warn("kubernetes not installed — K8s discovery/checks disabled",
-              "uv pip install 'mcpnuke[k8s]'  or:  pip install kubernetes")
-
     # Env vars
     import os
     if os.environ.get("ANTHROPIC_API_KEY"):
