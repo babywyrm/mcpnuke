@@ -66,7 +66,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     @property
     def _listener(self) -> CanaryListener:
-        return cast("CanaryListener", self.server._listener)  # type: ignore[attr-defined]
+        return cast(_CanaryServer, self.server).listener
 
     def _record(self, method: str) -> None:
         length = int(self.headers.get("Content-Length") or 0)
@@ -105,6 +105,12 @@ class _Handler(BaseHTTPRequestHandler):
         self._record("OPTIONS")
 
 
+class _CanaryServer(ThreadingHTTPServer):
+    def __init__(self, address: tuple[str, int], listener: CanaryListener) -> None:
+        super().__init__(address, _Handler)
+        self.listener = listener
+
+
 class CanaryListener:
     """Issues canary URLs and records who calls them back.
 
@@ -126,7 +132,7 @@ class CanaryListener:
         self._host = host
         self._requested_port = port
         self._advertised_host = advertised_host
-        self._server: ThreadingHTTPServer | None = None
+        self._server: _CanaryServer | None = None
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
         self._callbacks: list[Callback] = []
@@ -137,8 +143,7 @@ class CanaryListener:
     def start(self) -> CanaryListener:
         if self._server is not None:
             return self
-        server = ThreadingHTTPServer((self._host, self._requested_port), _Handler)
-        server._listener = self  # type: ignore[attr-defined]
+        server = _CanaryServer((self._host, self._requested_port), self)
         self._server = server
         self._thread = threading.Thread(
             target=lambda: server.serve_forever(poll_interval=_SHUTDOWN_POLL_SECONDS),
