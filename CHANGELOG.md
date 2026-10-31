@@ -6,6 +6,14 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **OWASP lab and `shadow_mcp_server`.** `tests/owasp_lab` is an
+  unauthenticated stdlib server with one planted marker per OWASP MCP
+  Top 10 category. It is not the hardened reference target, and
+  `tools/call` returns a fixed string. MCP09 has no taxonomy ID. The
+  new static check flags a manifest that recruits an MCP endpoint
+  other than the server being scanned. The scanned server's own URL
+  is not a finding.
+
 - **`--lab-coverage PROFILE`.** Print which labs in a target profile
   have a check that can attribute their threat ID. A lab is the
   tool-name prefix before the first dot. A lab is a gap when none of

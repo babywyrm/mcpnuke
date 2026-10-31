@@ -1,7 +1,7 @@
 # Security Checks Reference
 
 Every check mcpnuke runs, with the severity it emits and what it detects.
-103 checks in total: 79 in the check inventory in `mcpnuke/checks/__init__.py`,
+104 checks in total: 80 in the check inventory in `mcpnuke/checks/__init__.py`,
 plus the 24 deep behavioral probes `_build_deep_checks()` assembles.
 
 Three conventions worth knowing before reading the tables:
@@ -118,6 +118,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | `remote_package_execution` | CRITICAL–HIGH | Tools that fetch and then execute remote code (`curl … \| sh`, install-from-URL, remote script eval). Severity comes from the matched probe pattern. MCP-T08 |
 | `agentic_loop` | HIGH–LOW | A parameter naming another tool or function to call is HIGH; an unbounded iteration/repeat parameter is MEDIUM; orchestration language in the description alone is LOW. MCP-T10 |
 | `insecure_agent_comms` | HIGH–MEDIUM | Agent-to-agent message passing with no signature, HMAC or attestation parameter. HIGH when the tool is explicitly agent messaging, MEDIUM when only inferred from a payload parameter plus unsigned-transport language. MCP-T13 |
+| `shadow_mcp_server` | HIGH | A tool description tells the client to attach an MCP endpoint that is not the server being scanned. The scanned server's own URL is ignored. This is the scanner-visible half of OWASP MCP09; which hosts an operator approved is still outside one scan |
 | `model_routing` | CRITICAL–MEDIUM | A model-management tool name is CRITICAL; a caller-supplied model/provider parameter is HIGH; routing language in the description alone is MEDIUM. MCP-T15 |
 | `notification_sampling_abuse` | MEDIUM | Tools that push notifications to the client or sample the client's model — side-channel and DoS surface. MCP-T17 |
 | `role_escalation_tool` | HIGH | Tools that grant, assume, elevate or impersonate a role. MCP-T28 |

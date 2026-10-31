@@ -7,6 +7,9 @@ Measured by `tests/test_false_positives.py`, which runs the real pipeline
 hardened reference target in `tests/reference_target/`. It runs in default CI —
 no Docker, no external lab, no environment gate.
 
+The positive fixture is `tests/owasp_lab`: one planted marker per OWASP
+MCP Top 10 category. Those markers stay out of this server.
+
 The same fixture is measured over **two transports**, because for a while it
 was measured over one:
 
@@ -123,8 +126,9 @@ park false positives and the number stops meaning anything.
 
 ## What the gate does and does not cover
 
-Seventy checks execute against the reference target, including all the static
-checks and the full JWT set. Three lanes are **not** measured:
+Every static check in the inventory runs against the reference target,
+including `shadow_mcp_server`, along with the JWT set and the behavioral
+probes this fixture can reach. Three lanes are **not** measured:
 
 - **The AI lane.** `--claude`, chain replay and OAST are never exercised, so
   the loudest findings mcpnuke can produce have no false-positive measurement.

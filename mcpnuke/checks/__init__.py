@@ -87,6 +87,7 @@ from mcpnuke.checks.sdk_cache_tamper import (
     check_sdk_cache_poisoning,
     check_sdk_cache_tamper,
 )
+from mcpnuke.checks.shadow_mcp_server import check_shadow_mcp_server
 from mcpnuke.checks.shell_injection import check_shell_injection
 from mcpnuke.checks.ssrf_probe import check_ssrf_probe
 from mcpnuke.checks.supply_chain import check_supply_chain
@@ -204,6 +205,7 @@ _STATIC_CHECK_NAMES: tuple[str, ...] = (
     "remote_package_execution",
     "agentic_loop",
     "insecure_agent_comms",
+    "shadow_mcp_server",
     "model_routing",
     "notification_sampling_abuse",
     "delegation_depth",
@@ -549,6 +551,7 @@ def run_all_checks(
     _run("remote_package_execution", check_remote_package_execution, result)
     _run("agentic_loop", check_agentic_loop, result)
     _run("insecure_agent_comms", check_insecure_agent_comms, result)
+    _run("shadow_mcp_server", check_shadow_mcp_server, result)
     _run("model_routing", check_model_routing, result)
     _run("notification_sampling_abuse", check_notification_sampling_abuse, result)
     _run("delegation_depth", check_delegation_depth, result)

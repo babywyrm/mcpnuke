@@ -31,10 +31,10 @@ OWASP_MCP_TOP10: dict[str, str] = {
     "MCP10": "Context Injection & Over-Sharing",
 }
 
-# agentic-sec taxonomy_id -> OWASP MCP category. Curated per threat title;
-# MCP09 (Shadow MCP Servers) is a deployment-governance risk no tool-scan
-# finding maps to — it shows as a coverage gap in the report, which is the
-# point of an alignment view.
+# agentic-sec taxonomy_id -> OWASP MCP category. Curated per threat title.
+# MCP09 (Shadow MCP Servers) has no taxonomy ID: a scan cannot know which
+# hosts an operator approved. check_shadow_mcp_server is the visible half
+# (a manifest recruiting some other MCP endpoint) and maps by check name.
 TAXONOMY_TO_OWASP: dict[str, str] = {
     "MCP-T01": "MCP06",  # Direct Prompt Injection
     "MCP-T02": "MCP06",  # Indirect Prompt Injection
@@ -119,6 +119,7 @@ CHECK_TO_OWASP: dict[str, str] = {
     # through an MCP tool). Same OWASP bucket as actuator_probe: an
     # unauthenticated discovery endpoint.
     "teleport_proxy_discovery": "MCP07",
+    "shadow_mcp_server": "MCP09",
 }
 
 

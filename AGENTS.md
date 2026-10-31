@@ -87,6 +87,9 @@ These exist because each one broke once. Do not route around them:
   check inventory, never hardcoded.
 - `tests/test_docs_current.py` — README/docs structure, link resolution, and
   stated check counts are all asserted. Update docs with code.
+- `tests/test_owasp_lab.py` — the positive fixture lights every OWASP
+  category from its planted marker. `tests/reference_target` stays the
+  quiet server. Plant markers only in the lab.
 
 ## What To Use When
 

@@ -40,7 +40,7 @@ profile have a check for their threat ID.
 
 | Area | State |
 |------|-------|
-| Static metadata analysis (schema, permissions, credentials) | **Strong** — 50 static checks |
+| Static metadata analysis (schema, permissions, credentials) | **Strong** — 51 static checks |
 | Behavioral probes (tool invocation, SSRF, injection, exfil) | **Strong** — 4 light + 24 deep probes |
 | AI-augmented analysis (Claude + Ollama) | **Strong** — 4-phase analysis, ensemble consensus; Phase 4 chain replay, cross-server steps, and trust sets as of 6.21.0 |
 | Transport security (JWT, DPoP, SSE) | **Strong** — 8 JWT, 3 DPoP, 1 SSE |

@@ -226,7 +226,7 @@ all of it against DVMCP, is in **[docs/methodology.md](docs/methodology.md)**.
 
 ## Security Checks
 
-mcpnuke runs 103 checks across static, behavioral, infrastructure and aggregate
+mcpnuke runs 104 checks across static, behavioral, infrastructure and aggregate
 phases, covering 54 of 57 threat IDs (95%) in the agentic-sec threat taxonomy.
 See **[docs/checks.md](docs/checks.md)** for the full inventory with severities
 and detection notes.
@@ -238,9 +238,12 @@ and detection notes.
 Every lane-scoped finding carries an **identity lane** (1–5, the *who*:
 human-direct → anonymous) and a **transport** (A–E, the *how*: MCP JSON-RPC
 through native LLM function-calling), resolved automatically from the
-agentic-sec taxonomy. `--by-lane` groups findings per lane;
-`--owasp` maps them onto the OWASP MCP Top 10 (2025) alignment view;
+agentic-sec taxonomy. `--by-lane` groups findings per lane.
+`--owasp` maps them onto the OWASP MCP Top 10 (2025) alignment view.
 `--coverage-report` intersects them with a live camazotz lane corpus.
+`tests/owasp_lab` is the positive fixture for that report, one planted
+marker per category. `tests/reference_target` is the quiet server, and
+those markers stay out of it.
 
 Full tables and reporting guide: **[docs/lanes.md](docs/lanes.md)**.
 
