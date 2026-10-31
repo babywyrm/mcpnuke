@@ -325,7 +325,7 @@ def run_parallel(
 
     with progress:
 
-        def worker(url: str):
+        def worker(url: str) -> None:
             with lock:
                 snapshot = list(results)
             r = scan_target(

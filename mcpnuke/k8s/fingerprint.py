@@ -10,6 +10,8 @@ Supports parallel probing for clusters with many services.
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 
+from rich.console import Console
+
 from mcpnuke.core.models import Finding
 
 _ACTUATOR_PATHS = [
@@ -148,7 +150,7 @@ def fingerprint_services(
     namespace: str,
     token: str,
     fingerprint_workers: int = 10,
-    console=None,
+    console: Console | None = None,
 ) -> list[ServiceFingerprint]:
     """Fingerprint all services in a namespace for frameworks and exposed endpoints.
 

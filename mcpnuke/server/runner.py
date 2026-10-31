@@ -78,7 +78,7 @@ def _coverage(results: list, coverage_url: str) -> dict:
         return {"error": "unreachable", "detail": f"{type(exc).__name__}: {exc}"}
 
 
-def _scan_worker(req_dict: dict, q) -> None:
+def _scan_worker(req_dict: dict, q: mp.Queue) -> None:
     """Run a single scan in a child process and put the result on the queue.
 
     Must be a top-level function so it's picklable under the spawn start
@@ -145,7 +145,7 @@ class JobManager:
         with self._lock:
             return sorted(self._jobs.values(), key=lambda j: j.created_at, reverse=True)
 
-    def _set(self, job_id: str, **fields) -> None:
+    def _set(self, job_id: str, **fields: object) -> None:
         with self._lock:
             job = self._jobs.get(job_id)
             if job is None:

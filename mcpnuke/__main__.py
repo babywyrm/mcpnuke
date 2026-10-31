@@ -14,6 +14,7 @@ import argparse
 import sys
 import time
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.panel import Panel
@@ -44,6 +45,9 @@ from mcpnuke.diff import (
 from mcpnuke.k8s import discover_services, fingerprint_services, run_k8s_checks
 from mcpnuke.reporting import print_report, write_json, write_sarif
 from mcpnuke.scanner import run_parallel, scan_stdio_target, scan_target
+
+if TYPE_CHECKING:
+    from mcpnuke.core.oast import CanaryListener
 
 EXIT_CLEAN = 0
 EXIT_FINDINGS = 1
@@ -259,7 +263,7 @@ def _run_diff_subcommand(argv: list[str]) -> None:
         sys.exit(1)
 
 
-def _start_oast(args: argparse.Namespace, console: Console):
+def _start_oast(args: argparse.Namespace, console: Console) -> "CanaryListener | None":
     """Bring up the callback listener when --oast is set.
 
     Returns None when the flag is off or the socket cannot be bound. A listener

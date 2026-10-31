@@ -18,6 +18,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
+from rich.console import Console
+
 MCP_ANNOTATION_ENABLED = "mcp.io/enabled"
 MCP_ANNOTATION_TRANSPORT = "mcp.io/transport"
 MCP_ANNOTATION_PATH = "mcp.io/path"
@@ -179,7 +181,7 @@ def discover_services(
     extra_ports: set[int] | None = None,
     discovery_workers: int = 10,
     max_endpoints: int | None = None,
-    console=None,
+    console: Console | None = None,
     api_url: str | None = None,
     token: str | None = None,
 ) -> list[DiscoveredEndpoint]:

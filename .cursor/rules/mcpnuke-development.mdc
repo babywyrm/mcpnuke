@@ -37,7 +37,7 @@ All development on mcpnuke follows the superpowers skills framework:
 - Minimum 3 tests per check: positive detection, clean/negative, timing recorded
 - Use `conftest.py` fixtures: `result_with_tools([{...}])`
 - Full suite must pass before any commit: 0 failed. Do not cite a hardcoded pass count.
-- Also green before committing: `ruff check .` at zero, `mypy mcpnuke/` at or below the CI ceiling. `mcpnuke.core.*` and `mcpnuke.checks.*` additionally enforce `disallow_untyped_defs`
+- Also green before committing: `ruff check .` at zero, `mypy mcpnuke/` at or below the CI ceiling. The whole package enforces `disallow_untyped_defs`
 - DVMCP live tests gated behind `DVMCP_LIVE=1`
 
 ## Architecture Quick Reference

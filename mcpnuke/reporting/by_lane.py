@@ -15,6 +15,8 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable
 from typing import Any
 
+from rich.console import Console
+
 from mcpnuke.core.models import Finding, TargetResult
 
 # Canonical lane vocabulary — must match camazotz /api/lanes schema v1
@@ -126,7 +128,7 @@ def build_by_lane(results: list[TargetResult]) -> dict[str, Any]:
     return out
 
 
-def print_by_lane(results: list[TargetResult], console=None) -> None:
+def print_by_lane(results: list[TargetResult], console: Console | None = None) -> None:
     """Render the by-lane report to a Rich console (or stdout)."""
     from mcpnuke.core.constants import SEV_COLOR
 

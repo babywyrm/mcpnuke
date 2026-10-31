@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from rich.console import Console
+
     from mcpnuke.core.models import TargetResult
 
 
@@ -179,7 +181,7 @@ def load_baseline(path: str | Path) -> dict[str, dict]:
     return {t["url"]: t for t in targets if isinstance(t, dict) and "url" in t}
 
 
-def save_baseline(results: list, path: str | Path, console=None):
+def save_baseline(results: list, path: str | Path, console: Console | None = None) -> None:
     """Save current scan results as baseline JSON."""
     from mcpnuke.core.models import TargetResult
 
@@ -207,7 +209,9 @@ def save_baseline(results: list, path: str | Path, console=None):
         console.print(f"\n[green]Baseline saved → {path}[/green]")
 
 
-def print_diff_report(diff_results: list[DiffResult], baseline_path: str, console=None):
+def print_diff_report(
+    diff_results: list[DiffResult], baseline_path: str, console: Console | None = None
+) -> None:
     """Print differential scan report to console."""
     if not console:
         from rich.console import Console

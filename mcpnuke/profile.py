@@ -40,7 +40,7 @@ class ProfileData:
     # Built index: tool_name -> tool dict
     _index: dict[str, dict] = field(default_factory=dict, repr=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._index = {t["name"]: t for t in self.tools if "name" in t}
 
 

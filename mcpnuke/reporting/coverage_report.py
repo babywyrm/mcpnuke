@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+from rich.console import Console
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.reporting.by_lane import LANE_NAMES, LANE_SLUGS, build_by_lane
@@ -184,7 +185,7 @@ def build_coverage_report(
     return out
 
 
-def print_coverage_report(report: dict[str, Any], console=None) -> None:
+def print_coverage_report(report: dict[str, Any], console: Console | None = None) -> None:
     """Render the coverage report to console."""
     def _w(line: str = "") -> None:
         if console is not None:

@@ -6,6 +6,8 @@ from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
 
+from rich.console import Console
+
 from mcpnuke.core.models import TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 from mcpnuke.reporting.owasp import build_owasp
@@ -163,10 +165,10 @@ def build_report(results: list[TargetResult], *, include_k8s: bool = True) -> di
 def write_json(
     results: list[TargetResult],
     path: str,
-    console=None,
+    console: Console | None = None,
     *,
     taxonomy_coverage: dict | None = None,
-):
+) -> None:
     report = build_report(results)
     if taxonomy_coverage is not None:
         report["taxonomy_coverage"] = taxonomy_coverage

@@ -118,11 +118,8 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
-
-# core/ and checks/ are fully annotated, so they hold the stricter line: a new
-# function there must declare its types.
-[[tool.mypy.overrides]]
-module = ["mcpnuke.core.*", "mcpnuke.checks.*"]
+# Every function declares its types. mypy skips the body of an unannotated
+# function, so an untyped def is code the checker never reads.
 disallow_untyped_defs = true
 
 # Optional extras (ai, server). These are imported lazily inside

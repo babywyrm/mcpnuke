@@ -6,6 +6,8 @@ import json
 import os
 from typing import Any
 
+from rich.console import Console
+
 from mcpnuke.core.models import Finding
 from mcpnuke.k8s.discovery import k8s_ssl_context
 
@@ -35,7 +37,7 @@ def _k8s_get(path: str, token: str, api_url: str | None = None) -> dict | None:
         return None
 
 
-def _scan_helm(sname: str, obj: Any, path: str):
+def _scan_helm(sname: str, obj: Any, path: str) -> None:
     if isinstance(obj, dict):
         for k, v in obj.items():
             np = f"{path}.{k}" if path else k
@@ -65,7 +67,7 @@ def _scan_helm(sname: str, obj: Any, path: str):
             _scan_helm(sname, item, f"{path}[{i}]")
 
 
-def _check_pod_security(pod: dict, namespace: str):
+def _check_pod_security(pod: dict, namespace: str) -> None:
     """Analyze a pod spec for security misconfigurations."""
     meta = pod.get("metadata", {})
     pod_name = meta.get("name", "?")
@@ -133,7 +135,7 @@ def _check_pod_security(pod: dict, namespace: str):
             ))
 
 
-def _check_configmap_leaks(cm: dict, namespace: str):
+def _check_configmap_leaks(cm: dict, namespace: str) -> None:
     """Scan ConfigMap data for leaked secrets."""
     name = cm.get("metadata", {}).get("name", "?")
     for key, value in cm.get("data", {}).items():
@@ -151,7 +153,9 @@ def _check_configmap_leaks(cm: dict, namespace: str):
             ))
 
 
-def _check_sa_blast_radius(namespace: str, token: str, console=None, api_url: str | None = None):
+def _check_sa_blast_radius(
+    namespace: str, token: str, console: Console | None = None, api_url: str | None = None
+) -> None:
     """Map effective permissions for each ServiceAccount in the namespace.
 
     Uses SelfSubjectRulesReview to enumerate what each SA can do, then
@@ -256,7 +260,9 @@ def _check_sa_blast_radius(namespace: str, token: str, console=None, api_url: st
                 console.print(f"  [dim]  {sa_name}{pod_label}: {perm_count} rules, no elevated risk[/dim]")
 
 
-def _check_helm_version_drift(namespace: str, token: str, console=None, api_url: str | None = None):
+def _check_helm_version_drift(
+    namespace: str, token: str, console: Console | None = None, api_url: str | None = None
+) -> None:
     """Compare Helm release versions to find credentials removed in newer releases.
 
     When operators rotate secrets and upgrade a Helm release, the old release
@@ -369,7 +375,7 @@ def _flatten_values(obj: Any, prefix: str = "") -> dict[str, Any]:
     return flat
 
 
-def _check_network_policies(namespace: str, token: str, api_url: str | None = None):
+def _check_network_policies(namespace: str, token: str, api_url: str | None = None) -> None:
     """Check if network policies exist in the namespace."""
     data = _k8s_get(
         f"/apis/networking.k8s.io/v1/namespaces/{namespace}/networkpolicies",
@@ -400,7 +406,7 @@ _SESSION_TOKEN_PATHS = [
 _TOKEN_FILE_INDICATORS = ["access_token", "refresh_token", "Bearer", "eyJ"]
 
 
-def _check_hostnetwork_loopback(pods_data: dict | None, namespace: str):
+def _check_hostnetwork_loopback(pods_data: dict | None, namespace: str) -> None:
     """Flag pods with hostNetwork that can bridge to host-bound services (MCP-T58)."""
     if not pods_data:
         return
@@ -433,7 +439,7 @@ def _check_hostnetwork_loopback(pods_data: dict | None, namespace: str):
 def _check_session_token_exposure(
     pods_data: dict | None, namespace: str,
     token: str = "", api_url: str | None = None,
-):
+) -> None:
     """Detect plaintext session/token files in pod temp directories (MCP-T57).
 
     Requires exec permissions on pods — will silently skip if forbidden.
@@ -492,7 +498,12 @@ def _check_session_token_exposure(
                 break
 
 
-def run_k8s_checks(namespace: str, console=None, api_url: str | None = None, token: str | None = None):
+def run_k8s_checks(
+    namespace: str,
+    console: Console | None = None,
+    api_url: str | None = None,
+    token: str | None = None,
+) -> None:
     """Run K8s security checks.
 
     Works both in-cluster (auto-detects SA token) and externally

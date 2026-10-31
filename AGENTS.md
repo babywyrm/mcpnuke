@@ -26,10 +26,9 @@ uv run ruff check .           # must be zero
 uv run mypy mcpnuke/          # must stay at or below the CI ceiling
 ```
 
-CI gates all four on every push and PR. `mcpnuke/core/` and
-`mcpnuke/checks/` additionally enforce `disallow_untyped_defs`. If you edit
-`pyproject.toml`, run `uv lock` and commit `uv.lock` — CI checks they are in
-sync.
+CI gates all four on every push and PR. mypy enforces
+`disallow_untyped_defs` across the package. If you edit `pyproject.toml`, run
+`uv lock` and commit `uv.lock` — CI checks they are in sync.
 
 ## Code conventions
 

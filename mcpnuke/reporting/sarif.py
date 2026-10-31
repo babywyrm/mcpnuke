@@ -6,6 +6,8 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
+from rich.console import Console
+
 from mcpnuke import __version__
 from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.reporting.priority import guidance_for_finding
@@ -151,7 +153,7 @@ def build_sarif(results: list[TargetResult]) -> dict[str, Any]:
     }
 
 
-def write_sarif(results: list[TargetResult], path: str, console=None) -> None:
+def write_sarif(results: list[TargetResult], path: str, console: Console | None = None) -> None:
     """Write SARIF 2.1.0 report to path."""
     sarif = build_sarif(results)
     with open(path, "w") as fh:

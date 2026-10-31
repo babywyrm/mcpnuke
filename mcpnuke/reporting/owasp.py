@@ -15,6 +15,8 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable
 from typing import Any
 
+from rich.console import Console
+
 from mcpnuke.core.models import Finding, TargetResult
 
 # Canonical OWASP MCP Top 10 (2025), in order.
@@ -179,7 +181,7 @@ def build_owasp(results: list[TargetResult]) -> dict[str, Any]:
     return out
 
 
-def print_owasp(results: list[TargetResult], console=None) -> None:
+def print_owasp(results: list[TargetResult], console: Console | None = None) -> None:
     """Render the OWASP MCP Top 10 alignment report."""
     from mcpnuke.core.constants import SEV_COLOR
 

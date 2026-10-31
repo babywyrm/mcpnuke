@@ -61,8 +61,8 @@ All notable changes to this submodule are documented here.
   Kubernetes checks work in a base install. `--doctor` no longer warns
   that they are disabled without it. `mcpnuke[all]` is now `ai` and
   `server`.
-- **`mcpnuke.checks.*` enforces `disallow_untyped_defs`.** Every check
-  and helper now declares its types, so mypy also checks the bodies it
+- **The whole package enforces `disallow_untyped_defs`.** Every
+  function now declares its types, so mypy also checks the bodies it
   used to skip. `time_check` is a typed `contextmanager`; the lane
   wrapper is a `functools.partial` over `TargetResult.add`.
 - **SARIF carries the remediation.** Each result has the priority
