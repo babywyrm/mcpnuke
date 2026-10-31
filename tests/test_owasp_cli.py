@@ -40,7 +40,7 @@ def _alignment_markdown(buckets: dict[str, Any]) -> str:
 
 
 def _publish_alignment(text: str) -> None:
-    print(text, flush=True)
+    """Append to the Actions summary. Printing stays with the caller."""
     dest = os.environ.get("GITHUB_STEP_SUMMARY")
     if not dest:
         return
@@ -114,4 +114,6 @@ def test_cli_owasp_report_lights_every_category(tmp_path: Path) -> None:
     visible = re.sub(r"\x1b\[[0-9;]*m", "", proc.stdout)
     start = visible.find("OWASP MCP Top 10 alignment")
     print(visible[start:] if start != -1 else visible, flush=True)
-    _publish_alignment(_alignment_markdown(buckets))
+    table = _alignment_markdown(buckets)
+    print(table, flush=True)
+    _publish_alignment(table)
