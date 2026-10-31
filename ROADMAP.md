@@ -32,7 +32,11 @@ and verify, and the rule help repeats them. **`--taxonomy-coverage`**
 — pass, fail, or untested for each vendored MCP-T ID, with no camazotz.
 **`--watch SECONDS`** — re-scan until interrupted and print the lane
 finding-count delta. **`--lab-coverage`** — which labs in a target
-profile have a check for their threat ID.
+profile have a check for their threat ID. **OWASP lab** —
+`tests/owasp_lab` plants one marker per MCP Top 10 category, CI prints
+the alignment, and `shadow_mcp_server` is the scanner-visible half of
+MCP09. **Runner token** — `MCPNUKE_RUNNER_TOKEN`, when set, requires a
+bearer on `/scans`. `/health` stays open.
 
 ---
 
