@@ -20,6 +20,7 @@ from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.enumerator import enumerate_server
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.session import StdioSession, ToolServerSession, detect_transport
+from mcpnuke.core.transports.base import MCPSessionProtocol
 
 console = Console()
 
@@ -48,6 +49,48 @@ def _stdio_short_label(cmd: str) -> str:
         if name and name not in ("npx", "node", "python", "python3", "uv", "-y"):
             return f"stdio://{name}"
     return f"stdio://{parts[-1]}" if parts else "stdio://unknown"
+
+
+def _run_ai_analysis(
+    session: MCPSessionProtocol,
+    result: TargetResult,
+    opts: dict,
+    _log: Callable[[str], None],
+) -> None:
+    """Optional AI pass after the deterministic checks: Claude or Ollama."""
+    if opts.get("claude"):
+        from mcpnuke.checks.llm_analysis import run_llm_analysis
+        run_llm_analysis(
+            session, result,
+            probe_opts=opts,
+            model=opts.get("claude_model", DEFAULT_CLAUDE_MODEL),
+            console=console,
+        )
+    elif opts.get("ollama_analysis"):
+        from mcpnuke.core.llm_ollama import OllamaBackend, run_ensemble_analysis
+        ollama_host = opts["ollama_analysis"]
+        ensemble_spec = opts.get("ollama_ensemble")
+        if ensemble_spec:
+            models = [m.strip() for m in ensemble_spec.replace(",", " ").split() if m.strip()]
+            _log(f"  [cyan]AI backend: Ollama ensemble ({ollama_host}, {len(models)} models)[/cyan]")
+            run_ensemble_analysis(
+                session, result,
+                host=ollama_host,
+                models=models,
+                probe_opts=opts,
+                console=console,
+            )
+        else:
+            from mcpnuke.checks.llm_analysis import run_llm_analysis
+            ollama_model = opts.get("ollama_model", "qwen2.5:14b")
+            _log(f"  [cyan]AI backend: Ollama ({ollama_host}, model={ollama_model})[/cyan]")
+            run_llm_analysis(
+                session, result,
+                probe_opts=opts,
+                model=ollama_model,
+                console=console,
+                llm_backend=OllamaBackend(host=ollama_host, model=ollama_model),
+            )
 
 
 def scan_stdio_target(
@@ -124,39 +167,7 @@ def scan_stdio_target(
     from mcpnuke.checks import run_cross_target_checks
     run_cross_target_checks([result], verbose=verbose)
 
-    if opts.get("claude"):
-        from mcpnuke.checks.llm_analysis import run_llm_analysis
-        run_llm_analysis(
-            session, result,
-            probe_opts=opts,
-            model=opts.get("claude_model", DEFAULT_CLAUDE_MODEL),
-            console=console,
-        )
-    elif opts.get("ollama_analysis"):
-        from mcpnuke.core.llm_ollama import OllamaBackend, run_ensemble_analysis
-        ollama_host = opts["ollama_analysis"]
-        ensemble_spec = opts.get("ollama_ensemble")
-        if ensemble_spec:
-            models = [m.strip() for m in ensemble_spec.replace(",", " ").split() if m.strip()]
-            _log(f"  [cyan]AI backend: Ollama ensemble ({ollama_host}, {len(models)} models)[/cyan]")
-            run_ensemble_analysis(
-                session, result,
-                host=ollama_host,
-                models=models,
-                probe_opts=opts,
-                console=console,
-            )
-        else:
-            from mcpnuke.checks.llm_analysis import run_llm_analysis
-            ollama_model = opts.get("ollama_model", "qwen2.5:14b")
-            _log(f"  [cyan]AI backend: Ollama ({ollama_host}, model={ollama_model})[/cyan]")
-            run_llm_analysis(
-                session, result,
-                probe_opts=opts,
-                model=ollama_model,
-                console=console,
-                llm_backend=OllamaBackend(host=ollama_host, model=ollama_model),
-            )
+    _run_ai_analysis(session, result, opts, _log)
 
     session.close()
     result.timings["total"] = time.time() - t_start
@@ -277,41 +288,7 @@ def scan_target(
         log=_log,
     )
 
-    # AI-powered analysis (optional, runs after deterministic checks)
-    if opts.get("claude"):
-        from mcpnuke.checks.llm_analysis import run_llm_analysis
-        claude_model = opts.get("claude_model", DEFAULT_CLAUDE_MODEL)
-        run_llm_analysis(
-            session, result,
-            probe_opts=probe_opts or {},
-            model=claude_model,
-            console=console,
-        )
-    elif opts.get("ollama_analysis"):
-        from mcpnuke.core.llm_ollama import OllamaBackend, run_ensemble_analysis
-        ollama_host = opts["ollama_analysis"]
-        ensemble_spec = opts.get("ollama_ensemble")
-        if ensemble_spec:
-            models = [m.strip() for m in ensemble_spec.replace(",", " ").split() if m.strip()]
-            _log(f"  [cyan]AI backend: Ollama ensemble ({ollama_host}, {len(models)} models)[/cyan]")
-            run_ensemble_analysis(
-                session, result,
-                host=ollama_host,
-                models=models,
-                probe_opts=probe_opts or {},
-                console=console,
-            )
-        else:
-            from mcpnuke.checks.llm_analysis import run_llm_analysis
-            ollama_model = opts.get("ollama_model", "qwen2.5:14b")
-            _log(f"  [cyan]AI backend: Ollama ({ollama_host}, model={ollama_model})[/cyan]")
-            run_llm_analysis(
-                session, result,
-                probe_opts=probe_opts or {},
-                model=ollama_model,
-                console=console,
-                llm_backend=OllamaBackend(host=ollama_host, model=ollama_model),
-            )
+    _run_ai_analysis(session, result, opts, _log)
 
     session.close()
     result.timings["total"] = time.time() - t_start
