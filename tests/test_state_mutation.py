@@ -1,4 +1,4 @@
-"""Tests for enhanced state mutation detection with write-then-read probes."""
+"""State mutation: tool classification and write-then-read probes."""
 
 from unittest.mock import MagicMock
 

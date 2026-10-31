@@ -1,4 +1,4 @@
-"""Tests for taxonomy_id extraction and JSON serialization."""
+"""LLM finding parsing: taxonomy_id extraction and JSON serialization."""
 
 import json
 
