@@ -376,6 +376,185 @@ def _watch_lanes(
         console.print("\n[dim]Watch stopped.[/dim]")
 
 
+def _base_probe_opts(
+    args: argparse.Namespace,
+    *,
+    extra_headers: dict[str, str],
+    probe_workers: int,
+    phase2_workers: int,
+    deterministic: bool,
+) -> dict:
+    """Probe options every scan mode shares, read straight from the CLI."""
+    return {
+        "no_invoke": args.no_invoke,
+        "safe_mode": args.safe_mode,
+        "probe_calls": args.probe_calls,
+        "max_pages": args.max_pages,
+        "protocol_mode": args.protocol_mode,
+        "jwt_max_ttl": args.jwt_max_ttl,
+        "tool_names_file": getattr(args, "tool_names_file", None),
+        "claude": args.claude,
+        "chain_replay": getattr(args, "chain_replay", False),
+        "chain_replay_retries": getattr(args, "chain_replay_retries", 1),
+        "cross_server": getattr(args, "cross_server", False),
+        "claude_model": args.claude_model,
+        "bedrock": args.bedrock,
+        "bedrock_region": args.bedrock_region,
+        "bedrock_profile": args.bedrock_profile,
+        "bedrock_model": args.bedrock_model,
+        "claude_max_tools": args.claude_max_tools,
+        "claude_phase2_workers": phase2_workers,
+        "ollama_analysis": getattr(args, "ollama_analysis", None),
+        "ollama_model": getattr(args, "ollama_model", "qwen2.5:14b"),
+        "ollama_ensemble": getattr(args, "ollama_ensemble", None),
+        "fast": args.fast,
+        "coverage_n": getattr(args, "coverage", None) or 0,
+        "probe_workers": probe_workers,
+        "deterministic": deterministic,
+        "tls_verify": args.tls_verify,
+        "extra_headers": extra_headers,
+        "inference_host": getattr(args, "inference_host", None),
+        "inference_scan": getattr(args, "inference", False) or bool(getattr(args, "inference_host", None)),
+        "inference_baseline": getattr(args, "inference_baseline", None),
+        "save_inference_baseline": getattr(args, "save_inference_baseline", None),
+        "error_reflection": getattr(args, "error_reflection", "downgrade"),
+    }
+
+
+def _report(args: argparse.Namespace, results: list[TargetResult], console: Console) -> None:
+    """Print and write every requested report. Shared by all scan modes."""
+    print_report(results, group_findings=args.group_findings, console=console)
+
+    taxonomy_coverage = _emit_taxonomy_coverage(args, results, console)
+    if args.json_out:
+        write_json(results, args.json_out, console=console, taxonomy_coverage=taxonomy_coverage)
+
+    if getattr(args, "sarif_out", None):
+        write_sarif(results, args.sarif_out, console=console)
+
+    if getattr(args, "diff_baseline", None):
+        from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal
+        if args.json_out:
+            try:
+                # Not `diff`: that name already holds a DiffResult from the
+                # inventory comparison above, an unrelated type.
+                scan_diff = compare_json_files(args.diff_baseline, args.json_out)
+                for result in results:
+                    result.scan_diff = scan_diff
+                console.print("\n[bold cyan]── Diff vs baseline ──[/bold cyan]")
+                console.print(format_diff_terminal(scan_diff))
+                # Re-write JSON with diff block attached
+                write_json(results, args.json_out, console=None, taxonomy_coverage=taxonomy_coverage)
+            except FileNotFoundError as exc:
+                console.print(f"[yellow]--diff-baseline: {exc}[/yellow]")
+        else:
+            console.print(
+                "[yellow]--diff-baseline requires --json to write current scan results first.[/yellow]"
+            )
+
+    if getattr(args, "policy_out", None):
+        from pathlib import Path as _PolicyPath
+
+        from mcpnuke.policy import generate_policy, serialize_policy
+        rules = generate_policy(results)
+
+        def _kv_pairs(items: list[str], flag: str) -> dict[str, str]:
+            out: dict[str, str] = {}
+            for item in items:
+                if "=" not in item:
+                    raise SystemExit(
+                        f"{flag} expects KEY=VALUE, got {item!r}"
+                    )
+                key, _, value = item.partition("=")
+                key, value = key.strip(), value.strip()
+                if not key:
+                    raise SystemExit(f"{flag} key may not be empty: {item!r}")
+                out[key] = value
+            return out
+
+        selector = _kv_pairs(
+            getattr(args, "policy_selector", []) or [], "--policy-selector"
+        )
+        meta_labels = _kv_pairs(
+            getattr(args, "policy_labels", []) or [], "--policy-labels"
+        )
+        yaml_str = serialize_policy(
+            rules,
+            name=getattr(args, "policy_name", "mcpnuke-recommended"),
+            namespace=getattr(args, "policy_namespace", "") or "",
+            selector_labels=selector,
+            metadata_labels=meta_labels,
+        )
+        _PolicyPath(args.policy_out).write_text(yaml_str)
+        scope = (
+            f"selector={selector}" if selector else "selector=ALL pods (broad)"
+        )
+        console.print(
+            f"\n[green]nullfield policy written to {args.policy_out} "
+            f"({len(rules)} rules, {scope})[/green]"
+        )
+
+    if getattr(args, "by_lane", False):
+        from mcpnuke.reporting import print_by_lane
+        print_by_lane(results, console=console)
+
+    if getattr(args, "owasp", False):
+        from mcpnuke.reporting import print_owasp
+        print_owasp(results, console=console)
+
+    if getattr(args, "coverage_report", None):
+        import httpx as _httpx
+
+        from mcpnuke.reporting import (
+            SchemaMismatchError,
+            build_coverage_report,
+            fetch_lane_taxonomy,
+            print_coverage_report,
+        )
+        try:
+            taxonomy = fetch_lane_taxonomy(args.coverage_report)
+            report = build_coverage_report(results, taxonomy)
+            print_coverage_report(report, console=console)
+        except SchemaMismatchError as exc:
+            console.print(f"\n[red]coverage-report: {exc}[/red]")
+        except _httpx.HTTPError as exc:
+            console.print(
+                f"\n[red]coverage-report: failed to fetch /api/lanes from "
+                f"{args.coverage_report}: {exc}[/red]"
+            )
+
+    # Taxonomy validation — checks that every finding's taxonomy_id is known
+    # to the agentic-sec threat taxonomy (default: vendored lanes.yaml).
+    # Surfaces silent vocabulary drift between checks and the canonical list.
+    if getattr(args, "taxonomy", None) is not None or any(
+        f.taxonomy_id for r in results for f in r.findings
+    ):
+        from mcpnuke.core.taxonomy import load_taxonomy
+        from mcpnuke.core.taxonomy import threat_ids as _tids
+        try:
+            tax = load_taxonomy(args.taxonomy)
+            valid = _tids(tax)
+            unknowns: dict[str, int] = {}
+            for r in results:
+                for f in r.findings:
+                    if f.taxonomy_id and f.taxonomy_id not in valid:
+                        unknowns[f.taxonomy_id] = unknowns.get(f.taxonomy_id, 0) + 1
+            source = args.taxonomy if args.taxonomy else "vendored lanes.yaml"
+            console.print(
+                f"\n[dim]Taxonomy: {len(valid)} threat IDs loaded from {source}[/dim]"
+            )
+            if unknowns:
+                console.print(
+                    "[yellow]Findings reference threat IDs not in the taxonomy:[/yellow]"
+                )
+                for tid, count in sorted(unknowns.items()):
+                    console.print(f"  [yellow]{tid}[/yellow]  ({count} finding(s))")
+        except FileNotFoundError as exc:
+            console.print(f"\n[red]--taxonomy: {exc}[/red]")
+        except Exception as exc:  # noqa: BLE001 - surface any taxonomy load issue clearly
+            console.print(f"\n[red]--taxonomy: failed to load: {exc}[/red]")
+
+
 def _main_inner() -> None:
     # Handle `mcpnuke diff a.json b.json` before full arg parse
     if len(sys.argv) >= 2 and sys.argv[1] == "diff":
@@ -473,39 +652,13 @@ def _main_inner() -> None:
 
     # --stdio mode: scan a local server via stdin/stdout, then exit
     if args.stdio:
-        probe_opts = {
-            "no_invoke": args.no_invoke,
-            "safe_mode": args.safe_mode,
-            "probe_calls": args.probe_calls,
-            "max_pages": args.max_pages,
-            "protocol_mode": args.protocol_mode,
-            "jwt_max_ttl": args.jwt_max_ttl,
-            "tool_names_file": getattr(args, "tool_names_file", None),
-            "claude": args.claude,
-            "chain_replay": getattr(args, "chain_replay", False),
-            "chain_replay_retries": getattr(args, "chain_replay_retries", 1),
-            "cross_server": getattr(args, "cross_server", False),
-            "claude_model": args.claude_model,
-            "bedrock": args.bedrock,
-            "bedrock_region": args.bedrock_region,
-            "bedrock_profile": args.bedrock_profile,
-            "bedrock_model": args.bedrock_model,
-            "claude_max_tools": args.claude_max_tools,
-            "claude_phase2_workers": effective_phase2_workers,
-            "ollama_analysis": getattr(args, "ollama_analysis", None),
-            "ollama_model": getattr(args, "ollama_model", "qwen2.5:14b"),
-            "ollama_ensemble": getattr(args, "ollama_ensemble", None),
-            "fast": args.fast,
-            "coverage_n": getattr(args, "coverage", None) or 0,
-            "probe_workers": effective_probe_workers,
-            "deterministic": deterministic_mode,
-            "tls_verify": args.tls_verify,
-            "extra_headers": extra_headers,
-            "inference_host": getattr(args, "inference_host", None),
-            "inference_scan": getattr(args, "inference", False) or bool(getattr(args, "inference_host", None)),
-            "inference_baseline": getattr(args, "inference_baseline", None),
-            "save_inference_baseline": getattr(args, "save_inference_baseline", None),
-        }
+        probe_opts = _base_probe_opts(
+            args,
+            extra_headers=extra_headers,
+            probe_workers=effective_probe_workers,
+            phase2_workers=effective_phase2_workers,
+            deterministic=deterministic_mode,
+        )
 
         panel_lines = [
             f"[bold cyan]mcpnuke v{__version__}[/bold cyan]  [dim]MCP Red Teaming & Security Scanner[/dim]",
@@ -525,14 +678,7 @@ def _main_inner() -> None:
             verbose=args.verbose,
             probe_opts=probe_opts,
         )
-        print_report([result], group_findings=args.group_findings, console=console)
-        taxonomy_coverage = _emit_taxonomy_coverage(args, [result], console)
-        if args.json_out:
-            write_json(
-                [result], args.json_out, console=console, taxonomy_coverage=taxonomy_coverage
-            )
-        if getattr(args, "sarif_out", None):
-            write_sarif([result], args.sarif_out, console=console)
+        _report(args, [result], console)
         if _should_fail(result.findings, getattr(args, "fail_on", "high")):
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
@@ -717,41 +863,16 @@ def _main_inner() -> None:
             console.print(f"  [red]Profile error:[/red] {exc}")
 
     probe_opts = {
-        "no_invoke": args.no_invoke,
-        "safe_mode": args.safe_mode,
-        "error_reflection": getattr(args, "error_reflection", "downgrade"),
-        "probe_calls": args.probe_calls,
-        "max_pages": args.max_pages,
-        "protocol_mode": args.protocol_mode,
-        "jwt_max_ttl": args.jwt_max_ttl,
-        "tool_names_file": getattr(args, "tool_names_file", None),
-        "claude": args.claude,
-        "chain_replay": getattr(args, "chain_replay", False),
-        "chain_replay_retries": getattr(args, "chain_replay_retries", 1),
-        "cross_server": getattr(args, "cross_server", False),
+        **_base_probe_opts(
+            args,
+            extra_headers=extra_headers,
+            probe_workers=effective_probe_workers,
+            phase2_workers=effective_phase2_workers,
+            deterministic=deterministic_mode,
+        ),
         "trust_sets": [sorted(group) for group in trust_sets],
         "target_count": len(urls),
-        "claude_model": args.claude_model,
-        "bedrock": args.bedrock,
-        "bedrock_region": args.bedrock_region,
-        "bedrock_profile": args.bedrock_profile,
-        "bedrock_model": args.bedrock_model,
-        "claude_max_tools": args.claude_max_tools,
-        "claude_phase2_workers": effective_phase2_workers,
-        "ollama_analysis": getattr(args, "ollama_analysis", None),
-        "ollama_model": getattr(args, "ollama_model", "qwen2.5:14b"),
-        "ollama_ensemble": getattr(args, "ollama_ensemble", None),
-        "fast": args.fast,
-        "coverage_n": getattr(args, "coverage", None) or 0,
-        "probe_workers": effective_probe_workers,
-        "deterministic": deterministic_mode,
-        "tls_verify": args.tls_verify,
-        "extra_headers": extra_headers,
         "auth_context_summary": auth_context_summary,
-        "inference_host": getattr(args, "inference_host", None),
-        "inference_scan": getattr(args, "inference", False) or bool(getattr(args, "inference_host", None)),
-        "inference_baseline": getattr(args, "inference_baseline", None),
-        "save_inference_baseline": getattr(args, "save_inference_baseline", None),
         "profile": profile_data,
     }
 
@@ -861,14 +982,9 @@ def _main_inner() -> None:
             check_model_integrity(result, probe_opts=probe_opts)
         result.timings["total"] = time.time() - t0
         results = [result]
-        print_report(results, group_findings=args.group_findings, console=console)
+        _report(args, results, console)
         if probe_opts.get("save_inference_baseline"):
             console.print(f"\n  [green]✓[/green] Inference baseline saved to {probe_opts['save_inference_baseline']}")
-        taxonomy_coverage = _emit_taxonomy_coverage(args, results, console)
-        if args.json_out:
-            write_json(results, args.json_out, console=console, taxonomy_coverage=taxonomy_coverage)
-        if getattr(args, "sarif_out", None):
-            write_sarif(results, args.sarif_out, console=console)
         if _should_fail(result.findings, getattr(args, "fail_on", "high")):
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
@@ -938,139 +1054,9 @@ def _main_inner() -> None:
                 apply_diff_findings(r, diff)
         print_diff_report(diff_results, args.baseline, console=console)
 
-    print_report(results, group_findings=args.group_findings, console=console)
-
+    _report(args, results, console)
     if args.save_baseline:
         save_baseline(results, args.save_baseline, console=console)
-
-    taxonomy_coverage = _emit_taxonomy_coverage(args, results, console)
-    if args.json_out:
-        write_json(results, args.json_out, console=console, taxonomy_coverage=taxonomy_coverage)
-
-    if getattr(args, "sarif_out", None):
-        write_sarif(results, args.sarif_out, console=console)
-
-    if getattr(args, "diff_baseline", None):
-        from mcpnuke.reporting.diff import compare_json_files, format_diff_terminal
-        if args.json_out:
-            try:
-                # Not `diff`: that name already holds a DiffResult from the
-                # inventory comparison above, an unrelated type.
-                scan_diff = compare_json_files(args.diff_baseline, args.json_out)
-                for result in results:
-                    result.scan_diff = scan_diff
-                console.print("\n[bold cyan]── Diff vs baseline ──[/bold cyan]")
-                console.print(format_diff_terminal(scan_diff))
-                # Re-write JSON with diff block attached
-                write_json(results, args.json_out, console=None, taxonomy_coverage=taxonomy_coverage)
-            except FileNotFoundError as exc:
-                console.print(f"[yellow]--diff-baseline: {exc}[/yellow]")
-        else:
-            console.print(
-                "[yellow]--diff-baseline requires --json to write current scan results first.[/yellow]"
-            )
-
-    if getattr(args, "policy_out", None):
-        from pathlib import Path as _PolicyPath
-
-        from mcpnuke.policy import generate_policy, serialize_policy
-        rules = generate_policy(results)
-
-        def _kv_pairs(items: list[str], flag: str) -> dict[str, str]:
-            out: dict[str, str] = {}
-            for item in items:
-                if "=" not in item:
-                    raise SystemExit(
-                        f"{flag} expects KEY=VALUE, got {item!r}"
-                    )
-                key, _, value = item.partition("=")
-                key, value = key.strip(), value.strip()
-                if not key:
-                    raise SystemExit(f"{flag} key may not be empty: {item!r}")
-                out[key] = value
-            return out
-
-        selector = _kv_pairs(
-            getattr(args, "policy_selector", []) or [], "--policy-selector"
-        )
-        meta_labels = _kv_pairs(
-            getattr(args, "policy_labels", []) or [], "--policy-labels"
-        )
-        yaml_str = serialize_policy(
-            rules,
-            name=getattr(args, "policy_name", "mcpnuke-recommended"),
-            namespace=getattr(args, "policy_namespace", "") or "",
-            selector_labels=selector,
-            metadata_labels=meta_labels,
-        )
-        _PolicyPath(args.policy_out).write_text(yaml_str)
-        scope = (
-            f"selector={selector}" if selector else "selector=ALL pods (broad)"
-        )
-        console.print(
-            f"\n[green]nullfield policy written to {args.policy_out} "
-            f"({len(rules)} rules, {scope})[/green]"
-        )
-
-    if getattr(args, "by_lane", False):
-        from mcpnuke.reporting import print_by_lane
-        print_by_lane(results, console=console)
-
-    if getattr(args, "owasp", False):
-        from mcpnuke.reporting import print_owasp
-        print_owasp(results, console=console)
-
-    if getattr(args, "coverage_report", None):
-        import httpx as _httpx
-
-        from mcpnuke.reporting import (
-            SchemaMismatchError,
-            build_coverage_report,
-            fetch_lane_taxonomy,
-            print_coverage_report,
-        )
-        try:
-            taxonomy = fetch_lane_taxonomy(args.coverage_report)
-            report = build_coverage_report(results, taxonomy)
-            print_coverage_report(report, console=console)
-        except SchemaMismatchError as exc:
-            console.print(f"\n[red]coverage-report: {exc}[/red]")
-        except _httpx.HTTPError as exc:
-            console.print(
-                f"\n[red]coverage-report: failed to fetch /api/lanes from "
-                f"{args.coverage_report}: {exc}[/red]"
-            )
-
-    # Taxonomy validation — checks that every finding's taxonomy_id is known
-    # to the agentic-sec threat taxonomy (default: vendored lanes.yaml).
-    # Surfaces silent vocabulary drift between checks and the canonical list.
-    if getattr(args, "taxonomy", None) is not None or any(
-        f.taxonomy_id for r in results for f in r.findings
-    ):
-        from mcpnuke.core.taxonomy import load_taxonomy
-        from mcpnuke.core.taxonomy import threat_ids as _tids
-        try:
-            tax = load_taxonomy(args.taxonomy)
-            valid = _tids(tax)
-            unknowns: dict[str, int] = {}
-            for r in results:
-                for f in r.findings:
-                    if f.taxonomy_id and f.taxonomy_id not in valid:
-                        unknowns[f.taxonomy_id] = unknowns.get(f.taxonomy_id, 0) + 1
-            source = args.taxonomy if args.taxonomy else "vendored lanes.yaml"
-            console.print(
-                f"\n[dim]Taxonomy: {len(valid)} threat IDs loaded from {source}[/dim]"
-            )
-            if unknowns:
-                console.print(
-                    "[yellow]Findings reference threat IDs not in the taxonomy:[/yellow]"
-                )
-                for tid, count in sorted(unknowns.items()):
-                    console.print(f"  [yellow]{tid}[/yellow]  ({count} finding(s))")
-        except FileNotFoundError as exc:
-            console.print(f"\n[red]--taxonomy: {exc}[/red]")
-        except Exception as exc:  # noqa: BLE001 - surface any taxonomy load issue clearly
-            console.print(f"\n[red]--taxonomy: failed to load: {exc}[/red]")
 
     if getattr(args, "watch", None):
         _watch_lanes(args, results, urls, auth_token, probe_opts, baseline, console)

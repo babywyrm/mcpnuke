@@ -110,6 +110,13 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **`--stdio` and inference-only scans honor every report flag.** They
+  ran their own short report, so `--owasp`, `--by-lane`, `--policy-out`,
+  `--diff-baseline`, `--coverage-report`, and taxonomy validation were
+  silently skipped. All scan modes now share one report phase.
+- **`--stdio` honors `--error-reflection`.** Its probe options were a
+  hand copy of the URL path's and missed the flag. Both now come from
+  one builder.
 - **CI coherence dispatch no longer fails silently.** Without
   `ECOSYSTEM_DISPATCH_TOKEN` it fell back to `GITHUB_TOKEN`, which cannot
   dispatch to another repo, and `continue-on-error` hid the failure on

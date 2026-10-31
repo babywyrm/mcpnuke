@@ -117,3 +117,25 @@ def test_cli_owasp_report_lights_every_category(tmp_path: Path) -> None:
     table = _alignment_markdown(buckets)
     print(table, flush=True)
     _publish_alignment(table)
+
+
+def test_stdio_scan_honors_the_report_flags() -> None:
+    """--stdio shares the report phase, so --owasp and --by-lane still print."""
+    stdio_cmd = f"{sys.executable} -m tests.reference_target.stdio_server"
+    proc = subprocess.run(
+        [
+            sys.executable, "-m", "mcpnuke",
+            "--stdio", stdio_cmd,
+            "--no-invoke", "--fail-on", "none",
+            "--owasp", "--by-lane",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        cwd=_ROOT,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    plain = re.sub(r"\s+", " ", re.sub(r"\x1b\[[0-9;]*m", "", proc.stdout))
+    assert "OWASP MCP Top 10 alignment" in plain
+    assert "Findings grouped by identity lane" in plain
