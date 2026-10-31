@@ -72,6 +72,18 @@ def test_shadow_evidence_is_the_other_endpoint(scanned: TargetResult) -> None:
     assert scanned.url not in hits[0].evidence
 
 
+def test_lab_schemas_do_not_pad_the_buckets(scanned: TargetResult) -> None:
+    """Empty property objects and non-command strings stay out of the report.
+
+    The command parameter stays unbounded. That schema finding is part of
+    the MCP05 marker. Attack chains are a different check and may remain.
+    """
+    titles = [finding.title for finding in scanned.findings]
+    assert not any("no input schema" in title for title in titles)
+    unbounded = [title for title in titles if title.startswith("Unbounded string param")]
+    assert unbounded == ["Unbounded string param 'command' in tool 'run_task'"]
+
+
 def test_owasp_report_prints_every_category(scanned: TargetResult, capsys: pytest.CaptureFixture[str]) -> None:
     print_owasp([scanned])
     printed = capsys.readouterr().out

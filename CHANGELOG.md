@@ -6,6 +6,12 @@ All notable changes to this submodule are documented here.
 
 ### Added
 
+- **OWASP lab schemas no longer pad the alignment.** Tools with
+  nothing to declare carry one bounded string. String parameters
+  other than `run_task`'s `command` set `maxLength`. The command
+  parameter stays unbounded because that schema finding is part of
+  the MCP05 marker. Attack chains still count in their own buckets.
+
 - **DVMCP's submodule URL is recorded.** The pin was a gitlink with no
   `.gitmodules` entry, so every CI job logged `git` exit 128. The
   commit pin is unchanged, and CI still does not fetch the tree.
