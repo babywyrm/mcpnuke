@@ -376,6 +376,146 @@ def _watch_lanes(
         console.print("\n[dim]Watch stopped.[/dim]")
 
 
+def _validate_ai_backend(args: argparse.Namespace) -> None:
+    """Fail fast on AI flags that cannot work, before any scan or network call."""
+    from mcpnuke.core.llm import configure_bedrock
+
+    if args.claude and args.ollama_analysis:
+        print("Error: --claude and --ollama-analysis are mutually exclusive.", file=sys.stderr)
+        sys.exit(EXIT_ERROR)
+
+    if args.ollama_analysis:
+        # Validate Ollama is reachable before starting any scans.
+        import httpx as _httpx
+        try:
+            _r = _httpx.get(f"{args.ollama_analysis.rstrip('/')}/api/tags", timeout=5.0)
+            _r.raise_for_status()
+            _models = [m["name"] for m in _r.json().get("models", [])]
+            if args.ollama_model not in _models:
+                print(
+                    f"Warning: model '{args.ollama_model}' not found on "
+                    f"{args.ollama_analysis}.\n"
+                    f"  Available: {', '.join(_models[:8]) or '(none)'}",
+                    file=sys.stderr,
+                )
+        except Exception as _exc:
+            print(
+                f"Error: cannot reach Ollama at {args.ollama_analysis}: {_exc}\n"
+                "  Check the host/port and that Ollama is running.",
+                file=sys.stderr,
+            )
+            sys.exit(EXIT_ERROR)
+
+    if args.claude:
+        if args.bedrock:
+            try:
+                import boto3  # noqa: F401
+            except ImportError:
+                print(
+                    "Error: --bedrock requires boto3.\n"
+                    "Install it with:  uv pip install boto3",
+                    file=sys.stderr,
+                )
+                sys.exit(EXIT_ERROR)
+            configure_bedrock(
+                enabled=True,
+                region=args.bedrock_region,
+                profile=args.bedrock_profile,
+                model=args.bedrock_model,
+            )
+        else:
+            configure_bedrock(enabled=False)
+            try:
+                import anthropic  # noqa: F401
+            except ImportError:
+                print(
+                    "Error: --claude requires the 'anthropic' package.\n"
+                    "Install it with:  uv pip install mcpnuke[ai]   (or: pip install anthropic)",
+                    file=sys.stderr,
+                )
+                sys.exit(EXIT_ERROR)
+            import os
+            if not os.environ.get("ANTHROPIC_API_KEY"):
+                print(
+                    "Error: --claude requires ANTHROPIC_API_KEY environment variable.\n"
+                    "  export ANTHROPIC_API_KEY=sk-ant-...",
+                    file=sys.stderr,
+                )
+                sys.exit(EXIT_ERROR)
+
+
+def _resolve_auth(
+    args: argparse.Namespace,
+    urls: list[str],
+    extra_headers: dict[str, str],
+    console: Console,
+) -> tuple[str | None, dict]:
+    """Resolve the bearer (flag, file, OIDC, or none) and the auth context checks read.
+
+    The context holds the raw token under ``_raw_token``; JSON output redacts it.
+    """
+    try:
+        load_auth_secret_files(args)
+    except RuntimeError as e:
+        console.print(f"  [red]✗[/red] {e}")
+        sys.exit(EXIT_ERROR)
+    auth_token = args.auth_token
+    if not auth_token and args.client_id and args.client_secret:
+        try:
+            auth_token = resolve_auth_token(args)
+            console.print("  [green]✓[/green] Token acquired via OIDC client_credentials")
+        except RuntimeError as e:
+            console.print(f"  [red]✗[/red] OIDC token fetch failed: {e}")
+            sys.exit(EXIT_ERROR)
+    elif not auth_token and urls and args.verbose:
+        info = detect_auth_requirements(
+            urls[0],
+            verify_tls=args.tls_verify,
+            extra_headers=extra_headers,
+        )
+        if info.requires_auth:
+            console.print(f"  [yellow]⚠[/yellow]  Target requires auth: {info.summary()}")
+            if info.token_endpoint:
+                console.print(f"  [dim]  Token endpoint: {info.token_endpoint}[/dim]")
+                console.print(
+                    f"  [dim]  Use: --oidc-url {info.issuer or '...'} "
+                    f"--client-id ID --client-secret SECRET[/dim]"
+                )
+    auth_context_summary: dict = {}
+    if auth_token:
+        auth_context_summary["_raw_token"] = auth_token
+        claims = decode_jwt_claims(auth_token)
+        if claims:
+            auth_context_summary["jwt_claims_summary"] = summarize_jwt_claims(claims)
+    if args.token_introspect_url:
+        if not auth_token:
+            console.print("  [yellow]⚠[/yellow] token introspection configured but no auth token resolved")
+        else:
+            try:
+                raw_introspection = fetch_token_introspection(
+                    args.token_introspect_url,
+                    auth_token,
+                    client_id=args.token_introspect_client_id,
+                    client_secret=args.token_introspect_client_secret,
+                    verify_tls=args.tls_verify,
+                    extra_headers=extra_headers,
+                )
+                auth_context_summary["introspection_summary"] = summarize_introspection(raw_introspection)
+            except RuntimeError as e:
+                console.print(f"  [yellow]⚠[/yellow] token introspection failed: {e}")
+    if args.jwks_url:
+        try:
+            jwks = fetch_jwks(
+                args.jwks_url,
+                verify_tls=args.tls_verify,
+                extra_headers=extra_headers,
+            )
+            auth_context_summary["jwks_summary"] = summarize_jwks(jwks)
+        except RuntimeError as e:
+            console.print(f"  [yellow]⚠[/yellow] JWKS fetch failed: {e}")
+    return auth_token, auth_context_summary
+
+
 def _base_probe_opts(
     args: argparse.Namespace,
     *,
@@ -581,67 +721,7 @@ def _main_inner() -> None:
         _run_lab_coverage(args.lab_coverage, console, getattr(args, "json_out", None))
         sys.exit(EXIT_CLEAN)
 
-    if args.ollama_analysis:
-        # Validate Ollama is reachable before starting any scans.
-        import httpx as _httpx
-        try:
-            _r = _httpx.get(f"{args.ollama_analysis.rstrip('/')}/api/tags", timeout=5.0)
-            _r.raise_for_status()
-            _models = [m["name"] for m in _r.json().get("models", [])]
-            if args.ollama_model not in _models:
-                print(
-                    f"Warning: model '{args.ollama_model}' not found on "
-                    f"{args.ollama_analysis}.\n"
-                    f"  Available: {', '.join(_models[:8]) or '(none)'}",
-                    file=sys.stderr,
-                )
-        except Exception as _exc:
-            print(
-                f"Error: cannot reach Ollama at {args.ollama_analysis}: {_exc}\n"
-                "  Check the host/port and that Ollama is running.",
-                file=sys.stderr,
-            )
-            sys.exit(EXIT_ERROR)
-
-    if args.claude:
-        if args.ollama_analysis:
-            print("Error: --claude and --ollama-analysis are mutually exclusive.", file=sys.stderr)
-            sys.exit(EXIT_ERROR)
-        if args.bedrock:
-            try:
-                import boto3  # noqa: F401
-            except ImportError:
-                print(
-                    "Error: --bedrock requires boto3.\n"
-                    "Install it with:  uv pip install boto3",
-                    file=sys.stderr,
-                )
-                sys.exit(EXIT_ERROR)
-            configure_bedrock(
-                enabled=True,
-                region=args.bedrock_region,
-                profile=args.bedrock_profile,
-                model=args.bedrock_model,
-            )
-        else:
-            configure_bedrock(enabled=False)
-            try:
-                import anthropic  # noqa: F401
-            except ImportError:
-                print(
-                    "Error: --claude requires the 'anthropic' package.\n"
-                    "Install it with:  uv pip install mcpnuke[ai]   (or: pip install anthropic)",
-                    file=sys.stderr,
-                )
-                sys.exit(EXIT_ERROR)
-            import os
-            if not os.environ.get("ANTHROPIC_API_KEY"):
-                print(
-                    "Error: --claude requires ANTHROPIC_API_KEY environment variable.\n"
-                    "  export ANTHROPIC_API_KEY=sk-ant-...",
-                    file=sys.stderr,
-                )
-                sys.exit(EXIT_ERROR)
+    _validate_ai_backend(args)
 
     deterministic_mode: bool = bool(getattr(args, "deterministic", False))
     effective_probe_workers: int = args.probe_workers
@@ -707,68 +787,8 @@ def _main_inner() -> None:
         console.print(f"  [red]✗[/red] {exc}")
         sys.exit(EXIT_ERROR)
 
-    # Resolve auth token (direct, file, OIDC client_credentials, or auto-detect)
-    try:
-        load_auth_secret_files(args)
-    except RuntimeError as e:
-        console.print(f"  [red]✗[/red] {e}")
-        sys.exit(EXIT_ERROR)
-    auth_token = args.auth_token
-    if not auth_token and args.client_id and args.client_secret:
-        try:
-            auth_token = resolve_auth_token(args)
-            console.print("  [green]✓[/green] Token acquired via OIDC client_credentials")
-        except RuntimeError as e:
-            console.print(f"  [red]✗[/red] OIDC token fetch failed: {e}")
-            sys.exit(EXIT_ERROR)
-    elif not auth_token and urls and args.verbose:
-        info = detect_auth_requirements(
-            urls[0],
-            verify_tls=args.tls_verify,
-            extra_headers=extra_headers,
-        )
-        if info.requires_auth:
-            console.print(f"  [yellow]⚠[/yellow]  Target requires auth: {info.summary()}")
-            if info.token_endpoint:
-                console.print(f"  [dim]  Token endpoint: {info.token_endpoint}[/dim]")
-                console.print(
-                    f"  [dim]  Use: --oidc-url {info.issuer or '...'} "
-                    f"--client-id ID --client-secret SECRET[/dim]"
-                )
-    jwt_claims_summary: dict = {}
-    auth_context_summary: dict = {}
-    if auth_token:
-        auth_context_summary["_raw_token"] = auth_token
-        claims = decode_jwt_claims(auth_token)
-        if claims:
-            jwt_claims_summary = summarize_jwt_claims(claims)
-            auth_context_summary["jwt_claims_summary"] = jwt_claims_summary
-    if args.token_introspect_url:
-        if not auth_token:
-            console.print("  [yellow]⚠[/yellow] token introspection configured but no auth token resolved")
-        else:
-            try:
-                raw_introspection = fetch_token_introspection(
-                    args.token_introspect_url,
-                    auth_token,
-                    client_id=args.token_introspect_client_id,
-                    client_secret=args.token_introspect_client_secret,
-                    verify_tls=args.tls_verify,
-                    extra_headers=extra_headers,
-                )
-                auth_context_summary["introspection_summary"] = summarize_introspection(raw_introspection)
-            except RuntimeError as e:
-                console.print(f"  [yellow]⚠[/yellow] token introspection failed: {e}")
-    if args.jwks_url:
-        try:
-            jwks = fetch_jwks(
-                args.jwks_url,
-                verify_tls=args.tls_verify,
-                extra_headers=extra_headers,
-            )
-            auth_context_summary["jwks_summary"] = summarize_jwks(jwks)
-        except RuntimeError as e:
-            console.print(f"  [yellow]⚠[/yellow] JWKS fetch failed: {e}")
+    auth_token, auth_context_summary = _resolve_auth(args, urls, extra_headers, console)
+    jwt_claims_summary: dict = auth_context_summary.get("jwt_claims_summary", {})
 
     baseline = {}
     if args.baseline:

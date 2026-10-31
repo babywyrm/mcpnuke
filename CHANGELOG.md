@@ -56,6 +56,13 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
+- **Maintenance.** The stdio and HTTP scan paths share one AI-backend
+  dispatch. `_main_inner` shed its report phase, probe options, auth
+  resolution, and AI flag validation into tested helpers, from about
+  700 lines to under 400. The package carries no `type: ignore`. Test files are named
+  for the check they cover, not the session that wrote them, and probe
+  pacing no longer runs in real time under test, so the in-process
+  suite takes under half its former time.
 - **The `k8s` extra is gone.** It installed the `kubernetes` client and
   22 transitive packages, but every Kubernetes code path uses `urllib`.
   Kubernetes checks work in a base install. `--doctor` no longer warns
@@ -110,6 +117,8 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **`--claude` with `--ollama-analysis` is rejected before any network
+  call.** The conflict was checked only after probing the Ollama host.
 - **`--stdio` and inference-only scans honor every report flag.** They
   ran their own short report, so `--owasp`, `--by-lane`, `--policy-out`,
   `--diff-baseline`, `--coverage-report`, and taxonomy validation were
