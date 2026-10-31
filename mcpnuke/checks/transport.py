@@ -10,9 +10,11 @@ from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
 from mcpnuke.core.models import TargetResult
 
 
-def check_sse_security(base: str, sse_path: str, result: TargetResult) -> None:
+def check_sse_security(
+    base: str, sse_path: str, result: TargetResult, verify_tls: bool = False
+) -> None:
     with time_check("sse_security", result):
-        client = httpx.Client(verify=False, timeout=8)
+        client = httpx.Client(verify=verify_tls, timeout=8)
         try:
             with client.stream(
                 "GET",

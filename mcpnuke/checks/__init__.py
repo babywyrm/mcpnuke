@@ -660,11 +660,18 @@ def run_all_checks(
     if base and sse_path:
         if verbose:
             _log("\n  [bold cyan]── Transport Checks ──[/bold cyan]")
-        _run("sse_security", check_sse_security, base, sse_path, result)
+        _run(
+            "sse_security", check_sse_security, base, sse_path, result,
+            verify_tls=bool(opts.get("tls_verify", False)),
+        )
 
     # ── Target surface checks (probe base URL, not tools) ─────────────
     if base:
-        _run("actuator_probe", check_actuator_probe, base, result, auth_token=opts.get("auth_token"))
+        _run(
+            "actuator_probe", check_actuator_probe, base, result,
+            auth_token=opts.get("auth_token"),
+            verify_tls=bool(opts.get("tls_verify", False)),
+        )
 
     # ── Inference backend checks (opt-in via --inference / --inference-host) ──
     if opts.get("inference_host") or opts.get("inference_scan"):

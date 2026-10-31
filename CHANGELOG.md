@@ -79,6 +79,10 @@ All notable changes to this submodule are documented here.
 
 ### Security
 
+- **`--tls-verify` reaches the base-URL probes.** `actuator_probe` sent
+  `--auth-token` with certificate checks off even when `--tls-verify`
+  was set; `sse_security` ignored it too. Both now follow the flag. The
+  default stays unverified for self-signed lab targets.
 - **In-cluster Kubernetes calls verify TLS.** The k8s scanner,
   discovery, and Teleport checks send the pod's service-account token.
   They now verify the API server against the mounted

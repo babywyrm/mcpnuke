@@ -102,14 +102,19 @@ _ACTUATOR_WRITE_PROBES = [
 _ACTUATOR_HEAPDUMP_PATH = "/actuator/heapdump"
 
 
-def check_actuator_probe(base_url: str, result: TargetResult, auth_token: str | None = None) -> None:
+def check_actuator_probe(
+    base_url: str,
+    result: TargetResult,
+    auth_token: str | None = None,
+    verify_tls: bool = False,
+) -> None:
     """Probe for exposed debug/admin endpoints on the target's base URL."""
     with time_check("actuator_probe", result):
         headers = {}
         if auth_token:
             headers["Authorization"] = f"Bearer {auth_token}"
 
-        client = httpx.Client(verify=False, timeout=5, follow_redirects=True)
+        client = httpx.Client(verify=verify_tls, timeout=5, follow_redirects=True)
         reachable_actuator_paths: set[str] = set()
         try:
             for path, default_sev, description in DEBUG_ENDPOINTS:
@@ -143,7 +148,7 @@ def check_actuator_probe(base_url: str, result: TargetResult, auth_token: str | 
         # confirms at least one Spring actuator is exposed
         if any(p.startswith("/actuator/") for p in reachable_actuator_paths):
             _check_actuator_exploitation(
-                base_url, result, headers, reachable_actuator_paths
+                base_url, result, headers, reachable_actuator_paths, verify_tls=verify_tls
             )
 
 
@@ -152,6 +157,7 @@ def _check_actuator_exploitation(
     result: TargetResult,
     headers: dict,
     reachable_paths: set[str],
+    verify_tls: bool = False,
 ) -> None:
     """Active POST-based exploitation probes for Spring Boot actuators.
 
@@ -160,7 +166,7 @@ def _check_actuator_exploitation(
     and shutdown come last to avoid disrupting the target before other
     probes complete.
     """
-    client = httpx.Client(verify=False, timeout=5, follow_redirects=True)
+    client = httpx.Client(verify=verify_tls, timeout=5, follow_redirects=True)
     try:
         # Heap dump — GET probe (binary response, checked separately)
         if _ACTUATOR_HEAPDUMP_PATH in reachable_paths:
