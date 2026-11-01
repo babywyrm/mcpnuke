@@ -32,6 +32,7 @@ from mcpnuke.core.chain_replay import (
 )
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.core.oast import CanaryListener
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 # Enough of each field to carry the substance without letting one verbose
@@ -132,7 +133,7 @@ def _defer_cross_server(opts: dict) -> bool:
 
 
 def _propose_chains(
-    backend: Any,
+    backend: LLMBackend,
     tools: list[dict],
     findings: list[dict],
     model: str,
@@ -152,7 +153,7 @@ def _propose_chains(
 
 
 def _judge_chain(
-    backend: Any,
+    backend: LLMBackend,
     title: str,
     transcript: str,
     model: str,
@@ -170,14 +171,14 @@ def _judge_chain(
 
 
 def _revise_chain(
-    backend: Any,
-    chain: Any,
+    backend: LLMBackend,
+    chain: ProposedChain,
     transcript: str,
     tools: list[dict],
     model: str,
     log: Callable[[str], None],
     peers: list[tuple[str, list[str]]] | None = None,
-) -> Any:
+) -> ProposedChain | None:
     """Ask the backend to revise a halted chain, or None."""
     revise = getattr(backend, "revise_chain", None)
     if revise is None:
@@ -185,12 +186,14 @@ def _revise_chain(
     try:
         if peers:
             try:
-                return revise(chain, transcript, tools, model=model, log=log, peers=peers)
+                revised = revise(chain, transcript, tools, model=model, log=log, peers=peers)
             except TypeError:
-                pass
-        return revise(chain, transcript, tools, model=model, log=log)
+                revised = revise(chain, transcript, tools, model=model, log=log)
+        else:
+            revised = revise(chain, transcript, tools, model=model, log=log)
     except Exception:
         return None
+    return revised if isinstance(revised, ProposedChain) else None
 
 
 def _prepare_replay_session(session: MCPSessionProtocol, result: TargetResult) -> None:
@@ -235,17 +238,17 @@ def _cross_server_opener(
 
 def _replay_with_retries(
     session: MCPSessionProtocol,
-    chain: Any,
+    chain: ProposedChain,
     tools_by_name: dict[str, dict],
-    backend: Any,
+    backend: LLMBackend,
     *,
     model: str,
     log: Callable[[str], None],
     retries: int,
     safe_mode: bool,
-    oast: Any,
+    oast: CanaryListener | None,
     oast_wait: float = 2.0,
-    open_session: Any = None,
+    open_session: Callable[[str], MCPSessionProtocol | None] | None = None,
     allowed_targets: frozenset[str] | None = None,
     peer_rows: list[tuple[str, list[str]]] | None = None,
     catalogs: dict[str, dict[str, dict]] | None = None,
@@ -516,7 +519,7 @@ def _grade_proposed(
     session: MCPSessionProtocol,
     result: TargetResult,
     proposed: list,
-    backend: Any,
+    backend: LLMBackend,
     model: str,
     log: Callable[[str], None],
     opts: dict,
@@ -577,8 +580,8 @@ def replay_cross_server(
     results: list[TargetResult],
     probe_opts: dict | None = None,
     *,
-    backend: Any = None,
-    console: Any = None,
+    backend: LLMBackend | None = None,
+    console: Console | None = None,
 ) -> None:
     """Propose and replay chains once every target in the run has a catalog."""
     opts = probe_opts or {}

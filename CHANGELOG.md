@@ -117,6 +117,10 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Chain replay drops a revision that is not a chain.** A backend's
+  `revise_chain` reply went straight into replay whatever its type. It
+  is now used only if it is a `ProposedChain`; anything else ends the
+  retry the way `None` does.
 - **`--claude` with `--ollama-analysis` is rejected before any network
   call.** The conflict was checked only after probing the Ollama host.
 - **`--stdio` and inference-only scans honor every report flag.** They
