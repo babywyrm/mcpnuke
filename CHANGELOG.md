@@ -90,6 +90,11 @@ All notable changes to this submodule are documented here.
 
 ### Security
 
+- **Scan output is written owner-only.** JSON, SARIF, baselines,
+  `--generate-policy` YAML, the diff and discovery summaries, and the
+  inference manifest were created with the process umask, usually
+  world-readable. They now go through one writer that creates them with
+  mode 0600 and tightens a file that already exists.
 - **Finding evidence no longer carries the secret it found.**
   `response_credentials`, `credential_in_schema`, and `config_dump`
   copied the matched credential (or up to 500 characters of the

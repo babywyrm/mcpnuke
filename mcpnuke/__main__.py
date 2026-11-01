@@ -44,6 +44,7 @@ from mcpnuke.diff import (
 )
 from mcpnuke.k8s import discover_services, fingerprint_services, run_k8s_checks
 from mcpnuke.reporting import print_report, write_json, write_sarif
+from mcpnuke.reporting.files import write_private
 from mcpnuke.scanner import run_parallel, scan_stdio_target, scan_target
 
 if TYPE_CHECKING:
@@ -96,7 +97,7 @@ def _run_lab_coverage(path: str, console: Console, json_out: str | None) -> None
     report = build_lab_coverage(profile, check_taxonomy_catalog())
     print_lab_coverage(report, console=console)
     if json_out:
-        Path(json_out).write_text(json.dumps(report, indent=2))
+        write_private(json_out, json.dumps(report, indent=2))
         console.print(f"\n[green]JSON report written → {json_out}[/green]")
 
 
@@ -243,7 +244,6 @@ def _run_diff_subcommand(argv: list[str]) -> None:
 
     if args.json:
         import json as _json
-        from pathlib import Path as _Path
         summary = {
             "new": [
                 {"check": f.check, "severity": f.severity, "title": f.title}
@@ -256,7 +256,7 @@ def _run_diff_subcommand(argv: list[str]) -> None:
             "severity_changes": diff.severity_changes,
             "unchanged_count": diff.unchanged_count,
         }
-        _Path(args.json).write_text(_json.dumps(summary, indent=2))
+        write_private(args.json, _json.dumps(summary, indent=2))
         print(f"\nDiff JSON written to {args.json}")
 
     if diff.new_findings:
@@ -440,8 +440,7 @@ def _k8s_setup(args: argparse.Namespace, urls: list[str], console: Console) -> N
                     ],
                     "count": len(discovered),
                 }
-                from pathlib import Path
-                Path(args.json_out).write_text(json.dumps(report, indent=2))
+                write_private(args.json_out, json.dumps(report, indent=2))
                 console.print(f"[green]JSON written to {args.json_out}[/green]")
             sys.exit(EXIT_CLEAN)
         for ep in discovered:
@@ -667,7 +666,6 @@ def _report(args: argparse.Namespace, results: list[TargetResult], console: Cons
             )
 
     if getattr(args, "policy_out", None):
-        from pathlib import Path as _PolicyPath
 
         from mcpnuke.policy import generate_policy, serialize_policy
         rules = generate_policy(results)
@@ -699,7 +697,7 @@ def _report(args: argparse.Namespace, results: list[TargetResult], console: Cons
             selector_labels=selector,
             metadata_labels=meta_labels,
         )
-        _PolicyPath(args.policy_out).write_text(yaml_str)
+        write_private(args.policy_out, yaml_str)
         scope = (
             f"selector={selector}" if selector else "selector=ALL pods (broad)"
         )

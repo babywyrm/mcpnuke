@@ -79,7 +79,8 @@ Scan results describe exploitable paths. Finding evidence is masked when
 recorded: a matched token keeps its first four characters, an assignment
 keeps its name, and a private key keeps its banner. Detail text, tool
 names, and secrets in shapes the credential patterns do not know can still
-appear. Treat reports, SARIF files, and generated policy as sensitive:
+appear. mcpnuke writes every report, SARIF file, baseline, and generated
+policy with mode 0600, owner-only. Treat them as sensitive:
 
 - do not commit them to public repositories
 - redact before filing an issue against mcpnuke or a third-party server

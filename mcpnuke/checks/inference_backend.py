@@ -25,6 +25,7 @@ import httpx
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
+from mcpnuke.reporting.files import write_private
 
 logger = logging.getLogger(__name__)
 
@@ -454,7 +455,7 @@ def save_inference_baseline(
     }
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(manifest, indent=2) + "\n")
+    write_private(p, json.dumps(manifest, indent=2) + "\n")
     logger.info("Saved inference baseline to %s (%d host(s))", path, len(hosts_block))
 
 

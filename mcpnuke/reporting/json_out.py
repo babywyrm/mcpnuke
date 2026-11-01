@@ -10,6 +10,7 @@ from rich.console import Console
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
+from mcpnuke.reporting.files import write_private
 from mcpnuke.reporting.owasp import build_owasp
 from mcpnuke.reporting.priority import priority_actions_as_dicts
 
@@ -172,7 +173,6 @@ def write_json(
     report = build_report(results)
     if taxonomy_coverage is not None:
         report["taxonomy_coverage"] = taxonomy_coverage
-    with open(path, "w") as fh:
-        json.dump(report, fh, indent=2)
+    write_private(path, json.dumps(report, indent=2))
     if console:
         console.print(f"\n[green]JSON report written → {path}[/green]")

@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from mcpnuke.reporting.files import write_private
+
 if TYPE_CHECKING:
     from rich.console import Console
 
@@ -204,7 +206,7 @@ def save_baseline(results: list, path: str | Path, console: Console | None = Non
         "baseline": True,
         "targets": targets,
     }
-    p.write_text(json.dumps(report, indent=2))
+    write_private(p, json.dumps(report, indent=2))
     if console:
         console.print(f"\n[green]Baseline saved → {path}[/green]")
 

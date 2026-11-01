@@ -11,6 +11,7 @@ from rich.console import Console
 from mcpnuke import __version__
 from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
+from mcpnuke.reporting.files import write_private
 from mcpnuke.reporting.priority import guidance_for_finding
 
 _SARIF_SCHEMA = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
@@ -162,7 +163,6 @@ def build_sarif(results: list[TargetResult], *, include_k8s: bool = True) -> dic
 def write_sarif(results: list[TargetResult], path: str, console: Console | None = None) -> None:
     """Write SARIF 2.1.0 report to path."""
     sarif = build_sarif(results)
-    with open(path, "w") as fh:
-        json.dump(sarif, fh, indent=2)
+    write_private(path, json.dumps(sarif, indent=2))
     if console:
         console.print(f"\n[green]SARIF report written → {path}[/green]")
