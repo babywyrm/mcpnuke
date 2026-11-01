@@ -149,6 +149,12 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **A crashed scan says why.** Any unhandled error exited `2` with no
+  output. The exit code is unchanged; stderr now names the exception
+  type and message, with credentials redacted.
+- **`--ollama-ensemble` without `--ollama-analysis` fails first.** The
+  check ran after auth resolution, so an OIDC token was fetched before
+  the flag error. It now runs with the other AI flag checks.
 - **"No MCP endpoint found" says why.** Every SSE and POST probe
   failure during transport detection was swallowed, so a refused port, a
   timeout, and a certificate rejected under `--tls-verify` all looked

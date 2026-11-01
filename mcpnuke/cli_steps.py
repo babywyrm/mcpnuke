@@ -250,6 +250,9 @@ def _validate_ai_backend(args: argparse.Namespace) -> None:
     if args.claude and args.ollama_analysis:
         print("Error: --claude and --ollama-analysis are mutually exclusive.", file=sys.stderr)
         sys.exit(EXIT_ERROR)
+    if args.ollama_ensemble and not args.ollama_analysis:
+        print("Error: --ollama-ensemble requires --ollama-analysis.", file=sys.stderr)
+        sys.exit(EXIT_ERROR)
 
     if args.ollama_analysis:
         # Validate Ollama is reachable before starting any scans.

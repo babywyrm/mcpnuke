@@ -39,6 +39,7 @@ from mcpnuke.diff import (
     print_diff_report,
     save_baseline,
 )
+from mcpnuke.patterns.credentials import redact_credentials
 from mcpnuke.scanner import run_parallel, scan_stdio_target, scan_target
 from mcpnuke.subcommands import (
     EXIT_CLEAN,
@@ -210,9 +211,6 @@ def _main_inner() -> None:
         else:
             panel_lines.append(f"AI: Ollama ({args.ollama_analysis}, model={args.ollama_model})")
 
-    if args.ollama_ensemble and not args.ollama_analysis:
-        print("Error: --ollama-ensemble requires --ollama-analysis.", file=sys.stderr)
-        sys.exit(EXIT_ERROR)
     if deterministic_mode:
         panel_lines.append("Deterministic: True")
     if args.k8s_api_url:
@@ -367,7 +365,8 @@ def _main_inner() -> None:
 def main() -> None:
     try:
         _main_inner()
-    except Exception:
+    except Exception as exc:
+        print(f"mcpnuke: {type(exc).__name__}: {redact_credentials(str(exc))}", file=sys.stderr)
         sys.exit(EXIT_ERROR)
 
 

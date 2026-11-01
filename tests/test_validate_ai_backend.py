@@ -27,5 +27,11 @@ def test_claude_without_api_key_is_rejected(monkeypatch) -> None:
     assert exc.value.code == EXIT_ERROR
 
 
+def test_ensemble_without_ollama_is_rejected() -> None:
+    with pytest.raises(SystemExit) as exc:
+        cli_main._validate_ai_backend(_args("--ollama-ensemble", "a,b"))
+    assert exc.value.code == EXIT_ERROR
+
+
 def test_no_ai_flags_is_a_no_op() -> None:
     cli_main._validate_ai_backend(_args())
