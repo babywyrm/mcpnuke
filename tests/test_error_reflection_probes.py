@@ -13,16 +13,14 @@ import pytest
 from mcpnuke.checks.base import ERROR_REFLECTION_SUFFIX
 from mcpnuke.checks.command_injection_broad import check_command_injection_broad
 from mcpnuke.checks.injection import check_active_prompt_injection
+from mcpnuke.checks.input_sanitization import check_input_sanitization
 from mcpnuke.checks.prompt_injection_t01 import (
     _INJECTION_PAYLOADS as _T01_PAYLOADS,
 )
 from mcpnuke.checks.prompt_injection_t01 import (
     check_prompt_injection as check_prompt_injection_t01,
 )
-from mcpnuke.checks.tool_probes import (
-    check_input_sanitization,
-    check_tool_response_injection,
-)
+from mcpnuke.checks.tool_response_injection import check_tool_response_injection
 from mcpnuke.core.models import TargetResult
 from mcpnuke.patterns.probes import (
     ACTIVE_INJECTION_PAYLOADS,
@@ -160,8 +158,8 @@ def test_credential_leakage_checks_do_not_consult_the_policy():
     """
     import inspect
 
+    from mcpnuke.checks.error_leakage import check_error_leakage
     from mcpnuke.checks.response_credentials import check_response_credentials
-    from mcpnuke.checks.tool_probes import check_error_leakage
 
     for fn in (check_error_leakage, check_response_credentials):
         assert "error_reflection" not in inspect.getsource(fn), fn.__name__

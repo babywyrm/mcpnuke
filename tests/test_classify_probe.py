@@ -87,7 +87,7 @@ class TestLLMAugmentedResponseInjection:
     """Test that tool_response_injection uses classify_probe_response when --claude is active."""
 
     def test_llm_classification_wired_in(self):
-        from mcpnuke.checks.tool_probes import check_tool_response_injection
+        from mcpnuke.checks.tool_response_injection import check_tool_response_injection
 
         session = MagicMock()
         session.call.return_value = {
@@ -116,7 +116,7 @@ class TestLLMAugmentedResponseInjection:
         assert ai_findings[0].severity == "HIGH"
 
     def test_no_llm_without_claude_flag(self):
-        from mcpnuke.checks.tool_probes import check_tool_response_injection
+        from mcpnuke.checks.tool_response_injection import check_tool_response_injection
 
         session = MagicMock()
         session.call.return_value = {

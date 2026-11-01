@@ -36,6 +36,7 @@ from mcpnuke.checks.dpop_enforcement import (
     _probe_no_dpop_header,
     dpop_probeable,
 )
+from mcpnuke.checks.error_leakage import check_error_leakage
 from mcpnuke.checks.execution import (
     check_code_execution,
     check_remote_access,
@@ -52,6 +53,7 @@ from mcpnuke.checks.injection import (
     check_prompt_injection,
     check_tool_poisoning,
 )
+from mcpnuke.checks.input_sanitization import check_input_sanitization
 from mcpnuke.checks.insecure_agent_comms import check_insecure_agent_comms
 from mcpnuke.checks.jwt_boundary import (
     check_jwt_audience_target_match,
@@ -79,6 +81,7 @@ from mcpnuke.checks.protected_resource_metadata import (
 )
 from mcpnuke.checks.rate_limit import check_behavioral_rate_limit, check_rate_limit
 from mcpnuke.checks.remote_package_exec import check_remote_package_execution
+from mcpnuke.checks.resource_poisoning import check_resource_poisoning
 from mcpnuke.checks.response_credentials import check_response_credentials
 from mcpnuke.checks.routing_header_binding import check_routing_header_binding
 from mcpnuke.checks.schema_overdisclosure import check_schema_overdisclosure
@@ -130,15 +133,10 @@ from mcpnuke.checks.teleport_labs import (
     check_teleport_lab_cert_replay,
     check_teleport_lab_role_escalation,
 )
+from mcpnuke.checks.temporal_consistency import check_temporal_consistency
 from mcpnuke.checks.theft import check_token_theft
 from mcpnuke.checks.tool_output_poisoning import check_credential_forwarding, check_tool_output_poisoning
-from mcpnuke.checks.tool_probes import (
-    check_error_leakage,
-    check_input_sanitization,
-    check_resource_poisoning,
-    check_temporal_consistency,
-    check_tool_response_injection,
-)
+from mcpnuke.checks.tool_response_injection import check_tool_response_injection
 from mcpnuke.checks.transport import check_sse_security
 from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 from mcpnuke.core.models import TargetResult

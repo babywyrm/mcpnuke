@@ -66,7 +66,10 @@ All notable changes to this submodule are documented here.
   `docs/superpowers/specs/`. The four session classes moved out of
   `core/session.py` into `core/transports/` (`sse`, `http`,
   `toolserver`, `stdio`); `core/session.py` keeps detection and
-  re-exports them. Test files are named
+  re-exports them. The five behavioral checks in `checks/tool_probes.py`
+  each moved to `checks/<check>.py`, leaving the shared invocation
+  helpers behind, so SARIF `helpUri` links now resolve for them. Test
+  files are named
   for the check they cover, not the session that wrote them, and probe
   pacing no longer runs in real time under test, so the in-process
   suite takes under half its former time.

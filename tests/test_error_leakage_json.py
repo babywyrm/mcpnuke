@@ -8,7 +8,7 @@ as many MCP servers do.
 import json
 import re
 
-from mcpnuke.checks.tool_probes import _extract_json_strings, _match_error_patterns
+from mcpnuke.checks.error_leakage import _extract_json_strings, _match_error_patterns
 
 # ---------------------------------------------------------------------------
 # Helpers
