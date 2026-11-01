@@ -70,7 +70,9 @@ All notable changes to this submodule are documented here.
   each moved to `checks/<check>.py`, leaving the shared invocation
   helpers behind, so SARIF `helpUri` links now resolve for them.
   `--doctor`, `--lab-coverage`, and `mcpnuke diff` moved from
-  `__main__.py` to `subcommands.py`. Test
+  `__main__.py` to `subcommands.py`. Chain argument templating and
+  step conditions moved from `core/chain_replay.py` to
+  `core/chain_args.py`. Test
   files are named
   for the check they cover, not the session that wrote them, and probe
   pacing no longer runs in real time under test, so the in-process

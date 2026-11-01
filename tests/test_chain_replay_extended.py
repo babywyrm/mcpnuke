@@ -76,38 +76,44 @@ class TestChainGraphParsing:
 
 class TestConditionalExecution:
     def test_condition_true_executes_step(self):
-        from mcpnuke.core.chain_replay import StepResult, _evaluate_condition
+        from mcpnuke.core.chain_args import _evaluate_condition
+        from mcpnuke.core.chain_replay import StepResult
 
         prior = [StepResult(tool="a", request_args={}, response_text="admin", failed=False)]
         assert _evaluate_condition("step0.response_text contains 'admin'", prior) is True
 
     def test_condition_false_skips_step(self):
-        from mcpnuke.core.chain_replay import StepResult, _evaluate_condition
+        from mcpnuke.core.chain_args import _evaluate_condition
+        from mcpnuke.core.chain_replay import StepResult
 
         prior = [StepResult(tool="a", request_args={}, response_text="user", failed=False)]
         assert _evaluate_condition("step0.response_text contains 'admin'", prior) is False
 
     def test_condition_on_failed_status(self):
-        from mcpnuke.core.chain_replay import StepResult, _evaluate_condition
+        from mcpnuke.core.chain_args import _evaluate_condition
+        from mcpnuke.core.chain_replay import StepResult
 
         prior = [StepResult(tool="a", request_args={}, response_text="", failed=True)]
         assert _evaluate_condition("step0.failed == True", prior) is True
         assert _evaluate_condition("step0.failed == False", prior) is False
 
     def test_invalid_condition_returns_false(self):
-        from mcpnuke.core.chain_replay import StepResult, _evaluate_condition
+        from mcpnuke.core.chain_args import _evaluate_condition
+        from mcpnuke.core.chain_replay import StepResult
 
         prior = [StepResult(tool="a", request_args={}, response_text="x", failed=False)]
         assert _evaluate_condition("invalid python syntax !!!", prior) is False
 
     def test_condition_with_numeric_comparison(self):
-        from mcpnuke.core.chain_replay import StepResult, _evaluate_condition
+        from mcpnuke.core.chain_args import _evaluate_condition
+        from mcpnuke.core.chain_replay import StepResult
 
         prior = [StepResult(tool="a", request_args={}, response_text="count: 5", failed=False)]
         assert _evaluate_condition("len(step0.response_text) > 3", prior) is True
 
     def test_a_condition_cannot_read_attributes_outside_the_grammar(self):
-        from mcpnuke.core.chain_replay import StepResult, _evaluate_condition
+        from mcpnuke.core.chain_args import _evaluate_condition
+        from mcpnuke.core.chain_replay import StepResult
 
         prior = [StepResult(tool="a", request_args={}, response_text="admin", failed=False)]
         assert _evaluate_condition("step0.__class__", prior) is False
