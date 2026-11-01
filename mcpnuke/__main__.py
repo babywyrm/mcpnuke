@@ -1021,21 +1021,7 @@ def _main_inner() -> None:
         from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
         if GLOBAL_K8S_FINDINGS:
             console.print(f"\n[bold]── K8s-Only Report ({len(GLOBAL_K8S_FINDINGS)} findings) ──[/bold]")
-            from mcpnuke.core.constants import SEV_COLOR
-            for f in GLOBAL_K8S_FINDINGS:
-                color = SEV_COLOR.get(f.severity, "dim")
-                console.print(f"  [{color}]{f.severity:8s}[/] {f.title}")
-                if f.detail:
-                    console.print(f"           [dim]{f.detail}[/dim]")
-            if args.json_out:
-                import json
-                report = {"k8s_findings": [
-                    {"severity": f.severity, "check": f.check, "title": f.title, "detail": f.detail}
-                    for f in GLOBAL_K8S_FINDINGS
-                ]}
-                from pathlib import Path
-                Path(args.json_out).write_text(json.dumps(report, indent=2))
-                console.print(f"\n[green]JSON report written to {args.json_out}[/green]")
+            _report(args, [], console)
             if _should_fail(GLOBAL_K8S_FINDINGS, getattr(args, "fail_on", "high")):
                 sys.exit(EXIT_FINDINGS)
             sys.exit(EXIT_CLEAN)

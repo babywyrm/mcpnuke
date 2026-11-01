@@ -121,6 +121,13 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **A Kubernetes-only scan writes the standard reports.** With
+  `--k8s-discover` and no MCP targets, `--json` wrote a bare
+  `{"k8s_findings": [...]}` without evidence, and `--sarif`,
+  `--generate-policy`, and the other report flags were silently ignored.
+  That scan now goes through the same report path as every other mode:
+  the JSON has the usual `summary`/`targets` schema with `k8s_findings`
+  (evidence included).
 - **Chain replay drops a revision that is not a chain.** A backend's
   `revise_chain` reply went straight into replay whatever its type. It
   is now used only if it is a `ProposedChain`; anything else ends the
