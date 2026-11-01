@@ -72,6 +72,7 @@ mcpnuke/core/chain_args.py   chain step placeholders, filters, and conditions
 mcpnuke/core/models.py       Finding, TargetResult dataclasses
 mcpnuke/scanner.py           parallel scan orchestration
 mcpnuke/__main__.py          CLI entry point
+mcpnuke/cli_steps.py         scan-path helpers: auth, AI backend, k8s, report
 mcpnuke/subcommands.py       --doctor, --lab-coverage, `mcpnuke diff`; exit codes
 ```
 
