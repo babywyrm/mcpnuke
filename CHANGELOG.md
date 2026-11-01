@@ -63,7 +63,10 @@ All notable changes to this submodule are documented here.
   `type: ignore`. The DPoP and routing-header checks take a typed
   session and narrow it to `HTTPCapableSession`, whose `post_raw`
   returns `httpx.Response`. Design specs live in one folder,
-  `docs/superpowers/specs/`. Test files are named
+  `docs/superpowers/specs/`. The four session classes moved out of
+  `core/session.py` into `core/transports/` (`sse`, `http`,
+  `toolserver`, `stdio`); `core/session.py` keeps detection and
+  re-exports them. Test files are named
   for the check they cover, not the session that wrote them, and probe
   pacing no longer runs in real time under test, so the in-process
   suite takes under half its former time.

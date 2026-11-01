@@ -12,8 +12,8 @@ genuinely not uniform: a DPoP proof lives in an HTTP header, and stdio has no
 header layer for one to live in. Splitting that out keeps the capability
 explicit instead of leaving ``post_raw`` as a member some transports raise on.
 
-The file split of ``core/session.py`` into this package is separate work; this
-module intentionally defines only the contract.
+The implementations live beside this module (``sse``, ``http``, ``toolserver``,
+``stdio``); this one defines only the contract.
 """
 
 from __future__ import annotations

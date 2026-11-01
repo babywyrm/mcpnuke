@@ -29,7 +29,8 @@ All session types implement the same interface:
 
 ### 1. Create the session class
 
-In `mcpnuke/core/session.py`, add a new class:
+In a new module `mcpnuke/core/transports/<name>.py`, add the class, and
+re-export it from `mcpnuke/core/session.py`:
 
 ```python
 class YourSession:

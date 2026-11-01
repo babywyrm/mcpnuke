@@ -49,8 +49,9 @@ mcpnuke/checks/base.py           — time_check, tool_text (shared searchable su
 mcpnuke/patterns/rules.py        — static regex pattern sets
 mcpnuke/patterns/probes.py       — behavioral probe payloads and response analysis
 mcpnuke/patterns/credentials.py  — the only credential regexes, tiered by FP risk
-mcpnuke/core/session.py          — transport detection and the four session classes
+mcpnuke/core/session.py          — transport detection; re-exports the session classes
 mcpnuke/core/transports/base.py  — MCPSessionProtocol, HTTPCapableSession
+mcpnuke/core/transports/<name>.py — sse, http, toolserver, stdio sessions
 mcpnuke/core/protocol.py         — legacy vs stateless framing (2026-07-28 spec)
 mcpnuke/core/enumerator.py       — protocol negotiation and server enumeration
 mcpnuke/core/models.py           — Finding, TargetResult dataclasses

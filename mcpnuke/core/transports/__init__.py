@@ -1,4 +1,4 @@
-"""Transport contracts and, in time, the transport implementations."""
+"""Transport contracts and the four session implementations."""
 
 from mcpnuke.core.transports.base import HTTPCapableSession, MCPSessionProtocol
 
