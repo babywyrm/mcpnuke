@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from mcpnuke.core import llm
+from mcpnuke.core import llm, llm_prompts
 from mcpnuke.core.chain_replay import ProposedChain, parse_proposed_chains
 
 
@@ -209,9 +209,9 @@ class TestProposalPromptBudget:
             {"title": f"f{i}", "detail": "d" * 400, "evidence": "e" * 300}
             for i in range(40)
         ]
-        _, user = llm._propose_chains_prompt(tools, findings)
+        _, user = llm_prompts._propose_chains_prompt(tools, findings)
         assert len(user) <= (
-            llm._PROPOSE_TOOLS_BUDGET_CHARS + llm._PROPOSE_FINDINGS_BUDGET_CHARS + 500
+            llm_prompts._PROPOSE_TOOLS_BUDGET_CHARS + llm_prompts._PROPOSE_FINDINGS_BUDGET_CHARS + 500
         )
 
     def test_proposal_prompt_keeps_implicated_tools_when_trimming(self):
@@ -219,12 +219,12 @@ class TestProposalPromptBudget:
             {"name": f"tool{i}", "description": "x" * 500} for i in range(138)
         ]
         findings = [{"title": "t", "detail": "d", "tool": "tool137"}]
-        _, user = llm._propose_chains_prompt(tools, findings)
+        _, user = llm_prompts._propose_chains_prompt(tools, findings)
         assert "tool137" in user
 
 
 def test_peers_are_listed_and_steps_may_set_target() -> None:
-    system, user = llm._propose_chains_prompt(
+    system, user = llm_prompts._propose_chains_prompt(
         [{"name": "vault.read", "description": "read"}],
         [{"title": "t", "detail": "d"}],
         peers=[("http://b.example/mcp", ["net.deliver"])],
@@ -235,7 +235,7 @@ def test_peers_are_listed_and_steps_may_set_target() -> None:
 
 
 def test_peer_prompt_shows_target_in_the_step_schema() -> None:
-    system, _user = llm._propose_chains_prompt(
+    system, _user = llm_prompts._propose_chains_prompt(
         [{"name": "vault.read", "description": "read"}],
         [{"title": "t", "detail": "d"}],
         peers=[("http://b.example/mcp", ["net.deliver"])],
@@ -248,7 +248,7 @@ def test_peer_prompt_shows_target_in_the_step_schema() -> None:
 
 
 def test_revision_prompt_shows_target_when_peers_are_in_scope() -> None:
-    system, user = llm._revise_chain_prompt(
+    system, user = llm_prompts._revise_chain_prompt(
         "halted",
         "step1 failed",
         [{"name": "vault.read", "description": "read"}],
@@ -262,7 +262,7 @@ def test_revision_prompt_shows_target_when_peers_are_in_scope() -> None:
 
 
 def test_revision_prompt_without_peers_does_not_ask_for_a_target_field() -> None:
-    system, _user = llm._revise_chain_prompt(
+    system, _user = llm_prompts._revise_chain_prompt(
         "halted",
         "step1 failed",
         [{"name": "vault.read", "description": "read"}],
@@ -271,7 +271,7 @@ def test_revision_prompt_without_peers_does_not_ask_for_a_target_field() -> None
 
 
 def test_prompt_without_peers_does_not_ask_for_a_target_field() -> None:
-    system, _user = llm._propose_chains_prompt(
+    system, _user = llm_prompts._propose_chains_prompt(
         [{"name": "vault.read", "description": "read"}],
         [{"title": "t", "detail": "d"}],
     )

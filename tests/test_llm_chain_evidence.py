@@ -20,7 +20,7 @@ from types import SimpleNamespace
 import pytest
 
 from mcpnuke.checks.llm_analysis import run_llm_analysis
-from mcpnuke.core import llm
+from mcpnuke.core import llm, llm_prompts
 from mcpnuke.core.models import TargetResult
 
 
@@ -121,12 +121,12 @@ class TestToolsCarryTheirParameters:
             },
         }
 
-        digest = llm._tool_digest(tool)
+        digest = llm_prompts._tool_digest(tool)
 
         assert digest["params"] == ["url:string", "depth:integer"]
 
     def test_a_tool_without_a_schema_is_still_described(self):
-        digest = llm._tool_digest({"name": "svc.ping", "description": "Ping"})
+        digest = llm_prompts._tool_digest({"name": "svc.ping", "description": "Ping"})
 
         assert digest["name"] == "svc.ping"
         assert digest["params"] == []
@@ -135,7 +135,7 @@ class TestToolsCarryTheirParameters:
         """100 characters cut most descriptions before the risky clause."""
         tool = {"name": "t", "description": "x" * 400, "inputSchema": {}}
 
-        assert len(llm._tool_digest(tool)["description"]) > 100
+        assert len(llm_prompts._tool_digest(tool)["description"]) > 100
 
 
 class TestTheBudgetNeverEmitsBrokenJson:
@@ -150,27 +150,27 @@ class TestTheBudgetNeverEmitsBrokenJson:
         ]
 
     def test_an_over_budget_payload_is_still_valid_json(self):
-        text = llm._budgeted_json([llm._tool_digest(t) for t in self._tools(138)], 3000)
+        text = llm_prompts._budgeted_json([llm_prompts._tool_digest(t) for t in self._tools(138)], 3000)
 
         json.loads(text)
 
     def test_it_drops_whole_items_rather_than_cutting_one(self):
-        items = [llm._tool_digest(t) for t in self._tools(138)]
+        items = [llm_prompts._tool_digest(t) for t in self._tools(138)]
 
-        decoded = json.loads(llm._budgeted_json(items, 3000))
+        decoded = json.loads(llm_prompts._budgeted_json(items, 3000))
 
         assert 0 < len(decoded) < 138
         assert all(d in items for d in decoded)
 
     def test_everything_is_kept_when_it_fits(self):
-        items = [llm._tool_digest(t) for t in self._tools(3)]
+        items = [llm_prompts._tool_digest(t) for t in self._tools(3)]
 
-        assert json.loads(llm._budgeted_json(items, 100_000)) == items
+        assert json.loads(llm_prompts._budgeted_json(items, 100_000)) == items
 
     def test_the_budget_is_respected(self):
-        items = [llm._tool_digest(t) for t in self._tools(138)]
+        items = [llm_prompts._tool_digest(t) for t in self._tools(138)]
 
-        assert len(llm._budgeted_json(items, 3000)) <= 3000
+        assert len(llm_prompts._budgeted_json(items, 3000)) <= 3000
 
 
 class TestEveryVulnerabilityClassIsRepresented:
@@ -191,7 +191,7 @@ class TestEveryVulnerabilityClassIsRepresented:
         return bulk + rare
 
     def test_a_rare_check_is_not_crowded_out_by_a_noisy_one(self):
-        ordered = llm._diverse_findings(self._skewed())
+        ordered = llm_prompts._diverse_findings(self._skewed())
 
         # It must land before the noisy check's second instance, not merely
         # somewhere in a 234-long list.
@@ -204,7 +204,7 @@ class TestEveryVulnerabilityClassIsRepresented:
             for i in range(4)
         ]
 
-        head = llm._diverse_findings(findings)[:3]
+        head = llm_prompts._diverse_findings(findings)[:3]
 
         assert {f["check"] for f in head} == {"a", "b", "c"}
 
@@ -215,12 +215,12 @@ class TestEveryVulnerabilityClassIsRepresented:
             {"check": "x", "severity": "MEDIUM", "title": "med"},
         ]
 
-        assert llm._diverse_findings(findings)[0]["title"] == "crit"
+        assert llm_prompts._diverse_findings(findings)[0]["title"] == "crit"
 
     def test_nothing_is_lost_only_reordered(self):
         findings = self._skewed()
 
-        assert len(llm._diverse_findings(findings)) == len(findings)
+        assert len(llm_prompts._diverse_findings(findings)) == len(findings)
 
     def test_a_severe_class_is_ordered_ahead_of_a_mild_one(self):
         findings = [
@@ -228,7 +228,7 @@ class TestEveryVulnerabilityClassIsRepresented:
             {"check": "severe", "severity": "CRITICAL", "title": "s"},
         ]
 
-        assert llm._diverse_findings(findings)[0]["check"] == "severe"
+        assert llm_prompts._diverse_findings(findings)[0]["check"] == "severe"
 
 
 class TestTheBudgetFitsARealTarget:
@@ -243,9 +243,9 @@ class TestTheBudgetFitsARealTarget:
             }
             for i in range(139)
         ]
-        digests = [llm._tool_digest(t) for t in tools]
+        digests = [llm_prompts._tool_digest(t) for t in tools]
 
-        assert len(llm._fit(digests, llm._TOOLS_BUDGET_CHARS)) == 139
+        assert len(llm_prompts._fit(digests, llm_prompts._TOOLS_BUDGET_CHARS)) == 139
 
     def test_the_findings_budget_holds_one_of_every_class(self):
         findings = [
@@ -261,7 +261,7 @@ class TestTheBudgetFitsARealTarget:
             for i in range(47)
         ]
 
-        assert len(llm._fit(findings, llm._FINDINGS_BUDGET_CHARS)) == 47
+        assert len(llm_prompts._fit(findings, llm_prompts._FINDINGS_BUDGET_CHARS)) == 47
 
 
 class TestTrimmingPrefersImplicatedTools:

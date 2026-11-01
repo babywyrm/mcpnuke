@@ -72,7 +72,9 @@ All notable changes to this submodule are documented here.
   `--doctor`, `--lab-coverage`, and `mcpnuke diff` moved from
   `__main__.py` to `subcommands.py`. Chain argument templating and
   step conditions moved from `core/chain_replay.py` to
-  `core/chain_args.py`. Test
+  `core/chain_args.py`. Prompt construction and the input budgets
+  moved from `core/llm.py` to `core/llm_prompts.py`, leaving the API
+  calls. Test
   files are named
   for the check they cover, not the session that wrote them, and probe
   pacing no longer runs in real time under test, so the in-process

@@ -39,9 +39,11 @@ from typing import TYPE_CHECKING
 import httpx
 
 from mcpnuke.core.chain_replay import ProposedChain
-from mcpnuke.core.llm import (
-    LLMFinding,
-    _parse_findings,
+from mcpnuke.core.llm import LLMFinding, _parse_findings
+from mcpnuke.core.llm_prompts import (
+    _judge_chain_run_prompt,
+    _propose_chains_prompt,
+    _revise_chain_prompt,
     taxonomy_id_clause,
     tool_analysis_system_prompt,
 )
@@ -384,12 +386,11 @@ class OllamaBackend:
         peers: list[tuple[str, list[str]]] | None = None,
     ) -> list:
         """Propose executable attack chains for replay."""
-        from mcpnuke.core import llm as llm_core
         from mcpnuke.core.chain_replay import parse_proposed_chains
 
         if not findings:
             return []
-        system, user = llm_core._propose_chains_prompt(tools, findings, peers=peers)
+        system, user = _propose_chains_prompt(tools, findings, peers=peers)
         schema = chain_response_schema(require_target=bool(peers))
         text = self._call(system, user, DEFAULT_MAX_TOKENS, log, response_format=schema)
         chains = parse_proposed_chains(text)
@@ -418,9 +419,8 @@ class OllamaBackend:
         log: Callable[[str], None] | None = None,
     ) -> tuple[bool, str]:
         """Judge whether a replay transcript shows transformed data movement."""
-        from mcpnuke.core import llm as llm_core
 
-        system, user = llm_core._judge_chain_run_prompt(title, transcript)
+        system, user = _judge_chain_run_prompt(title, transcript)
         text = self._call(system, user, 300, log)
         try:
             obj = json.loads((text or "").strip())
@@ -438,10 +438,9 @@ class OllamaBackend:
         peers: list[tuple[str, list[str]]] | None = None,
     ) -> ProposedChain | None:
         """Propose one corrected chain for a halted run, or None."""
-        from mcpnuke.core import llm as llm_core
         from mcpnuke.core.chain_replay import parse_proposed_chains
 
-        system, user = llm_core._revise_chain_prompt(
+        system, user = _revise_chain_prompt(
             chain.title, transcript, tools, peers=peers
         )
         text = self._call(

@@ -338,7 +338,7 @@ def _captured_system(callable_name: str, *args) -> str:
 def test_ollama_phase3_prompt_constrains_taxonomy_ids():
     """The Ollama chain-reasoning prompt carried the stale 'if applicable'
     line that let live models invent MCP-2024-* ids or omit the field."""
-    from mcpnuke.core.llm import taxonomy_id_clause
+    from mcpnuke.core.llm_prompts import taxonomy_id_clause
 
     system = _captured_system(
         "analyze_findings",
@@ -349,7 +349,7 @@ def test_ollama_phase3_prompt_constrains_taxonomy_ids():
 
 
 def test_ollama_phase2_prompt_constrains_taxonomy_ids():
-    from mcpnuke.core.llm import taxonomy_id_clause
+    from mcpnuke.core.llm_prompts import taxonomy_id_clause
 
     system = _captured_system("analyze_response", "t", "d", "x" * 20)
     assert taxonomy_id_clause() in system

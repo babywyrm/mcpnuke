@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-from mcpnuke.core.llm import taxonomy_id_clause
+from mcpnuke.core.llm_prompts import taxonomy_id_clause
 from mcpnuke.core.taxonomy import threat_ids
 
 
