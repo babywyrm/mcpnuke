@@ -42,6 +42,7 @@ def _probe_sse_path(
     auth_token: str | None = None,
     verify_tls: bool = False,
     extra_headers: dict | None = None,
+    errors: list[str] | None = None,
 ) -> bool:
     url = base + path
     result: list[bool] = [False]
@@ -61,8 +62,8 @@ def _probe_sse_path(
                 done.set()
                 for _ in zip(resp.iter_bytes(chunk_size=64), range(3), strict=False):
                     pass
-        except Exception:
-            pass
+        except Exception as exc:
+            _record(errors, exc)
         finally:
             done.set()
 
@@ -71,6 +72,14 @@ def _probe_sse_path(
     done.wait(timeout=timeout + 1)
     return result[0]
 
+
+def _record(errors: list[str] | None, exc: BaseException) -> None:
+    """Keep one line per distinct probe failure, for the caller to report."""
+    if errors is None:
+        return
+    line = f"{type(exc).__name__}: {exc}"[:200]
+    if line not in errors:
+        errors.append(line)
 
 
 TOOL_SERVER_PROBES = [
@@ -187,12 +196,16 @@ def detect_transport(
     verify_tls: bool = False,
     extra_headers: dict | None = None,
     log: Callable[[str], None] | None = None,
+    errors: list[str] | None = None,
     **kwargs: Any,
 ) -> MCPSession | HTTPSession | ToolServerSession | None:
     """Detect MCP transport at the given URL.
 
     Tries SSE, HTTP POST (Streamable HTTP), SSE+POST combos, and custom tool servers.
-    When verbose=True and log is provided, emits detailed probe status.
+    When verbose=True and log is provided, emits detailed probe status. When
+    *errors* is given, each distinct SSE and POST probe failure is appended to
+    it, so a caller can say why nothing answered (a refused port, a rejected
+    certificate) rather than only that nothing did.
     """
     _log = log or (lambda msg: None)
     parsed = urlparse(url)
@@ -219,6 +232,7 @@ def detect_transport(
             auth_token=auth_token,
             verify_tls=verify_tls,
             extra_headers=extra_headers,
+            errors=errors,
         ):
             continue
 
@@ -306,14 +320,16 @@ def detect_transport(
                     headers=mcp_headers,
                     verify_tls=verify_tls,
                 )
-        except httpx.ConnectError:
+        except httpx.ConnectError as exc:
+            _record(errors, exc)
             if verbose:
                 _log("  [dim]  → Connection refused[/dim]")
-        except httpx.TimeoutException:
+        except httpx.TimeoutException as exc:
+            _record(errors, exc)
             if verbose:
                 _log("  [dim]  → Timeout[/dim]")
-        except Exception:
-            pass
+        except Exception as exc:
+            _record(errors, exc)
 
     if verbose:
         _log("  [dim]Trying SSE+POST combinations...[/dim]")
@@ -341,8 +357,8 @@ def detect_transport(
                         client.close()
                         return session
                     session.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                _record(errors, exc)
 
     client.close()
 

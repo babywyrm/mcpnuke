@@ -6,6 +6,7 @@ from collections.abc import Callable
 from urllib.parse import urlparse
 
 from rich.console import Console
+from rich.markup import escape
 from rich.progress import (
     BarColumn,
     Progress,
@@ -192,23 +193,24 @@ def scan_target(
 
     opts = probe_opts or {}
     _log: Callable[[str], None] = _print_log if verbose else _quiet
+    detect_errors: list[str] = []
     session = detect_transport(
         url, connect_timeout=timeout, verbose=verbose, auth_token=auth_token,
         verify_tls=bool(opts.get("tls_verify", False)),
         extra_headers=opts.get("extra_headers"),
         tool_names_file=opts.get("tool_names_file"),
         log=_log,
+        errors=detect_errors,
     )
 
     if not session:
         console.print(f"  [red]✗[/red] No MCP transport found on {url}")
+        detail = "Tried SSE + HTTP POST + ToolServer on common paths"
+        if detect_errors:
+            console.print(f"    [dim]{escape(detect_errors[0])}[/dim]")
+            detail += ". Probe errors: " + "; ".join(detect_errors[:3])
         result.transport = "none"
-        result.add(
-            "transport",
-            "HIGH",
-            "No MCP endpoint found",
-            "Tried SSE + HTTP POST + ToolServer on common paths",
-        )
+        result.add("transport", "HIGH", "No MCP endpoint found", detail)
         # Inference backend probe runs independently of MCP transport
         if opts.get("inference_host") or opts.get("inference_scan"):
             from mcpnuke.checks.inference_backend import check_inference_backend, check_model_integrity

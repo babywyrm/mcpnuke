@@ -141,6 +141,11 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **"No MCP endpoint found" says why.** Every SSE and POST probe
+  failure during transport detection was swallowed, so a refused port, a
+  timeout, and a certificate rejected under `--tls-verify` all looked
+  like a server with no MCP endpoint. The finding detail now lists up to
+  three distinct probe errors, and the console prints the first.
 - **Kubernetes findings gate CI and reach SARIF.** A URL or
   inference-only scan with `--k8s-discover` printed Kubernetes findings
   but left them out of the `--fail-on` exit code, so a privileged pod
