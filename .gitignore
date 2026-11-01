@@ -45,7 +45,6 @@ profiles/*-fast.json
 
 .uv/
 tests/test_targets/
-1/
 
 # Scan output
 walkthrough/report.json
