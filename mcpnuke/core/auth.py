@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import httpx
 
 from mcpnuke.core.constants import MCP_INIT_PARAMS
+from mcpnuke.patterns.credentials import redact_credentials
 
 
 @dataclass
@@ -150,7 +151,7 @@ def fetch_token_introspection(
         if r.status_code != 200:
             raise RuntimeError(
                 f"Token introspection failed: HTTP {r.status_code} from {introspect_url}\n"
-                f"Response: {r.text[:500]}"
+                f"Response: {redact_credentials(r.text)[:500]}"
             )
         body = r.json()
         if not isinstance(body, dict):
@@ -204,7 +205,7 @@ def fetch_jwks(
         if r.status_code != 200:
             raise RuntimeError(
                 f"JWKS fetch failed: HTTP {r.status_code} from {jwks_url}\n"
-                f"Response: {r.text[:500]}"
+                f"Response: {redact_credentials(r.text)[:500]}"
             )
         body = r.json()
         if not isinstance(body, dict):
@@ -435,12 +436,12 @@ def fetch_client_credentials_token(
         if r.status_code != 200:
             raise RuntimeError(
                 f"Token fetch failed: HTTP {r.status_code} from {token_endpoint}\n"
-                f"Response: {r.text[:500]}"
+                f"Response: {redact_credentials(r.text)[:500]}"
             )
         data = r.json()
         token = data.get("access_token")
         if not token:
-            raise RuntimeError(f"No access_token in response: {json.dumps(data)[:500]}")
+            raise RuntimeError(f"No access_token in response (keys: {', '.join(sorted(data))})")
         return token
     except httpx.HTTPError as e:
         raise RuntimeError(f"Token fetch error: {e}") from e

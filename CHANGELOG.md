@@ -106,6 +106,12 @@ All notable changes to this submodule are documented here.
 
 ### Security
 
+- **Auth fetch errors carry no token.** A failed OIDC token,
+  introspection, or JWKS request put up to 500 characters of the raw
+  response body in the error the console prints. The body is now
+  redacted before it is cut. A token response with no `access_token`
+  listed its whole body, so an `id_token` or `refresh_token` reached
+  the console; the error now names only the keys.
 - **Scan output is written owner-only.** JSON, SARIF, baselines,
   `--generate-policy` YAML, the diff and discovery summaries, and the
   inference manifest were created with the process umask, usually
