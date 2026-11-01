@@ -10,7 +10,6 @@ from pathlib import Path
 
 from mcpnuke import _docsgen
 from mcpnuke import checks as checks_pkg
-from mcpnuke.__main__ import _build_diff_parser
 from mcpnuke._docsgen import render_cli_reference
 from mcpnuke.checks import (
     _DPOP_CHECK_NAMES,
@@ -24,6 +23,7 @@ from mcpnuke.checks import (
 from mcpnuke.cli import build_parser, parse_args
 from mcpnuke.core.constants import ATTACK_CHAIN_PATTERNS
 from mcpnuke.core.models import TargetResult
+from mcpnuke.subcommands import _build_diff_parser
 
 
 class TestParserFactory:

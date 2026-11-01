@@ -71,6 +71,7 @@ mcpnuke/core/chain_replay.py multi-hop attack chain replay (DAG, OAST)
 mcpnuke/core/models.py       Finding, TargetResult dataclasses
 mcpnuke/scanner.py           parallel scan orchestration
 mcpnuke/__main__.py          CLI entry point
+mcpnuke/subcommands.py       --doctor, --lab-coverage, `mcpnuke diff`; exit codes
 ```
 
 ## Invariants guarded by tests

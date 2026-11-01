@@ -34,8 +34,8 @@ import ast
 from pathlib import Path
 from typing import TypeGuard
 
-from mcpnuke.__main__ import _build_diff_parser
 from mcpnuke.cli import build_parser
+from mcpnuke.subcommands import _build_diff_parser
 
 REPO_ROOT: Path = Path(__file__).resolve().parent.parent
 CLI_REFERENCE_PATH: Path = REPO_ROOT / "docs" / "cli-reference.md"
