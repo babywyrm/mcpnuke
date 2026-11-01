@@ -230,6 +230,53 @@ def compile_patterns(
     return out
 
 
+# What redaction masks: every tier that matches a secret value. Not
+# REFERENCE_PATTERNS (they point at a secret) or VENDOR_CREDENTIALS (lab
+# names such as CZTZ_ADMIN_TOKEN are identifiers, not values).
+REDACT_CREDENTIALS: tuple[PatternSpec, ...] = (
+    STRUCTURAL_CREDENTIALS + KEYWORD_CREDENTIALS + PROSE_CREDENTIALS
+)
+
+REDACTED: str = "[REDACTED]"
+
+# A PEM banner is not secret but the body after it is, and an excerpt may be
+# cut before the END line.
+_PEM_BLOCK: re.Pattern[str] = re.compile(
+    r"(-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----)"
+    r"(?!\[REDACTED\]).*?(?:-----END [A-Z ]*PRIVATE KEY(?: BLOCK)?-----|\Z)",
+    re.DOTALL,
+)
+_SEPARATOR: re.Pattern[str] = re.compile(r"[:=]\s*[\"']?|\s+[\"']?")
+
+
+def _mask(match: re.Match[str]) -> str:
+    text = match.group()
+    sep = _SEPARATOR.search(text)
+    if sep is None:
+        return text[:4] + REDACTED
+    value = text[sep.end():]
+    # A schema declaration, `"password": {"type": "string"}`, holds no value.
+    if value.startswith(("{", "[")):
+        return text
+    return text[: sep.end()] + REDACTED
+
+
+def redact_credentials(text: str) -> str:
+    """Mask every credential value in *text*, keeping enough to identify it.
+
+    A bare token keeps its first four characters (``AKIA[REDACTED]``); an
+    assignment keeps its name (``password: [REDACTED]``); a private key keeps
+    its banner and loses its body.
+    """
+    if not text:
+        return text
+    text = _PEM_BLOCK.sub(lambda m: m.group(1) + REDACTED, text)
+    for pat, name in compile_patterns(REDACT_CREDENTIALS):
+        if name != "private_key":
+            text = pat.sub(_mask, text)
+    return text
+
+
 def find_credential(
     text: str,
     patterns: tuple[PatternSpec, ...] | list[PatternSpec] = STRUCTURAL_CREDENTIALS,

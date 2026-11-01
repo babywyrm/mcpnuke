@@ -28,6 +28,7 @@ from mcpnuke.patterns.credentials import (
     VENDOR_CREDENTIALS,
     compile_patterns,
     find_credential,
+    redact_credentials,
 )
 
 # ── The corpus ────────────────────────────────────────────────────────
@@ -234,3 +235,60 @@ class TestHelpers:
     def test_every_pattern_compiles(self):
         for tier in (STRUCTURAL_CREDENTIALS, KEYWORD_CREDENTIALS, VENDOR_CREDENTIALS):
             compile_patterns(tier)
+
+
+# ── Redaction ─────────────────────────────────────────────────────────
+#
+# Finding evidence reaches the console, JSON, and SARIF, and SARIF is
+# uploaded to code scanning. A matched secret must not ride along.
+
+KEYWORD_VALUES: dict[str, str] = {
+    "password_assign": "hunter2seven",
+    "password_equals": "s3cr3t-value",
+    "api_key_assign": "abc123def456",
+    "rcon_password": "minecraft123",
+    "admin_api_key": "adminsecret1",
+}
+
+_PEM: str = "-----BEGIN RSA PRIVATE KEY-----\nMIIEsyntheticbody\n-----END RSA PRIVATE KEY-----"
+
+
+class TestRedaction:
+    @pytest.mark.parametrize(("label", "text"), sorted(STRUCTURAL_POSITIVES.items()))
+    def test_no_structural_secret_survives(self, label: str, text: str):
+        out = redact_credentials(f"leaked {text} here")
+        assert "[REDACTED]" in out, label
+        assert _detect(out, STRUCTURAL_CREDENTIALS) in (None, "private_key"), out
+
+    @pytest.mark.parametrize(("label", "text"), sorted(KEYWORD_POSITIVES.items()))
+    def test_keyword_value_is_removed_and_the_name_kept(self, label: str, text: str):
+        out = redact_credentials(text)
+        assert KEYWORD_VALUES[label] not in out
+        assert out.split("[REDACTED]")[0].strip(" :=\"'"), out
+
+    def test_private_key_body_is_removed(self):
+        out = redact_credentials(f"config {_PEM} tail")
+        assert "MIIEsyntheticbody" not in out
+        assert out.startswith("config -----BEGIN RSA PRIVATE KEY-----")
+        assert out.endswith(" tail")
+
+    def test_truncated_private_key_body_is_removed(self):
+        assert "MIIE" not in redact_credentials(_PEM[:40])
+
+    def test_connection_string_password_is_removed(self):
+        assert "hunter2" not in redact_credentials("postgres://user:hunter2@db:5432/app")
+
+    @pytest.mark.parametrize(("label", "text"), sorted(STRUCTURAL_NEGATIVES.items()))
+    def test_negatives_are_untouched(self, label: str, text: str):
+        assert redact_credentials(text) == text
+
+    def test_redaction_is_idempotent(self):
+        once = redact_credentials(f"{_PEM} AKIAIOSFODNN7EXAMPLE password=hunter2seven")
+        assert redact_credentials(once) == once
+
+    def test_finding_evidence_is_redacted(self):
+        from mcpnuke.core.models import Finding
+
+        f = Finding(target="t", check="c", severity="HIGH", title="t",
+                    evidence="key AKIAIOSFODNN7EXAMPLE")
+        assert "AKIAIOSFODNN7EXAMPLE" not in f.evidence

@@ -90,6 +90,15 @@ All notable changes to this submodule are documented here.
 
 ### Security
 
+- **Finding evidence no longer carries the secret it found.**
+  `response_credentials`, `credential_in_schema`, and `config_dump`
+  copied the matched credential (or up to 500 characters of the
+  response) into `evidence`, which reached the console, JSON, and SARIF
+  uploaded to code scanning. `Finding` now masks every value the
+  credential patterns match when it is created: `AKIA[REDACTED]`,
+  `password: [REDACTED]`, a private key's banner without its body.
+  Schema declarations such as `"password": {"type": ...}` are left
+  alone.
 - **`--tls-verify` reaches the base-URL probes.** `actuator_probe` sent
   `--auth-token` with certificate checks off even when `--tls-verify`
   was set; `sse_security` ignored it too. Both now follow the flag. The

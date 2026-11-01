@@ -62,7 +62,7 @@ def test_the_planted_secret_is_the_documented_example(scanned: TargetResult) -> 
         if finding.check == "credential_in_schema" and "aws_access_key" in finding.title
     ]
     assert len(hits) == 1
-    assert "AKIAIOSFODNN7EXAMPLE" in hits[0].evidence
+    assert hits[0].evidence == "AKIA[REDACTED]"
 
 
 def test_shadow_evidence_is_the_other_endpoint(scanned: TargetResult) -> None:

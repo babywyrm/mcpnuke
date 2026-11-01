@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from mcpnuke.patterns.credentials import redact_credentials
+
 if TYPE_CHECKING:
     # Import-only: reporting.diff imports this module, so a runtime import
     # here would be circular.
@@ -30,6 +32,8 @@ class Finding:
     mitre_id: str = ""
 
     def __post_init__(self) -> None:
+        if isinstance(self.evidence, str):
+            self.evidence = redact_credentials(self.evidence)
         if self.taxonomy_id and (self.lane is None or self.transport is None):
             try:
                 from mcpnuke.core.taxonomy import threat_metadata
