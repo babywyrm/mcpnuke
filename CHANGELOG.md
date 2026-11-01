@@ -76,7 +76,9 @@ All notable changes to this submodule are documented here.
   moved from `core/llm.py` to `core/llm_prompts.py`, leaving the API
   calls. The scan-path helpers (auth, AI backend, Kubernetes setup,
   probe options, reporting) moved from `__main__.py` to
-  `cli_steps.py`; `__main__.py` keeps the run order. Test
+  `cli_steps.py`; `__main__.py` keeps the run order. The scan banner,
+  mode notices, and baseline diff left `_main_inner` for named steps
+  there. Test
   files are named
   for the check they cover, not the session that wrote them, and probe
   pacing no longer runs in real time under test, so the in-process

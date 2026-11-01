@@ -3,10 +3,13 @@
 import argparse
 import sys
 import time
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from rich.console import Console
+from rich.panel import Panel
 
+from mcpnuke import __version__
 from mcpnuke.core.auth import (
     decode_jwt_claims,
     detect_auth_requirements,
@@ -22,6 +25,7 @@ from mcpnuke.core.models import TargetResult
 from mcpnuke.diff import (
     apply_diff_findings,
     diff_against_baseline,
+    print_diff_report,
 )
 from mcpnuke.k8s import discover_services, fingerprint_services, run_k8s_checks
 from mcpnuke.reporting import print_report, write_json, write_sarif
@@ -563,3 +567,145 @@ def _report(args: argparse.Namespace, results: list[TargetResult], console: Cons
         except Exception as exc:  # noqa: BLE001 - surface any taxonomy load issue clearly
             console.print(f"\n[red]--taxonomy: failed to load: {exc}[/red]")
 
+
+
+def _print_scan_panel(
+    args: argparse.Namespace,
+    urls: list[str],
+    *,
+    auth_token: str | None,
+    auth_context_summary: dict,
+    extra_headers: dict[str, str],
+    probe_workers: int,
+    phase2_workers: int,
+    deterministic: bool,
+    console: Console,
+) -> None:
+    """Print the banner: targets, auth, AI backend, and the run's knobs."""
+    jwt_claims_summary: dict = auth_context_summary.get("jwt_claims_summary", {})
+    panel_lines = [
+        f"[bold cyan]mcpnuke v{__version__}[/bold cyan]  [dim]MCP Red Teaming & Security Scanner[/dim]",
+        f"Targets : {len(urls)}",
+        f"Workers : {args.workers}",
+        f"Timeout : {args.timeout}s",
+        f"Verbose : {args.verbose}  Debug: {args.debug}",
+        f"Fast    : {args.fast}" if args.fast else "",
+        f"Probe⌿  : {probe_workers} thread(s)" if probe_workers > 1 else "",
+        f"Group   : {args.group_findings}" if args.group_findings else "",
+        f"Started : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+    ]
+    panel_lines = [line for line in panel_lines if line]
+    if args.baseline:
+        panel_lines.append(f"Baseline: {args.baseline}")
+    if args.save_baseline:
+        panel_lines.append(f"Save baseline: {args.save_baseline}")
+    if auth_token:
+        if args.client_id:
+            panel_lines.append(f"Auth: OIDC client_credentials (client={args.client_id})")
+        else:
+            panel_lines.append("Auth: Bearer token")
+    if args.oidc_scope:
+        panel_lines.append(f"OIDC scope: {args.oidc_scope}")
+    if args.dpop_proof:
+        panel_lines.append("DPoP: provided")
+    if args.tls_verify:
+        panel_lines.append("TLS verify: True")
+    if extra_headers:
+        panel_lines.append(f"Extra headers: {len(extra_headers)}")
+    if jwt_claims_summary:
+        claims_short = ", ".join(
+            f"{k}={v}" for k, v in jwt_claims_summary.items() if k in {"iss", "sub", "aud", "scope", "scp"}
+        )
+        if claims_short:
+            panel_lines.append(f"JWT claims: {claims_short[:120]}")
+    if "introspection_summary" in auth_context_summary:
+        active = auth_context_summary["introspection_summary"].get("active")
+        panel_lines.append(f"Introspection active: {active}")
+    if "jwks_summary" in auth_context_summary:
+        panel_lines.append(f"JWKS keys: {auth_context_summary['jwks_summary'].get('key_count', 0)}")
+    if args.claude:
+        if args.bedrock:
+            panel_lines.append(f"AI: Claude via Bedrock ({args.bedrock_model})")
+            if args.bedrock_region:
+                panel_lines.append(f"Bedrock region: {args.bedrock_region}")
+            if args.bedrock_profile:
+                panel_lines.append(f"Bedrock profile: {args.bedrock_profile}")
+        else:
+            panel_lines.append(f"AI: Claude ({args.claude_model})")
+        if phase2_workers > 1:
+            panel_lines.append(f"AI Phase2 workers: {phase2_workers}")
+    elif args.ollama_analysis:
+        if args.ollama_ensemble:
+            models_str = args.ollama_ensemble
+            panel_lines.append(f"AI: Ollama ensemble ({args.ollama_analysis})")
+            panel_lines.append(f"    models: {models_str}")
+        else:
+            panel_lines.append(f"AI: Ollama ({args.ollama_analysis}, model={args.ollama_model})")
+
+    if deterministic:
+        panel_lines.append("Deterministic: True")
+    if args.k8s_api_url:
+        panel_lines.append(f"K8s API: {args.k8s_api_url} (external)")
+    elif not args.no_k8s:
+        panel_lines.append("K8s: in-cluster (auto-detect)")
+
+    console.print(
+        Panel(
+            "\n".join(panel_lines),
+            title="mcpnuke",
+            border_style="cyan",
+        )
+    )
+
+
+def _print_mode_notices(args: argparse.Namespace, deterministic: bool, console: Console) -> None:
+    """Say which flags narrow or widen what the scan will touch."""
+    if args.no_invoke:
+        console.print("  [yellow]--no-invoke: behavioral probes disabled (static-only)[/yellow]")
+    elif args.safe_mode:
+        console.print("  [yellow]--safe-mode: skipping dangerous tool invocations[/yellow]")
+    if args.fast:
+        console.print("  [yellow]--fast: sampling top 5 tools, skipping heavy probes[/yellow]")
+    elif getattr(args, "coverage", None):
+        console.print(
+            f"  [yellow]--coverage {args.coverage}: sampling top "
+            f"{args.coverage} security-relevant tools[/yellow]"
+        )
+    if deterministic:
+        console.print("  [yellow]--deterministic: stable ordering, single-threaded probes/AI phase2[/yellow]")
+    if args.tls_verify:
+        console.print("  [yellow]--tls-verify: TLS certificate verification enabled[/yellow]")
+    if getattr(args, "inference_host", None):
+        console.print(f"  [yellow]--inference-host: probing {args.inference_host}[/yellow]")
+    elif getattr(args, "inference", False):
+        console.print("  [yellow]--inference: auto-detecting inference backends from MCP context[/yellow]")
+    if getattr(args, "inference_baseline", None):
+        console.print(f"  [yellow]--inference-baseline: comparing against {args.inference_baseline}[/yellow]")
+    if getattr(args, "save_inference_baseline", None):
+        console.print(f"  [yellow]--save-inference-baseline: will snapshot to {args.save_inference_baseline}[/yellow]")
+
+
+def _apply_baseline(
+    args: argparse.Namespace,
+    results: list[TargetResult],
+    baseline: dict,
+    console: Console,
+) -> None:
+    """Diff each result against its baseline entry and add drift findings."""
+    diff_results = []
+    if args.baseline and baseline:
+        for r in results:
+            base = baseline.get(r.url, {})
+            if base:
+                diff = diff_against_baseline(
+                    r.catalog_tools(),
+                    r.resources,
+                    r.prompts,
+                    base.get("tools", []),
+                    base.get("resources", []),
+                    base.get("prompts", []),
+                    url=r.url,
+                )
+                diff_results.append(diff)
+                apply_diff_findings(r, diff)
+        print_diff_report(diff_results, args.baseline, console=console)
