@@ -376,6 +376,80 @@ def _watch_lanes(
         console.print("\n[dim]Watch stopped.[/dim]")
 
 
+def _k8s_setup(args: argparse.Namespace, urls: list[str], console: Console) -> None:
+    """Run the cluster checks and add discovered MCP endpoints to ``urls``.
+
+    Token order: --k8s-token or its MCPNUKE_K8S_TOKEN default, then
+    --k8s-token-file, then the pod's service-account token.
+    """
+    k8s_token: str | None = args.k8s_token
+    if not k8s_token and args.k8s_token_file:
+        from pathlib import Path as _P
+        _tf = _P(args.k8s_token_file)
+        if _tf.is_file():
+            k8s_token = _tf.read_text().strip()
+        else:
+            console.print(f"[red]Error: --k8s-token-file not found: {args.k8s_token_file}[/red]")
+            sys.exit(EXIT_ERROR)
+    k8s_api_url: str | None = args.k8s_api_url
+
+    if not args.no_k8s:
+        run_k8s_checks(args.k8s_namespace, console=console, api_url=k8s_api_url, token=k8s_token)
+
+        import os
+        sa_token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        _fp_token = k8s_token
+        if not _fp_token and os.path.exists(sa_token_path):
+            with open(sa_token_path) as _f:
+                _fp_token = _f.read().strip()
+        if _fp_token:
+            fingerprint_services(
+                args.k8s_namespace,
+                _fp_token,
+                fingerprint_workers=args.k8s_discovery_workers,
+                console=console,
+            )
+
+    if args.k8s_discover:
+        discovered = discover_services(
+            namespaces=args.k8s_discover_namespaces,
+            probe=not args.k8s_no_probe,
+            discovery_workers=args.k8s_discovery_workers,
+            max_endpoints=args.k8s_max_endpoints,
+            console=console,
+            api_url=k8s_api_url,
+            token=k8s_token,
+        )
+        if args.k8s_discover_only:
+            from rich.table import Table
+            table = Table(title="Discovered MCP Endpoints")
+            table.add_column("Namespace", style="dim")
+            table.add_column("Service", style="cyan")
+            table.add_column("URL", style="green")
+            table.add_column("Source", style="yellow")
+            for ep in discovered:
+                table.add_row(ep.namespace, ep.service_name, ep.url, ep.source)
+            console.print(table)
+            console.print(f"\n[bold]Total: {len(discovered)} endpoint(s)[/bold]")
+            if args.json_out:
+                import json
+                report = {
+                    "discovered": [
+                        {"url": ep.url, "service": ep.service_name, "namespace": ep.namespace, "source": ep.source}
+                        for ep in discovered
+                    ],
+                    "count": len(discovered),
+                }
+                from pathlib import Path
+                Path(args.json_out).write_text(json.dumps(report, indent=2))
+                console.print(f"[green]JSON written to {args.json_out}[/green]")
+            sys.exit(EXIT_CLEAN)
+        for ep in discovered:
+            if ep.url not in urls:
+                urls.append(ep.url)
+                console.print(f"  [green]+[/green] Added discovered target: {ep.url}")
+
+
 def _validate_ai_backend(args: argparse.Namespace) -> None:
     """Fail fast on AI flags that cannot work, before any scan or network call."""
     from mcpnuke.core.llm import configure_bedrock
@@ -924,73 +998,7 @@ def _main_inner() -> None:
     if getattr(args, "save_inference_baseline", None):
         console.print(f"  [yellow]--save-inference-baseline: will snapshot to {args.save_inference_baseline}[/yellow]")
 
-    # Resolve K8s token: --k8s-token > --k8s-token-file > MCPNUKE_K8S_TOKEN env > SA file
-    k8s_token: str | None = args.k8s_token
-    if not k8s_token and args.k8s_token_file:
-        from pathlib import Path as _P
-        _tf = _P(args.k8s_token_file)
-        if _tf.is_file():
-            k8s_token = _tf.read_text().strip()
-        else:
-            console.print(f"[red]Error: --k8s-token-file not found: {args.k8s_token_file}[/red]")
-            sys.exit(EXIT_ERROR)
-    k8s_api_url: str | None = args.k8s_api_url
-
-    if not args.no_k8s:
-        run_k8s_checks(args.k8s_namespace, console=console, api_url=k8s_api_url, token=k8s_token)
-
-        import os
-        sa_token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-        _fp_token = k8s_token
-        if not _fp_token and os.path.exists(sa_token_path):
-            with open(sa_token_path) as _f:
-                _fp_token = _f.read().strip()
-        if _fp_token:
-            fingerprint_services(
-                args.k8s_namespace,
-                _fp_token,
-                fingerprint_workers=args.k8s_discovery_workers,
-                console=console,
-            )
-
-    if args.k8s_discover:
-        discovered = discover_services(
-            namespaces=args.k8s_discover_namespaces,
-            probe=not args.k8s_no_probe,
-            discovery_workers=args.k8s_discovery_workers,
-            max_endpoints=args.k8s_max_endpoints,
-            console=console,
-            api_url=k8s_api_url,
-            token=k8s_token,
-        )
-        if args.k8s_discover_only:
-            from rich.table import Table
-            table = Table(title="Discovered MCP Endpoints")
-            table.add_column("Namespace", style="dim")
-            table.add_column("Service", style="cyan")
-            table.add_column("URL", style="green")
-            table.add_column("Source", style="yellow")
-            for ep in discovered:
-                table.add_row(ep.namespace, ep.service_name, ep.url, ep.source)
-            console.print(table)
-            console.print(f"\n[bold]Total: {len(discovered)} endpoint(s)[/bold]")
-            if args.json_out:
-                import json
-                report = {
-                    "discovered": [
-                        {"url": ep.url, "service": ep.service_name, "namespace": ep.namespace, "source": ep.source}
-                        for ep in discovered
-                    ],
-                    "count": len(discovered),
-                }
-                from pathlib import Path
-                Path(args.json_out).write_text(json.dumps(report, indent=2))
-                console.print(f"[green]JSON written to {args.json_out}[/green]")
-            sys.exit(EXIT_CLEAN)
-        for ep in discovered:
-            if ep.url not in urls:
-                urls.append(ep.url)
-                console.print(f"  [green]+[/green] Added discovered target: {ep.url}")
+    _k8s_setup(args, urls, console)
 
     if not urls and inference_only:
         from mcpnuke.checks.inference_backend import check_inference_backend, check_model_integrity
