@@ -108,13 +108,13 @@ def _extra_requirements() -> list[str]:
 def test_every_extra_dependency_is_imported_by_the_package(dist):
     """An extra nobody imports is install weight and supply-chain surface.
 
-    ``--doctor`` probing for a module is not a use, so ``__main__`` does
-    not count.
+    ``--doctor`` probing for a module is not a use, so ``subcommands.py``
+    does not count.
     """
     module = dist.replace("-", "_")
     pattern = re.compile(rf"^\s*(?:import|from)\s+{re.escape(module)}\b", re.M)
     users = [
         p for p in (_ROOT / "mcpnuke").rglob("*.py")
-        if p.name != "__main__.py" and pattern.search(p.read_text())
+        if p.name != "subcommands.py" and pattern.search(p.read_text())
     ]
     assert users, f"extra dependency {dist!r} is never imported by mcpnuke/"
