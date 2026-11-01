@@ -23,7 +23,7 @@ class Finding:
     # finding is scoped to. None = not lane-scoped (e.g. generic TLS hygiene).
     # Vocabulary source: camazotz/frontend/lane_taxonomy.py::LANES (schema v1)
     # via agentic-sec/docs/identity-flows.md. See also:
-    # mcpnuke/docs/specs/2026-04-26-by-lane-reporting.md
+    # mcpnuke/docs/superpowers/specs/2026-04-26-by-lane-reporting.md
     lane: int | None = None
     transport: str | None = None
     taxonomy_id: str = ""

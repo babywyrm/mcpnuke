@@ -6,7 +6,7 @@ release (per-server catalogs, `initialize` before `tools/call`, a
 rejected first step retried with the Phase 2 argument filler, halt
 reasons, and the Ollama peer reask) shipped in 6.21.1.
 Current behavior is also in
-[docs/ai-analysis.md](../ai-analysis.md). The sections below are
+[docs/ai-analysis.md](../../ai-analysis.md). The sections below are
 the design as written.
 
 ## 1. Problem

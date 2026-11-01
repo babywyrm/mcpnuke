@@ -1,7 +1,7 @@
 """Cross-project coverage report consuming camazotz /api/lanes schema v1.
 
 Implements the `--coverage-report <url>` CLI flag per
-mcpnuke/docs/specs/2026-04-26-by-lane-reporting.md.
+mcpnuke/docs/superpowers/specs/2026-04-26-by-lane-reporting.md.
 
 Fetches a target camazotz instance's lane taxonomy, intersects it with
 mcpnuke's scan findings on that target, and emits a cross-project

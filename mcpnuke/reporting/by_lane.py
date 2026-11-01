@@ -1,7 +1,7 @@
 """Per-lane grouping + reporting for scan findings.
 
 Implements the `--by-lane` CLI flag per
-mcpnuke/docs/specs/2026-04-26-by-lane-reporting.md.
+mcpnuke/docs/superpowers/specs/2026-04-26-by-lane-reporting.md.
 
 Groups a list of TargetResult findings by agentic-identity lane
 (1..5) and surfaces a per-lane severity tally plus the transports

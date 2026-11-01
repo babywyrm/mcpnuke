@@ -62,7 +62,8 @@ All notable changes to this submodule are documented here.
   helpers, from about 700 lines to about 330. The package carries no
   `type: ignore`. The DPoP and routing-header checks take a typed
   session and narrow it to `HTTPCapableSession`, whose `post_raw`
-  returns `httpx.Response`. Test files are named
+  returns `httpx.Response`. Design specs live in one folder,
+  `docs/superpowers/specs/`. Test files are named
   for the check they cover, not the session that wrote them, and probe
   pacing no longer runs in real time under test, so the in-process
   suite takes under half its former time.
@@ -1523,7 +1524,7 @@ The 4b model is too small for a 138-tool server. Practical sweet spot: `qwen2.5:
   per-lane severity tally, and emit the same structure into the JSON
   report when `--json` is also set. Findings without a lane scope land in
   an "Uncategorized" bucket. Implemented per
-  `docs/specs/2026-04-26-by-lane-reporting.md`.
+  `docs/superpowers/specs/2026-04-26-by-lane-reporting.md`.
 
 - **`--coverage-report URL`** — Fetch `GET <URL>/api/lanes` (schema v1)
   from a running camazotz instance, intersect with the current scan's

@@ -127,7 +127,7 @@ def _flag_confusable_names(result: TargetResult) -> None:
 
 
 # Cross-server chain vocabulary — Phase A of
-# docs/specs/2026-09-14-cross-server-chain-design.md. Sources are the
+# docs/superpowers/specs/2026-09-14-cross-server-chain-design.md. Sources are the
 # context-poisoning vectors that steer an agent; sinks are the execution,
 # credential, and egress vectors the agent gets steered into.
 _CROSS_SERVER_SOURCES: frozenset[str] = frozenset({
