@@ -10,6 +10,7 @@ from rich.console import Console
 
 from mcpnuke import __version__
 from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 from mcpnuke.reporting.priority import guidance_for_finding
 
 _SARIF_SCHEMA = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
@@ -70,63 +71,68 @@ def _make_rule(
     }
 
 
-def build_sarif(results: list[TargetResult]) -> dict[str, Any]:
+def build_sarif(results: list[TargetResult], *, include_k8s: bool = True) -> dict[str, Any]:
     """Build a SARIF 2.1.0 document from scan results."""
     rules: dict[str, dict] = {}
     sarif_results: list[dict] = []
 
-    for target in results:
-        for finding in target.findings:
-            rule_id = finding.check
-            if rule_id not in rules:
-                rules[rule_id] = _make_rule(
-                    check=rule_id,
-                    title=finding.title,
-                    severity=finding.severity,
-                    detail=finding.detail,
-                    taxonomy_id=getattr(finding, "taxonomy_id", ""),
-                    mitre_id=getattr(finding, "mitre_id", ""),
-                    finding=finding,
-                )
+    located: list[tuple[str, str, Finding]] = [
+        (target.url, target.transport, finding) for target in results for finding in target.findings
+    ]
+    if include_k8s:
+        located += [(finding.target, "", finding) for finding in GLOBAL_K8S_FINDINGS]
 
-            guide = guidance_for_finding(finding)
-            message_parts = [finding.detail or finding.title]
-            if finding.evidence:
-                message_parts.append(f"Evidence: {finding.evidence}")
-            if getattr(finding, "taxonomy_id", ""):
-                message_parts.append(f"Taxonomy: {finding.taxonomy_id}")
+    for uri, transport, finding in located:
+        rule_id = finding.check
+        if rule_id not in rules:
+            rules[rule_id] = _make_rule(
+                check=rule_id,
+                title=finding.title,
+                severity=finding.severity,
+                detail=finding.detail,
+                taxonomy_id=getattr(finding, "taxonomy_id", ""),
+                mitre_id=getattr(finding, "mitre_id", ""),
+                finding=finding,
+            )
 
-            sarif_results.append({
-                "ruleId": rule_id,
-                "level": _SEVERITY_MAP.get(finding.severity.upper(), "warning"),
-                "message": {"text": " | ".join(message_parts)},
-                "locations": [
-                    {
-                        "physicalLocation": {
-                            "artifactLocation": {
-                                "uri": target.url,
-                                "uriBaseId": "%SRCROOT%",
-                            },
+        guide = guidance_for_finding(finding)
+        message_parts = [finding.detail or finding.title]
+        if finding.evidence:
+            message_parts.append(f"Evidence: {finding.evidence}")
+        if getattr(finding, "taxonomy_id", ""):
+            message_parts.append(f"Taxonomy: {finding.taxonomy_id}")
+
+        sarif_results.append({
+            "ruleId": rule_id,
+            "level": _SEVERITY_MAP.get(finding.severity.upper(), "warning"),
+            "message": {"text": " | ".join(message_parts)},
+            "locations": [
+                {
+                    "physicalLocation": {
+                        "artifactLocation": {
+                            "uri": uri,
+                            "uriBaseId": "%SRCROOT%",
                         },
-                        "logicalLocations": [
-                            {
-                                "name": target.url,
-                                "kind": "module",
-                            }
-                        ],
-                    }
-                ],
-                "properties": {
-                    "severity": finding.severity,
-                    "transport": finding.transport or target.transport,
-                    "lane": finding.lane,
-                    "taxonomy_id": getattr(finding, "taxonomy_id", ""),
-                    "mitre_id": getattr(finding, "mitre_id", ""),
-                    "impact": guide.impact,
-                    "fix": guide.fix,
-                    "verify": guide.verify,
-                },
-            })
+                    },
+                    "logicalLocations": [
+                        {
+                            "name": uri,
+                            "kind": "module",
+                        }
+                    ],
+                }
+            ],
+            "properties": {
+                "severity": finding.severity,
+                "transport": finding.transport or transport,
+                "lane": finding.lane,
+                "taxonomy_id": getattr(finding, "taxonomy_id", ""),
+                "mitre_id": getattr(finding, "mitre_id", ""),
+                "impact": guide.impact,
+                "fix": guide.fix,
+                "verify": guide.verify,
+            },
+        })
 
     return {
         "$schema": _SARIF_SCHEMA,

@@ -121,6 +121,11 @@ All notable changes to this submodule are documented here.
 
 ### Fixed
 
+- **Kubernetes findings gate CI and reach SARIF.** A URL or
+  inference-only scan with `--k8s-discover` printed Kubernetes findings
+  but left them out of the `--fail-on` exit code, so a privileged pod
+  passed CI. They now count. SARIF never carried them in any mode; each
+  is now a result located at the finding's Kubernetes target.
 - **A Kubernetes-only scan writes the standard reports.** With
   `--k8s-discover` and no MCP targets, `--json` wrote a bare
   `{"k8s_findings": [...]}` without evidence, and `--sarif`,

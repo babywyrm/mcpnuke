@@ -1013,7 +1013,8 @@ def _main_inner() -> None:
         _report(args, results, console)
         if probe_opts.get("save_inference_baseline"):
             console.print(f"\n  [green]✓[/green] Inference baseline saved to {probe_opts['save_inference_baseline']}")
-        if _should_fail(result.findings, getattr(args, "fail_on", "high")):
+        from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
+        if _should_fail(result.findings + GLOBAL_K8S_FINDINGS, getattr(args, "fail_on", "high")):
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
 
@@ -1076,7 +1077,8 @@ def _main_inner() -> None:
         _watch_lanes(args, results, urls, auth_token, probe_opts, baseline, console)
         return
 
-    all_findings = [f for r in results for f in r.findings]
+    from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
+    all_findings = [f for r in results for f in r.findings] + GLOBAL_K8S_FINDINGS
     if _should_fail(all_findings, getattr(args, "fail_on", "high")):
         sys.exit(EXIT_FINDINGS)
 
