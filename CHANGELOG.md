@@ -59,7 +59,10 @@ All notable changes to this submodule are documented here.
 - **Maintenance.** The stdio and HTTP scan paths share one AI-backend
   dispatch. `_main_inner` shed its report phase, probe options, auth
   resolution, AI flag validation, and Kubernetes setup into tested
-  helpers, from about 700 lines to about 330. The package carries no `type: ignore`. Test files are named
+  helpers, from about 700 lines to about 330. The package carries no
+  `type: ignore`. The DPoP and routing-header checks take a typed
+  session and narrow it to `HTTPCapableSession`, whose `post_raw`
+  returns `httpx.Response`. Test files are named
   for the check they cover, not the session that wrote them, and probe
   pacing no longer runs in real time under test, so the in-process
   suite takes under half its former time.

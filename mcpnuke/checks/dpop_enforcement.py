@@ -29,12 +29,12 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import Any
+from typing import Any, TypeGuard
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
-from mcpnuke.core.transports.base import MCPSessionProtocol
+from mcpnuke.core.transports.base import HTTPCapableSession, MCPSessionProtocol
 
 _add = lane_tagged(lane=3, transport="A")
 _TAXONOMY_ID: str = "MCP-T43"
@@ -75,7 +75,7 @@ def _probe_payload(req_id: int) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": req_id, "method": _PROBE_TOOL, "params": {}}
 
 
-def dpop_probeable(session: MCPSessionProtocol | None) -> bool:
+def dpop_probeable(session: MCPSessionProtocol | None) -> TypeGuard[HTTPCapableSession]:
     """True when the transport can carry a DPoP proof and its endpoint is resolved.
 
     A proof travels in an HTTP header, so ``post_raw`` is the discriminator:
@@ -89,7 +89,7 @@ def dpop_probeable(session: MCPSessionProtocol | None) -> bool:
     return bool(getattr(session, "post_raw", None) and getattr(session, "post_url", ""))
 
 
-def run_dpop_enforcement_checks(result: TargetResult, session: Any) -> None:
+def run_dpop_enforcement_checks(result: TargetResult, session: MCPSessionProtocol | None) -> None:
     """Run all DPoP enforcement probes against *session*'s MCP endpoint.
 
     Three targeted probes that need only ``tools/list`` — safe to run always,
@@ -127,7 +127,7 @@ def _server_enforces_dpop(result: TargetResult) -> bool:
     return result.auth_context.get(_DPOP_ENFORCED_KEY) is True
 
 
-def _probe_no_dpop_header(result: TargetResult, session: Any) -> None:
+def _probe_no_dpop_header(result: TargetResult, session: HTTPCapableSession) -> None:
     """Check 1: plain bearer request accepted → DPoP not enforced."""
     with time_check("dpop_no_header", result):
         try:
@@ -167,7 +167,7 @@ def _probe_no_dpop_header(result: TargetResult, session: Any) -> None:
         )
 
 
-def _probe_malformed_dpop(result: TargetResult, session: Any) -> None:
+def _probe_malformed_dpop(result: TargetResult, session: HTTPCapableSession) -> None:
     """Check 2: malformed DPoP header accepted → header is decorative.
 
     Only meaningful once probe 1 has shown the server demands a proof. A server
@@ -214,7 +214,7 @@ def _probe_malformed_dpop(result: TargetResult, session: Any) -> None:
         )
 
 
-def _probe_missing_htm_htu(result: TargetResult, session: Any) -> None:
+def _probe_missing_htm_htu(result: TargetResult, session: HTTPCapableSession) -> None:
     """Check 3: JWT missing htm/htu accepted → binding not checked.
 
     Gated on probe 1 for the same reason as probe 2: a server that never asked

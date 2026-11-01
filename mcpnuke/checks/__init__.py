@@ -304,7 +304,7 @@ DeepCheck = tuple[str, Callable[..., Any], tuple[Any, ...], dict[str, Any]]
 
 
 def _build_deep_checks(
-    session: Any,
+    session: MCPSessionProtocol,
     result: TargetResult,
     opts: dict[str, Any],
     *,

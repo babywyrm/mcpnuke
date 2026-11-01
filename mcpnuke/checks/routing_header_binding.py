@@ -15,7 +15,9 @@ no HTTP header layer.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeGuard
+
+import httpx
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
@@ -25,13 +27,14 @@ from mcpnuke.core.protocol import (
     inject_meta,
 )
 from mcpnuke.core.session import _parse_sse_json
+from mcpnuke.core.transports.base import HTTPCapableSession, MCPSessionProtocol
 
 _BODY_METHOD: str = "tools/list"
 _HEADER_METHOD: str = "tools/call"
 _CHECK: str = "routing_header_binding"
 
 
-def _probeable(session: Any, result: TargetResult) -> bool:
+def _probeable(session: MCPSessionProtocol | None, result: TargetResult) -> TypeGuard[HTTPCapableSession]:
     if session is None:
         return False
     if getattr(session, "protocol_mode", "") != STATELESS:
@@ -41,7 +44,7 @@ def _probeable(session: Any, result: TargetResult) -> bool:
     return bool(getattr(session, "post_raw", None) and getattr(session, "post_url", ""))
 
 
-def _rpc_body(resp: Any) -> dict[str, Any] | None:
+def _rpc_body(resp: httpx.Response) -> dict[str, Any] | None:
     try:
         body = resp.json()
     except Exception:
@@ -52,14 +55,14 @@ def _rpc_body(resp: Any) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
-def _rpc_succeeded(resp: Any) -> bool:
+def _rpc_succeeded(resp: httpx.Response) -> bool:
     if getattr(resp, "status_code", None) not in (200, 202):
         return False
     body = _rpc_body(resp)
     return body is not None and "result" in body and "error" not in body
 
 
-def check_routing_header_binding(session: Any, result: TargetResult) -> None:
+def check_routing_header_binding(session: MCPSessionProtocol | None, result: TargetResult) -> None:
     with time_check(_CHECK, result):
         if not _probeable(session, result):
             return

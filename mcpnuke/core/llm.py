@@ -6,10 +6,13 @@ import re as _re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from mcpnuke.core.constants import DEFAULT_BEDROCK_MODEL, DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.taxonomy import threat_ids
+
+if TYPE_CHECKING:
+    from mcpnuke.core.chain_replay import ProposedChain
 
 _client = None
 _bedrock_config: dict[str, Any] = {
@@ -671,13 +674,13 @@ def _peer_prompt_suffix(
 
 
 def revise_chain(
-    chain: Any,
+    chain: "ProposedChain",
     transcript: str,
     tools: list[dict],
     model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
     peers: list[tuple[str, list[str]]] | None = None,
-) -> Any:
+) -> "ProposedChain | None":
     """Given a chain that halted and the transcript of why, propose one revision.
 
     Returns a single ProposedChain (or None). The model is shown the failing

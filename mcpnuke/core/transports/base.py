@@ -18,7 +18,10 @@ module intentionally defines only the contract.
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    import httpx
 
 
 @runtime_checkable
@@ -70,6 +73,6 @@ class HTTPCapableSession(MCPSessionProtocol, Protocol):
         payload: dict,
         extra_headers: dict | None = None,
         timeout: float | None = None,
-    ) -> Any:
+    ) -> httpx.Response:
         """POST *payload* to the endpoint and return the raw HTTP response."""
         ...

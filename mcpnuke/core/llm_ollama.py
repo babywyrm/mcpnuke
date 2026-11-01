@@ -34,7 +34,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING
 
 import httpx
 
@@ -47,6 +47,9 @@ from mcpnuke.core.llm import (
 )
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
+
+if TYPE_CHECKING:
+    from rich.console import Console
 
 logger = logging.getLogger("mcpnuke.core.llm_ollama")
 
@@ -427,13 +430,13 @@ class OllamaBackend:
 
     def revise_chain(
         self,
-        chain: Any,
+        chain: ProposedChain,
         transcript: str,
         tools: list[dict],
         model: str | None = None,
         log: Callable[[str], None] | None = None,
         peers: list[tuple[str, list[str]]] | None = None,
-    ) -> Any:
+    ) -> ProposedChain | None:
         """Propose one corrected chain for a halted run, or None."""
         from mcpnuke.core import llm as llm_core
         from mcpnuke.core.chain_replay import parse_proposed_chains
@@ -461,7 +464,7 @@ def run_ensemble_analysis(
     host: str,
     models: list[str],
     probe_opts: dict | None = None,
-    console: Any = None,
+    console: Console | None = None,
 ) -> list[EnsembleFinding]:
     """Run phases 1+3 for each model independently, cluster by taxonomy_id.
 
