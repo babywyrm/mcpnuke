@@ -208,6 +208,8 @@ Tagged MCP-T27 like the static sibling. Do not apply the stdio auth skip.
 2. Push an annotated `vX.Y.Z` tag on that commit.
 3. Approve the `pypi` deployment in the Actions run. The environment
    requires a reviewer, so nothing uploads without one.
+4. Create the GitHub release on the tag (`gh release create vX.Y.Z
+   --verify-tag`), or the releases page stays on the previous version.
 
 The trusted publisher (owner `babywyrm`, repository `mcpnuke`, workflow
 `publish.yml`, environment `pypi`) and the `PYPI_PUBLISH=true` repository
