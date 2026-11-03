@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.1] - 2026-11-02
+
 ### Security
 
 - **A `--stdio` server no longer inherits the scanner's environment.**
