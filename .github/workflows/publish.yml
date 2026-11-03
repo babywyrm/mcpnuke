@@ -112,11 +112,10 @@ jobs:
     #
     # The tag check keeps releases off branch pushes and manual dry runs.
     #
-    # PYPI_PUBLISH is an explicit opt-in for the upload itself, and stays
-    # unset until the trusted publisher is registered on PyPI and the `pypi`
-    # environment exists in repo settings. Without it a tag push queues a job
-    # that cannot start, and every release reads as failed while the build
-    # underneath it was fine. Set the repository variable to 'true' to arm it.
+    # PYPI_PUBLISH is an explicit opt-in for the upload itself. Arming it
+    # before the trusted publisher and the `pypi` environment exist queues a
+    # job that cannot start, and the release reads as failed while the build
+    # underneath it was fine. It is 'true' now; clear it to pause uploads.
     if: startsWith(github.ref, 'refs/tags/') && vars.PYPI_PUBLISH == 'true'
 
     environment:

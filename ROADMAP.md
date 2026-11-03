@@ -17,14 +17,13 @@ mcpnuke check.
 
 ## What's not done yet
 
-The coverage atlas below is what mcpnuke scans today. These are the open
-build items, highest value first:
+The coverage atlas below is what mcpnuke scans today. No build item is
+open. ETags, Tasks, HTTP-over-stdio, and WIF wait for a wire format; see
+[docs/spec-surface.md](docs/spec-surface.md).
 
-1. **PyPI trusted publisher** — register the publisher and set `PYPI_PUBLISH`
-   (account steps, detailed under Infrastructure roadmap). Until then a
-   `vX.Y.Z` tag builds and verifies but does not upload.
-
-Shipped since this list was drawn up: **`--scan-profile`**
+Shipped since this list was drawn up: **PyPI** — 6.22.0 is the first
+release on [pypi.org/project/mcpnuke](https://pypi.org/project/mcpnuke/),
+uploaded by trusted publishing. **`--scan-profile`**
 (`cursor-mcp` / `claude-desktop` / `stdio`) — one flag applies the right
 defaults for a known host; an explicit flag still wins. **SARIF
 remediation** — each result carries the priority action's impact, fix,
@@ -54,7 +53,7 @@ bearer on `/scans`. `/health` stays open.
 | CI integration (SARIF, --fail-on) | **Done** |
 | Actionable reporting (priority actions, fix/verify, policy, `--owasp`) | **Done** — see below |
 | False-positive measurement | **Done** — three harnesses, all baselined and gated; see below |
-| Distribution (PyPI, install script) | **Ready** — `install.sh` + publish workflow, both tested; upload armed by the `PYPI_PUBLISH` variable once the trusted publisher is registered |
+| Distribution (PyPI, install script) | **Done** — on PyPI since 6.22.0; `install.sh` + publish workflow, both tested |
 | CI/CD workflow for the tool itself | **CLI dogfood** — `tests.yml` scans the in-repo reference target via `python -m mcpnuke` |
 
 ---
@@ -198,22 +197,22 @@ Tagged MCP-T27 like the static sibling. Do not apply the stdio auth skip.
 ### Near-term
 
 - **First Ready-row spec-surface checks** — dual `tools/call` body, list caching, and SEP-2243 routing-header binding are done. ETags, Tasks, HTTP-over-stdio, WIF wait for a wire format. See [docs/spec-surface.md](docs/spec-surface.md).
-- **First PyPI release** — everything below is built and tested; what remains
-  is registering the trusted publisher on PyPI and pushing a `vX.Y.Z` tag
+- ~~**First PyPI release**~~ **Done** — 6.22.0
   - ~~Publish workflow — PyPI via OIDC trusted publishing on tag push~~ **Done**
   - ~~`install.sh` — one-liner macOS/Linux installer~~ **Done**
 
-### Publishing, when the tag goes up
+### Releasing
 
-Two one-time steps, in this order:
+1. Commit the version bump: `pyproject.toml`, `mcpnuke/__init__.py`,
+   `uv.lock`, and the changelog heading.
+2. Push an annotated `vX.Y.Z` tag on that commit.
+3. Approve the `pypi` deployment in the Actions run. The environment
+   requires a reviewer, so nothing uploads without one.
 
-1. On PyPI, under the project's Publishing settings: owner `babywyrm`,
-   repository `mcpnuke`, workflow `publish.yml`, environment `pypi`. Create
-   the matching `pypi` environment in repo settings.
-2. Set the repository variable `PYPI_PUBLISH` to `true`.
-
-Until step 2, a `vX.Y.Z` tag still runs the full build-and-verify job and
-simply skips the upload, so tagging a release is safe before PyPI exists.
+The trusted publisher (owner `babywyrm`, repository `mcpnuke`, workflow
+`publish.yml`, environment `pypi`) and the `PYPI_PUBLISH=true` repository
+variable are already set. Clearing the variable makes a tag build and
+verify without uploading.
 No API token is created or stored — `publish.yml` mints a short-lived OIDC credential per
 run, and a stored token would be the same long-lived secret mcpnuke flags on
 other people's servers.
