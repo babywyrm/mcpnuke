@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.2] - 2026-11-03
+
 ### Added
 
 - **Every release is installed back from PyPI and run.** After the
