@@ -11,7 +11,7 @@ from mcpnuke.core.models import TargetResult
 def _stdio_opts(monkeypatch: pytest.MonkeyPatch, *flags: str) -> dict:
     seen: dict = {}
 
-    def _fake_scan(cmd: str, timeout: float, verbose: bool, probe_opts: dict) -> TargetResult:
+    def _fake_scan(cmd: str, timeout: float, verbose: bool, probe_opts: dict, inherit_env: tuple) -> TargetResult:
         seen.update(probe_opts)
         return TargetResult(url="stdio://fake")
 

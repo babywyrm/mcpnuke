@@ -51,6 +51,7 @@ Generated from the parser, so it cannot fall behind the code.
 | Option | Description |
 |---|---|
 | `--stdio CMD` | Scan a local MCP server via stdin/stdout JSON-RPC. Launch CMD as a subprocess and communicate over stdio. E.g. --stdio 'npx -y @modelcontextprotocol/server-everything' |
+| `--stdio-env NAME` | Pass this environment variable through to the --stdio server. Repeatable. By default the server gets only HOME, LOGNAME, PATH, SHELL, TERM, and USER (a fixed system set on Windows), so the scanner's own keys and tokens stay out of it. |
 
 ## Safety Controls
 

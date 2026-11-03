@@ -4,6 +4,17 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **A `--stdio` server no longer inherits the scanner's environment.**
+  The server under test was launched with every variable the operator
+  had set, so API keys, `MCP_AUTH_TOKEN`, and cloud credentials reached
+  a process mcpnuke assumes may be hostile; `server-everything`'s
+  `get-env` returned them. The child now gets the MCP SDK's default
+  set (`HOME`, `LOGNAME`, `PATH`, `SHELL`, `TERM`, `USER`; a fixed
+  system set on Windows). **Behavior change:** a server that needs
+  another variable gets it with `--stdio-env NAME`, repeatable.
+
 ### Changed
 
 - **Maintenance.** Tool ranking for `--fast` and `--coverage`

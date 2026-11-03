@@ -99,6 +99,7 @@ def scan_stdio_target(
     timeout: float = 25.0,
     verbose: bool = False,
     probe_opts: dict | None = None,
+    inherit_env: tuple[str, ...] = (),
 ) -> TargetResult:
     """Scan a local MCP server launched via stdin/stdout."""
     label = _stdio_short_label(cmd)
@@ -112,7 +113,7 @@ def scan_stdio_target(
     console.print(f"  [dim]Launching subprocess: {cmd}[/dim]")
 
     try:
-        session = StdioSession(cmd, timeout=timeout)
+        session = StdioSession(cmd, timeout=timeout, inherit=inherit_env)
     except Exception as e:
         console.print(f"  [red]✗[/red] Failed to launch: {e}")
         result.transport = "stdio-error"

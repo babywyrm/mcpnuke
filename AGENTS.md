@@ -115,7 +115,8 @@ not a lab name, to pick the command.
 - `--save-baseline` / `--baseline`: schema or description drift on an approved
   tool is CRITICAL; a tool added or removed is MEDIUM.
 - `--stdio CMD`: a local MCP process. No HTTP auth boundary, so those
-  findings stay off.
+  findings stay off. The process gets only the SDK's default variables;
+  `--stdio-env NAME` passes another one through.
 - `--auth-token-file`: a token without putting it on the command line.
 - `--by-lane`: group findings by identity lane.
 - `--scan-profile cursor-mcp|claude-desktop|stdio`: the right defaults for a

@@ -4,14 +4,39 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import queue
 import shlex
 import subprocess
+import sys
 import threading
 import time
+from collections.abc import Iterable
 
 from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
 from mcpnuke.core.protocol import LEGACY
+
+# The MCP SDK stdio client's default inheritance. A server under test is
+# untrusted, so the scanner's own API keys and tokens never reach it unless
+# named with --stdio-env.
+INHERITED_ENV: tuple[str, ...] = (
+    (
+        "APPDATA", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA", "PATH", "PROCESSOR_ARCHITECTURE",
+        "SYSTEMDRIVE", "SYSTEMROOT", "TEMP", "USERNAME", "USERPROFILE", "PROGRAMFILES",
+    )
+    if sys.platform == "win32"
+    else ("HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER")
+)
+
+
+def child_env(passthrough: Iterable[str] = ()) -> dict[str, str]:
+    """The defaults plus named variables, minus exported shell functions."""
+    names = (*INHERITED_ENV, *passthrough)
+    return {
+        name: os.environ[name]
+        for name in names
+        if name in os.environ and not os.environ[name].startswith("()")
+    }
 
 
 class StdioSession:
@@ -21,7 +46,13 @@ class StdioSession:
     newline-delimited JSON-RPC over the process's stdin/stdout.
     """
 
-    def __init__(self, cmd: str | list[str], timeout: float = 25.0, env: dict | None = None):
+    def __init__(
+        self,
+        cmd: str | list[str],
+        timeout: float = 25.0,
+        env: dict[str, str] | None = None,
+        inherit: Iterable[str] = (),
+    ):
         if isinstance(cmd, str):
             self.cmd = shlex.split(cmd)
         else:
@@ -37,10 +68,7 @@ class StdioSession:
         self._q: queue.Queue[dict] = queue.Queue()
         self._stop = threading.Event()
 
-        proc_env = None
-        if env:
-            import os
-            proc_env = {**os.environ, **env}
+        proc_env = {**child_env(inherit), **(env or {})}
 
         self._proc = subprocess.Popen(
             self.cmd,

@@ -106,6 +106,8 @@ def _main_inner() -> None:
         ]
         if deterministic_mode:
             panel_lines.append("Deterministic: True")
+        if args.stdio_env:
+            panel_lines.append(f"Env pass-through: {', '.join(args.stdio_env)}")
         console.print(Panel("\n".join(panel_lines), title="mcpnuke", border_style="cyan"))
 
         result = scan_stdio_target(
@@ -113,6 +115,7 @@ def _main_inner() -> None:
             timeout=args.timeout,
             verbose=args.verbose,
             probe_opts=probe_opts,
+            inherit_env=tuple(args.stdio_env),
         )
         _report(args, [result], console)
         if _should_fail(result.findings, getattr(args, "fail_on", "high")):

@@ -156,7 +156,13 @@ mcpnuke --stdio 'npx -y @modelcontextprotocol/server-everything'
 ```
 
 No URL and no proxy. Auth-shaped findings that need an HTTP boundary
-are not reported on stdio.
+are not reported on stdio. The server gets only `HOME`, `LOGNAME`,
+`PATH`, `SHELL`, `TERM`, and `USER` from your environment, so your own
+keys stay out of it. Name anything else it needs:
+
+```bash
+mcpnuke --stdio 'npx -y @modelcontextprotocol/server-github' --stdio-env GITHUB_TOKEN
+```
 
 ### "The server wants a token"
 

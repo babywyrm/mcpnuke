@@ -235,6 +235,15 @@ def _add_stdio_arguments(group: ArgumentGroup) -> None:
         "Launch CMD as a subprocess and communicate over stdio. "
         "E.g. --stdio 'npx -y @modelcontextprotocol/server-everything'",
     )
+    group.add_argument(
+        "--stdio-env",
+        metavar="NAME",
+        action="append",
+        default=[],
+        help="Pass this environment variable through to the --stdio server. Repeatable. "
+        "By default the server gets only HOME, LOGNAME, PATH, SHELL, TERM, and USER "
+        "(a fixed system set on Windows), so the scanner's own keys and tokens stay out of it.",
+    )
 
 
 def _add_safety_arguments(group: ArgumentGroup) -> None:
