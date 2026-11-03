@@ -402,10 +402,16 @@ def test_unsupported_methods_405(method, path):
     assert getattr(client, method)(path).status_code == 405
 
 
-def test_cors_allows_any_origin_by_default():
+def test_cors_is_off_by_default():
+    """A web page the operator visits must not be able to drive the runner."""
     resp = client.get("/health", headers={"Origin": "http://portal.example"})
     assert resp.status_code == 200
-    assert resp.headers["access-control-allow-origin"] == "*"
+    assert "access-control-allow-origin" not in resp.headers
+
+
+def test_cors_origins_are_parsed_from_the_env_value():
+    assert server_app._cors_origins("") == []
+    assert server_app._cors_origins(" http://a, http://b ,") == ["http://a", "http://b"]
 
 
 def test_openapi_lists_the_job_api():
@@ -442,7 +448,40 @@ def test_run_entrypoint_defaults(monkeypatch):
 
     server_app.run()
 
-    assert called["k"] == {"host": "0.0.0.0", "port": 8090, "log_level": "info"}
+    assert called["k"] == {"host": "127.0.0.1", "port": 8090, "log_level": "info"}
+
+
+@pytest.fixture
+def open_bind(monkeypatch) -> dict:
+    uvicorn = pytest.importorskip("uvicorn")
+    called: dict = {}
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: called.update(k=k))
+    monkeypatch.setenv("MCPNUKE_RUNNER_HOST", "0.0.0.0")
+    monkeypatch.delenv("MCPNUKE_RUNNER_TOKEN", raising=False)
+    monkeypatch.delenv("MCPNUKE_RUNNER_ALLOW_OPEN", raising=False)
+    return called
+
+
+def test_an_open_bind_without_a_token_refuses_to_start(open_bind, capsys):
+    with pytest.raises(SystemExit) as exc:
+        server_app.run()
+    assert exc.value.code == 2
+    assert open_bind == {}
+    assert "MCPNUKE_RUNNER_TOKEN" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("var", ["MCPNUKE_RUNNER_TOKEN", "MCPNUKE_RUNNER_ALLOW_OPEN"])
+def test_an_open_bind_starts_with_a_token_or_the_opt_out(open_bind, monkeypatch, var):
+    monkeypatch.setenv(var, "lab-token" if var.endswith("TOKEN") else "1")
+    server_app.run()
+    assert open_bind["k"]["host"] == "0.0.0.0"
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "localhost", "::1"])
+def test_a_loopback_bind_needs_no_token(open_bind, monkeypatch, host):
+    monkeypatch.setenv("MCPNUKE_RUNNER_HOST", host)
+    server_app.run()
+    assert open_bind["k"]["host"] == host
 
 
 def test_version_falls_back_when_distribution_metadata_missing():

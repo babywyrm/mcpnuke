@@ -296,17 +296,20 @@ API — job responses redact it).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCPNUKE_RUNNER_HOST` | `0.0.0.0` | Bind address |
+| `MCPNUKE_RUNNER_HOST` | `127.0.0.1` | Bind address. Any non-loopback address needs `MCPNUKE_RUNNER_TOKEN` or `MCPNUKE_RUNNER_ALLOW_OPEN=1` |
 | `MCPNUKE_RUNNER_PORT` | `8090` | Port |
 | `MCPNUKE_RUNNER_WORKERS` | `2` | Concurrent scan subprocesses |
 | `MCPNUKE_RUNNER_JOB_TIMEOUT` | `180` | Default wall-clock cap (seconds) |
 | `MCPNUKE_RUNNER_LOG_LEVEL` | `info` | Uvicorn log level |
-| `MCPNUKE_RUNNER_CORS` | `*` | Allowed origins (comma-separated) |
+| `MCPNUKE_RUNNER_CORS` | unset | Browser origins allowed to call the API (comma-separated). Unset allows none |
 | `MCPNUKE_RUNNER_TOKEN` | unset | When set, `/scans` requires `Authorization: Bearer <token>`. `/health` stays open |
+| `MCPNUKE_RUNNER_ALLOW_OPEN` | unset | `1` lets `mcpnuke-runner` listen beyond loopback with no token |
 
 > **Security warning:** with `MCPNUKE_RUNNER_TOKEN` unset the runner has
-> **no authentication** and defaults to CORS `*` — it is an unauthenticated
-> scan-execution oracle that can be aimed at internal targets. Set the
-> token, bind it to localhost, or front it with an authenticated proxy.
-> Never expose it directly to a network you do not control.
+> **no authentication**. Anyone who can reach it can aim scans at internal
+> targets and read the reports. `mcpnuke-runner` therefore refuses to
+> listen beyond loopback without the token unless
+> `MCPNUKE_RUNNER_ALLOW_OPEN=1` says the network is yours. Started as
+> `uvicorn mcpnuke.server.app:app`, that check does not run, because
+> uvicorn owns the bind; set the token.
 

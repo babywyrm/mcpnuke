@@ -12,8 +12,10 @@ Run directly with ``mcpnuke-runner`` (see pyproject scripts) or
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import secrets
+import sys
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,15 +41,22 @@ app = FastAPI(
     description="HTTP job API wrapping the mcpnuke MCP security scanner.",
 )
 
-# The portal proxies server-side, but allow CORS so the API can also be hit
-# directly from a browser during local development.
-_origins = os.getenv("MCPNUKE_RUNNER_CORS", "*").split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o.strip() for o in _origins if o.strip()],
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
+
+
+def _cors_origins(raw: str) -> list[str]:
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+# The portal proxies server-side. Browser access is opt-in: with any origin
+# allowed, a page the operator visits could submit scans and read reports.
+_origins = _cors_origins(os.getenv("MCPNUKE_RUNNER_CORS", ""))
+if _origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_origins,
+        allow_methods=["GET", "POST"],
+        allow_headers=["*"],
+    )
 
 _manager = JobManager(max_workers=int(os.getenv("MCPNUKE_RUNNER_WORKERS", "2")))
 
@@ -93,13 +102,37 @@ def get_scan(job_id: str, _: None = Depends(_runner_authorized)) -> ScanJob:
     return job
 
 
+def _is_loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def run() -> None:
     """Console-script entrypoint (``mcpnuke-runner``)."""
+    host = os.getenv("MCPNUKE_RUNNER_HOST", "127.0.0.1")
+    if (
+        not _is_loopback(host)
+        and not os.getenv("MCPNUKE_RUNNER_TOKEN", "").strip()
+        and os.getenv("MCPNUKE_RUNNER_ALLOW_OPEN") != "1"
+    ):
+        print(
+            f"mcpnuke-runner: refusing to listen on {host} without MCPNUKE_RUNNER_TOKEN.\n"
+            "  Anyone who can reach it could aim scans at internal targets and read the reports.\n"
+            "  Set MCPNUKE_RUNNER_TOKEN, bind 127.0.0.1, or set MCPNUKE_RUNNER_ALLOW_OPEN=1 "
+            "on a network you control.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     import uvicorn
 
     uvicorn.run(
         "mcpnuke.server.app:app",
-        host=os.getenv("MCPNUKE_RUNNER_HOST", "0.0.0.0"),
+        host=host,
         port=int(os.getenv("MCPNUKE_RUNNER_PORT", "8090")),
         log_level=os.getenv("MCPNUKE_RUNNER_LOG_LEVEL", "info"),
     )

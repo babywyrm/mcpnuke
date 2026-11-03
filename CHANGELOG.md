@@ -12,6 +12,17 @@ All notable changes to this submodule are documented here.
   target. The build job only ever tested the wheel it built, not the
   one users download.
 
+### Security
+
+- **`mcpnuke-runner` is closed by default.** It bound `0.0.0.0` with no
+  token and allowed every CORS origin, so anyone on the network, or a
+  web page the operator visited, could aim scans at internal targets and
+  read the reports. It now binds `127.0.0.1`, allows no browser origin
+  unless `MCPNUKE_RUNNER_CORS` names one, and refuses to listen beyond
+  loopback without `MCPNUKE_RUNNER_TOKEN`. **Behavior change:** the
+  container image binds `0.0.0.0`, so it needs the token, or
+  `MCPNUKE_RUNNER_ALLOW_OPEN=1` on a network you control.
+
 ## [6.22.1] - 2026-11-02
 
 ### Security

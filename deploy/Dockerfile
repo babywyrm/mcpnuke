@@ -14,6 +14,8 @@ COPY --from=builder /install /usr/local
 WORKDIR /app
 USER 1001
 
+# Listening on 0.0.0.0, the runner will not start without MCPNUKE_RUNNER_TOKEN
+# (pass it at run time, e.g. from a Secret) or MCPNUKE_RUNNER_ALLOW_OPEN=1.
 ENV MCPNUKE_RUNNER_HOST=0.0.0.0 \
     MCPNUKE_RUNNER_PORT=8090 \
     MCPNUKE_RUNNER_WORKERS=2

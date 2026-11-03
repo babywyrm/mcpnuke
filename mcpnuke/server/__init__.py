@@ -5,7 +5,7 @@ portal) can launch scans and read structured findings without shelling out
 to the CLI or parsing stdout. Install with the ``server`` extra:
 
     pip install "mcpnuke[server]"
-    mcpnuke-runner            # serves on 0.0.0.0:8090
+    mcpnuke-runner            # serves on 127.0.0.1:8090
 
 The service is intentionally stateless beyond an in-memory job table; it
 holds no credentials and performs the same checks as the CLI.
