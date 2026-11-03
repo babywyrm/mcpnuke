@@ -62,6 +62,7 @@ CI gates all four on every push and PR. mypy enforces
 mcpnuke/checks/__init__.py   orchestrator, run_all_checks
 mcpnuke/checks/<name>.py     individual check modules
 mcpnuke/checks/base.py       time_check, tool_text (shared searchable surface)
+mcpnuke/checks/sampling.py   tool ranking for --fast and --coverage
 mcpnuke/patterns/rules.py    static regex pattern sets
 mcpnuke/patterns/probes.py   behavioral probe payloads and response analysis
 mcpnuke/patterns/credentials.py  the only credential regexes, tiered by FP risk

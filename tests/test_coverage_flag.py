@@ -2,7 +2,7 @@
 
 import pytest
 
-from mcpnuke.checks import _pick_security_relevant
+from mcpnuke.checks.sampling import _pick_security_relevant
 from mcpnuke.cli import parse_args
 
 

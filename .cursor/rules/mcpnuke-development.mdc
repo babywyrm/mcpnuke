@@ -43,9 +43,10 @@ All development on mcpnuke follows the superpowers skills framework:
 ## Architecture Quick Reference
 
 ```
-mcpnuke/checks/__init__.py       — orchestrator, _pick_security_relevant, run_all_checks
+mcpnuke/checks/__init__.py       — orchestrator, run_all_checks
 mcpnuke/checks/<name>.py         — individual check modules
 mcpnuke/checks/base.py           — time_check, tool_text (shared searchable surface)
+mcpnuke/checks/sampling.py       — tool ranking for --fast and --coverage
 mcpnuke/patterns/rules.py        — static regex pattern sets
 mcpnuke/patterns/probes.py       — behavioral probe payloads and response analysis
 mcpnuke/patterns/credentials.py  — the only credential regexes, tiered by FP risk

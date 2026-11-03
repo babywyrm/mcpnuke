@@ -4,6 +4,12 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **Maintenance.** Tool ranking for `--fast` and `--coverage`
+  (`_pick_security_relevant` and its scoring tables) moved from
+  `checks/__init__.py` to `checks/sampling.py`.
+
 ## [6.22.0] - 2026-11-02
 
 ### Added

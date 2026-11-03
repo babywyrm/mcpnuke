@@ -1,7 +1,7 @@
 """Tests for fast-mode tool security scoring and sampling."""
 
 
-from mcpnuke.checks import _pick_security_relevant, _tool_security_score
+from mcpnuke.checks.sampling import _pick_security_relevant, _tool_security_score
 
 # ---------------------------------------------------------------------------
 # Fixture: realistic MCP tool definitions from Artifice scan
