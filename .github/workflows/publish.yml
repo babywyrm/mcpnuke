@@ -134,3 +134,55 @@ jobs:
 
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  # The build job tests the wheel it made; only an install from the index
+  # proves users get that wheel and that it runs. The checkout is for the
+  # reference target, never for the package.
+  verify-pypi:
+    name: Install from PyPI and scan
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      # A fresh upload can take a minute to reach the index.
+      - name: Install the release from PyPI
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          uv venv --python 3.12 /tmp/pypi
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if uv pip install --python /tmp/pypi/bin/python --no-cache --refresh "mcpnuke==${version}"; then
+              break
+            fi
+            if [ "$attempt" -eq 10 ]; then
+              echo "::error::mcpnuke==${version} never appeared on PyPI"
+              exit 1
+            fi
+            sleep 30
+          done
+          installed="$(/tmp/pypi/bin/mcpnuke --version | awk '{print $NF}')"
+          if [ "$installed" != "$version" ]; then
+            echo "::error::PyPI served ${installed}, expected ${version}"
+            exit 1
+          fi
+
+      - name: Scan the reference target with the installed release
+        run: |
+          /tmp/pypi/bin/mcpnuke \
+            --stdio "/tmp/pypi/bin/python -m tests.reference_target.stdio_server" \
+            --fast --no-invoke --fail-on none --json /tmp/scan.json
+          /tmp/pypi/bin/python -c '
+          import json, sys
+          target = json.load(open("/tmp/scan.json"))["targets"][0]
+          count = target["tools_total"]
+          print(target["url"], target["transport"], count, "tools")
+          ok = target["transport"] == "stdio" and count > 0
+          sys.exit(0 if ok else "the installed release did not enumerate the reference target")
+          '

@@ -79,6 +79,21 @@ def test_the_publish_workflow_calls_this_guard():
     assert "./scripts/check-tag-version.sh" in workflow
 
 
+def test_the_uploaded_release_is_installed_from_pypi_and_scans():
+    """The build job tests the wheel it made. Only an install from the index
+    proves the upload users get is that wheel and that it runs."""
+    import yaml
+
+    workflow = yaml.safe_load((_ROOT / ".github" / "workflows" / "publish.yml").read_text())
+    verify = workflow["jobs"]["verify-pypi"]
+    script = "\n".join(step.get("run", "") for step in verify["steps"])
+
+    assert verify["needs"] == "publish"
+    assert "mcpnuke==" in script and "dist/" not in script
+    assert "--stdio" in script and "tests.reference_target.stdio_server" in script
+    assert "permissions" not in verify
+
+
 def test_the_publish_workflow_only_uploads_on_a_tag():
     """Guards the one condition that separates a release from every other
     push. A publish job that ran on branch pushes would ship whatever was on

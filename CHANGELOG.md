@@ -4,6 +4,14 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Every release is installed back from PyPI and run.** After the
+  upload, `verify-pypi` installs the tagged version from the index into
+  a clean environment, checks `--version`, and scans the stdio reference
+  target. The build job only ever tested the wheel it built, not the
+  one users download.
+
 ## [6.22.1] - 2026-11-02
 
 ### Security
