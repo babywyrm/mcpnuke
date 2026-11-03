@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.0] - 2026-11-02
+
 ### Added
 
 - **OWASP lab schemas no longer pad the alignment.** Tools with
