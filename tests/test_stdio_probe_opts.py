@@ -28,6 +28,19 @@ def test_stdio_honors_error_reflection(monkeypatch: pytest.MonkeyPatch) -> None:
     assert opts["error_reflection"] == "keep"
 
 
+def test_stdio_plants_the_oast_listener(monkeypatch: pytest.MonkeyPatch) -> None:
+    listener = object()
+    monkeypatch.setattr(cli_main, "_start_oast", lambda args, console: listener)
+    opts = _stdio_opts(monkeypatch, "--oast")
+    assert opts["oast"] is listener
+
+
+def test_stdio_rejects_watch(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    opts = _stdio_opts(monkeypatch, "--watch", "30")
+    assert opts == {}
+    assert "--watch" in capsys.readouterr().err
+
+
 def test_stdio_opts_match_the_shared_base(monkeypatch: pytest.MonkeyPatch) -> None:
     opts = _stdio_opts(monkeypatch, "--fast", "--safe-mode")
     args = cli_main.parse_args(["--stdio", "fake-server", "--fast", "--safe-mode"])

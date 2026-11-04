@@ -18,6 +18,10 @@ All notable changes to this submodule are documented here.
   path returned before the baseline step, so it wrote no baseline and
   reported no drift, and still exited 0. Rug-pull detection across
   scans now works on the transport most users have.
+- **`--stdio` honors `--oast` and rejects `--watch`.** The callback
+  listener started on URL scans only, so stdio exfil probes had no
+  callback URL. `--watch` with `--stdio` scanned once and exited 0; it
+  now exits 2 and says so.
 
 ## [6.22.2] - 2026-11-03
 

@@ -94,6 +94,9 @@ def _main_inner() -> None:
 
     # --stdio mode: scan a local server via stdin/stdout, then exit
     if args.stdio:
+        if args.watch:
+            print("Error: --watch re-scans URL targets; it does not re-run --stdio.", file=sys.stderr)
+            sys.exit(EXIT_ERROR)
         probe_opts = _base_probe_opts(
             args,
             extra_headers=extra_headers,
@@ -101,6 +104,9 @@ def _main_inner() -> None:
             phase2_workers=effective_phase2_workers,
             deterministic=deterministic_mode,
         )
+        oast_listener = _start_oast(args, console)
+        if oast_listener is not None:
+            probe_opts["oast"] = oast_listener
 
         panel_lines = [
             f"[bold cyan]mcpnuke v{__version__}[/bold cyan]  [dim]MCP Red Teaming & Security Scanner[/dim]",
