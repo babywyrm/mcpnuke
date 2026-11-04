@@ -86,6 +86,12 @@ def _main_inner() -> None:
         effective_probe_workers = 1
         effective_phase2_workers = 1
 
+    baseline = {}
+    if args.baseline:
+        baseline = load_baseline(args.baseline)
+        if not baseline:
+            console.print(f"[yellow]Baseline empty or not found: {args.baseline}[/yellow]")
+
     # --stdio mode: scan a local server via stdin/stdout, then exit
     if args.stdio:
         probe_opts = _base_probe_opts(
@@ -117,7 +123,10 @@ def _main_inner() -> None:
             probe_opts=probe_opts,
             inherit_env=tuple(args.stdio_env),
         )
+        _apply_baseline(args, [result], baseline, console)
         _report(args, [result], console)
+        if args.save_baseline:
+            save_baseline([result], args.save_baseline, console=console)
         if _should_fail(result.findings, getattr(args, "fail_on", "high")):
             sys.exit(EXIT_FINDINGS)
         sys.exit(EXIT_CLEAN)
@@ -147,13 +156,6 @@ def _main_inner() -> None:
         sys.exit(EXIT_ERROR)
 
     auth_token, auth_context_summary = _resolve_auth(args, urls, extra_headers, console)
-
-    baseline = {}
-    if args.baseline:
-        baseline = load_baseline(args.baseline)
-        if not baseline:
-            console.print(f"[yellow]Baseline empty or not found: {args.baseline}[/yellow]")
-
     _print_scan_panel(
         args,
         urls,

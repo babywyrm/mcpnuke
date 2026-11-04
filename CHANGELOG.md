@@ -12,6 +12,13 @@ All notable changes to this submodule are documented here.
   before any report was written, and a description could fake a
   CLEAN line. The console now prints that text literally.
 
+### Fixed
+
+- **`--stdio` honors `--save-baseline` and `--baseline`.** The stdio
+  path returned before the baseline step, so it wrote no baseline and
+  reported no drift, and still exited 0. Rug-pull detection across
+  scans now works on the transport most users have.
+
 ## [6.22.2] - 2026-11-03
 
 ### Added
