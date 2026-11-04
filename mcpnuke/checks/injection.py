@@ -2,6 +2,8 @@
 
 import re
 
+from rich.markup import escape
+
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
@@ -227,7 +229,7 @@ def check_active_prompt_injection(
             if not string_params:
                 continue
 
-            _log(f"    [dim]    [{idx + 1}/{len(invokable)}] {name}[/dim]")
+            _log(f"    [dim]    [{idx + 1}/{len(invokable)}] {escape(name)}[/dim]")
             target_param = string_params[0]
             base_args = _build_safe_args(tool)
             found = False

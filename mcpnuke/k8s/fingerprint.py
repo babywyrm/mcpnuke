@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 
 from rich.console import Console
+from rich.markup import escape
 
 from mcpnuke.core.models import Finding
 
@@ -210,7 +211,7 @@ def fingerprint_services(
                         for f in fp.findings:
                             from mcpnuke.core.constants import SEV_COLOR
                             color = SEV_COLOR.get(f.severity, "dim")
-                            console.print(f"    [{color}]{f.severity}[/] {f.title}")
+                            console.print(f"    [{color}]{f.severity}[/] {escape(f.title)}")
             except Exception:
                 if console:
                     console.print(f"  [dim]  {name}.{ns}:{port} -- fingerprint failed[/dim]")

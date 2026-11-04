@@ -3,6 +3,8 @@
 import re
 import time
 
+from rich.markup import escape
+
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
@@ -68,7 +70,7 @@ def check_behavioral_rate_limit(
         target = safe_tools[0]
         name = target.get("name", "")
         args = _build_safe_args(target)
-        _log(f"    [dim]    burst-testing '{name}' with {RAPID_BURST_COUNT} rapid calls[/dim]")
+        _log(f"    [dim]    burst-testing '{escape(name)}' with {RAPID_BURST_COUNT} rapid calls[/dim]")
 
         successes = 0
         t0 = time.time()

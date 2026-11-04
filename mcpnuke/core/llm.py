@@ -8,6 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from rich.markup import escape
+
 from mcpnuke.core.constants import DEFAULT_BEDROCK_MODEL, DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.llm_prompts import (
     _chain_context,
@@ -193,7 +195,7 @@ def _call_claude(
     _warn_if_truncated(resp.stop_reason, max_tokens, _log)
     _log("  [dim]  └─ Response body:[/dim]")
     for line in text.strip().split("\n"):
-        _log(f"  [dim]    {line}[/dim]")
+        _log(f"  [dim]    {escape(line)}[/dim]")
 
     return text
 
@@ -257,7 +259,7 @@ def _call_bedrock_claude(
     _warn_if_truncated(stop_reason, max_tokens, _log)
     _log("  [dim]  └─ Response body:[/dim]")
     for line in text.strip().split("\n"):
-        _log(f"  [dim]    {line}[/dim]")
+        _log(f"  [dim]    {escape(line)}[/dim]")
 
     return text
 

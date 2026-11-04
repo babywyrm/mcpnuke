@@ -3,6 +3,8 @@ injection, exfiltration, and cross-tool manipulation."""
 
 import re
 
+from rich.markup import escape
+
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
     grade_reflection,
@@ -49,7 +51,7 @@ def check_tool_response_injection(
             if not _should_invoke(tool, opts):
                 continue
             name = tool.get("name", "")
-            _log(f"    [dim]    [{idx+1}/{len(invokable)}] {name}[/dim]")
+            _log(f"    [dim]    [{idx+1}/{len(invokable)}] {escape(name)}[/dim]")
             # Arg generation tiers:
             # safe_mode → Tier 0: required-only (minimal footprint)
             # --claude  → Tier 2: Claude generates semantically adversarial args

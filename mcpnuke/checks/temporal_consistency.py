@@ -4,6 +4,8 @@ responses that turn malicious after the first calls."""
 import re
 import time
 
+from rich.markup import escape
+
 from mcpnuke.checks.base import (
     time_check,
 )
@@ -39,7 +41,7 @@ def check_temporal_consistency(
                 continue
             tool_idx += 1
             name = tool.get("name", "")
-            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
+            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {escape(name)}[/dim]")
             args = _build_safe_args(tool)
 
             responses: list[str] = []

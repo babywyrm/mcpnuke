@@ -6,6 +6,8 @@ import queue
 import re
 import time
 
+from rich.markup import escape
+
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _response_text
 from mcpnuke.core.models import TargetResult
@@ -152,10 +154,10 @@ def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe
                     text = _extract_text(resp)
                     if i == 0:
                         first_responses[name] = text
-                        _log(f"    [dim]    [{probe_num}/{total_probes}] {name} → {len(text)} chars[/dim]")
+                        _log(f"    [dim]    [{probe_num}/{total_probes}] {escape(name)} → {len(text)} chars[/dim]")
                     last_responses[name] = text
                 except Exception:
-                    _log(f"    [dim]    [{probe_num}/{total_probes}] {name} → error[/dim]")
+                    _log(f"    [dim]    [{probe_num}/{total_probes}] {escape(name)} → error[/dim]")
                 time.sleep(0.3)
 
         # Phase 3: re-enumerate and diff metadata

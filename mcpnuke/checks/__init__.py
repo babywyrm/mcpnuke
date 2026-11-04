@@ -9,6 +9,8 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
+from rich.markup import escape
+
 from mcpnuke.checks.actuator_probe import check_actuator_probe
 from mcpnuke.checks.agentic_loop import check_agentic_loop, check_agentic_loop_behavioral
 from mcpnuke.checks.ai_guardrail_probe import check_ai_guardrail
@@ -499,9 +501,9 @@ def run_all_checks(
         if verbose and new_findings:
             for f in new_findings:
                 color = SEV_COLOR.get(f.severity, "white")
-                _log(f"    [{color}]  ■ {f.severity:8s}[/{color}] {f.title}")
+                _log(f"    [{color}]  ■ {f.severity:8s}[/{color}] {escape(f.title)}")
                 if f.detail:
-                    _log(f"    [dim]           {f.detail[:120]}[/dim]")
+                    _log(f"    [dim]           {escape(f.detail[:120])}[/dim]")
         if verbose:
             status = f"[green]✓[/green] {len(new_findings)} finding(s)" if new_findings else "[dim]clean[/dim]"
             _log(f"  [dim]    └─ {status}  ({elapsed:.2f}s)[/dim]")

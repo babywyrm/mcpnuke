@@ -148,7 +148,7 @@ def scan_stdio_target(
         si = result.server_info.get("serverInfo", {})
         if si:
             console.print(
-                f"  [dim]Server: {si.get('name', '?')} v{si.get('version', '?')}[/dim]"
+                f"  [dim]Server: {escape(str(si.get('name', '?')))} v{escape(str(si.get('version', '?')))}[/dim]"
             )
 
     console.print(
@@ -271,7 +271,7 @@ def scan_target(
         si = result.server_info.get("serverInfo", {})
         if si:
             console.print(
-                f"  [dim]Server: {si.get('name', '?')} v{si.get('version', '?')}[/dim]"
+                f"  [dim]Server: {escape(str(si.get('name', '?')))} v{escape(str(si.get('version', '?')))}[/dim]"
             )
 
     console.print(

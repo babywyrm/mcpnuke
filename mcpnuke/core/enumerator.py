@@ -5,6 +5,8 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from rich.markup import escape
+
 from mcpnuke.core.cache_hints import cache_fields_from_result
 from mcpnuke.core.constants import MCP_INIT_PARAMS
 from mcpnuke.core.models import TargetResult
@@ -210,7 +212,8 @@ def enumerate_server(
         server_name = info.get("name", "?")
         server_version = info.get("version", "?")
         proto = r.get("protocolVersion", "?")
-        _log(f"  [dim]Server: {server_name} v{server_version}  protocol={proto} mode={mode}[/dim]")
+        server = escape(f"{server_name} v{server_version}  protocol={proto}")
+        _log(f"  [dim]Server: {server} mode={mode}[/dim]")
         cap_list = list(caps.keys()) if caps else ["none"]
         _log(f"  [dim]Capabilities: {', '.join(cap_list)}[/dim]")
 
@@ -264,7 +267,7 @@ def enumerate_server(
         _log(f"  [dim]Tools ({len(result.tools)}):[/dim]")
         for t in result.tools:
             desc = t.get("description", "")[:60]
-            _log(f"  [dim]    {t['name']}: {desc}[/dim]")
+            _log(f"  [dim]    {escape(str(t['name']))}: {escape(desc)}[/dim]")
 
     if verbose:
         _log("  [dim]Enumerating resources...[/dim]")

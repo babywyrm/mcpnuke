@@ -2,6 +2,8 @@
 
 import re
 
+from rich.markup import escape
+
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import TargetResult
@@ -50,7 +52,7 @@ def check_response_credentials(
                 continue
             tool_idx += 1
             name = tool.get("name", "")
-            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
+            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {escape(name)}[/dim]")
             text = cache.get(name)
             if text is None:
                 args = _build_safe_args(tool)

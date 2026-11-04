@@ -4,6 +4,8 @@ paths, and other implementation detail in the response."""
 import json
 import re
 
+from rich.markup import escape
+
 from mcpnuke.checks.base import (
     time_check,
 )
@@ -67,7 +69,7 @@ def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe
                 continue
             tool_idx += 1
             name = tool.get("name", "")
-            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {name}[/dim]")
+            _log(f"    [dim]    [{tool_idx}/{len(invokable)}] {escape(name)}[/dim]")
             schema = tool.get("inputSchema", {})
             required = schema.get("required", [])
 

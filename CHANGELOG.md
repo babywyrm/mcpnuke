@@ -4,6 +4,14 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **A scanned server can no longer crash or restyle the console.**
+  Server names, tool names, finding titles, and model output were
+  printed as rich markup. A server named `[/bold]x` aborted the scan
+  before any report was written, and a description could fake a
+  CLEAN line. The console now prints that text literally.
+
 ## [6.22.2] - 2026-11-03
 
 ### Added

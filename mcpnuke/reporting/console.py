@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 
 from rich import box
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 from rich.text import Text
 
@@ -123,7 +124,7 @@ def print_report(
                 _short_target(f.target),
                 f.check,
                 Text(f.severity, style=color),
-                f.title,
+                Text(f.title),
             )
         console.print(table)
 
@@ -173,16 +174,16 @@ def print_report(
             color = SEV_COLOR.get(action.severity, "white")
             console.print(
                 f"  {action.rank}. [{color}]{action.severity}[/{color}] "
-                f"{action.title}  [dim]— {action.reason}[/dim]"
+                f"{escape(action.title)}  [dim]— {escape(action.reason)}[/dim]"
             )
-            console.print(f"       [dim]Impact:[/dim] {action.impact}")
-            console.print(f"       [dim]Fix:[/dim] {action.fix}")
-            console.print(f"       [dim]Verify:[/dim] {action.verify}")
+            console.print(f"       [dim]Impact:[/dim] {escape(action.impact)}")
+            console.print(f"       [dim]Fix:[/dim] {escape(action.fix)}")
+            console.print(f"       [dim]Verify:[/dim] {escape(action.verify)}")
 
     chain_findings = [f for f in all_findings if f.check == "attack_chain"]
     if chain_findings:
         console.print("\n[bold red]Attack Chains Detected:[/bold red]")
         for f in chain_findings:
             console.print(
-                f"  [bold red]⚠[/bold red]  {f.title} ({f.target})"
+                f"  [bold red]⚠[/bold red]  {escape(f.title)} ({escape(f.target)})"
             )

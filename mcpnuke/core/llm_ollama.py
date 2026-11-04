@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import httpx
+from rich.markup import escape
 
 from mcpnuke.core.chain_replay import ProposedChain
 from mcpnuke.core.llm import LLMFinding, _parse_findings
@@ -282,7 +283,7 @@ class OllamaBackend:
                 _log(f"  [yellow]  ⚠ Ollama output truncated (hit max_tokens={max_tokens})[/yellow]")
         _log("  [dim]  └─ Response body (first 200 chars):[/dim]")
         for line in text.strip()[:200].split("\n"):
-            _log(f"  [dim]    {line}[/dim]")
+            _log(f"  [dim]    {escape(line)}[/dim]")
 
         return text
 
@@ -528,11 +529,12 @@ def run_ensemble_analysis(
     _log(f"\n  [bold]Ensemble summary ({len(models)} models):[/bold]")
     _log(f"  [green bold]  CONSENSUS ({len(consensus)} finding classes, 2+ models agree):[/green bold]")
     for e in consensus:
-        _log(f"    [green]✓ {e.finding.taxonomy_id or '?'} ({e.consensus_count}x) — {e.finding.title[:60]}[/green]")
+        title = escape(e.finding.title[:60])
+        _log(f"    [green]✓ {e.finding.taxonomy_id or '?'} ({e.consensus_count}x) — {title}[/green]")
         _log(f"      models: {', '.join(e.models)}")
     _log(f"  [yellow]  CANDIDATES ({len(candidates)}, single-model only):[/yellow]")
     for e in candidates[:10]:
-        _log(f"    [yellow]? {e.finding.taxonomy_id or '?'} ({e.models[0]}) — {e.finding.title[:60]}[/yellow]")
+        _log(f"    [yellow]? {e.finding.taxonomy_id or '?'} ({e.models[0]}) — {escape(e.finding.title[:60])}[/yellow]")
     if len(candidates) > 10:
         _log(f"    [dim]  ... and {len(candidates)-10} more[/dim]")
 

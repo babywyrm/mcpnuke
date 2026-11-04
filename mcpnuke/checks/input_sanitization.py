@@ -6,6 +6,8 @@ import re
 import time
 from collections.abc import Callable
 
+from rich.markup import escape
+
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
     grade_reflection,
@@ -105,7 +107,7 @@ def _fuzz_single_tool(
     total: int,
 ) -> None:
     name = tool.get("name", "")
-    _log(f"    [dim]    [{idx + 1}/{total}] {name}[/dim]")
+    _log(f"    [dim]    [{idx + 1}/{total}] {escape(name)}[/dim]")
     props = tool.get("inputSchema", {}).get("properties", {})
 
     for pname, pdef in props.items():

@@ -14,6 +14,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 from rich.console import Console
+from rich.markup import escape
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.chaining import _TOOL_NAME_RE
@@ -744,12 +745,12 @@ def run_llm_analysis(
                     name = tool.get("name", "")
                     desc = tool.get("description", "")
                     args = _build_extended_args(tool)
-                    _log(f"  [dim]  Calling tool '{name}' with args: {args}[/dim]")
+                    _log(f"  [dim]  Calling tool '{escape(name)}' with args: {escape(str(args))}[/dim]")
                     resp = _call_tool(session, name, args)
                     text = _response_text(resp)
                     payload = _build_phase2_payload(text, resp)
                     if not payload:
-                        _log(f"  [dim]  Tool '{name}' returned empty/short response, skipping[/dim]")
+                        _log(f"  [dim]  Tool '{escape(name)}' returned empty/short response, skipping[/dim]")
                         continue
                     candidates.append(_Phase2Candidate(tool_name=name, tool_desc=desc, payload=payload))
 

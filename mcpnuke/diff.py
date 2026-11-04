@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from rich.markup import escape
+
 from mcpnuke.reporting.files import write_private
 
 if TYPE_CHECKING:
@@ -231,24 +233,24 @@ def print_diff_report(
         console.print(f"\n  [bold]{d.url.replace('http://', '')}[/bold]")
         if d.added_tools:
             for t in d.added_tools:
-                console.print(f"    [green]+ ADDED tool:[/green] {t.get('name', '?')}")
+                console.print(f"    [green]+ ADDED tool:[/green] {escape(str(t.get('name', '?')))}")
         if d.removed_tools:
             for t in d.removed_tools:
-                console.print(f"    [red]- REMOVED tool:[/red] {t.get('name', '?')}")
+                console.print(f"    [red]- REMOVED tool:[/red] {escape(str(t.get('name', '?')))}")
         if d.modified_tools:
             for _base, curr in d.modified_tools:
-                console.print(f"    [yellow]~ MODIFIED tool:[/yellow] {curr.get('name', '?')}")
+                console.print(f"    [yellow]~ MODIFIED tool:[/yellow] {escape(str(curr.get('name', '?')))}")
         if d.added_resources:
             for r in d.added_resources:
                 uri = r.get("uri", r.get("name", "?"))
-                console.print(f"    [green]+ ADDED resource:[/green] {uri}")
+                console.print(f"    [green]+ ADDED resource:[/green] {escape(str(uri))}")
         if d.removed_resources:
             for r in d.removed_resources:
                 uri = r.get("uri", r.get("name", "?"))
-                console.print(f"    [red]- REMOVED resource:[/red] {uri}")
+                console.print(f"    [red]- REMOVED resource:[/red] {escape(str(uri))}")
         if d.added_prompts:
             for p in d.added_prompts:
-                console.print(f"    [green]+ ADDED prompt:[/green] {p.get('name', '?')}")
+                console.print(f"    [green]+ ADDED prompt:[/green] {escape(str(p.get('name', '?')))}")
         if d.removed_prompts:
             for p in d.removed_prompts:
-                console.print(f"    [red]- REMOVED prompt:[/red] {p.get('name', '?')}")
+                console.print(f"    [red]- REMOVED prompt:[/red] {escape(str(p.get('name', '?')))}")
