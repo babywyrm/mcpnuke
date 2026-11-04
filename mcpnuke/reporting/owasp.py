@@ -16,6 +16,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from rich.console import Console
+from rich.markup import escape
 
 from mcpnuke.core.models import Finding, TargetResult
 
@@ -214,7 +215,7 @@ def print_owasp(results: list[TargetResult], console: Console | None = None) -> 
             sev = f["severity"]
             if console is not None:
                 color = SEV_COLOR.get(sev, "dim")
-                _write(f"    [{color}]{sev:8s}[/] {f['check']:25s} {f['title']}")
+                _write(f"    [{color}]{sev:8s}[/] {f['check']:25s} {escape(f['title'])}")
             else:
                 _write(f"    {sev:8s} {f['check']:25s} {f['title']}")
         if count > 10:
@@ -226,4 +227,5 @@ def print_owasp(results: list[TargetResult], console: Console | None = None) -> 
         line = f"Unmapped (no taxonomy mapping — {unmapped['finding_count']} finding(s))"
         _write(f"[bold]{line}[/bold]" if console else line)
         for f in unmapped["findings"][:10]:
-            _write(f"    {f['severity']:8s} {f['check']:25s} {f['title']}")
+            title = escape(f['title']) if console is not None else f['title']
+            _write(f"    {f['severity']:8s} {f['check']:25s} {title}")

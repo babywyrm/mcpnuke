@@ -17,7 +17,10 @@ _COMMAND = f"{shlex.quote(sys.executable)} -m tests.hostile_markup.stdio_server"
 def test_markup_in_server_strings_is_printed_not_parsed(tmp_path: Path) -> None:
     report = tmp_path / "scan.json"
     proc = subprocess.run(
-        [sys.executable, "-m", "mcpnuke", "--stdio", _COMMAND, "--verbose", "--fail-on", "none", "--json", str(report)],
+        [
+            sys.executable, "-m", "mcpnuke", "--stdio", _COMMAND, "--verbose", "--by-lane", "--owasp",
+            "--fail-on", "none", "--json", str(report),
+        ],
         capture_output=True,
         text=True,
         timeout=120,
