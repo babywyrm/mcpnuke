@@ -103,6 +103,66 @@ jobs:
       - name: Run pytest verbose
         run: uv run pytest -v --tb=short
 
+  # A fork() child of the threaded scanner or runner can segfault on macOS,
+  # so stdio servers and runner workers must posix_spawn. The full suite
+  # with the server extra exercises both, plus the tests' own subprocesses.
+  pytest-macos:
+    name: pytest (macOS, server extra)
+    runs-on: macos-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install project
+        run: uv sync --frozen --extra dev --extra server
+
+      - name: Run pytest
+        run: uv run pytest -q --tb=short
+
+  # slim is the deploy/Dockerfile base (glibc, posix_spawn). alpine is musl,
+  # where subprocess falls back to fork(); descriptors must still not leak.
+  pytest-container:
+    name: pytest (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    needs: lint
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['python:3.13-slim', 'python:3.13-alpine']
+
+    steps:
+      - name: Install git and bash
+        run: |
+          if command -v apk >/dev/null; then
+            apk add --no-cache git bash
+          else
+            apt-get update && apt-get install -y --no-install-recommends git
+          fi
+
+      - uses: actions/checkout@v7
+
+      - name: Trust the workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+
+      - name: Install project
+        run: uv sync --frozen --extra dev --extra server --python python3
+
+      - name: Run pytest
+        run: uv run pytest -q --tb=short
+
   dogfood:
     name: CLI dogfood (reference target and OWASP lab)
     runs-on: ubuntu-latest
