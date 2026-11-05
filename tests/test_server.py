@@ -135,7 +135,7 @@ def test_scan_lifecycle_unreachable_target(live_manager):
     job_id = resp.json()["id"]
 
     body = _wait_for_job(job_id)
-    assert body["status"] == "done"
+    assert body["status"] == "done", body.get("error")
     assert body["report"] is not None
     assert body["report"]["summary"]["targets"] == 1
     assert body["by_lane"]["schema"] == "v1"

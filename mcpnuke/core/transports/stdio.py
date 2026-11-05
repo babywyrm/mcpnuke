@@ -7,6 +7,7 @@ import json
 import os
 import queue
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
@@ -39,6 +40,26 @@ def child_env(passthrough: Iterable[str] = ()) -> dict[str, str]:
     }
 
 
+def _close_inherited_on_exec() -> bool:
+    """Mark every inheritable descriptor above stderr close-on-exec.
+
+    False when the descriptors cannot be listed; the caller must then
+    close them in the child instead.
+    """
+    if sys.platform == "win32":
+        return False
+    try:
+        fds = [int(name) for name in os.listdir("/dev/fd")]
+    except OSError:
+        return False
+    for fd in fds:
+        if fd > 2:
+            with contextlib.suppress(OSError):
+                if os.get_inheritable(fd):
+                    os.set_inheritable(fd, False)
+    return True
+
+
 class StdioSession:
     """JSON-RPC over stdin/stdout for local MCP servers (npm, npx, python, etc.).
 
@@ -69,13 +90,20 @@ class StdioSession:
         self._stop = threading.Event()
 
         proc_env = {**child_env(inherit), **(env or {})}
+        program = shutil.which(self.cmd[0], path=proc_env.get("PATH")) if self.cmd else None
 
+        # A full program path and close_fds=False let Popen posix_spawn
+        # instead of fork(). A macOS fork() child can segfault in
+        # Network.framework's atfork handler. The server is untrusted, so
+        # descriptors the scanner inherited are made close-on-exec first.
         self._proc = subprocess.Popen(
             self.cmd,
+            executable=program,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=proc_env,
+            close_fds=not _close_inherited_on_exec(),
         )
         self._reader = threading.Thread(
             target=self._read_stdout, daemon=True, name="stdio-reader"

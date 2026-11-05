@@ -27,6 +27,13 @@ All notable changes to this submodule are documented here.
   profile names now takes the profile's threat ID, lane, and transport
   where its check set none, on URL, stdio, and `--watch` scans. The
   help no longer promises AI prompt enrichment.
+- **`--stdio` no longer forks the server process.** On macOS a `fork()`
+  child of the threaded scanner could segfault in Network.framework's
+  atfork handler before the server started, and the scan reported
+  "Process not ready". The session now uses `posix_spawn`, which runs no
+  atfork handlers, on macOS and glibc Linux, including the container
+  image. Descriptors the scanner inherited are made close-on-exec first,
+  so the untrusted server still gets none of them.
 
 ## [6.22.2] - 2026-11-03
 
