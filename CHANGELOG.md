@@ -34,6 +34,13 @@ All notable changes to this submodule are documented here.
   atfork handlers, on macOS and glibc Linux, including the container
   image. Descriptors the scanner inherited are made close-on-exec first,
   so the untrusted server still gets none of them.
+- **`mcpnuke-runner` no longer forks scan workers.** `multiprocessing`
+  always forks before exec, so on macOS a job could die the same way
+  and end as a wall-clock timeout. Each job now runs
+  `python -m mcpnuke.server.runner` through `posix_spawn`, with the
+  request on stdin and the result on stdout. CI now runs the full suite
+  with the server extra on macOS, on `python:3.13-slim` (the image
+  base), and on `python:3.13-alpine`.
 
 ## [6.22.2] - 2026-11-03
 

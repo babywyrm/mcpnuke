@@ -114,9 +114,8 @@ def test_importing_the_shim_does_not_import_the_server_package():
         assert not [m for m in sys.modules if m.startswith("mcpnuke.server")]
     finally:
         # Restore the original module objects. Leaving them deleted makes the
-        # next pickle of mcpnuke.server.runner._scan_worker re-import the
-        # module fresh, and spawn then fails with "not the same object" —
-        # which stranded test_server.py jobs in 'running' under the full suite.
+        # next import create fresh copies, and tests that monkeypatch the
+        # originals would patch modules the code no longer uses.
         for mod in [m for m in sys.modules if m.startswith("mcpnuke.server")]:
             del sys.modules[mod]
         sys.modules.update(saved)

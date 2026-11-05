@@ -15,7 +15,7 @@ import pytest
 
 from mcpnuke.core.transports.stdio import StdioSession
 
-pytestmark = pytest.mark.skipif(
+needs_posix_spawn = pytest.mark.skipif(
     not subprocess._USE_POSIX_SPAWN,  # type: ignore[attr-defined]
     reason="this libc cannot posix_spawn for subprocess",
 )
@@ -34,6 +34,7 @@ def test_server_gets_no_inherited_descriptor() -> None:
         os.close(write_fd)
 
 
+@needs_posix_spawn
 @pytest.mark.parametrize("program", [sys.executable, os.path.basename(sys.executable)])
 def test_session_uses_posix_spawn(monkeypatch: pytest.MonkeyPatch, program: str) -> None:
     calls: list[str] = []

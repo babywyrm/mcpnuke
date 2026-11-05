@@ -15,9 +15,10 @@ needed.
 
 from __future__ import annotations
 
-import multiprocessing as mp
+import json
 import os
-import queue as _queue
+import subprocess
+import sys
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -29,9 +30,6 @@ from mcpnuke.server.models import ScanDepth, ScanJob, ScanRequest, ScanStatus
 # ScanRequest.max_seconds, or globally via the env var.
 DEFAULT_JOB_TIMEOUT = float(os.getenv("MCPNUKE_RUNNER_JOB_TIMEOUT", "180"))
 
-# spawn keeps behavior identical on Linux (container) and macOS (dev), and
-# avoids inheriting the parent's threads/uvicorn state into the child.
-_MP_CTX = mp.get_context("spawn")
 
 
 def _now() -> str:
@@ -78,13 +76,8 @@ def _coverage(results: list, coverage_url: str) -> dict:
         return {"error": "unreachable", "detail": f"{type(exc).__name__}: {exc}"}
 
 
-def _scan_worker(req_dict: dict, q: mp.Queue) -> None:
-    """Run a single scan in a child process and put the result on the queue.
-
-    Must be a top-level function so it's picklable under the spawn start
-    method. Imports are kept inside so spawning the child stays cheap and the
-    parent never pays for scanner/rich import at module load.
-    """
+def _scan(req_dict: dict) -> tuple[bool, dict | str]:
+    """Run one scan. Returns (True, payload) or (False, error text)."""
     try:
         from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
         from mcpnuke.reporting.by_lane import build_by_lane
@@ -102,14 +95,44 @@ def _scan_worker(req_dict: dict, q: mp.Queue) -> None:
             auth_token=req.auth_token,
             probe_opts=_probe_opts_for(req),
         )
-        payload = {
+        return True, {
             "report": build_report(results, include_k8s=False),
             "by_lane": build_by_lane(results),
             "coverage": _coverage(results, req.coverage_url) if req.coverage_url else None,
         }
-        q.put((True, payload))
     except Exception as exc:  # noqa: BLE001 — surface any failure to the parent
-        q.put((False, f"{type(exc).__name__}: {exc}"))
+        return False, f"{type(exc).__name__}: {exc}"
+
+
+def _worker_main() -> None:
+    """Child entry point: request JSON on stdin, result JSON on stdout.
+
+    Scan output goes to stderr so nothing but the result reaches the
+    parent's pipe. os._exit skips joining threads a scan left behind.
+    """
+    req_dict = json.loads(sys.stdin.read())
+    result_fd = os.dup(1)
+    os.dup2(2, 1)
+    ok, payload = _scan(req_dict)
+    with os.fdopen(result_fd, "w") as out:
+        json.dump([ok, payload], out)
+    os._exit(0)
+
+
+def _spawn_worker() -> subprocess.Popen[str]:
+    from mcpnuke.core.transports.stdio import _close_inherited_on_exec
+
+    # A full interpreter path and close_fds=False let Popen posix_spawn
+    # instead of fork(); see StdioSession for why fork() is unsafe here.
+    return subprocess.Popen(
+        [sys.executable, "-m", "mcpnuke.server.runner"],
+        executable=sys.executable,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        close_fds=not _close_inherited_on_exec(),
+    )
 
 
 class JobManager:
@@ -161,18 +184,15 @@ class JobManager:
         timeout = req.max_seconds or self._default_timeout
         self._set(job_id, status=ScanStatus.running, started_at=_now())
 
-        q: mp.Queue = _MP_CTX.Queue()
         # auth_token is Field(exclude=True) so it never serializes into API
         # responses — re-add it here for the worker, which needs the value.
         req_dict = req.model_dump()
         req_dict["auth_token"] = req.auth_token
-        proc = _MP_CTX.Process(target=_scan_worker, args=(req_dict, q), daemon=True)
         try:
-            proc.start()
+            proc = _spawn_worker()
         except Exception as exc:
-            # A spawn failure (PicklingError from a poisoned sys.modules, fd
-            # exhaustion) must not strand the job in "running" — the thread
-            # dying silently is how the e2e tests flaked under full-suite load.
+            # A spawn failure (fd exhaustion, missing interpreter) must not
+            # strand the job in "running".
             self._set(
                 job_id,
                 status=ScanStatus.error,
@@ -181,13 +201,11 @@ class JobManager:
             )
             return
 
-        # get(timeout) drains the pipe (avoiding the large-result join deadlock)
-        # and bounds the wall clock in one shot.
         try:
-            ok, payload = q.get(timeout=timeout)
-        except _queue.Empty:
-            proc.terminate()
-            proc.join(5)
+            out, _ = proc.communicate(json.dumps(req_dict), timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
             self._set(
                 job_id,
                 status=ScanStatus.error,
@@ -195,13 +213,23 @@ class JobManager:
                 error=f"scan exceeded {timeout:.0f}s wall-clock cap and was terminated",
             )
             return
-        finally:
-            if proc.is_alive():
-                proc.join(5)
-                if proc.is_alive():
-                    proc.terminate()
+
+        try:
+            ok, payload = json.loads(out)
+        except ValueError:
+            self._set(
+                job_id,
+                status=ScanStatus.error,
+                finished_at=_now(),
+                error=f"scan subprocess exited {proc.returncode} without a result",
+            )
+            return
 
         if ok:
             self._set(job_id, status=ScanStatus.done, finished_at=_now(), **payload)
         else:
             self._set(job_id, status=ScanStatus.error, finished_at=_now(), error=payload)
+
+
+if __name__ == "__main__":
+    _worker_main()

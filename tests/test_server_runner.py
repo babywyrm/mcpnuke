@@ -1,9 +1,9 @@
 """Unit tests for the runner's job manager, scan worker, and coverage glue.
 
 JobManager supervises each scan in a spawned subprocess; these tests drive
-``_run`` synchronously against a scripted fake multiprocessing context, so
-the result/error/wall-clock-cap paths are covered deterministically — no
-real subprocesses, no network, no load sensitivity. The end-to-end variants
+``_run`` synchronously against a scripted fake worker process, so the
+result/error/wall-clock-cap paths are covered deterministically — no real
+subprocesses, no network, no load sensitivity. The end-to-end variants
 that do spawn subprocesses live in tests/test_server.py.
 
 Skipped automatically when the optional ``server`` extra (fastapi/pydantic)
@@ -12,8 +12,10 @@ isn't installed, matching tests/test_server.py.
 
 from __future__ import annotations
 
-import queue as _queue
+import json
+import os
 import string
+import subprocess
 
 import pytest
 
@@ -23,80 +25,29 @@ pytest.importorskip("pydantic")
 from mcpnuke.reporting.coverage_report import SchemaMismatchError  # noqa: E402
 from mcpnuke.server import runner  # noqa: E402
 from mcpnuke.server.models import ScanDepth, ScanRequest, ScanStatus  # noqa: E402
-from mcpnuke.server.runner import JobManager, _coverage, _probe_opts_for, _scan_worker  # noqa: E402
+from mcpnuke.server.runner import JobManager, _coverage, _probe_opts_for, _scan  # noqa: E402
 
 
-class _FakeQueue:
-    """Stands in for mp.Queue: serves one scripted get() result."""
+class _FakeWorker:
+    """Stands in for the worker Popen: scripted stdout, or a hang."""
 
-    def __init__(self, item=None, raises_empty: bool = False):
-        self._item = item
-        self._raises_empty = raises_empty
-        self.get_timeouts: list[float | None] = []
+    def __init__(self, result: object = None, raw: str | None = None, hangs: bool = False, returncode: int = 0):
+        self._out = raw if raw is not None else json.dumps(result)
+        self._hangs = hangs
+        self.returncode = returncode
+        self.inputs: list[str | None] = []
+        self.timeouts: list[float | None] = []
+        self.killed = False
 
-    def get(self, timeout=None):
-        self.get_timeouts.append(timeout)
-        if self._raises_empty:
-            raise _queue.Empty
-        return self._item
+    def communicate(self, input: str | None = None, timeout: float | None = None) -> tuple[str, None]:
+        self.inputs.append(input)
+        self.timeouts.append(timeout)
+        if self._hangs and not self.killed:
+            raise subprocess.TimeoutExpired("worker", timeout or 0)
+        return self._out, None
 
-
-class _FakeProcess:
-    """Records lifecycle calls. ``survive_join`` simulates a wedged child."""
-
-    def __init__(self, alive_after_run: bool = False, survive_join: bool = False):
-        self.alive_after_run = alive_after_run
-        self.survive_join = survive_join
-        self.started = False
-        self.terminated = False
-        self.joins: list[float | None] = []
-        self.target = None
-        self.args = None
-        self.daemon = None
-        self._alive = False
-
-    def start(self):
-        self.started = True
-        self._alive = self.alive_after_run
-
-    def is_alive(self):
-        return self._alive
-
-    def join(self, timeout=None):
-        self.joins.append(timeout)
-        if not self.survive_join:
-            self._alive = False
-
-    def terminate(self):
-        self.terminated = True
-        self._alive = False
-
-
-class _FakeCtx:
-    """Drop-in for mp.get_context("spawn") returning scripted queue/process."""
-
-    def __init__(self, q: _FakeQueue, proc: _FakeProcess):
-        self._q = q
-        self._proc = proc
-
-    def Queue(self):
-        return self._q
-
-    def Process(self, target, args, daemon):
-        self._proc.target = target
-        self._proc.args = args
-        self._proc.daemon = daemon
-        return self._proc
-
-
-class _CaptureQueue:
-    """Collects what _scan_worker puts on the result queue."""
-
-    def __init__(self):
-        self.items = []
-
-    def put(self, item):
-        self.items.append(item)
+    def kill(self) -> None:
+        self.killed = True
 
 
 @pytest.fixture
@@ -111,11 +62,14 @@ def idle_manager(monkeypatch):
     return mgr
 
 
-def _drive_run(mgr, job, q, proc, monkeypatch):
-    """Run JobManager._run synchronously against a scripted mp context."""
-    monkeypatch.setattr(runner, "_MP_CTX", _FakeCtx(q, proc))
+def _drive_run(mgr, job, worker, monkeypatch):
+    """Run JobManager._run synchronously against a scripted worker."""
+    monkeypatch.setattr(runner, "_spawn_worker", lambda: worker)
     mgr._run(job.id)
     return mgr.get(job.id)
+
+
+_DONE = [True, {"report": {}, "by_lane": {}, "coverage": None}]
 
 
 # ---------------------------------------------------------------------------
@@ -141,28 +95,22 @@ def test_worker_handoff_still_carries_auth_token(idle_manager, monkeypatch):
     """auth_token is Field(exclude=True) so API responses can't leak it; _run
     must re-add it to the worker payload or authenticated scans run anon."""
     job = idle_manager.submit(ScanRequest(target="http://x", auth_token="tok-123"))
-    q = _FakeQueue(item=(True, {"report": {}, "by_lane": {}, "coverage": None}))
-    proc = _FakeProcess()
-    _drive_run(idle_manager, job, q, proc, monkeypatch)
-    assert proc.args[0]["auth_token"] == "tok-123"
+    worker = _FakeWorker(_DONE)
+    _drive_run(idle_manager, job, worker, monkeypatch)
+    assert json.loads(worker.inputs[0])["auth_token"] == "tok-123"
 
 
 def test_spawn_failure_marks_job_error_instead_of_stuck_running(idle_manager, monkeypatch):
-    """If the scan subprocess cannot be started, the job must end in error.
+    """If the scan subprocess cannot be started, the job must end in error,
+    not strand the supervision thread with the job 'running' forever."""
 
-    An unhandled exception from proc.start() kills the supervision thread and
-    leaves the job 'running' forever. Observed in the full suite after an
-    unrelated test deleted mcpnuke.server.* from sys.modules, so spawn's
-    pickle lookup of _scan_worker raised PicklingError."""
-
-    class _ExplodingProcess(_FakeProcess):
-        def start(self):
-            raise RuntimeError("spawn failed")
+    def _explode():
+        raise OSError("spawn failed")
 
     job = idle_manager.submit(ScanRequest(target="http://x"))
-    q = _FakeQueue()
-    proc = _ExplodingProcess()
-    result = _drive_run(idle_manager, job, q, proc, monkeypatch)
+    monkeypatch.setattr(runner, "_spawn_worker", _explode)
+    idle_manager._run(job.id)
+    result = idle_manager.get(job.id)
     assert result.status is ScanStatus.error
     assert "failed to start" in (result.error or "")
 
@@ -216,89 +164,88 @@ def test_run_success_marks_done_with_payload(idle_manager, monkeypatch):
         "by_lane": {"schema": "v1"},
         "coverage": None,
     }
-    q, proc = _FakeQueue(item=(True, payload)), _FakeProcess()
-    out = _drive_run(idle_manager, job, q, proc, monkeypatch)
+    worker = _FakeWorker([True, payload])
+    out = _drive_run(idle_manager, job, worker, monkeypatch)
 
     assert out.status is ScanStatus.done
     assert out.report == {"summary": {"targets": 1}}
     assert out.by_lane == {"schema": "v1"}
     assert out.coverage is None
     assert out.started_at and out.finished_at
-    assert proc.started and proc.daemon is True
-    assert proc.target is _scan_worker
-    assert proc.args[0]["target"] == "http://x"
-    assert proc.args[1] is q
-    assert q.get_timeouts == [30.0]  # per-request cap wins over the default
+    assert json.loads(worker.inputs[0])["target"] == "http://x"
+    assert worker.timeouts == [30.0]  # per-request cap wins over the default
 
 
 def test_run_uses_default_timeout_when_request_has_none(idle_manager, monkeypatch):
     job = idle_manager.submit(ScanRequest(target="http://x"))
-    q = _FakeQueue(item=(True, {"report": {}, "by_lane": {}, "coverage": None}))
-    proc = _FakeProcess()
-    _drive_run(idle_manager, job, q, proc, monkeypatch)
-    assert q.get_timeouts == [idle_manager._default_timeout]
+    worker = _FakeWorker(_DONE)
+    _drive_run(idle_manager, job, worker, monkeypatch)
+    assert worker.timeouts == [idle_manager._default_timeout]
 
 
 def test_run_worker_failure_marks_error(idle_manager, monkeypatch):
     job = idle_manager.submit(ScanRequest(target="http://x"))
-    q, proc = _FakeQueue(item=(False, "RuntimeError: boom")), _FakeProcess()
-    out = _drive_run(idle_manager, job, q, proc, monkeypatch)
+    out = _drive_run(idle_manager, job, _FakeWorker([False, "RuntimeError: boom"]), monkeypatch)
 
     assert out.status is ScanStatus.error
     assert out.error == "RuntimeError: boom"
     assert out.finished_at
 
 
-def test_run_wall_clock_cap_terminates_subprocess(idle_manager, monkeypatch):
-    """Deterministic version of the end-to-end hard-timeout test: the queue
-    never delivers, so the child must be terminated and the job errored."""
+def test_run_wall_clock_cap_kills_subprocess(idle_manager, monkeypatch):
+    """Deterministic version of the end-to-end hard-timeout test: the worker
+    never answers, so it must be killed and the job errored."""
     job = idle_manager.submit(ScanRequest(target="http://x", max_seconds=5.0))
-    q, proc = _FakeQueue(raises_empty=True), _FakeProcess(alive_after_run=True)
-    out = _drive_run(idle_manager, job, q, proc, monkeypatch)
+    worker = _FakeWorker(hangs=True)
+    out = _drive_run(idle_manager, job, worker, monkeypatch)
 
     assert out.status is ScanStatus.error
     assert "exceeded 5s wall-clock cap" in out.error
     assert out.finished_at
-    assert proc.terminated
+    assert worker.killed
 
 
-def test_run_joins_lingering_child_without_terminate(idle_manager, monkeypatch):
-    """Child still alive after delivering its result: join(5) reaps it."""
+def test_run_worker_that_dies_without_a_result_marks_error(idle_manager, monkeypatch):
     job = idle_manager.submit(ScanRequest(target="http://x"))
-    q = _FakeQueue(item=(True, {"report": {}, "by_lane": {}, "coverage": None}))
-    proc = _FakeProcess(alive_after_run=True)
-    out = _drive_run(idle_manager, job, q, proc, monkeypatch)
+    out = _drive_run(idle_manager, job, _FakeWorker(raw="", returncode=-11), monkeypatch)
 
-    assert out.status is ScanStatus.done
-    assert proc.joins == [5]
-    assert not proc.terminated
-
-
-def test_run_terminates_child_that_survives_join(idle_manager, monkeypatch):
-    """A child that ignores join(5) after delivering is force-terminated."""
-    job = idle_manager.submit(ScanRequest(target="http://x"))
-    q = _FakeQueue(item=(True, {"report": {}, "by_lane": {}, "coverage": None}))
-    proc = _FakeProcess(alive_after_run=True, survive_join=True)
-    out = _drive_run(idle_manager, job, q, proc, monkeypatch)
-
-    assert out.status is ScanStatus.done
-    assert proc.joins == [5]
-    assert proc.terminated
+    assert out.status is ScanStatus.error
+    assert "exited -11 without a result" in out.error
 
 
 def test_run_unknown_job_returns_before_spawning(idle_manager, monkeypatch):
-    q, proc = _FakeQueue(), _FakeProcess()
-    monkeypatch.setattr(runner, "_MP_CTX", _FakeCtx(q, proc))
+    spawned: list[bool] = []
+    monkeypatch.setattr(runner, "_spawn_worker", lambda: spawned.append(True))
     idle_manager._run("missing")
-    assert not proc.started
+    assert not spawned
+
+
+@pytest.mark.skipif(
+    not subprocess._USE_POSIX_SPAWN,  # type: ignore[attr-defined]
+    reason="this libc cannot posix_spawn for subprocess",
+)
+def test_worker_is_posix_spawned(monkeypatch):
+    """fork() from the threaded runner can segfault the child on macOS."""
+    calls: list[str] = []
+    real = os.posix_spawn
+
+    def _spy(path, *args, **kwargs):
+        calls.append(path)
+        return real(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "posix_spawn", _spy)
+    proc = runner._spawn_worker()
+    proc.kill()
+    proc.communicate()
+    assert calls == [runner.sys.executable]
 
 
 # ---------------------------------------------------------------------------
-# _scan_worker — the child-process entry point, driven in-process
+# _scan — the worker's scan, driven in-process
 # ---------------------------------------------------------------------------
 
 
-def test_scan_worker_success_payload(monkeypatch):
+def test_scan_success_payload(monkeypatch):
     seen = {}
 
     def fake_run_parallel(targets, **kwargs):
@@ -317,15 +264,13 @@ def test_scan_worker_success_payload(monkeypatch):
     )
 
     req = ScanRequest(target="http://x", depth=ScanDepth.deep, auth_token="synthetic-token")
-    q = _CaptureQueue()
     # Mirror JobManager._run's handoff: model_dump strips auth_token
     # (Field exclude=True) so API responses can't leak it; the worker
     # payload re-adds it.
     req_dict = req.model_dump()
     req_dict["auth_token"] = req.auth_token
-    _scan_worker(req_dict, q)
+    ok, payload = _scan(req_dict)
 
-    (ok, payload), = q.items
     assert ok is True
     assert payload["report"] == {"results": ["sentinel-result"], "include_k8s": False}
     assert payload["by_lane"] == {"schema": "v1"}
@@ -339,32 +284,25 @@ def test_scan_worker_success_payload(monkeypatch):
     assert seen["probe_opts"]["deterministic"] is True
 
 
-def test_scan_worker_includes_coverage_when_url_set(monkeypatch):
+def test_scan_includes_coverage_when_url_set(monkeypatch):
     monkeypatch.setattr("mcpnuke.scanner.run_parallel", lambda *a, **k: [])
     monkeypatch.setattr("mcpnuke.reporting.json_out.build_report", lambda results, include_k8s: {})
     monkeypatch.setattr("mcpnuke.reporting.by_lane.build_by_lane", lambda results: {})
     monkeypatch.setattr(runner, "_coverage", lambda results, url: {"schema": "v1", "url": url})
 
     req = ScanRequest(target="http://x", coverage_url="http://camazotz:3000")
-    q = _CaptureQueue()
-    _scan_worker(req.model_dump(), q)
+    ok, payload = _scan(req.model_dump())
 
-    (ok, payload), = q.items
     assert ok is True
     assert payload["coverage"] == {"schema": "v1", "url": "http://camazotz:3000"}
 
 
-def test_scan_worker_surfaces_any_exception_to_parent(monkeypatch):
+def test_scan_surfaces_any_exception_to_parent(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("kaboom")
 
     monkeypatch.setattr("mcpnuke.scanner.run_parallel", boom)
-    q = _CaptureQueue()
-    _scan_worker(ScanRequest(target="http://x").model_dump(), q)
-
-    (ok, err), = q.items
-    assert ok is False
-    assert err == "RuntimeError: kaboom"
+    assert _scan(ScanRequest(target="http://x").model_dump()) == (False, "RuntimeError: kaboom")
 
 
 # ---------------------------------------------------------------------------
