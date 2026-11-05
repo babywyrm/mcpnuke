@@ -22,6 +22,7 @@ from mcpnuke.core.enumerator import enumerate_server
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.session import StdioSession, ToolServerSession, detect_transport
 from mcpnuke.core.transports.base import MCPSessionProtocol
+from mcpnuke.profile import attribute_findings
 
 console = Console()
 
@@ -170,6 +171,8 @@ def scan_stdio_target(
     run_cross_target_checks([result], verbose=verbose)
 
     _run_ai_analysis(session, result, opts, _log)
+    if opts.get("profile"):
+        attribute_findings(opts["profile"], [result])
 
     session.close()
     result.timings["total"] = time.time() - t_start
@@ -292,6 +295,8 @@ def scan_target(
     )
 
     _run_ai_analysis(session, result, opts, _log)
+    if opts.get("profile"):
+        attribute_findings(opts["profile"], [result])
 
     session.close()
     result.timings["total"] = time.time() - t_start

@@ -41,6 +41,13 @@ def test_stdio_rejects_watch(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     assert "--watch" in capsys.readouterr().err
 
 
+def test_stdio_passes_the_profile(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    profile = tmp_path / "p.json"
+    profile.write_text('{"name": "p", "tools": [{"name": "read_secret", "threat_id": "MCP-T06"}]}')
+    opts = _stdio_opts(monkeypatch, "--profile", str(profile))
+    assert opts["profile"].name == "p"
+
+
 def test_stdio_opts_match_the_shared_base(monkeypatch: pytest.MonkeyPatch) -> None:
     opts = _stdio_opts(monkeypatch, "--fast", "--safe-mode")
     args = cli_main.parse_args(["--stdio", "fake-server", "--fast", "--safe-mode"])

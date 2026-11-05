@@ -642,7 +642,8 @@ def _add_lane_arguments(group: ArgumentGroup) -> None:
         metavar="FILE",
         default=None,
         help="Path to a target profile JSON (maps tool names to lane, transport, "
-             "threat ID, and notes). Enriches AI prompts and finding attribution. "
+             "threat ID, and notes). Fills threat ID, lane, and transport on findings "
+             "for the tools it names, where the check set none. "
              "Bundled profiles: profiles/camazotz.json, profiles/dvmcp.json.",
     )
 

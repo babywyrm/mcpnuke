@@ -92,6 +92,15 @@ def _main_inner() -> None:
         if not baseline:
             console.print(f"[yellow]Baseline empty or not found: {args.baseline}[/yellow]")
 
+    profile_data = None
+    if getattr(args, "profile", None):
+        from mcpnuke.profile import load_profile
+        try:
+            profile_data = load_profile(args.profile)
+            console.print(f"  [green]Profile loaded:[/green] {profile_data.name} ({len(profile_data.tools)} tools)")
+        except (FileNotFoundError, ValueError) as exc:
+            console.print(f"  [red]Profile error:[/red] {exc}")
+
     # --stdio mode: scan a local server via stdin/stdout, then exit
     if args.stdio:
         if args.watch:
@@ -104,6 +113,8 @@ def _main_inner() -> None:
             phase2_workers=effective_phase2_workers,
             deterministic=deterministic_mode,
         )
+        if profile_data is not None:
+            probe_opts["profile"] = profile_data
         oast_listener = _start_oast(args, console)
         if oast_listener is not None:
             probe_opts["oast"] = oast_listener
@@ -173,16 +184,6 @@ def _main_inner() -> None:
         deterministic=deterministic_mode,
         console=console,
     )
-
-    profile_data = None
-    if getattr(args, "profile", None):
-        from mcpnuke.profile import load_profile
-        try:
-            profile_data = load_profile(args.profile)
-            console.print(f"  [green]Profile loaded:[/green] {profile_data.name} ({len(profile_data.tools)} tools)")
-        except (FileNotFoundError, ValueError) as exc:
-            console.print(f"  [red]Profile error:[/red] {exc}")
-
     probe_opts = {
         **_base_probe_opts(
             args,

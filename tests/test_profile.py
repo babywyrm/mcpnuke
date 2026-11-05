@@ -94,6 +94,52 @@ class TestProfileLookups:
         assert threat_id_for(profile, "nope") == ""
 
 
+class TestAttributeFindings:
+    def _profile(self):
+        from mcpnuke.profile import ProfileData
+        tool = {"name": "read_secret", "lane": 2, "transport": "B", "threat_id": "MCP-T06"}
+        return ProfileData(name="t", tools=[tool])
+
+    def _result(self, **finding):
+        from mcpnuke.core.models import TargetResult
+        r = TargetResult(url="stdio://t")
+        r.add("some_check", "HIGH", finding.pop("title", "x"), **finding)
+        return r
+
+    def test_fills_blank_attribution_from_profile(self):
+        from mcpnuke.profile import attribute_findings
+        r = self._result(title="Tool 'read_secret' leaks data")
+        attribute_findings(self._profile(), [r])
+        f = r.findings[0]
+        assert (f.taxonomy_id, f.lane, f.transport) == ("MCP-T06", 2, "B")
+
+    def test_matches_on_evidence_alone(self):
+        from mcpnuke.profile import attribute_findings
+        r = self._result(title="Added tool", evidence="read_secret")
+        attribute_findings(self._profile(), [r])
+        assert r.findings[0].taxonomy_id == "MCP-T06"
+
+    def test_matches_a_quoted_name_after_a_bracket_tag(self):
+        from mcpnuke.profile import attribute_findings
+        r = self._result(title="Dangerous capability [filesystem]: 'read_secret'")
+        attribute_findings(self._profile(), [r])
+        assert r.findings[0].taxonomy_id == "MCP-T06"
+
+    def test_keeps_what_the_check_set(self):
+        from mcpnuke.profile import attribute_findings
+        r = self._result(title="Tool 'read_secret' x", taxonomy_id="MCP-T03", lane=1, transport="A")
+        attribute_findings(self._profile(), [r])
+        f = r.findings[0]
+        assert (f.taxonomy_id, f.lane, f.transport) == ("MCP-T03", 1, "A")
+
+    def test_ignores_tools_not_in_profile(self):
+        from mcpnuke.profile import attribute_findings
+        r = self._result(title="Tool 'other' x")
+        attribute_findings(self._profile(), [r])
+        f = r.findings[0]
+        assert (f.taxonomy_id, f.lane, f.transport) == ("", None, None)
+
+
 class TestProfileCLI:
     def test_profile_flag_parses(self, tmp_path):
         from mcpnuke.cli import parse_args

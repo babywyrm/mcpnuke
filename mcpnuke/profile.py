@@ -3,8 +3,8 @@
 A profile is a simple JSON file (hand-writable in 5 minutes) that maps
 tool names to security metadata: lane, transport surface, threat ID, and
 freeform notes.  Profiles are *optional* — mcpnuke works fully without one
-via auto-discovery.  A profile just upgrades the quality of AI prompts and
-lane/transport attribution on findings.
+via auto-discovery.  A profile fills threat ID, lane, and transport on
+findings for the tools it names, where the check set none.
 
 Schema
 ------
@@ -27,8 +27,14 @@ Schema
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from mcpnuke.core.models import TargetResult
+from mcpnuke.policy.generator import _extract_tool_name
+
+_QUOTED_RE: re.Pattern[str] = re.compile(r"'([^']+)'")
 
 
 @dataclass
@@ -102,6 +108,22 @@ def notes_for(profile: ProfileData, tool_name: str) -> str:
     if t is None:
         return ""
     return t.get("notes", "") or ""
+
+
+def attribute_findings(profile: ProfileData, results: list[TargetResult]) -> None:
+    """Fill threat ID, lane, and transport from the profile where a finding has none."""
+    for r in results:
+        for f in r.findings:
+            names = [_extract_tool_name(f), f.evidence, *_QUOTED_RE.findall(f.title)]
+            tool = next((t for n in names if (t := _get_tool(profile, n))), None)
+            if tool is None:
+                continue
+            if not f.taxonomy_id:
+                f.taxonomy_id = tool.get("threat_id", "") or ""
+            if f.lane is None and tool.get("lane") is not None:
+                f.lane = int(tool["lane"])
+            if f.transport is None:
+                f.transport = tool.get("transport") or None
 
 
 def enrich_tool(profile: ProfileData, tool: dict) -> dict:

@@ -22,6 +22,11 @@ All notable changes to this submodule are documented here.
   listener started on URL scans only, so stdio exfil probes had no
   callback URL. `--watch` with `--stdio` scanned once and exited 0; it
   now exits 2 and says so.
+- **`--profile` attributes findings.** The profile was loaded and
+  never read, so the flag changed nothing. A finding on a tool the
+  profile names now takes the profile's threat ID, lane, and transport
+  where its check set none, on URL, stdio, and `--watch` scans. The
+  help no longer promises AI prompt enrichment.
 
 ## [6.22.2] - 2026-11-03
 
