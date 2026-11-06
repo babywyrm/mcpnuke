@@ -590,7 +590,7 @@ def _add_lane_arguments(group: ArgumentGroup) -> None:
         default=None,
         help="Re-scan every SECONDS and print the lane finding-count delta. "
         "Runs until interrupted, then exits 0. Does not apply --fail-on. "
-        "Minimum 1.",
+        "URL targets only; --stdio exits 2. Minimum 1.",
     )
     group.add_argument(
         "--lab-coverage",

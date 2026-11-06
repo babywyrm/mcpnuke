@@ -686,7 +686,7 @@ wheels = [
 
 [[package]]
 name = "mcpnuke"
-version = "6.22.2"
+version = "6.22.3"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

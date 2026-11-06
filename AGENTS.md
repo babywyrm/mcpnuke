@@ -125,6 +125,7 @@ not a lab name, to pick the command.
   for their threat ID. No scan and no `--targets`.
 - `--watch SECONDS`: re-scan until interrupted and print the lane
   finding-count delta. The exit is 0. `--fail-on` does not apply.
+  URL targets only; with `--stdio` it exits 2.
 - `--taxonomy-coverage`: pass, fail, or untested for each vendored MCP-T ID.
   `--coverage-report` is the per-lane camazotz comparison, and it needs a URL.
 

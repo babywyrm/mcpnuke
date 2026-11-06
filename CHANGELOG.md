@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.3] - 2026-11-05
+
 ### Security
 
 - **A scanned server can no longer crash or restyle the console.**
