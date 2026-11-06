@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
 from rich.console import Console
+from rich.markup import escape
 
 MCP_ANNOTATION_ENABLED = "mcp.io/enabled"
 MCP_ANNOTATION_TRANSPORT = "mcp.io/transport"
@@ -274,7 +275,7 @@ def discover_services(
                     )
                     endpoints.append(ep)
                     if console:
-                        console.print(f"  [green]✓[/green] {ep.url} (annotated)")
+                        console.print(f"  [green]✓[/green] {escape(ep.url)} (annotated)")
                 continue
 
             for sp in svc_ports:
@@ -327,7 +328,7 @@ def discover_services(
                         seen_urls.add(ep.url)
                         endpoints.append(ep)
                         if console:
-                            console.print(f"  [green]✓[/green] {ep.url} (probed)")
+                            console.print(f"  [green]✓[/green] {escape(ep.url)} (probed)")
                 except Exception:
                     if console:
                         console.print(

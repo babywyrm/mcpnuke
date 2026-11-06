@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from rich.console import Console
+from rich.markup import escape
 from rich.panel import Panel
 
 from mcpnuke import __version__
@@ -79,7 +80,7 @@ def _start_oast(args: argparse.Namespace, console: Console) -> "CanaryListener |
             advertised_host=getattr(args, "oast_host", None),
         ).start()
     except OSError as exc:
-        console.print(f"  [red]--oast: could not bind listener: {exc}[/red]")
+        console.print(f"  [red]--oast: could not bind listener: {escape(str(exc))}[/red]")
         return None
 
     console.print(
@@ -244,7 +245,7 @@ def _k8s_setup(args: argparse.Namespace, urls: list[str], console: Console) -> N
         for ep in discovered:
             if ep.url not in urls:
                 urls.append(ep.url)
-                console.print(f"  [green]+[/green] Added discovered target: {ep.url}")
+                console.print(f"  [green]+[/green] Added discovered target: {escape(ep.url)}")
 
 
 def _validate_ai_backend(args: argparse.Namespace) -> None:
@@ -331,7 +332,7 @@ def _resolve_auth(
     try:
         load_auth_secret_files(args)
     except RuntimeError as e:
-        console.print(f"  [red]✗[/red] {e}")
+        console.print(f"  [red]✗[/red] {escape(str(e))}")
         sys.exit(EXIT_ERROR)
     auth_token = args.auth_token
     if not auth_token and args.client_id and args.client_secret:
@@ -339,7 +340,7 @@ def _resolve_auth(
             auth_token = resolve_auth_token(args)
             console.print("  [green]✓[/green] Token acquired via OIDC client_credentials")
         except RuntimeError as e:
-            console.print(f"  [red]✗[/red] OIDC token fetch failed: {e}")
+            console.print(f"  [red]✗[/red] OIDC token fetch failed: {escape(str(e))}")
             sys.exit(EXIT_ERROR)
     elif not auth_token and urls and args.verbose:
         info = detect_auth_requirements(
@@ -348,11 +349,11 @@ def _resolve_auth(
             extra_headers=extra_headers,
         )
         if info.requires_auth:
-            console.print(f"  [yellow]⚠[/yellow]  Target requires auth: {info.summary()}")
+            console.print(f"  [yellow]⚠[/yellow]  Target requires auth: {escape(info.summary())}")
             if info.token_endpoint:
-                console.print(f"  [dim]  Token endpoint: {info.token_endpoint}[/dim]")
+                console.print(f"  [dim]  Token endpoint: {escape(info.token_endpoint)}[/dim]")
                 console.print(
-                    f"  [dim]  Use: --oidc-url {info.issuer or '...'} "
+                    f"  [dim]  Use: --oidc-url {escape(info.issuer or '...')} "
                     f"--client-id ID --client-secret SECRET[/dim]"
                 )
     auth_context_summary: dict = {}
@@ -376,7 +377,7 @@ def _resolve_auth(
                 )
                 auth_context_summary["introspection_summary"] = summarize_introspection(raw_introspection)
             except RuntimeError as e:
-                console.print(f"  [yellow]⚠[/yellow] token introspection failed: {e}")
+                console.print(f"  [yellow]⚠[/yellow] token introspection failed: {escape(str(e))}")
     if args.jwks_url:
         try:
             jwks = fetch_jwks(
@@ -386,7 +387,7 @@ def _resolve_auth(
             )
             auth_context_summary["jwks_summary"] = summarize_jwks(jwks)
         except RuntimeError as e:
-            console.print(f"  [yellow]⚠[/yellow] JWKS fetch failed: {e}")
+            console.print(f"  [yellow]⚠[/yellow] JWKS fetch failed: {escape(str(e))}")
     return auth_token, auth_context_summary
 
 
@@ -460,7 +461,7 @@ def _report(args: argparse.Namespace, results: list[TargetResult], console: Cons
                 # Re-write JSON with diff block attached
                 write_json(results, args.json_out, console=None, taxonomy_coverage=taxonomy_coverage)
             except FileNotFoundError as exc:
-                console.print(f"[yellow]--diff-baseline: {exc}[/yellow]")
+                console.print(f"[yellow]--diff-baseline: {escape(str(exc))}[/yellow]")
         else:
             console.print(
                 "[yellow]--diff-baseline requires --json to write current scan results first.[/yellow]"
@@ -529,7 +530,7 @@ def _report(args: argparse.Namespace, results: list[TargetResult], console: Cons
             report = build_coverage_report(results, taxonomy)
             print_coverage_report(report, console=console)
         except SchemaMismatchError as exc:
-            console.print(f"\n[red]coverage-report: {exc}[/red]")
+            console.print(f"\n[red]coverage-report: {escape(str(exc))}[/red]")
         except _httpx.HTTPError as exc:
             console.print(
                 f"\n[red]coverage-report: failed to fetch /api/lanes from "
@@ -563,9 +564,9 @@ def _report(args: argparse.Namespace, results: list[TargetResult], console: Cons
                 for tid, count in sorted(unknowns.items()):
                     console.print(f"  [yellow]{tid}[/yellow]  ({count} finding(s))")
         except FileNotFoundError as exc:
-            console.print(f"\n[red]--taxonomy: {exc}[/red]")
+            console.print(f"\n[red]--taxonomy: {escape(str(exc))}[/red]")
         except Exception as exc:  # noqa: BLE001 - surface any taxonomy load issue clearly
-            console.print(f"\n[red]--taxonomy: failed to load: {exc}[/red]")
+            console.print(f"\n[red]--taxonomy: failed to load: {escape(str(exc))}[/red]")
 
 
 

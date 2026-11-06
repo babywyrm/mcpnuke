@@ -7,8 +7,9 @@ All notable changes to this submodule are documented here.
 ### Security
 
 - **A scanned server can no longer crash or restyle the console.**
-  Server names, tool names, finding titles, and model output were
-  printed as rich markup. A server named `[/bold]x` aborted the scan
+  Server names, tool names, finding titles, auth metadata, remote error
+  text, k8s annotation URLs, and model output were printed as rich
+  markup. A server named `[/bold]x` aborted the scan
   before any report was written, and a description could fake a
   CLEAN line. The console now prints that text literally.
 
