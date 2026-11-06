@@ -68,8 +68,8 @@ mcpnuke/patterns/probes.py   behavioral probe payloads and response analysis
 mcpnuke/patterns/credentials.py  the only credential regexes, tiered by FP risk
 mcpnuke/core/session.py      transport detection; re-exports the session classes
 mcpnuke/core/transports/     MCPSessionProtocol and the sse/http/toolserver/stdio sessions
-mcpnuke/core/chain_replay.py multi-hop attack chain replay (DAG, OAST)
-mcpnuke/core/chain_args.py   chain step placeholders, filters, and conditions
+mcpnuke/core/chain_replay.py multi-hop attack chain replay (linear, OAST)
+mcpnuke/core/chain_args.py   chain step placeholders and filters
 mcpnuke/core/models.py       Finding, TargetResult dataclasses
 mcpnuke/scanner.py           parallel scan orchestration
 mcpnuke/__main__.py          CLI entry point

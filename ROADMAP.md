@@ -140,7 +140,7 @@ Coverage today is the glance row (measured, not this audit's 22).
 | ID | Threat | Notes |
 |----|--------|-------|
 | MCP-T16–T32 | Transport/auth/identity (17 IDs) | Many overlap jwt/dpop/transport; T22/T23 have static checks |
-| MCP-T34–T36 | Advanced delegation/chain attacks | Attributed; multi-hop replay shipped 6.18.0 (`ChainGraph` DAG, conditional steps, lane templates) |
+| MCP-T34–T36 | Advanced delegation/chain attacks | Attributed; `--chain-replay` replays linear multi-hop chains. The 6.18.0 DAG, conditional steps, and lane templates were never wired in and have been removed |
 | MCP-T37–T41 | RAG poisoning, HTTP bypass, governance redirect | Harder without internal corpus access |
 | MCP-T44–T49 | Transport identity dilution (lanes B–E) | T44 has a probe; lane-aware chain templates (B–E) shipped 6.18.0 |
 | MCP-T52 | Pre-Authentication Injection | `pre_auth_injection` in `taxonomy_coverage.py` |

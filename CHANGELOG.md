@@ -4,6 +4,16 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Removed
+
+- **The unused chain DAG, conditional steps, and lane templates.**
+  `ChainGraph`, `parse_chain_graph`, `replay_chain_graph`,
+  `ConditionalStep`, the condition evaluator, and
+  `core/chain_templates.py` were listed as shipped in 6.18.0, but
+  `--chain-replay` only ever ran the linear `replay_chain`, so none of
+  it could execute. About 390 lines and their tests are gone.
+  `--chain-replay` behavior is unchanged.
+
 ## [6.22.3] - 2026-11-05
 
 ### Security

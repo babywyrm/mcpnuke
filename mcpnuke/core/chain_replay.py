@@ -29,7 +29,6 @@ from mcpnuke.checks.tool_probes import (
 )
 from mcpnuke.core.chain_args import (
     _PLACEHOLDER_RE,
-    _evaluate_condition,
     _parse_json_safe,
     _resolve_args,
 )
@@ -55,13 +54,6 @@ class ChainStep:
     tool: str
     args: dict = field(default_factory=dict)
     target: str = ""
-
-
-@dataclass(frozen=True)
-class ConditionalStep(ChainStep):
-    """A step that executes only if its condition evaluates true."""
-
-    condition: str = ""
 
 
 @dataclass(frozen=True)
@@ -110,23 +102,6 @@ class ChainVerdict:
     detail: str
     evidence: str = ""
     egress_confirmed: bool = False
-
-
-@dataclass
-class ChainNode:
-    """A node in the chain execution graph."""
-
-    step: ChainStep
-    dependencies: list[int] = field(default_factory=list)
-    condition: str | None = None
-
-
-@dataclass
-class ChainGraph:
-    """Directed acyclic graph of chain execution."""
-
-    nodes: list[ChainNode] = field(default_factory=list)
-    parallel_groups: list[list[int]] = field(default_factory=list)
 
 
 def parse_proposed_chains(text: str) -> list[ProposedChain]:
@@ -182,58 +157,6 @@ def parse_proposed_chains(text: str) -> list[ProposedChain]:
             )
         )
     return chains
-
-
-def parse_chain_graph(chain: ProposedChain) -> ChainGraph:
-    """Parse a ProposedChain into a ChainGraph with dependency edges.
-
-    Builds edges from {{stepN.output}} references in step args.
-    Validates: no cycles, no self-dependencies.
-    """
-    nodes: list[ChainNode] = []
-    for i, step in enumerate(chain.steps):
-        deps: list[int] = []
-        for arg_value in step.args.values():
-            if isinstance(arg_value, str):
-                for match in _PLACEHOLDER_RE.finditer(arg_value):
-                    dep_idx = int(match.group(1))
-                    if dep_idx == i:
-                        raise ValueError(f"self-dependency in step {i}")
-                    if dep_idx not in deps:
-                        deps.append(dep_idx)
-        condition = getattr(step, "condition", None)
-        nodes.append(ChainNode(step=step, dependencies=sorted(deps), condition=condition))
-
-    # Cycle detection via topological sort
-    _topological_sort(nodes)  # raises ValueError on cycle
-
-    return ChainGraph(nodes=nodes)
-
-
-def _topological_sort(nodes: list[ChainNode]) -> list[int]:
-    """Return execution order via Kahn's algorithm. Raises ValueError on cycle."""
-    in_degree = {i: 0 for i in range(len(nodes))}
-    for i, node in enumerate(nodes):
-        for _dep in node.dependencies:
-            in_degree[i] += 1
-
-    queue = [i for i, deg in in_degree.items() if deg == 0]
-    order: list[int] = []
-
-    while queue:
-        node_idx = queue.pop(0)
-        order.append(node_idx)
-        for i, node in enumerate(nodes):
-            if node_idx in node.dependencies:
-                in_degree[i] -= 1
-                if in_degree[i] == 0:
-                    queue.append(i)
-
-    if len(order) != len(nodes):
-        raise ValueError("circular dependency detected in chain")
-    return order
-
-
 
 
 def _adapt_step_args_with_llm(
@@ -607,127 +530,3 @@ def summarize_run(
         ),
         evidence=f"Moved fragment: {fragment}",
     )
-
-
-def replay_chain_graph(
-    session: MCPSessionProtocol,
-    graph: ChainGraph,
-    tools: dict[str, dict],
-    *,
-    safe_mode: bool = False,
-    oast: CanaryListener | None = None,
-    backend: Any = None,
-    model: str = "",
-) -> ChainRun:
-    """Execute a ChainGraph against a session.
-
-    Respects dependency order, evaluates conditions, and tracks
-    data movement across all executed steps.
-    """
-    # Create a synthetic chain for the run record
-    chain = ProposedChain(
-        title="graph_execution",
-        steps=[node.step for node in graph.nodes],
-    )
-    run = ChainRun(chain=chain)
-
-    oast_url = ""
-    if oast is not None:
-        run.oast_token = oast.issue()
-        oast_url = oast.url_for(run.oast_token)
-
-    # Get execution order
-    order = _topological_sort(graph.nodes)
-
-    # Track which node index maps to which result index
-    node_to_result: dict[int, int] = {}
-
-    for node_idx in order:
-        node = graph.nodes[node_idx]
-
-        # Evaluate condition if present
-        if node.condition:
-            prior_results = [run.results[node_to_result[i]] for i in node.dependencies if i in node_to_result]
-            if not _evaluate_condition(node.condition, prior_results):
-                continue
-
-        tool = tools.get(node.step.tool)
-        if tool is None:
-            run.results.append(
-                StepResult(
-                    tool=node.step.tool,
-                    request_args={},
-                    response_text="",
-                    failed=True,
-                    reason=f"unknown tool '{node.step.tool}'",
-                )
-            )
-            node_to_result[node_idx] = len(run.results) - 1
-            continue
-
-        if safe_mode and _is_dangerous_tool(tool):
-            run.results.append(
-                StepResult(
-                    tool=node.step.tool,
-                    request_args={},
-                    response_text="",
-                    failed=True,
-                    reason="refused under safe-mode: dangerous tool",
-                )
-            )
-            node_to_result[node_idx] = len(run.results) - 1
-            continue
-
-        # Build args from dependencies
-        args = _build_safe_args(tool)
-        dep_results = [run.results[node_to_result[i]] for i in node.dependencies if i in node_to_result]
-        args.update(_resolve_args(node.step.args, dep_results, oast_url, run.tracked_fragments))
-
-        # Check for unresolved placeholders
-        has_unresolved = any(
-            isinstance(v, str) and _PLACEHOLDER_RE.search(v)
-            for v in args.values()
-        )
-        if has_unresolved and backend is not None:
-            adapted = _adapt_step_args_with_llm(backend, tool, node.step.args, dep_results, model=model)
-            if adapted:
-                args.update(adapted)
-                for val in adapted.values():
-                    if isinstance(val, str) and len(val.strip()) >= 4:
-                        run.tracked_fragments.append(val.strip())
-
-        resp = _call_tool(session, node.step.tool, args)
-        text = _response_text(resp)
-        failed = response_is_error(resp)
-
-        # LLM fallback on failure
-        if failed and not has_unresolved and backend is not None:
-            adapted = _adapt_step_args_with_llm(backend, tool, node.step.args, dep_results, model=model)
-            if adapted and adapted != args:
-                retry_args = _build_safe_args(tool)
-                retry_args.update(adapted)
-                retry_resp = _call_tool(session, node.step.tool, retry_args)
-                retry_text = _response_text(retry_resp)
-                retry_failed = response_is_error(retry_resp)
-                if not retry_failed:
-                    args = retry_args
-                    resp = retry_resp
-                    text = retry_text
-                    failed = False
-                    for val in adapted.values():
-                        if isinstance(val, str) and len(val.strip()) >= 4:
-                            run.tracked_fragments.append(val.strip())
-
-        run.results.append(
-            StepResult(
-                tool=node.step.tool,
-                request_args=args,
-                response_text=text,
-                failed=failed,
-                reason="tool returned an error" if failed else "",
-                declared_params=_declared_params(tool),
-            )
-        )
-        node_to_result[node_idx] = len(run.results) - 1
-
-    return run
