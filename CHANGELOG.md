@@ -6,8 +6,8 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
-- **Dependencies.** The `ai` extra now resolves `anthropic` 2.3.0; the
-  client calls mcpnuke makes are unchanged in 2.x. Also boto3 1.43.123,
+- **Dependencies.** The `ai` extra now resolves `anthropic` 2.5.0; the
+  client calls mcpnuke makes are unchanged in 2.x. Also boto3 1.43.124,
   mypy 2.4.1, pytest 9.2.0, types-PyYAML, and `setup-uv` 10.3.3 in CI.
 
 ## [6.22.5] - 2026-11-07
