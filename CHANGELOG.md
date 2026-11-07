@@ -30,6 +30,18 @@ All notable changes to this submodule are documented here.
   does not declare. That covers `.get()`, which mypy does not check.
   Checks share one `no_log` default instead of nineteen untyped lambdas.
 
+### Fixed
+
+- **`--ollama-analysis` reasons over the same evidence as `--claude`.**
+  Each backend kept its own copy of the phase 2 and phase 3 prompts, and
+  Ollama's had drifted. Its chain reasoning saw tool names and a clipped
+  description, but no params or finding evidence, and was never told to
+  ground a chain in them. Its response analysis used a registry-driven
+  taxonomy clause that Claude's did not. Every phase now builds its
+  prompt in `llm_prompts.py`, and only the transport and context budget
+  differ. Ollama keeps the smaller chain-proposal budget for its context
+  window. `tests/test_llm_backend_parity.py` holds them together.
+
 ### Removed
 
 - **Dead option plumbing.** The actuator probe took an `auth_token` that
