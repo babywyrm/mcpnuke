@@ -7,12 +7,20 @@ import json
 import queue
 import threading
 import time
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 
 from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
 from mcpnuke.core.protocol import LEGACY
 from mcpnuke.core.transports.http import _auth_headers, _mcp_headers
+
+_DEFAULT_PORTS: dict[str, int] = {"http": 80, "https": 443}
+
+
+def _origin(url: str) -> tuple[str, str | None, int | None]:
+    parts = urlsplit(url)
+    return parts.scheme, parts.hostname, parts.port or _DEFAULT_PORTS.get(parts.scheme)
 
 
 class MCPSession:
@@ -74,11 +82,11 @@ class MCPSession:
                     elif line.startswith("data:"):
                         data = line[5:].strip()
                         if event_type == "endpoint" and data:
-                            self.post_url = (
-                                data
-                                if data.startswith("http")
-                                else self.base + data
-                            )
+                            endpoint = urljoin(self.sse_url, data)
+                            # Every POST carries the bearer token, so only
+                            # the stream's own origin may receive them.
+                            if _origin(endpoint) == _origin(self.sse_url):
+                                self.post_url = endpoint
                             self._endpoint_ready.set()
                         elif event_type != "endpoint" and data:
                             try:

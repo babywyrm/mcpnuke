@@ -14,6 +14,13 @@ All notable changes to this submodule are documented here.
   issuer and token endpoint must now be on the target's host; another
   port is fine. Anything else stops with an error that asks for
   `--oidc-url`. An explicit `--oidc-url` is trusted as before.
+- **The SSE transport posted the bearer token to any endpoint the server
+  announced.** An absolute `endpoint` event on another origin was
+  adopted as is, and a relative one was string-appended to the base, so
+  `@evil.example/x` became userinfo on a foreign host. The endpoint is
+  now resolved with `urljoin` and adopted only on the stream's own
+  origin, as the MCP Python SDK does. Otherwise the scan falls back to
+  probing the target URL directly.
 
 ### Fixed
 
