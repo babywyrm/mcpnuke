@@ -11,6 +11,7 @@ from pathlib import Path
 import httpx
 
 from mcpnuke.core.protocol import LEGACY
+from mcpnuke.core.transports.http import _same_host_hooks
 
 _DEFAULT_TOOL_NAMES_FILE = Path(__file__).parent.parent.parent / "data" / "tool_names.txt"
 
@@ -118,7 +119,10 @@ class ToolServerSession:
         # negotiated mode is readable from any transport.
         self.protocol_mode = LEGACY
         self._headers = headers or {"Content-Type": "application/json"}
-        self._client = httpx.Client(verify=verify_tls, timeout=timeout, follow_redirects=True)
+        self._client = httpx.Client(
+            verify=verify_tls, timeout=timeout, follow_redirects=True,
+            event_hooks=_same_host_hooks(post_url),
+        )
         self._discovered_tools: list[dict] = []
         self._tool_names_file = tool_names_file
         self.fingerprint: dict = fingerprint or {}

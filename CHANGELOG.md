@@ -21,6 +21,12 @@ All notable changes to this submodule are documented here.
   now resolved with `urljoin` and adopted only on the stream's own
   origin, as the MCP Python SDK does. Otherwise the scan falls back to
   probing the target URL directly.
+- **`--header` values followed a redirect to any host.** httpx drops
+  only `Authorization` and `Cookie` on a cross-origin redirect, so an
+  API key, a session id, or a DPoP proof went wherever the target's 307
+  pointed. Every client that sends user headers now strips them, except
+  a short list of plain request headers, from a request that leaves the
+  target's host. Same-host redirects keep everything.
 
 ### Fixed
 

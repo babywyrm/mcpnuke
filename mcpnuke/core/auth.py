@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import httpx
 
 from mcpnuke.core.constants import MCP_INIT_PARAMS
+from mcpnuke.core.transports.http import _same_host_hooks
 from mcpnuke.patterns.credentials import redact_credentials
 
 
@@ -238,7 +239,10 @@ def detect_auth_requirements(
     if extra_headers:
         base_headers.update(extra_headers)
 
-    client = httpx.Client(verify=verify_tls, timeout=timeout, follow_redirects=True)
+    client = httpx.Client(
+        verify=verify_tls, timeout=timeout, follow_redirects=True,
+        event_hooks=_same_host_hooks(base),
+    )
     try:
         payload = {
             "jsonrpc": "2.0",

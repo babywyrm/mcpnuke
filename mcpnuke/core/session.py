@@ -14,7 +14,13 @@ import httpx
 
 from mcpnuke.core.constants import MCP_INIT_PARAMS, POST_PATHS, SSE_PATHS
 from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
-from mcpnuke.core.transports.http import HTTPSession, _auth_headers, _mcp_headers, _parse_sse_json
+from mcpnuke.core.transports.http import (
+    HTTPSession,
+    _auth_headers,
+    _mcp_headers,
+    _parse_sse_json,
+    _same_host_hooks,
+)
 from mcpnuke.core.transports.sse import MCPSession
 from mcpnuke.core.transports.stdio import StdioSession
 from mcpnuke.core.transports.toolserver import (
@@ -127,7 +133,9 @@ def _detect_tool_server(
     paths_to_try.extend(TOOL_EXECUTE_PATHS)
 
     seen: set[str] = set()
-    client = httpx.Client(verify=verify_tls, timeout=5, follow_redirects=True)
+    client = httpx.Client(
+        verify=verify_tls, timeout=5, follow_redirects=True, event_hooks=_same_host_hooks(base)
+    )
 
     try:
         for path in paths_to_try:
@@ -254,7 +262,9 @@ def detect_transport(
 
         session.close()
 
-    client = httpx.Client(verify=verify_tls, timeout=8, follow_redirects=True)
+    client = httpx.Client(
+        verify=verify_tls, timeout=8, follow_redirects=True, event_hooks=_same_host_hooks(base)
+    )
 
     seen_post: set[str] = set()
     ordered_post: list[str] = []

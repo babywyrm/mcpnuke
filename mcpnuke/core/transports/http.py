@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import time
+from collections.abc import Callable
 
 import httpx
 
@@ -20,6 +21,26 @@ def _auth_headers(auth_token: str | None, extra_headers: dict | None = None) -> 
     if extra_headers:
         h.update(extra_headers)
     return h
+
+
+# What a redirect to another host may keep. httpx drops only Authorization
+# and Cookie there, so a --header API key, a session id, or a DPoP proof
+# would otherwise follow the target's 307 to any host it names.
+_CROSS_HOST_SAFE_HEADERS: frozenset[str] = frozenset(
+    {"accept", "accept-encoding", "connection", "content-length", "content-type", "host", "user-agent"}
+)
+
+
+def _same_host_hooks(home_url: str) -> dict[str, list[Callable[[httpx.Request], None]]]:
+    """httpx event hooks that strip credentials from requests that leave *home_url*'s host."""
+    home = httpx.URL(home_url).host
+
+    def _strip(request: httpx.Request) -> None:
+        if request.url.host != home:
+            for name in [n for n in request.headers if n.lower() not in _CROSS_HOST_SAFE_HEADERS]:
+                del request.headers[name]
+
+    return {"request": [_strip]}
 
 
 def _mcp_headers(auth_token: str | None, extra_headers: dict | None = None) -> dict:
@@ -74,7 +95,8 @@ class HTTPSession:
         self._session_id: str | None = None
         self._headers = headers or {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
         self._client = httpx.Client(
-            verify=verify_tls, timeout=timeout, follow_redirects=True
+            verify=verify_tls, timeout=timeout, follow_redirects=True,
+            event_hooks=_same_host_hooks(post_url),
         )
 
     def wait_ready(self, timeout: float = 10.0) -> bool:

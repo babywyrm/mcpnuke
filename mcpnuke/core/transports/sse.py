@@ -13,7 +13,7 @@ import httpx
 
 from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
 from mcpnuke.core.protocol import LEGACY
-from mcpnuke.core.transports.http import _auth_headers, _mcp_headers
+from mcpnuke.core.transports.http import _auth_headers, _mcp_headers, _same_host_hooks
 
 _DEFAULT_PORTS: dict[str, int] = {"http": 80, "https": 443}
 
@@ -52,7 +52,8 @@ class MCPSession:
         self._stop = threading.Event()
         self._endpoint_ready = threading.Event()
         self._client = httpx.Client(
-            verify=verify_tls, timeout=timeout, follow_redirects=True
+            verify=verify_tls, timeout=timeout, follow_redirects=True,
+            event_hooks=_same_host_hooks(self.sse_url),
         )
         self._listener = threading.Thread(
             target=self._listen, daemon=True, name=f"sse-{base}"
