@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from mcpnuke.core.models import Finding, TargetResult
 from mcpnuke.policy.rules import ACTION_PRIORITY, FINDING_TO_ACTION, PolicyRule
@@ -86,9 +87,9 @@ def _apply_candidate(
     *,
     action: str,
     reason: str,
-    hold: dict | None,
-    scope: dict | None,
-    budget: dict | None,
+    hold: dict[str, Any] | None,
+    scope: dict[str, Any] | None,
+    budget: dict[str, Any] | None,
     append_reason: str,
 ) -> None:
     existing = tool_rules.get(tool_name)

@@ -34,7 +34,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from rich.markup import escape
@@ -291,7 +291,7 @@ class OllamaBackend:
 
     def analyze_tools(
         self,
-        tools: list[dict],
+        tools: list[dict[str, Any]],
         model: str | None = None,
         log: Callable[[str], None] | None = None,
         known_findings: list[str] | None = None,
@@ -306,8 +306,8 @@ class OllamaBackend:
 
     def analyze_findings(
         self,
-        tools: list[dict],
-        findings: list[dict],
+        tools: list[dict[str, Any]],
+        findings: list[dict[str, Any]],
         model: str | None = None,
         log: Callable[[str], None] | None = None,
     ) -> list[LLMFinding]:
@@ -380,12 +380,12 @@ class OllamaBackend:
 
     def propose_chains(
         self,
-        tools: list[dict],
-        findings: list[dict],
+        tools: list[dict[str, Any]],
+        findings: list[dict[str, Any]],
         model: str | None = None,
         log: Callable[[str], None] | None = None,
         peers: list[tuple[str, list[str]]] | None = None,
-    ) -> list:
+    ) -> list[ProposedChain]:
         """Propose executable attack chains for replay."""
         from mcpnuke.core.chain_replay import parse_proposed_chains
 
@@ -433,7 +433,7 @@ class OllamaBackend:
         self,
         chain: ProposedChain,
         transcript: str,
-        tools: list[dict],
+        tools: list[dict[str, Any]],
         model: str | None = None,
         log: Callable[[str], None] | None = None,
         peers: list[tuple[str, list[str]]] | None = None,

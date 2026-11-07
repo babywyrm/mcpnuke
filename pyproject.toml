@@ -119,9 +119,6 @@ python_version = "3.11"
 # Every function declares its types. mypy skips the body of an unannotated
 # function, so an untyped def is code the checker never reads.
 strict = true
-# Held back: bare dict and list annotations. Spelling them dict[str, Any]
-# adds no checking; replacing them with real shapes is the open work.
-disallow_any_generics = false
 
 # Optional extras (ai, server). These are absent from the base install, so
 # mypy cannot always resolve them. CI installs the server extra so strict mode

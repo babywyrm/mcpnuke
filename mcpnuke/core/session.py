@@ -47,7 +47,7 @@ def _probe_sse_path(
     timeout: float = 6.0,
     auth_token: str | None = None,
     verify_tls: bool = False,
-    extra_headers: dict | None = None,
+    extra_headers: dict[str, Any] | None = None,
     errors: list[str] | None = None,
 ) -> bool:
     url = base + path
@@ -113,7 +113,7 @@ def _detect_tool_server(
     timeout: float,
     auth_token: str | None,
     verify_tls: bool,
-    extra_headers: dict | None,
+    extra_headers: dict[str, Any] | None,
     tool_names_file: str | None = None,
 ) -> ToolServerSession | None:
     """Try to detect a custom tool-execute API (non-MCP).
@@ -202,7 +202,7 @@ def detect_transport(
     verbose: bool = False,
     auth_token: str | None = None,
     verify_tls: bool = False,
-    extra_headers: dict | None = None,
+    extra_headers: dict[str, Any] | None = None,
     log: Callable[[str], None] | None = None,
     errors: list[str] | None = None,
     **kwargs: Any,

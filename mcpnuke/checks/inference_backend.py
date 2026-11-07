@@ -20,6 +20,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -67,7 +68,7 @@ class InferenceBackend(StrEnum):
 
 def fingerprint_backend(
     host: str, *, verify: bool = False,
-) -> tuple[InferenceBackend, dict]:
+) -> tuple[InferenceBackend, dict[str, Any]]:
     """Probe a host to identify the inference backend type.
 
     Returns (backend_type, metadata_dict). metadata_dict may contain
@@ -351,7 +352,7 @@ def _check_management_endpoints(
 def check_inference_backend(
     result: TargetResult,
     probe_opts: ProbeOpts | None = None,
-    metas_out: list[dict] | None = None,
+    metas_out: list[dict[str, Any]] | None = None,
 ) -> None:
     """Probe for unauthenticated inference backends (MCP-T54).
 
@@ -420,7 +421,7 @@ def check_inference_backend(
 # ── Model Integrity Verification (MCP-T55) ───────────────────────────
 
 
-def _load_manifest(path: str) -> dict:
+def _load_manifest(path: str) -> dict[str, Any]:
     """Load a model integrity manifest from JSON file."""
     p = Path(path)
     if not p.is_file():
@@ -435,11 +436,11 @@ def _load_manifest(path: str) -> dict:
 
 
 def save_inference_baseline(
-    hosts_data: dict[str, tuple[InferenceBackend, dict]],
+    hosts_data: dict[str, tuple[InferenceBackend, dict[str, Any]]],
     path: str,
 ) -> None:
     """Save current model state as a known-good baseline manifest."""
-    hosts_block: dict = {}
+    hosts_block: dict[str, Any] = {}
     for host, (backend, meta) in hosts_data.items():
         if backend != InferenceBackend.OLLAMA:
             continue
@@ -488,7 +489,7 @@ def check_model_integrity(
         return
 
     with time_check("model_integrity", result):
-        current_state: dict[str, tuple[InferenceBackend, dict]] = {}
+        current_state: dict[str, tuple[InferenceBackend, dict[str, Any]]] = {}
         for host in hosts_to_probe:
             backend, meta = fingerprint_backend(host, verify=verify)
             if backend == InferenceBackend.OLLAMA and meta.get("model_details"):
@@ -624,7 +625,7 @@ def _backend_base(host: str) -> str:
 
 
 def _score_guardrails(
-    inference_metas: list[dict], _log: Callable[[str], None], verify: bool = False
+    inference_metas: list[dict[str, Any]], _log: Callable[[str], None], verify: bool = False
 ) -> dict[str, str]:
     """Probe each model on each supported backend, returning host/model → tier."""
     model_scores: dict[str, str] = {}
@@ -663,7 +664,7 @@ def _score_guardrails(
 
 def check_inference_guardrail_variance(
     result: TargetResult,
-    inference_metas: list[dict],
+    inference_metas: list[dict[str, Any]],
     _log: Callable[[str], None] | None = None,
     verify: bool = False,
 ) -> None:

@@ -265,7 +265,7 @@ def _call_bedrock_claude(
 
 
 def analyze_tools(
-    tools: list[dict],
+    tools: list[dict[str, Any]],
     model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
     known_findings: list[str] | None = None,
@@ -284,8 +284,8 @@ def analyze_tools(
 
 
 def analyze_findings(
-    tools: list[dict],
-    findings: list[dict],
+    tools: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
     model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
 ) -> list[LLMFinding]:
@@ -328,12 +328,12 @@ def analyze_findings(
 
 
 def propose_chains(
-    tools: list[dict],
-    findings: list[dict],
+    tools: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
     model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
     peers: list[tuple[str, list[str]]] | None = None,
-) -> list:
+) -> list["ProposedChain"]:
     """Ask for chains as executable steps the prober can replay.
 
     Differs from `analyze_findings` in what it asks for: not prose about a
@@ -377,7 +377,7 @@ def judge_chain_run(
 def revise_chain(
     chain: "ProposedChain",
     transcript: str,
-    tools: list[dict],
+    tools: list[dict[str, Any]],
     model: str = DEFAULT_CLAUDE_MODEL,
     log: Callable[[str], None] | None = None,
     peers: list[tuple[str, list[str]]] | None = None,
@@ -471,7 +471,7 @@ def classify_probe_response(
     return None
 
 
-def _complete_objects(text: str) -> list[dict]:
+def _complete_objects(text: str) -> list[dict[str, Any]]:
     """Recover the top-level objects of an array that was cut off mid-flight.
 
     Walks the text tracking string state and brace depth so that a brace inside
@@ -480,7 +480,7 @@ def _complete_objects(text: str) -> list[dict]:
     turns a truncated response into the findings that did arrive rather than
     none of them.
     """
-    objects: list[dict] = []
+    objects: list[dict[str, Any]] = []
     depth = 0
     start = -1
     in_string = False

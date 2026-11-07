@@ -17,6 +17,7 @@ import ssl
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from typing import Any
 
 from rich.console import Console
 from rich.markup import escape
@@ -66,7 +67,7 @@ class DiscoveredEndpoint:
     source: str = ""
 
 
-def _k8s_api(path: str, token: str, api_url: str | None = None) -> dict | None:
+def _k8s_api(path: str, token: str, api_url: str | None = None) -> dict[str, Any] | None:
     base = api_url or K8S_API
     headers: dict[str, str] = {}
     if token:

@@ -7,6 +7,7 @@ import ipaddress
 import json
 import time
 from collections.abc import Callable
+from typing import Any
 
 import httpx
 
@@ -14,7 +15,7 @@ from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
 from mcpnuke.core.protocol import LEGACY, STATELESS, inject_meta, routing_headers
 
 
-def _auth_headers(auth_token: str | None, extra_headers: dict | None = None) -> dict:
+def _auth_headers(auth_token: str | None, extra_headers: dict[str, Any] | None = None) -> dict[str, Any]:
     """Build headers with optional Authorization Bearer."""
     h = {"Accept": "text/event-stream"}
     if auth_token:
@@ -69,7 +70,7 @@ def _same_host_hooks(home_url: str) -> dict[str, list[Callable[[httpx.Request], 
     return {"request": [_strip]}
 
 
-def _mcp_headers(auth_token: str | None, extra_headers: dict | None = None) -> dict:
+def _mcp_headers(auth_token: str | None, extra_headers: dict[str, Any] | None = None) -> dict[str, Any]:
     """Build MCP request headers with optional Authorization Bearer."""
     h = {
         "Content-Type": "application/json",
@@ -83,7 +84,7 @@ def _mcp_headers(auth_token: str | None, extra_headers: dict | None = None) -> d
 
 
 
-def _parse_sse_json(text: str, req_id: int | None = None) -> dict | None:
+def _parse_sse_json(text: str, req_id: int | None = None) -> dict[str, Any] | None:
     """Extract JSON-RPC response from SSE body (event: message / data: {...})."""
     for line in text.splitlines():
         if line.startswith("data:"):
@@ -108,7 +109,7 @@ class HTTPSession:
         base: str,
         post_url: str,
         timeout: float = 25.0,
-        headers: dict | None = None,
+        headers: dict[str, Any] | None = None,
         verify_tls: bool = False,
         protocol_mode: str = LEGACY,
     ):
@@ -131,8 +132,8 @@ class HTTPSession:
     def _request_headers(
         self,
         method: str = "",
-        params: dict | None = None,
-    ) -> dict:
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         h = dict(self._headers)
         if self.protocol_mode == STATELESS:
             h.update(routing_headers(method, params, self.protocol_mode))
@@ -151,8 +152,8 @@ class HTTPSession:
 
     def post_raw(
         self,
-        payload: dict,
-        extra_headers: dict | None = None,
+        payload: dict[str, Any],
+        extra_headers: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> httpx.Response:
         """POST *payload* to the MCP endpoint and return the raw httpx response.
@@ -181,10 +182,10 @@ class HTTPSession:
     def call(
         self,
         method: str,
-        params: dict | None = None,
+        params: dict[str, Any] | None = None,
         timeout: float | None = None,
         retries: int = 2,
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         for attempt in range(retries + 1):
             self._req_id += 1
             sent_params = (
@@ -221,7 +222,7 @@ class HTTPSession:
                     time.sleep(0.5)
         return None
 
-    def notify(self, method: str, params: dict | None = None) -> None:
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
         sent_params = (
             inject_meta(params, self.protocol_mode)
             if params or self.protocol_mode == STATELESS

@@ -15,6 +15,8 @@ Lane 2 (Delegated) / Transport A (MCP JSON-RPC).
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
@@ -79,7 +81,7 @@ _INJECTION_PAYLOADS = [
 ]
 
 
-def _find_llm_params(tool: dict) -> list[str]:
+def _find_llm_params(tool: dict[str, Any]) -> list[str]:
     """Find parameters likely to be passed to an LLM."""
     props = tool.get("inputSchema", {}).get("properties", {})
     return [
@@ -89,7 +91,7 @@ def _find_llm_params(tool: dict) -> list[str]:
     ]
 
 
-def _is_ai_tool(tool: dict) -> bool:
+def _is_ai_tool(tool: dict[str, Any]) -> bool:
     """Heuristic: tool likely involves LLM processing."""
     name = tool.get("name", "").lower()
     desc = tool.get("description", "").lower()

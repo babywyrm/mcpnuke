@@ -47,7 +47,7 @@ def _extract_json_strings(text: str) -> list[str]:
     return strings
 
 
-def _match_error_patterns(texts: list[str]) -> re.Match | None:
+def _match_error_patterns(texts: list[str]) -> re.Match[str] | None:
     """Return the first ERROR_LEAKAGE_PATTERNS match across *texts*."""
     for t in texts:
         for pat in ERROR_LEAKAGE_PATTERNS:

@@ -17,12 +17,12 @@ from mcpnuke.reporting.priority import priority_actions_as_dicts
 _REDACTED_KEYS: frozenset[str] = frozenset({"_raw_token"})
 
 
-def _safe_auth_context(auth_context: dict) -> dict:
+def _safe_auth_context(auth_context: dict[str, Any]) -> dict[str, Any]:
     """Return auth_context with sensitive keys stripped for JSON output."""
     return {k: v for k, v in auth_context.items() if k not in _REDACTED_KEYS}
 
 
-def _tool_surface_hash(tools: list[dict]) -> str:
+def _tool_surface_hash(tools: list[dict[str, Any]]) -> str:
     """sha256 over the canonical tool surface (name, description, schema).
 
     Order-independent. A description or schema change between scans — the
@@ -56,7 +56,7 @@ def _server_identity(server_info: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def _build_inventory(r: TargetResult) -> dict:
+def _build_inventory(r: TargetResult) -> dict[str, Any]:
     """AIBOM-style inventory: the enumerated surface, in what posture."""
     catalog = r.catalog_tools()
     return {
@@ -70,7 +70,7 @@ def _build_inventory(r: TargetResult) -> dict:
     }
 
 
-def _build_target_dict(r: TargetResult) -> dict:
+def _build_target_dict(r: TargetResult) -> dict[str, Any]:
     catalog = r.catalog_tools()
     tools_total = r.tools_total if r.tools_total > 0 else len(catalog)
     tools_scanned = len(r.tools)
@@ -128,7 +128,7 @@ def _build_target_dict(r: TargetResult) -> dict:
     return d
 
 
-def build_report(results: list[TargetResult], *, include_k8s: bool = True) -> dict:
+def build_report(results: list[TargetResult], *, include_k8s: bool = True) -> dict[str, Any]:
     """Assemble the full JSON report as a plain dict.
 
     This is the in-memory counterpart to :func:`write_json` — same schema,
@@ -168,7 +168,7 @@ def write_json(
     path: str,
     console: Console | None = None,
     *,
-    taxonomy_coverage: dict | None = None,
+    taxonomy_coverage: dict[str, Any] | None = None,
 ) -> None:
     report = build_report(results)
     if taxonomy_coverage is not None:

@@ -27,7 +27,7 @@ uv run mypy mcpnuke/          # must stay at or below the CI ceiling
 ```
 
 CI gates all four on every push and PR. mypy runs in
-`strict` mode across the package, except `disallow_any_generics`. If you edit `pyproject.toml`, run
+`strict` mode across the package. If you edit `pyproject.toml`, run
 `uv lock` and commit `uv.lock` — CI checks they are in sync.
 
 ## Code conventions

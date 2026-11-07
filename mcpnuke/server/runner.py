@@ -23,8 +23,9 @@ import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from typing import Any
 
-from mcpnuke.core.models import ProbeOpts
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.server.models import ScanDepth, ScanJob, ScanRequest, ScanStatus
 
 # Default hard cap for a whole scan job. Overridable per-request via
@@ -60,7 +61,7 @@ def _probe_opts_for(req: ScanRequest) -> ProbeOpts:
     return opts
 
 
-def _coverage(results: list, coverage_url: str) -> dict:
+def _coverage(results: list[TargetResult], coverage_url: str) -> dict[str, Any]:
     """Best-effort cross-project coverage; failures degrade to a note."""
     from mcpnuke.reporting.coverage_report import (
         SchemaMismatchError,
@@ -77,7 +78,7 @@ def _coverage(results: list, coverage_url: str) -> dict:
         return {"error": "unreachable", "detail": f"{type(exc).__name__}: {exc}"}
 
 
-def _scan(req_dict: dict) -> tuple[bool, dict | str]:
+def _scan(req_dict: dict[str, Any]) -> tuple[bool, dict[str, Any] | str]:
     """Run one scan. Returns (True, payload) or (False, error text)."""
     try:
         from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS

@@ -8,6 +8,7 @@ reachability of theoretical exfiltration paths.
 """
 
 import re
+from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import no_log, response_is_error, time_check
@@ -40,7 +41,7 @@ SENSITIVE_SOURCE_PATTERNS = [
 ]
 
 
-def _classify_tool(tool: dict) -> tuple[bool, bool, bool]:
+def _classify_tool(tool: dict[str, Any]) -> tuple[bool, bool, bool]:
     """Classify a tool as source, sink, or sensitive source."""
     name = tool.get("name", "").lower()
     desc = tool.get("description", "").lower()
@@ -70,7 +71,7 @@ EXFIL_CANARY = "MCPV_EXFIL_CANARY_7x9k2"
 _CALLBACK_WAIT_SECONDS: float = 2.0
 
 
-def _try_source_read(session: MCPSessionProtocol, tool: dict) -> str | None:
+def _try_source_read(session: MCPSessionProtocol, tool: dict[str, Any]) -> str | None:
     """Attempt to call a source tool and extract text from the response."""
     from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text
     name = tool.get("name", "")
@@ -80,7 +81,7 @@ def _try_source_read(session: MCPSessionProtocol, tool: dict) -> str | None:
     return text if text and len(text) > 5 else None
 
 
-def _try_sink_send(session: MCPSessionProtocol, tool: dict, data: str) -> tuple[bool, str]:
+def _try_sink_send(session: MCPSessionProtocol, tool: dict[str, Any], data: str) -> tuple[bool, str]:
     """Attempt to route canary data through a sink tool.
 
     Returns (accepted, response_text). 'accepted' means the sink took the

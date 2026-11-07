@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 from collections.abc import Iterable
+from typing import Any
 
 from mcpnuke.core.constants import build_jsonrpc_request as _jrpc
 from mcpnuke.core.protocol import LEGACY
@@ -86,7 +87,7 @@ class StdioSession:
         self.post_url = f"stdio://{' '.join(self.cmd)}"
         self.sse_url = ""
         self._req_id = 0
-        self._q: queue.Queue[dict] = queue.Queue()
+        self._q: queue.Queue[dict[str, Any]] = queue.Queue()
         self._stop = threading.Event()
 
         proc_env = {**child_env(inherit), **(env or {})}
@@ -137,10 +138,10 @@ class StdioSession:
     def call(
         self,
         method: str,
-        params: dict | None = None,
+        params: dict[str, Any] | None = None,
         timeout: float | None = None,
         retries: int = 2,
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         wait = timeout or self.timeout
         for attempt in range(retries + 1):
             self._req_id += 1
@@ -157,7 +158,7 @@ class StdioSession:
                 return None
 
             deadline = time.time() + wait
-            pending: list[dict] = []
+            pending: list[dict[str, Any]] = []
             while time.time() < deadline:
                 try:
                     msg = self._q.get(timeout=0.3)
@@ -174,7 +175,7 @@ class StdioSession:
                 time.sleep(0.5)
         return None
 
-    def notify(self, method: str, params: dict | None = None) -> None:
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
         payload = {
             "jsonrpc": "2.0",
             "method": method,

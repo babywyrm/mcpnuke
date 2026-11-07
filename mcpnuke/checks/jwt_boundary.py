@@ -22,6 +22,7 @@ services or roles.
 
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import urlparse
 
 from mcpnuke.checks._lane_helpers import lane_tagged
@@ -163,7 +164,7 @@ def check_jwt_audience_target_match(result: TargetResult) -> None:
         )
 
 
-def _claims_indicate_read_only(claims: dict) -> tuple[bool, str]:
+def _claims_indicate_read_only(claims: dict[str, Any]) -> tuple[bool, str]:
     """Return (is_read_only, reason) for a JWT claims dict."""
     scope = claims.get("scope", "")
     if isinstance(scope, str):
@@ -188,7 +189,7 @@ def _claims_indicate_read_only(claims: dict) -> tuple[bool, str]:
     return False, ""
 
 
-def _tool_is_write_class(tool: dict) -> bool:
+def _tool_is_write_class(tool: dict[str, Any]) -> bool:
     """Heuristic: does this tool name suggest mutation, deletion, or admin?"""
     name = str(tool.get("name", "")).lower()
     return any(kw in name for kw in _WRITE_TOOL_KEYWORDS)

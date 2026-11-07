@@ -10,6 +10,7 @@ Coverage targets: MCP-T17, T22, T23, T25, T28, T32, T34, T36, T52, T53, T57, T58
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
@@ -62,7 +63,7 @@ _SIDECAR_PARAMS: frozenset[str] = frozenset({
 })
 
 
-def _param_keys(tool: dict) -> set[str]:
+def _param_keys(tool: dict[str, Any]) -> set[str]:
     props = tool.get("inputSchema", {}).get("properties", {}) or {}
     out: set[str] = set()
     for raw in props:

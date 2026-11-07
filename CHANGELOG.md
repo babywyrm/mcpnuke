@@ -16,11 +16,12 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
-- **mypy runs in `strict` mode.** Only `disallow_any_generics` is held
-  back, for the bare `dict` and `list` annotations still in the package.
-  The other strict checks already passed, so turning them on locks them
-  in. The one fix needed was three log callbacks typed as an untyped
-  lambda. CI now installs the `server` extra for the type check, so the
+- **mypy runs in full `strict` mode.** Three log callbacks typed as an
+  untyped lambda were the only fix the other strict checks needed.
+  `disallow_any_generics` took more: bare `list` annotations now name
+  their element (`Finding`, `TargetResult`, `LLMFinding`,
+  `ProposedChain`), and bare `dict` JSON payloads are `dict[str, Any]`.
+  New code must spell its type arguments. CI now installs the `server` extra for the type check, so the
   API is checked against real pydantic and fastapi types.
 - **Probe options are a `ProbeOpts` TypedDict.** Every check took
   `probe_opts: dict`, so a misspelled key read as `None` and silently

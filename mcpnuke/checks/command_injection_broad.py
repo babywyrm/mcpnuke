@@ -16,6 +16,7 @@ Lane 2 (Delegated) / Transport A (MCP JSON-RPC).
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
@@ -87,13 +88,13 @@ _SKIP_SHELL_TOOLS = frozenset({
 })
 
 
-def _is_shell_named(tool: dict) -> bool:
+def _is_shell_named(tool: dict[str, Any]) -> bool:
     """Check if tool is already covered by shell_injection.py."""
     name = tool.get("name", "").lower()
     return any(kw in name for kw in _SKIP_SHELL_TOOLS)
 
 
-def _get_string_params(tool: dict) -> list[str]:
+def _get_string_params(tool: dict[str, Any]) -> list[str]:
     """Get all string-typed parameters from a tool schema."""
     props = tool.get("inputSchema", {}).get("properties", {})
     return [

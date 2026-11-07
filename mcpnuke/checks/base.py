@@ -4,6 +4,7 @@ import json
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from typing import Any
 
 from mcpnuke.core.models import TargetResult
 
@@ -12,7 +13,7 @@ def no_log(_msg: str) -> None:
     """The _log fallback when a check runs without a progress logger."""
 
 
-def tool_text(tool: dict) -> str:
+def tool_text(tool: dict[str, Any]) -> str:
     """Build the searchable surface of a tool definition.
 
     Name, description, and the whole inputSchema — which carries parameter
@@ -30,7 +31,7 @@ def tool_text(tool: dict) -> str:
     return "\n".join(parts)
 
 
-def response_is_error(resp: dict | None) -> bool:
+def response_is_error(resp: dict[str, Any] | None) -> bool:
     """True when the server refused or failed the call.
 
     ``_call_tool`` returns the response whenever the JSON-RPC round trip

@@ -52,7 +52,7 @@ class ChainStep:
     """
 
     tool: str
-    args: dict = field(default_factory=dict)
+    args: dict[str, Any] = field(default_factory=dict)
     target: str = ""
 
 
@@ -71,7 +71,7 @@ class StepResult:
     """What happened when one step was attempted."""
 
     tool: str
-    request_args: dict
+    request_args: dict[str, Any]
     response_text: str
     failed: bool
     reason: str = ""
@@ -161,11 +161,11 @@ def parse_proposed_chains(text: str) -> list[ProposedChain]:
 
 def _adapt_step_args_with_llm(
     backend: Any,
-    tool: dict,
-    template_args: dict,
+    tool: dict[str, Any],
+    template_args: dict[str, Any],
     prior_results: list[StepResult],
     model: str = "",
-) -> dict | None:
+) -> dict[str, Any] | None:
     """Ask LLM backend to extract appropriate arguments for the tool based on prior step responses."""
     if not backend or not prior_results:
         return None
@@ -215,7 +215,7 @@ def _adapt_step_args_with_llm(
 def replay_chain(
     session: MCPSessionProtocol,
     chain: ProposedChain,
-    tools: dict[str, dict],
+    tools: dict[str, dict[str, Any]],
     *,
     safe_mode: bool = False,
     oast: CanaryListener | None = None,
@@ -223,7 +223,7 @@ def replay_chain(
     model: str = "",
     open_session: Callable[[str], MCPSessionProtocol | None] | None = None,
     allowed_targets: frozenset[str] | None = None,
-    catalogs: dict[str, dict[str, dict]] | None = None,
+    catalogs: dict[str, dict[str, dict[str, Any]]] | None = None,
 ) -> ChainRun:
     """Execute *chain* against *session*, threading outputs into later args.
 
@@ -399,7 +399,7 @@ def replay_chain(
     return run
 
 
-def _declared_params(tool: dict) -> frozenset[str] | None:
+def _declared_params(tool: dict[str, Any]) -> frozenset[str] | None:
     """Property names the tool's input schema declares.
 
     None when the tool has no properties object: there is no list to

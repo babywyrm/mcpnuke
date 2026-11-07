@@ -9,6 +9,7 @@ import base64
 import json
 import re
 import time
+from typing import Any
 
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.llm import _call_claude
@@ -49,7 +50,7 @@ _READ_ONLY_TOOL_KEYWORDS = {
 }
 
 
-def _is_dangerous_tool(tool: dict) -> bool:
+def _is_dangerous_tool(tool: dict[str, Any]) -> bool:
     """Classify a tool as dangerous based on name and description."""
     name = tool.get("name", "").lower()
     desc = tool.get("description", "").lower()
@@ -66,7 +67,7 @@ def _is_dangerous_tool(tool: dict) -> bool:
     return bool(any(kw in combined for kw in ("side effect", "irreversible", "destructive", "permanent")))
 
 
-def _should_invoke(tool: dict, probe_opts: ProbeOpts) -> bool:
+def _should_invoke(tool: dict[str, Any], probe_opts: ProbeOpts) -> bool:
     """Decide whether to invoke a tool given the current probe options."""
     if probe_opts.get("no_invoke"):
         return False
@@ -78,12 +79,12 @@ def _should_invoke(tool: dict, probe_opts: ProbeOpts) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _build_safe_args(tool: dict) -> dict:
+def _build_safe_args(tool: dict[str, Any]) -> dict[str, Any]:
     """Generate minimal safe arguments from a tool's input schema."""
     schema = tool.get("inputSchema", {})
     props = schema.get("properties", {})
     required = set(schema.get("required", []))
-    args: dict = {}
+    args: dict[str, Any] = {}
 
     for pname, pdef in props.items():
         if pname not in required:
@@ -147,7 +148,7 @@ def _build_safe_args(tool: dict) -> dict:
     return args
 
 
-def _build_extended_args(tool: dict) -> dict:
+def _build_extended_args(tool: dict[str, Any]) -> dict[str, Any]:
     """Generate arguments including optional params filled with heuristic probe values.
 
     Tier 1 of Phase 2 smart invocation: extends _build_safe_args to also fill in
@@ -244,7 +245,7 @@ def _is_stdio(session: MCPSessionProtocol) -> bool:
     return hasattr(session, "_proc")
 
 
-def _call_claude_for_args(tool: dict, model: str = DEFAULT_CLAUDE_MODEL) -> dict | None:
+def _call_claude_for_args(tool: dict[str, Any], model: str = DEFAULT_CLAUDE_MODEL) -> dict[str, Any] | None:
     """Ask Claude to generate semantically interesting args for a tool.
 
     Returns a dict of parameter name → value, or None on failure.  The caller
@@ -290,8 +291,8 @@ def _call_claude_for_args(tool: dict, model: str = DEFAULT_CLAUDE_MODEL) -> dict
 
 
 def _generate_claude_args(
-    tool: dict, session: MCPSessionProtocol, model: str = DEFAULT_CLAUDE_MODEL
-) -> dict:
+    tool: dict[str, Any], session: MCPSessionProtocol, model: str = DEFAULT_CLAUDE_MODEL
+) -> dict[str, Any]:
     """Tier 2 argument generation: Claude-assisted, with _build_extended_args fallback.
 
     Calls _call_claude_for_args and merges result with extended_args baseline so
@@ -313,10 +314,10 @@ def _generate_claude_args(
 def _call_tool(
     session: MCPSessionProtocol,
     name: str,
-    args: dict,
+    args: dict[str, Any],
     timeout: float = 10.0,
     retries: int = 2,
-) -> dict | None:
+) -> dict[str, Any] | None:
     """Call a tool via tools/call with adaptive backoff and jitter.
 
     Tracks per-tool latency to set progressive timeouts and retries with
@@ -372,7 +373,7 @@ def _serialize_structured(value: object) -> str:
     return json.dumps(value)[:2000]
 
 
-def _response_text(resp: dict | None) -> str:
+def _response_text(resp: dict[str, Any] | None) -> str:
     """Extract all text content from a tools/call response.
 
     A successful result may carry ``content`` (blocks for humans) and

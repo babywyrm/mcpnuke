@@ -164,7 +164,7 @@ _FAST_RETAIN_PARAM_NAMES = frozenset({
 })
 
 
-def _has_dangerous_params(tools: list[dict]) -> bool:
+def _has_dangerous_params(tools: list[dict[str, Any]]) -> bool:
     """Return True if any tool has params whose names suggest attack surface."""
     for tool in tools:
         props = tool.get("inputSchema", {}).get("properties", {})
@@ -669,7 +669,7 @@ def run_all_checks(
             _log("\n  [bold cyan]── Inference Backend Probe ──[/bold cyan]")
         # The guardrail probe reuses these fingerprints rather than re-probing
         # every host; it self-skips when no backend serves two or more models.
-        inference_metas: list[dict] = []
+        inference_metas: list[dict[str, Any]] = []
         _run(
             "inference_backend", check_inference_backend, result,
             probe_opts=opts, metas_out=inference_metas,

@@ -7,6 +7,7 @@ import json
 import re
 import time
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -56,9 +57,9 @@ def _load_tool_names(extra_file: str | None = None) -> list[str]:
     return names
 
 
-def _fingerprint_tool_server(headers: dict, body: str) -> dict:
+def _fingerprint_tool_server(headers: dict[str, Any], body: str) -> dict[str, Any]:
     """Fingerprint a tool server from HTTP response metadata."""
-    info: dict = {}
+    info: dict[str, Any] = {}
 
     for fw, sigs in _TOOL_SERVER_FRAMEWORKS.items():
         for header_key, match_val in sigs:
@@ -105,9 +106,9 @@ class ToolServerSession:
         base: str,
         post_url: str,
         timeout: float = 25.0,
-        headers: dict | None = None,
+        headers: dict[str, Any] | None = None,
         tool_names_file: str | None = None,
-        fingerprint: dict | None = None,
+        fingerprint: dict[str, Any] | None = None,
         verify_tls: bool = False,
     ):
         self.base = base
@@ -123,17 +124,17 @@ class ToolServerSession:
             verify=verify_tls, timeout=timeout, follow_redirects=True,
             event_hooks=_same_host_hooks(post_url),
         )
-        self._discovered_tools: list[dict] = []
+        self._discovered_tools: list[dict[str, Any]] = []
         self._tool_names_file = tool_names_file
-        self.fingerprint: dict = fingerprint or {}
+        self.fingerprint: dict[str, Any] = fingerprint or {}
 
     def wait_ready(self, timeout: float = 10.0) -> bool:
         return True
 
     def post_raw(
         self,
-        payload: dict,
-        extra_headers: dict | None = None,
+        payload: dict[str, Any],
+        extra_headers: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> httpx.Response:
         """POST *payload* to the tool endpoint, returning the raw response.
@@ -152,7 +153,7 @@ class ToolServerSession:
             timeout=timeout or self.timeout,
         )
 
-    def enumerate_tools(self) -> list[dict]:
+    def enumerate_tools(self) -> list[dict[str, Any]]:
         """Probe tool names from wordlist and return the ones the server recognizes."""
         names = _load_tool_names(self._tool_names_file)
         tools = []
@@ -177,9 +178,9 @@ class ToolServerSession:
         self._discovered_tools = tools
         return tools
 
-    def _build_tool_def(self, name: str, r: httpx.Response) -> dict:
+    def _build_tool_def(self, name: str, r: httpx.Response) -> dict[str, Any]:
         """Build a tool definition from a probe response."""
-        tool_def: dict = {
+        tool_def: dict[str, Any] = {
             "name": name,
             "description": f"Tool server endpoint (status {r.status_code})",
             "inputSchema": {"type": "object", "properties": {}},
@@ -223,10 +224,10 @@ class ToolServerSession:
     def call(
         self,
         method: str,
-        params: dict | None = None,
+        params: dict[str, Any] | None = None,
         timeout: float | None = None,
         retries: int = 2,
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Translate MCP-style calls to tool-server /execute calls."""
         params = params or {}
 
@@ -280,7 +281,7 @@ class ToolServerSession:
 
         return None
 
-    def notify(self, method: str, params: dict | None = None) -> None:
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
         pass
 
     def close(self) -> None:

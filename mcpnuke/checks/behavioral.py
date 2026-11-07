@@ -5,6 +5,7 @@ import json
 import queue
 import re
 import time
+from typing import Any
 
 from rich.markup import escape
 
@@ -19,8 +20,8 @@ from mcpnuke.patterns.probes import RESPONSE_INJECTION_PATTERNS
 # ---------------------------------------------------------------------------
 
 def _diff_tool_lists(
-    t1: dict,
-    t2: dict,
+    t1: dict[str, Any],
+    t2: dict[str, Any],
     result: TargetResult,
     label: str,
     severity: str = "HIGH",
@@ -118,7 +119,7 @@ def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe
             "inject", "poison", "hook", "override", "patch",
         })
 
-        def _priority(t: dict) -> int:
+        def _priority(t: dict[str, Any]) -> int:
             """Lower = higher priority. Tools with mutation-related keywords sort first."""
             name = t.get("name", "").lower()
             desc = (t.get("description") or "").lower()
@@ -136,7 +137,7 @@ def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe
         for tool in probe_tools:
             name = tool.get("name", "")
             props = tool.get("inputSchema", {}).get("properties", {})
-            args: dict = {}
+            args: dict[str, Any] = {}
             for pname, pdef in props.items():
                 if "enum" in pdef:
                     args[pname] = pdef["enum"][0]
@@ -233,7 +234,7 @@ _READ_KEYWORDS = frozenset({
 _STATE_CANARY = "MCPNUKE_STATE_PROBE_7x9k"
 
 
-def _classify_tool(tool: dict) -> str | None:
+def _classify_tool(tool: dict[str, Any]) -> str | None:
     """Classify a tool as 'write', 'read', or None based on name/description."""
     name = tool.get("name", "").lower()
     desc = (tool.get("description") or "").lower()
@@ -245,9 +246,9 @@ def _classify_tool(tool: dict) -> str | None:
     return None
 
 
-def _build_args(tool: dict, canary: str | None = None) -> dict:
+def _build_args(tool: dict[str, Any], canary: str | None = None) -> dict[str, Any]:
     props = tool.get("inputSchema", {}).get("properties", {})
-    args: dict = {}
+    args: dict[str, Any] = {}
     for pname, pdef in props.items():
         if "enum" in pdef:
             args[pname] = pdef["enum"][0]
@@ -375,7 +376,7 @@ def check_notification_abuse(session: MCPSessionProtocol, result: TargetResult) 
             return
 
         # Drain and re-queue existing messages so we only catch new ones
-        existing: list[dict] = []
+        existing: list[dict[str, Any]] = []
         try:
             while True:
                 existing.append(q.get_nowait())
@@ -387,7 +388,7 @@ def check_notification_abuse(session: MCPSessionProtocol, result: TargetResult) 
         # Wait for unsolicited messages
         time.sleep(3)
 
-        unsolicited: list[dict] = []
+        unsolicited: list[dict[str, Any]] = []
         try:
             while True:
                 unsolicited.append(q.get_nowait())

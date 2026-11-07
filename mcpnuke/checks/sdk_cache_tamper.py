@@ -28,6 +28,7 @@ import json
 import logging
 import re
 import time
+from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import no_log, time_check
@@ -127,7 +128,7 @@ def _forge_admin_jwt() -> str:
     return f"{hdr}.{pld}.{sig}"
 
 
-def _find_cache_write_tool(tools: list[dict]) -> dict | None:
+def _find_cache_write_tool(tools: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Return the first tool that exposes writable SDK token-cache access."""
     for tool in tools:
         name = tool.get("name", "")
@@ -149,7 +150,7 @@ def _find_cache_write_tool(tools: list[dict]) -> dict | None:
     return None
 
 
-def _find_cache_invoke_tool(tools: list[dict]) -> dict | None:
+def _find_cache_invoke_tool(tools: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Return the first tool that invokes operations using a cached token."""
     for tool in tools:
         name = tool.get("name", "")
@@ -159,10 +160,10 @@ def _find_cache_invoke_tool(tools: list[dict]) -> dict | None:
     return None
 
 
-def _pick_invoke_args(invoke_tool: dict) -> dict:
+def _pick_invoke_args(invoke_tool: dict[str, Any]) -> dict[str, Any]:
     """Build the most privileged argument set the invoke tool accepts."""
     props = invoke_tool.get("inputSchema", {}).get("properties", {})
-    args: dict = {}
+    args: dict[str, Any] = {}
     if "operation" in props:
         enum_vals = props["operation"].get("enum", [])
         for op in _PRIVILEGED_OPERATIONS:

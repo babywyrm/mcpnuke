@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import re
 import time
+from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import no_log, time_check
@@ -58,7 +59,7 @@ def _session_is_anonymous(result: TargetResult) -> bool:
     return result.scanned_anonymously()
 
 
-def _tools_advertise_per_caller_accounting(tools: list[dict]) -> bool:
+def _tools_advertise_per_caller_accounting(tools: list[dict[str, Any]]) -> bool:
     """Look for any tool whose description/schema mentions per-caller buckets.
 
     Heuristic — if the server explicitly documents per-caller isolation,
@@ -76,7 +77,7 @@ def _tools_advertise_per_caller_accounting(tools: list[dict]) -> bool:
     return False
 
 
-def _pick_burst_target(tools: list[dict], opts: ProbeOpts) -> dict | None:
+def _pick_burst_target(tools: list[dict[str, Any]], opts: ProbeOpts) -> dict[str, Any] | None:
     """Pick the safest tool to burst: read-only, no destructive verbs."""
     safe = [
         t for t in tools

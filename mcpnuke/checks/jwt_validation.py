@@ -6,6 +6,7 @@ missing standard claims, excessive TTL, and known weak signing keys.
 
 import hmac
 import time
+from typing import Any
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.auth import decode_jwt_claims, decode_jwt_header
@@ -31,7 +32,7 @@ def _get_auth_token(result: TargetResult) -> str | None:
     return result.auth_context.get("_raw_token")
 
 
-def _get_jwt_claims(result: TargetResult) -> dict | None:
+def _get_jwt_claims(result: TargetResult) -> dict[str, Any] | None:
     summary = result.auth_context.get("jwt_claims_summary")
     if isinstance(summary, dict) and summary:
         return summary
@@ -41,7 +42,7 @@ def _get_jwt_claims(result: TargetResult) -> dict | None:
     return None
 
 
-def _get_jwt_header(result: TargetResult) -> dict | None:
+def _get_jwt_header(result: TargetResult) -> dict[str, Any] | None:
     token = _get_auth_token(result)
     if token:
         return decode_jwt_header(token)

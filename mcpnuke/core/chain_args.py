@@ -147,12 +147,12 @@ def _substitute(
 
 
 def _resolve_args(
-    template: dict,
+    template: dict[str, Any],
     prior: list[StepResult],
     oast_url: str = "",
     tracked_fragments: list[str] | None = None,
-) -> dict:
-    resolved: dict = {}
+) -> dict[str, Any]:
+    resolved: dict[str, Any] = {}
     for key, value in template.items():
         if isinstance(value, str):
             substituted, _ = _substitute(value, prior, tracked_fragments)

@@ -7,6 +7,7 @@ environments. Complements static K8s checks with chain-aware analysis.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import TargetResult
@@ -21,14 +22,14 @@ _K8S_TOOL_PATTERNS = re.compile(
 _NAMESPACE_PARAMS = {"namespace", "ns", "target_namespace", "target_ns"}
 
 
-def _has_namespace_param(tool: dict) -> bool:
+def _has_namespace_param(tool: dict[str, Any]) -> bool:
     """Check if tool accepts a namespace parameter."""
     schema = tool.get("inputSchema", {})
     props = schema.get("properties", {})
     return any(p in _NAMESPACE_PARAMS for p in props)
 
 
-def _is_k8s_tool(tool: dict) -> bool:
+def _is_k8s_tool(tool: dict[str, Any]) -> bool:
     """Check if tool appears to be K8s-related."""
     name = tool.get("name", "")
     desc = tool.get("description", "")

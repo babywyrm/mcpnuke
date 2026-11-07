@@ -27,7 +27,7 @@ uv run mypy mcpnuke/         # must not exceed the CI ceiling
 `mypy` has known debt. CI enforces a **ceiling** rather than zero (see
 `MYPY_CEILING` in `.github/workflows/tests.yml`). Do not raise it. If your
 change lowers the count, lower the ceiling in the same PR to lock the win in.
-The whole package runs mypy `strict`, except `disallow_any_generics`.
+The whole package runs mypy `strict`.
 
 Coverage is available but off by default, since `--cov` roughly doubles an
 80-second run:

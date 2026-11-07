@@ -73,7 +73,7 @@ def serialize_policy(
     return _manual_yaml(policy)
 
 
-def _manual_yaml(policy: dict) -> str:
+def _manual_yaml(policy: dict[str, Any]) -> str:
     """Fallback YAML serializer when PyYAML is not available."""
     import json
 

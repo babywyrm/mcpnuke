@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
 
-def _pick_security_relevant(tools: list[dict], n: int) -> list[dict]:
+
+def _pick_security_relevant(tools: list[dict[str, Any]], n: int) -> list[dict[str, Any]]:
     """Select the top N most security-relevant tools for coverage-limited scanning.
 
     n=0 means return all tools (full coverage, sorted by security relevance).
@@ -91,7 +93,7 @@ _HIGH_VALUE_NAME_KEYWORDS: frozenset[str] = frozenset({
 _HIGH_VALUE_FLOOR: int = 15
 
 
-def _tool_security_score(tool: dict) -> int:
+def _tool_security_score(tool: dict[str, Any]) -> int:
     """Score a single MCP tool definition for security relevance.
 
     Higher scores indicate greater likelihood of exploitable behaviour.
@@ -101,7 +103,7 @@ def _tool_security_score(tool: dict) -> int:
     """
     name: str = tool.get("name", "").lower()
     desc: str = tool.get("description", "").lower()
-    props: dict = tool.get("inputSchema", {}).get("properties", {})
+    props: dict[str, Any] = tool.get("inputSchema", {}).get("properties", {})
 
     score: int = 0
 

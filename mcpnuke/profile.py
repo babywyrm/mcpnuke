@@ -30,6 +30,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from mcpnuke.core.models import TargetResult
 from mcpnuke.policy.generator import _extract_tool_name
@@ -42,9 +43,9 @@ class ProfileData:
     name: str
     version: str = "1"
     description: str = ""
-    tools: list[dict] = field(default_factory=list)
+    tools: list[dict[str, Any]] = field(default_factory=list)
     # Built index: tool_name -> tool dict
-    _index: dict[str, dict] = field(default_factory=dict, repr=False)
+    _index: dict[str, dict[str, Any]] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         self._index = {t["name"]: t for t in self.tools if "name" in t}
@@ -73,7 +74,7 @@ def load_profile(path: str) -> ProfileData:
     )
 
 
-def _get_tool(profile: ProfileData, tool_name: str) -> dict | None:
+def _get_tool(profile: ProfileData, tool_name: str) -> dict[str, Any] | None:
     return profile._index.get(tool_name)
 
 

@@ -32,6 +32,7 @@ from mcpnuke.core.chain_replay import (
     summarize_run,
 )
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
+from mcpnuke.core.llm import LLMFinding
 from mcpnuke.core.models import Finding, ProbeOpts, TargetResult
 from mcpnuke.core.oast import CanaryListener
 from mcpnuke.core.transports.base import MCPSessionProtocol
@@ -47,20 +48,20 @@ class LLMBackend(Protocol):
 
     def analyze_tools(
         self,
-        tools: list[dict],
+        tools: list[dict[str, Any]],
         model: str,
         log: Callable[[str], None],
         known_findings: list[str] | None = None,
-    ) -> list:
+    ) -> list[LLMFinding]:
         ...
 
     def analyze_findings(
         self,
-        tools: list[dict],
-        findings: list[dict],
+        tools: list[dict[str, Any]],
+        findings: list[dict[str, Any]],
         model: str,
         log: Callable[[str], None],
-    ) -> list:
+    ) -> list[LLMFinding]:
         ...
 
     def analyze_response(
@@ -70,7 +71,7 @@ class LLMBackend(Protocol):
         response_text: str,
         model: str,
         log: Callable[[str], None],
-    ) -> list:
+    ) -> list[LLMFinding]:
         ...
 
 
@@ -84,7 +85,7 @@ class _Phase2Candidate:
 @dataclass
 class _Phase2Output:
     tool_name: str
-    findings: list
+    findings: list[LLMFinding]
 
 
 def _implicated_tool(title: str) -> str:
@@ -135,12 +136,12 @@ def _defer_cross_server(opts: ProbeOpts) -> bool:
 
 def _propose_chains(
     backend: LLMBackend,
-    tools: list[dict],
-    findings: list[dict],
+    tools: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
     model: str,
     log: Callable[[str], None],
     peers: list[tuple[str, list[str]]] | None = None,
-) -> list:
+) -> list[ProposedChain]:
     """Ask the backend for executable chains, or return [] if it cannot."""
     propose = getattr(backend, "propose_chains", None)
     if propose is None:
@@ -175,7 +176,7 @@ def _revise_chain(
     backend: LLMBackend,
     chain: ProposedChain,
     transcript: str,
-    tools: list[dict],
+    tools: list[dict[str, Any]],
     model: str,
     log: Callable[[str], None],
     peers: list[tuple[str, list[str]]] | None = None,
@@ -240,7 +241,7 @@ def _cross_server_opener(
 def _replay_with_retries(
     session: MCPSessionProtocol,
     chain: ProposedChain,
-    tools_by_name: dict[str, dict],
+    tools_by_name: dict[str, dict[str, Any]],
     backend: LLMBackend,
     *,
     model: str,
@@ -252,7 +253,7 @@ def _replay_with_retries(
     open_session: Callable[[str], MCPSessionProtocol | None] | None = None,
     allowed_targets: frozenset[str] | None = None,
     peer_rows: list[tuple[str, list[str]]] | None = None,
-    catalogs: dict[str, dict[str, dict]] | None = None,
+    catalogs: dict[str, dict[str, dict[str, Any]]] | None = None,
 ) -> tuple[ChainRun, ChainVerdict]:
     """Replay a chain; on a halt, revise and retry up to *retries* times."""
     run = replay_chain(
@@ -431,7 +432,7 @@ def _clip_text(value: object, limit: int) -> str:
     return text[:limit]
 
 
-def _finding_digest(finding: Finding) -> dict:
+def _finding_digest(finding: Finding) -> dict[str, Any]:
     """What chain reasoning needs from a finding to argue about a data path.
 
     The title alone says a class of problem exists somewhere; the detail,
@@ -454,7 +455,7 @@ def _resolve_phase2_workers(opts: ProbeOpts) -> int:
     return max(1, min(int(opts.get("claude_phase2_workers", 1)), 8))
 
 
-def _build_phase2_payload(text: str, resp: dict | None, max_chars: int = 3000) -> str:
+def _build_phase2_payload(text: str, resp: dict[str, Any] | None, max_chars: int = 3000) -> str:
     """Build the payload sent to Claude for response analysis.
 
     Phase 2 used to skip short responses and sometimes only captured a single
@@ -474,7 +475,7 @@ def _build_phase2_payload(text: str, resp: dict | None, max_chars: int = 3000) -
     if not cleaned:
         return raw_payload
 
-    result_obj: dict | None = resp.get("result") if isinstance(resp, dict) else None
+    result_obj: dict[str, Any] | None = resp.get("result") if isinstance(resp, dict) else None
     low_signal: bool = False
     if isinstance(result_obj, dict):
         content = result_obj.get("content")
@@ -502,11 +503,11 @@ def _default_backend() -> LLMBackend:
     return llm_core
 
 
-def _catalogs_by_url(results: list[TargetResult]) -> dict[str, dict[str, dict]]:
+def _catalogs_by_url(results: list[TargetResult]) -> dict[str, dict[str, dict[str, Any]]]:
     """Each server's tools, keyed by URL. Names are not merged across servers."""
-    catalogs: dict[str, dict[str, dict]] = {}
+    catalogs: dict[str, dict[str, dict[str, Any]]] = {}
     for item in results:
-        by_name: dict[str, dict] = {}
+        by_name: dict[str, dict[str, Any]] = {}
         for tool in item.tools:
             name = str(tool.get("name") or "")
             if name:
@@ -519,7 +520,7 @@ def _catalogs_by_url(results: list[TargetResult]) -> dict[str, dict[str, dict]]:
 def _grade_proposed(
     session: MCPSessionProtocol,
     result: TargetResult,
-    proposed: list,
+    proposed: list[ProposedChain],
     backend: LLMBackend,
     model: str,
     log: Callable[[str], None],

@@ -18,7 +18,7 @@ The implementations live beside this module (``sse``, ``http``, ``toolserver``,
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import httpx
@@ -36,14 +36,14 @@ class MCPSessionProtocol(Protocol):
     def call(
         self,
         method: str,
-        params: dict | None = None,
+        params: dict[str, Any] | None = None,
         timeout: float | None = None,
         retries: int = 2,
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Send a JSON-RPC request and return the parsed response, or None."""
         ...
 
-    def notify(self, method: str, params: dict | None = None) -> None:
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
         """Send a JSON-RPC notification, which expects no response."""
         ...
 
@@ -70,8 +70,8 @@ class HTTPCapableSession(MCPSessionProtocol, Protocol):
 
     def post_raw(
         self,
-        payload: dict,
-        extra_headers: dict | None = None,
+        payload: dict[str, Any],
+        extra_headers: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> httpx.Response:
         """POST *payload* to the endpoint and return the raw HTTP response."""

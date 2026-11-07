@@ -87,7 +87,7 @@ def _scope_tokens(claims: dict[str, Any]) -> set[str]:
 _schema_text = tool_text
 
 
-def _schema_has_requested_scope_param(tool: dict) -> bool:
+def _schema_has_requested_scope_param(tool: dict[str, Any]) -> bool:
     props = tool.get("inputSchema", {}).get("properties", {}) or {}
     for pname, pdef in props.items():
         if _REQUESTED_SCOPE_PARAM.search(str(pname)):
@@ -97,16 +97,16 @@ def _schema_has_requested_scope_param(tool: dict) -> bool:
     return False
 
 
-def _schema_advertises_privileged_scope(tool: dict) -> bool:
+def _schema_advertises_privileged_scope(tool: dict[str, Any]) -> bool:
     text = _schema_text(tool).lower()
     return any(term in text for term in _PRIVILEGED_SCOPE_TERMS)
 
 
-def _schema_has_narrowing(tool: dict) -> bool:
+def _schema_has_narrowing(tool: dict[str, Any]) -> bool:
     return bool(_NARROWING_LANGUAGE.search(_schema_text(tool)))
 
 
-def _looks_like_token_minter(tool: dict) -> bool:
+def _looks_like_token_minter(tool: dict[str, Any]) -> bool:
     return bool(_TOKEN_MINT_TOOL.search(_schema_text(tool)))
 
 

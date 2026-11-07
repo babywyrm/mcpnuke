@@ -4,7 +4,7 @@ import argparse
 import sys
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 from rich.markup import escape
@@ -22,7 +22,7 @@ from mcpnuke.core.auth import (
     summarize_jwks,
     summarize_jwt_claims,
 )
-from mcpnuke.core.models import ProbeOpts, TargetResult
+from mcpnuke.core.models import Finding, ProbeOpts, TargetResult
 from mcpnuke.diff import (
     apply_diff_findings,
     diff_against_baseline,
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 _SEVERITY_ORDER: list[str] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 
 
-def _should_fail(findings: list, fail_on: str) -> bool:
+def _should_fail(findings: list[Finding], fail_on: str) -> bool:
     """Return True if any finding meets or exceeds the --fail-on threshold."""
     if fail_on == "none":
         return False
@@ -94,7 +94,7 @@ def _emit_taxonomy_coverage(
     args: argparse.Namespace,
     results: list[TargetResult],
     console: Console,
-) -> dict | None:
+) -> dict[str, Any] | None:
     """Print the per-ID report when asked. None leaves the JSON unchanged."""
     if not getattr(args, "taxonomy_coverage", False):
         return None
@@ -118,7 +118,7 @@ def _watch_lanes(
     urls: list[str],
     auth_token: str | None,
     probe_opts: ProbeOpts,
-    baseline: dict,
+    baseline: dict[str, Any],
     console: Console,
 ) -> None:
     """Re-scan until interrupted. Print only the lane delta each pass."""
@@ -324,7 +324,7 @@ def _resolve_auth(
     urls: list[str],
     extra_headers: dict[str, str],
     console: Console,
-) -> tuple[str | None, dict]:
+) -> tuple[str | None, dict[str, Any]]:
     """Resolve the bearer (flag, file, OIDC, or none) and the auth context checks read.
 
     The context holds the raw token under ``_raw_token``; JSON output redacts it.
@@ -356,7 +356,7 @@ def _resolve_auth(
                     f"  [dim]  Use: --oidc-url {escape(info.issuer or '...')} "
                     f"--client-id ID --client-secret SECRET[/dim]"
                 )
-    auth_context_summary: dict = {}
+    auth_context_summary: dict[str, Any] = {}
     if auth_token:
         auth_context_summary["_raw_token"] = auth_token
         claims = decode_jwt_claims(auth_token)
@@ -571,7 +571,7 @@ def _print_scan_panel(
     urls: list[str],
     *,
     auth_token: str | None,
-    auth_context_summary: dict,
+    auth_context_summary: dict[str, Any],
     extra_headers: dict[str, str],
     probe_workers: int,
     phase2_workers: int,
@@ -579,7 +579,7 @@ def _print_scan_panel(
     console: Console,
 ) -> None:
     """Print the banner: targets, auth, AI backend, and the run's knobs."""
-    jwt_claims_summary: dict = auth_context_summary.get("jwt_claims_summary", {})
+    jwt_claims_summary: dict[str, Any] = auth_context_summary.get("jwt_claims_summary", {})
     panel_lines = [
         f"[bold cyan]mcpnuke v{__version__}[/bold cyan]  [dim]MCP Red Teaming & Security Scanner[/dim]",
         f"Targets : {len(urls)}",
@@ -685,7 +685,7 @@ def _print_mode_notices(args: argparse.Namespace, deterministic: bool, console: 
 def _apply_baseline(
     args: argparse.Namespace,
     results: list[TargetResult],
-    baseline: dict,
+    baseline: dict[str, Any],
     console: Console,
 ) -> None:
     """Diff each result against its baseline entry and add drift findings."""

@@ -683,8 +683,8 @@ uv run pytest tests/     # 900+ passed, 0 failed, on Python 3.12 and 3.13
 ```
 
 The mypy ceiling is a ratchet: it only ever moves down, so new code cannot add
-untyped surface. mypy runs `strict` across the package (except
-`disallow_any_generics`), so every function needs annotations.
+untyped surface. mypy runs `strict` across the package, so every function needs annotations
+and every generic needs its type arguments.
 
 Dependencies are pinned in `uv.lock` and CI installs with `--frozen`. If you
 change `pyproject.toml`, run `uv lock` and commit the result, or the

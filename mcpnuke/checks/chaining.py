@@ -3,11 +3,12 @@
 import re
 from difflib import SequenceMatcher
 from itertools import combinations
+from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.constants import ATTACK_CHAIN_PATTERNS, SHADOW_TARGETS
-from mcpnuke.core.models import AttackChain, TargetResult
+from mcpnuke.core.models import AttackChain, Finding, TargetResult
 
 # All findings in this module are scoped to Lane 4 / Transport "A"
 # (2026-04-26 by-lane reporting spec).
@@ -42,9 +43,9 @@ def _similar(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
 
 
-def _confusable_pairs(tools: list[dict]) -> list[tuple[dict, dict, float]]:
+def _confusable_pairs(tools: list[dict[str, Any]]) -> list[tuple[dict[str, Any], dict[str, Any], float]]:
     """Same-server tool pairs whose names are near-duplicates."""
-    pairs: list[tuple[dict, dict, float]] = []
+    pairs: list[tuple[dict[str, Any], dict[str, Any], float]] = []
     for first, second in combinations(tools, 2):
         left = _normalize_tool_name(str(first.get("name", "")))
         right = _normalize_tool_name(str(second.get("name", "")))
@@ -252,7 +253,7 @@ def check_multi_vector(result: TargetResult) -> None:
 
 
 def _extract_tool_names(
-    findings: list, check_type: str, valid_names: set[str] | None = None
+    findings: list[Finding], check_type: str, valid_names: set[str] | None = None
 ) -> list[str]:
     """Extract tool names mentioned in findings for a given check type.
 

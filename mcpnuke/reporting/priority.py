@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import Any
 
 from mcpnuke.core.constants import SEVERITY_WEIGHTS
 from mcpnuke.core.models import Finding
@@ -389,7 +390,7 @@ def priority_actions_as_dicts(
     findings: list[Finding],
     *,
     limit: int = _DEFAULT_LIMIT,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """JSON-serializable priority actions for a finding list."""
     return [
         {

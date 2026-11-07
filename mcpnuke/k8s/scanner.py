@@ -20,7 +20,7 @@ _DANGEROUS_CAPABILITIES = {"NET_RAW", "SYS_ADMIN", "SYS_PTRACE", "NET_ADMIN",
                            "SYS_MODULE", "DAC_OVERRIDE", "SETUID", "SETGID"}
 
 
-def _k8s_get(path: str, token: str, api_url: str | None = None) -> dict | None:
+def _k8s_get(path: str, token: str, api_url: str | None = None) -> dict[str, Any] | None:
     import urllib.request
 
     base = api_url or "https://kubernetes.default"
@@ -67,7 +67,7 @@ def _scan_helm(sname: str, obj: Any, path: str) -> None:
             _scan_helm(sname, item, f"{path}[{i}]")
 
 
-def _check_pod_security(pod: dict, namespace: str) -> None:
+def _check_pod_security(pod: dict[str, Any], namespace: str) -> None:
     """Analyze a pod spec for security misconfigurations."""
     meta = pod.get("metadata", {})
     pod_name = meta.get("name", "?")
@@ -135,7 +135,7 @@ def _check_pod_security(pod: dict, namespace: str) -> None:
             ))
 
 
-def _check_configmap_leaks(cm: dict, namespace: str) -> None:
+def _check_configmap_leaks(cm: dict[str, Any], namespace: str) -> None:
     """Scan ConfigMap data for leaked secrets."""
     name = cm.get("metadata", {}).get("name", "?")
     for key, value in cm.get("data", {}).items():
@@ -274,7 +274,7 @@ def _check_helm_version_drift(
         return
 
     import re
-    releases: dict[str, list[tuple[int, dict]]] = {}
+    releases: dict[str, list[tuple[int, dict[str, Any]]]] = {}
     for secret in secrets_data.get("items", []):
         if secret.get("type") != "helm.sh/release.v1":
             continue
@@ -406,7 +406,7 @@ _SESSION_TOKEN_PATHS = [
 _TOKEN_FILE_INDICATORS = ["access_token", "refresh_token", "Bearer", "eyJ"]
 
 
-def _check_hostnetwork_loopback(pods_data: dict | None, namespace: str) -> None:
+def _check_hostnetwork_loopback(pods_data: dict[str, Any] | None, namespace: str) -> None:
     """Flag pods with hostNetwork that can bridge to host-bound services (MCP-T58)."""
     if not pods_data:
         return
@@ -437,7 +437,7 @@ def _check_hostnetwork_loopback(pods_data: dict | None, namespace: str) -> None:
 
 
 def _check_session_token_exposure(
-    pods_data: dict | None, namespace: str,
+    pods_data: dict[str, Any] | None, namespace: str,
     token: str = "", api_url: str | None = None,
 ) -> None:
     """Detect plaintext session/token files in pod temp directories (MCP-T57).

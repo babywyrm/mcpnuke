@@ -63,7 +63,7 @@ def _minimal_jwt(*, include_htm: bool = True, include_htu: bool = True) -> str:
     if include_htu:
         payload["htu"] = "http://probe.invalid/mcp"
 
-    def _b64(obj: dict) -> str:
+    def _b64(obj: dict[str, Any]) -> str:
         return base64.urlsafe_b64encode(
             json.dumps(obj, separators=(",", ":")).encode()
         ).rstrip(b"=").decode()

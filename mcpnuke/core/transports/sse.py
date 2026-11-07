@@ -7,6 +7,7 @@ import json
 import queue
 import threading
 import time
+from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -33,7 +34,7 @@ class MCPSession:
         timeout: float = 25.0,
         auth_token: str | None = None,
         verify_tls: bool = False,
-        extra_headers: dict | None = None,
+        extra_headers: dict[str, Any] | None = None,
     ):
         self.base = base
         self.sse_url = base + sse_path
@@ -47,7 +48,7 @@ class MCPSession:
         self._extra_headers = extra_headers or {}
         self._req_id = 0
         self._session_id: str | None = None
-        self._q: queue.Queue[dict] = queue.Queue()
+        self._q: queue.Queue[dict[str, Any]] = queue.Queue()
         self._stop = threading.Event()
         self._endpoint_ready = threading.Event()
         self._client = httpx.Client(
@@ -106,10 +107,10 @@ class MCPSession:
     def call(
         self,
         method: str,
-        params: dict | None = None,
+        params: dict[str, Any] | None = None,
         timeout: float | None = None,
         retries: int = 2,
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         wait = timeout or self.timeout
         for attempt in range(retries + 1):
             self._req_id += 1
@@ -136,7 +137,7 @@ class MCPSession:
                 return None
 
             deadline = time.time() + wait
-            pending: list[dict] = []
+            pending: list[dict[str, Any]] = []
             while time.time() < deadline:
                 try:
                     msg = self._q.get(timeout=0.3)
@@ -153,7 +154,7 @@ class MCPSession:
                 time.sleep(1.0)
         return None
 
-    def notify(self, method: str, params: dict | None = None) -> None:
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
         payload = {
             "jsonrpc": "2.0",
             "method": method,
@@ -172,8 +173,8 @@ class MCPSession:
 
     def post_raw(
         self,
-        payload: dict,
-        extra_headers: dict | None = None,
+        payload: dict[str, Any],
+        extra_headers: dict[str, Any] | None = None,
         timeout: float | None = None,
     ) -> httpx.Response:
         """POST *payload* to the SSE message endpoint, returning the raw response.

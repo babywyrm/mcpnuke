@@ -74,8 +74,8 @@ def _make_rule(
 
 def build_sarif(results: list[TargetResult], *, include_k8s: bool = True) -> dict[str, Any]:
     """Build a SARIF 2.1.0 document from scan results."""
-    rules: dict[str, dict] = {}
-    sarif_results: list[dict] = []
+    rules: dict[str, dict[str, Any]] = {}
+    sarif_results: list[dict[str, Any]] = []
 
     located: list[tuple[str, str, Finding]] = [
         (target.url, target.transport, finding) for target in results for finding in target.findings

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
+from typing import Any
 
 from rich import box
 from rich.console import Console
@@ -29,7 +30,7 @@ def _short_target(url: str, max_len: int = 45) -> str:
     return url[:max_len - 1] + "\u2026"
 
 
-def _group_findings(findings: list[Finding]) -> list[dict]:
+def _group_findings(findings: list[Finding]) -> list[dict[str, Any]]:
     """Collapse similar findings by (check, severity) into compact grouped rows.
 
     Returns dicts with keys: check, severity, title, count, tools.

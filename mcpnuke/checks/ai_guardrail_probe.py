@@ -11,6 +11,7 @@ are discovered.  Requires tool invocation (skipped with --no-invoke).
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _call_tool, _response_text, _should_invoke
@@ -32,7 +33,7 @@ _SECRET_VAR_HINTS = [
 ]
 
 
-def _find_guardrail_tools(result: TargetResult) -> list[dict]:
+def _find_guardrail_tools(result: TargetResult) -> list[dict[str, Any]]:
     """Identify tools whose descriptions suggest AI-mediated decision making."""
     return [
         t for t in result.tools
@@ -56,7 +57,7 @@ def _guess_target_vars(result: TargetResult) -> list[str]:
     return list(candidates) if candidates else ["CLIENT_SECRET"]
 
 
-def _find_message_param(tool: dict) -> str | None:
+def _find_message_param(tool: dict[str, Any]) -> str | None:
     """Find the message/query/prompt parameter name for a chat-style tool."""
     schema = tool.get("inputSchema", {})
     props = schema.get("properties", {})

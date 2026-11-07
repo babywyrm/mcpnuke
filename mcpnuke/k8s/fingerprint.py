@@ -9,6 +9,7 @@ Supports parallel probing for clusters with many services.
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from typing import Any
 
 from rich.console import Console
 from rich.markup import escape
@@ -53,7 +54,7 @@ class ServiceFingerprint:
     findings: list[Finding] = field(default_factory=list)
 
 
-def _http_probe(url: str, timeout: float = 3.0) -> tuple[int, dict, str]:
+def _http_probe(url: str, timeout: float = 3.0) -> tuple[int, dict[str, Any], str]:
     """Quick HTTP GET, returns (status, headers_dict, body_snippet)."""
     import httpx
     try:
@@ -66,7 +67,7 @@ def _http_probe(url: str, timeout: float = 3.0) -> tuple[int, dict, str]:
         return 0, {}, ""
 
 
-def _detect_framework(headers: dict, body: str) -> str:
+def _detect_framework(headers: dict[str, Any], body: str) -> str:
     """Match response against known framework signatures."""
     for framework, sigs in _FRAMEWORK_SIGNATURES.items():
         for header_key, match_val in sigs:

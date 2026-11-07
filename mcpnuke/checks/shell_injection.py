@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import no_log, time_check
@@ -82,14 +83,14 @@ _DANGEROUS_BASE_PAYLOADS = [
 ]
 
 
-def _is_shell_tool(tool: dict) -> bool:
+def _is_shell_tool(tool: dict[str, Any]) -> bool:
     name = tool.get("name", "").lower()
     desc = tool.get("description", "").lower()
     combined = f"{name} {desc}"
     return any(kw in combined for kw in _SHELL_TOOL_KEYWORDS)
 
 
-def _find_injectable_params(tool: dict) -> list[str]:
+def _find_injectable_params(tool: dict[str, Any]) -> list[str]:
     props = tool.get("inputSchema", {}).get("properties", {})
     return [
         p for p in props
@@ -155,8 +156,8 @@ def check_shell_injection(
 def _probe_dangerous_base(
     session: MCPSessionProtocol,
     result: TargetResult,
-    tool: dict,
-    base_args: dict,
+    tool: dict[str, Any],
+    base_args: dict[str, Any],
     _log: Callable[[str], None],
 ) -> None:
     """Test if the tool allows dangerous base commands (bash, sh)."""

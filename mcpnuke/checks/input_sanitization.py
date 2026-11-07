@@ -5,6 +5,7 @@ import contextlib
 import re
 import time
 from collections.abc import Callable
+from typing import Any
 
 from rich.markup import escape
 
@@ -56,7 +57,7 @@ def _classify_ssti(
 def _canary_sighting(
     result: TargetResult,
     *,
-    resp: dict | None,
+    resp: dict[str, Any] | None,
     text: str,
     payload: str,
     base_severity: str,
@@ -100,7 +101,7 @@ def _canary_sighting(
 
 def _fuzz_single_tool(
     session: MCPSessionProtocol,
-    tool: dict,
+    tool: dict[str, Any],
     result: TargetResult,
     opts: ProbeOpts,
     _log: Callable[[str], None],

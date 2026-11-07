@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich.markup import escape
 
@@ -23,13 +23,13 @@ class DiffResult:
     """Result of diffing current scan against baseline."""
 
     url: str
-    added_tools: list[dict] = field(default_factory=list)
-    removed_tools: list[dict] = field(default_factory=list)
-    modified_tools: list[tuple[dict, dict]] = field(default_factory=list)
-    added_resources: list[dict] = field(default_factory=list)
-    removed_resources: list[dict] = field(default_factory=list)
-    added_prompts: list[dict] = field(default_factory=list)
-    removed_prompts: list[dict] = field(default_factory=list)
+    added_tools: list[dict[str, Any]] = field(default_factory=list)
+    removed_tools: list[dict[str, Any]] = field(default_factory=list)
+    modified_tools: list[tuple[dict[str, Any], dict[str, Any]]] = field(default_factory=list)
+    added_resources: list[dict[str, Any]] = field(default_factory=list)
+    removed_resources: list[dict[str, Any]] = field(default_factory=list)
+    added_prompts: list[dict[str, Any]] = field(default_factory=list)
+    removed_prompts: list[dict[str, Any]] = field(default_factory=list)
 
     def has_changes(self) -> bool:
         return bool(
@@ -43,19 +43,19 @@ class DiffResult:
         )
 
 
-def _tool_key(t: dict) -> str:
+def _tool_key(t: dict[str, Any]) -> str:
     return str(t.get("name", ""))
 
 
-def _resource_key(r: dict) -> str:
+def _resource_key(r: dict[str, Any]) -> str:
     return str(r.get("uri", r.get("name", "")))
 
 
-def _prompt_key(p: dict) -> str:
+def _prompt_key(p: dict[str, Any]) -> str:
     return str(p.get("name", ""))
 
 
-def _tools_equal(a: dict, b: dict) -> bool:
+def _tools_equal(a: dict[str, Any], b: dict[str, Any]) -> bool:
     """Compare two tool definitions (name, description, inputSchema)."""
     return (
         a.get("name") == b.get("name")
@@ -66,12 +66,12 @@ def _tools_equal(a: dict, b: dict) -> bool:
 
 
 def diff_against_baseline(
-    current_tools: list[dict],
-    current_resources: list[dict],
-    current_prompts: list[dict],
-    baseline_tools: list[dict],
-    baseline_resources: list[dict],
-    baseline_prompts: list[dict],
+    current_tools: list[dict[str, Any]],
+    current_resources: list[dict[str, Any]],
+    current_prompts: list[dict[str, Any]],
+    baseline_tools: list[dict[str, Any]],
+    baseline_resources: list[dict[str, Any]],
+    baseline_prompts: list[dict[str, Any]],
     url: str = "",
 ) -> DiffResult:
     """Compare current enumeration to baseline. Returns DiffResult."""
@@ -171,7 +171,7 @@ def apply_diff_findings(result: TargetResult, diff: DiffResult) -> None:
             )
 
 
-def load_baseline(path: str | Path) -> dict[str, dict]:
+def load_baseline(path: str | Path) -> dict[str, dict[str, Any]]:
     """Load baseline from JSON. Returns dict[url, {tools, resources, prompts}]. """
     p = Path(path)
     if not p.is_file():
@@ -185,7 +185,7 @@ def load_baseline(path: str | Path) -> dict[str, dict]:
     return {t["url"]: t for t in targets if isinstance(t, dict) and "url" in t}
 
 
-def save_baseline(results: list, path: str | Path, console: Console | None = None) -> None:
+def save_baseline(results: list[TargetResult], path: str | Path, console: Console | None = None) -> None:
     """Save current scan results as baseline JSON."""
     from mcpnuke.core.models import TargetResult
 

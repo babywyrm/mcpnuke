@@ -22,7 +22,7 @@ _LIST_ITEM_KEYS: dict[str, str] = {
 }
 
 
-def _jsonrpc_error(resp: dict | None) -> dict | None:
+def _jsonrpc_error(resp: dict[str, Any] | None) -> dict[str, Any] | None:
     """Return the JSON-RPC error object, or None if this was not an error reply."""
     if not isinstance(resp, dict):
         return None
@@ -30,7 +30,7 @@ def _jsonrpc_error(resp: dict | None) -> dict | None:
     return err if isinstance(err, dict) else None
 
 
-def _error_label(err: dict) -> str:
+def _error_label(err: dict[str, Any]) -> str:
     code = err.get("code", "?")
     message = err.get("message", "")
     if message:
@@ -97,7 +97,7 @@ def negotiate_protocol(
     reported as silence.
     """
     _log = log or (lambda msg: None)
-    handshake_errors: list[tuple[str, dict]] = []
+    handshake_errors: list[tuple[str, dict[str, Any]]] = []
 
     if mode in (AUTO, LEGACY):
         if verbose:
@@ -157,7 +157,7 @@ def negotiate_protocol(
 
 
 def _emit_handshake_failure(
-    result: TargetResult, errors: list[tuple[str, dict]],
+    result: TargetResult, errors: list[tuple[str, dict[str, Any]]],
 ) -> None:
     """Record a JSON-RPC handshake error. Silence is left to enumerate_server."""
     if not errors:

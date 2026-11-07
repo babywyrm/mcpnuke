@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import ssl
 import urllib.request
+from typing import Any
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
@@ -20,7 +21,7 @@ from mcpnuke.k8s.discovery import k8s_ssl_context
 _add = lane_tagged(lane=3, transport="A")
 
 
-def _probe_url(url: str, timeout: float = 3.0) -> dict | None:
+def _probe_url(url: str, timeout: float = 3.0) -> dict[str, Any] | None:
     """GET a URL with TLS verification disabled, return parsed JSON or None."""
     ctx = ssl.create_default_context()
     ctx.check_hostname = False

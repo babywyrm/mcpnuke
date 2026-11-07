@@ -7,6 +7,7 @@ prompts can be tested without a backend.
 """
 
 import json
+from typing import Any
 
 from mcpnuke.core.taxonomy import threat_ids
 
@@ -115,7 +116,7 @@ def _known_findings_clause(known_findings: list[str] | None) -> str:
     )
 
 
-def _tool_digest(tool: dict) -> dict:
+def _tool_digest(tool: dict[str, Any]) -> dict[str, Any]:
     """The parts of a tool definition a chain argument depends on.
 
     Parameters are what make a chain traceable: without them the model can see
@@ -135,7 +136,7 @@ def _tool_digest(tool: dict) -> dict:
     }
 
 
-def _fit(items: list[dict], limit: int) -> list[dict]:
+def _fit(items: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
     """The longest prefix of *items* that serializes within *limit* characters.
 
     Binary search over the prefix length, since serialized size grows with it.
@@ -156,7 +157,7 @@ def _fit(items: list[dict], limit: int) -> list[dict]:
     return items[:low]
 
 
-def _diverse_findings(findings: list[dict]) -> list[dict]:
+def _diverse_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Order findings so every check is represented before any check repeats.
 
     Volume and importance are unrelated: Camazotz reports 233 instances of one
@@ -167,13 +168,13 @@ def _diverse_findings(findings: list[dict]) -> list[dict]:
     removes extra evidence for a class already shown rather than the only
     evidence for a class not shown at all.
     """
-    grouped: dict[str, list[dict]] = {}
+    grouped: dict[str, list[dict[str, Any]]] = {}
     for finding in sorted(
         findings, key=lambda f: _SEVERITY_ORDER.get(str(f.get("severity") or "").upper(), 9)
     ):
         grouped.setdefault(str(finding.get("check") or ""), []).append(finding)
 
-    ordered: list[dict] = []
+    ordered: list[dict[str, Any]] = []
     for tier in range(max((len(g) for g in grouped.values()), default=0)):
         for group in grouped.values():
             if tier < len(group):
@@ -181,7 +182,7 @@ def _diverse_findings(findings: list[dict]) -> list[dict]:
     return ordered
 
 
-def _prioritized_tools(tools: list[dict], findings: list[dict]) -> list[dict]:
+def _prioritized_tools(tools: list[dict[str, Any]], findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Tools already implicated by a finding first, so a trim cannot drop them."""
     named = {str(f.get("tool") or "") for f in findings}
     named.discard("")
@@ -200,8 +201,8 @@ def _shown_of(shown: int, total: int, noun: str) -> str:
 
 
 def _chain_context(
-    tools: list[dict],
-    findings: list[dict],
+    tools: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
     tools_budget: int = _TOOLS_BUDGET_CHARS,
     findings_budget: int = _FINDINGS_BUDGET_CHARS,
 ) -> tuple[str, str, int, int, int, int]:
@@ -223,8 +224,8 @@ def _chain_context(
 
 
 def _propose_chains_prompt(
-    tools: list[dict],
-    findings: list[dict],
+    tools: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
     peers: list[tuple[str, list[str]]] | None = None,
 ) -> tuple[str, str]:
     """Build the (system, user) prompt for executable chain proposals.
@@ -321,7 +322,7 @@ def _peer_prompt_suffix(
 def _revise_chain_prompt(
     chain_title: str,
     transcript: str,
-    tools: list[dict],
+    tools: list[dict[str, Any]],
     peers: list[tuple[str, list[str]]] | None = None,
 ) -> tuple[str, str]:
     """Build the (system, user) prompt for single-chain revision."""
