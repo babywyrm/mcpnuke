@@ -11,17 +11,24 @@ import json
 from unittest.mock import MagicMock
 
 from mcpnuke.checks.dpop_enforcement import (
+    DPOP_PROBES,
     _minimal_jwt,
     _probe_malformed_dpop,
     _probe_missing_htm_htu,
     _probe_no_dpop_header,
     dpop_probeable,
-    run_dpop_enforcement_checks,
 )
 from mcpnuke.core.models import TargetResult
 
 _URL = "http://target.invalid/mcp"
 _ENDPOINT = "http://target.invalid/mcp"
+
+
+def _run_table(result: TargetResult, session) -> None:
+    """Run the probes the way run_all_checks does: gated, then the shared table."""
+    if dpop_probeable(session):
+        for _name, probe in DPOP_PROBES:
+            probe(result, session)
 
 
 def _resp(status: int):
@@ -75,8 +82,8 @@ class _StdioLikeSession:
 class TestDpopProbeable:
     """The single source of truth for "can this transport carry a proof?".
 
-    Both the orchestrator's progress gate and run_dpop_enforcement_checks'
-    early return read this, so a drift between them is not expressible.
+    The orchestrator's progress gate and the probe loop both read this, so a
+    drift between them is not expressible.
     """
 
     def test_http_session_with_a_resolved_endpoint(self):
@@ -123,7 +130,7 @@ class TestTransportGating:
         """DPoP is an HTTP header mechanism; stdio has nothing to probe."""
         result = TargetResult(url="stdio://server.py", transport="stdio")
 
-        run_dpop_enforcement_checks(result, session=_StdioLikeSession())
+        _run_table(result, session=_StdioLikeSession())
 
         assert result.findings == []
         assert result.error == ""
@@ -134,7 +141,7 @@ class TestTransportGating:
         result = TargetResult(url=_URL)
         session = _session(200, post_url="")
 
-        run_dpop_enforcement_checks(result, session=session)
+        _run_table(result, session=session)
 
         assert result.findings == []
         assert session.post_raw.call_count == 0
@@ -151,7 +158,7 @@ class TestRequestShape:
         requests never reached the MCP endpoint and could not return 200.
         """
         session = _session(401)
-        run_dpop_enforcement_checks(TargetResult(url=_URL), session=session)
+        _run_table(TargetResult(url=_URL), session=session)
 
         assert session.post_raw.call_count == 3
         assert session.post.call_count == 0, "post() does not exist on real sessions"
@@ -180,7 +187,7 @@ class TestRequestShape:
 
     def test_probes_send_a_valid_jsonrpc_body(self):
         session = _session(401)
-        run_dpop_enforcement_checks(TargetResult(url=_URL), session=session)
+        _run_table(TargetResult(url=_URL), session=session)
 
         for call in session.post_raw.call_args_list:
             payload = call[0][0]
@@ -245,14 +252,14 @@ class TestRunAll:
         findings for one fact, on every plain-bearer server in existence.
         """
         result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(result, session=_session(200))
+        _run_table(result, session=_session(200))
 
         assert [f.check for f in result.findings] == ["dpop_not_enforced"]
 
     def test_dpop_claiming_server_that_accepts_garbage_is_still_caught(self):
         """The case probes 2 and 3 exist for, and where they are damning."""
         result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(
+        _run_table(
             result, session=_dpop_aware_session(401, 200, 200)
         )
 
@@ -263,19 +270,19 @@ class TestRunAll:
 
     def test_compliant_server_is_clean(self):
         result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(result, session=_session(401))
+        _run_table(result, session=_session(401))
         assert result.findings == []
 
     def test_timings_recorded(self):
         result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(result, session=_session(401))
+        _run_table(result, session=_session(401))
 
         for probe in ("dpop_no_header", "dpop_malformed", "dpop_missing_binding"):
             assert probe in result.timings
 
     def test_findings_tagged_lane3_transport_a(self):
         result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(
+        _run_table(
             result, session=_dpop_aware_session(401, 200, 200)
         )
 
@@ -294,7 +301,7 @@ class TestProbeErrorHandling:
         session.post_raw.side_effect = RuntimeError("connection refused")
 
         result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(result, session=session)
+        _run_table(result, session=session)
 
         assert "connection refused" in result.error
         assert result.findings == []
@@ -330,7 +337,7 @@ class TestProbeErrorHandling:
         session.post_raw.side_effect = RuntimeError("boom")
 
         result = TargetResult(url=_URL)
-        run_dpop_enforcement_checks(result, session=session)
+        _run_table(result, session=session)
 
         assert isinstance(result.error, str)
 

@@ -32,12 +32,7 @@ from mcpnuke.checks.command_injection_broad import check_command_injection_broad
 from mcpnuke.checks.config_dump import check_config_dump
 from mcpnuke.checks.config_tampering import check_config_tampering
 from mcpnuke.checks.credential_in_schema import check_credential_in_schema
-from mcpnuke.checks.dpop_enforcement import (
-    _probe_malformed_dpop,
-    _probe_missing_htm_htu,
-    _probe_no_dpop_header,
-    dpop_probeable,
-)
+from mcpnuke.checks.dpop_enforcement import DPOP_PROBES, dpop_probeable
 from mcpnuke.checks.error_leakage import check_error_leakage
 from mcpnuke.checks.execution import (
     check_code_execution,
@@ -257,11 +252,7 @@ _JWT_CHECK_NAMES: tuple[str, ...] = (
 # so they are counted conditionally. These are the time_check labels; the
 # findings they emit are dpop_not_enforced, dpop_header_not_validated and
 # dpop_binding_not_enforced.
-_DPOP_CHECK_NAMES: tuple[str, ...] = (
-    "dpop_no_header",
-    "dpop_malformed",
-    "dpop_missing_binding",
-)
+_DPOP_CHECK_NAMES: tuple[str, ...] = tuple(name for name, _ in DPOP_PROBES)
 
 _LIGHT_BEHAVIORAL_CHECK_NAMES: tuple[str, ...] = (
     "rug_pull",
@@ -605,11 +596,10 @@ def run_all_checks(
         _run("jwt_cross_role_replay", check_jwt_cross_role_replay, result)
         # DPoP enforcement probes (RFC 9449 — Lane 3 / Machine Identity).
         # Routed through _run so they appear in progress; gated on the same
-        # capability check run_dpop_enforcement_checks used to make internally.
+        # capability check that sets the denominator.
         if dpop_capable:
-            _run("dpop_no_header", _probe_no_dpop_header, result, session)
-            _run("dpop_malformed", _probe_malformed_dpop, result, session)
-            _run("dpop_missing_binding", _probe_missing_htm_htu, result, session)
+            for name, probe in DPOP_PROBES:
+                _run(name, probe, result, session)
 
     static_count = len(result.findings)
     if verbose:

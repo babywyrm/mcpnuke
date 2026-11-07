@@ -18,6 +18,10 @@ All notable changes to this submodule are documented here.
   `CanaryListener.any_hit` and `all_callbacks`, and
   `llm_prompts._budgeted_json`. The prompt-budget tests now exercise
   `_chain_context`, the path the scan takes.
+- **`run_dpop_enforcement_checks`.** No scan called it, but every DPoP
+  test did, so a probe added only there was tested and never ran.
+  `dpop_enforcement.DPOP_PROBES` is now the one list the scan runs, the
+  progress count derives from, and the tests iterate.
 
 ## [6.22.3] - 2026-11-05
 

@@ -200,6 +200,8 @@ class TestCheckNameTables:
         src = Path(checks_pkg.__file__).read_text()
         body = src.split("def run_all_checks(", 1)[1]
         called = set(re.findall(r'_run\(\s*"([a-z0-9_]+)"', body))
+        if re.search(r"for \w+, \w+ in DPOP_PROBES:\s+_run\(", body):
+            called |= {name for name, _ in dpop_enforcement.DPOP_PROBES}
 
         tabled = set(
             _STATIC_CHECK_NAMES
@@ -360,21 +362,21 @@ class _StdioLike:
         return None
 
 
-_PROBE_ATTRS: dict[str, str] = {
-    "_probe_no_dpop_header": "dpop_no_header",
-    "_probe_malformed_dpop": "dpop_malformed",
-    "_probe_missing_htm_htu": "dpop_missing_binding",
-}
-
-
 def _stub_probes(monkeypatch) -> list[str]:
-    """Replace the three probes with recorders; return the call log."""
+    """Replace every probe in the table with a recorder; return the call log."""
     called: list[str] = []
-    for probe, label in _PROBE_ATTRS.items():
-        def _record(result, session, _label=label):
-            called.append(_label)
 
-        monkeypatch.setattr(checks_pkg, probe, _record)
+    def _recorder(label: str):
+        def _record(result, session):
+            called.append(label)
+
+        return _record
+
+    monkeypatch.setattr(
+        checks_pkg,
+        "DPOP_PROBES",
+        tuple((name, _recorder(name)) for name, _ in dpop_enforcement.DPOP_PROBES),
+    )
     return called
 
 
@@ -408,57 +410,25 @@ def _time_check_labels() -> dict[str, str]:
     return labels
 
 
-def _probes_chained_in_the_runner() -> list[str]:
-    """The probes ``run_dpop_enforcement_checks`` calls, in order, by label.
+class TestDpopTableCoversEveryProbe:
+    """``DPOP_PROBES`` is the one list a scan runs and the tests iterate.
 
-    Read from the source: the function guards on ``dpop_probeable`` and calling
-    it with a stub session returns before any probe runs, so a stub cannot
-    observe the body.
-    """
-    tree = ast.parse(Path(dpop_enforcement.__file__).read_text())
-    runner = next(
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef)
-        and node.name == "run_dpop_enforcement_checks"
-    )
-    # A `_probe_*` call with no timing falls back to its own function name,
-    # which is in no table and so fails loudly. The runner chains probes and
-    # nothing else; a pure helper belongs inside one of them, not here.
-    labels = _time_check_labels()
-    return [
-        labels.get(node.func.id, node.func.id)
-        for node in ast.walk(runner)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id.startswith("_probe_")
-    ]
-
-
-class TestDpopRunnerStaysInSync:
-    """``run_dpop_enforcement_checks`` has no production caller.
-
-    ``run_all_checks`` drives the three probes individually through ``_run`` so
-    each lands in the progress count, which left the runner orphaned — and it
-    is still where all twelve tests in tests/test_dpop_enforcement.py enter, so
-    it is where a contributor adding a fourth probe will add it. Nothing would
-    fail: ``test_dpop_names_are_registered`` pins the three that exist and
-    ``test_tables_match_literal_run_call_sites`` only reads ``_run(...)``
-    literals. Fully tested probe, green suite, never runs in a real scan.
-
-    The better fix is to delete the orphan and have the orchestrator and the
-    tests iterate one shared table, so there is only one list to add to. That
-    is a larger refactor than this branch; until then, this test is the thing
-    that makes the divergence loud.
+    A probe that records a timing but is missing from the table would be
+    fully written and never run, so the table must hold every one of them
+    under the label the probe itself records.
     """
 
-    def test_the_runner_chains_exactly_the_registered_probes(self):
-        assert tuple(_probes_chained_in_the_runner()) == _DPOP_CHECK_NAMES
+    def test_every_timed_probe_is_in_the_table(self):
+        tabled = {probe.__name__ for _, probe in dpop_enforcement.DPOP_PROBES}
+        assert set(_time_check_labels()) == tabled
 
-    def test_the_ast_walk_sees_the_calls(self):
-        """A restructured runner would empty the parse, and an empty parse must
-        not read as agreement with an empty table."""
-        assert _probes_chained_in_the_runner()
+    def test_each_name_is_the_probes_own_label(self):
+        labels = _time_check_labels()
+        for name, probe in dpop_enforcement.DPOP_PROBES:
+            assert labels[probe.__name__] == name
+
+    def test_the_counted_names_derive_from_the_table(self):
+        assert tuple(n for n, _ in dpop_enforcement.DPOP_PROBES) == _DPOP_CHECK_NAMES
 
     def test_the_labels_come_from_the_probes_themselves(self):
         """The chain is compared by time_check label, so the label map is load

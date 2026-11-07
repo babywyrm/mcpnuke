@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Callable
 from typing import Any, TypeGuard
 
 from mcpnuke.checks._lane_helpers import lane_tagged
@@ -83,40 +84,10 @@ def dpop_probeable(session: MCPSessionProtocol | None) -> TypeGuard[HTTPCapableS
     is excluded by the first conjunct alone. The second excludes SSE before its
     handshake resolves an endpoint, where ``post_url`` is still empty.
 
-    The orchestrator's progress gate and ``run_dpop_enforcement_checks`` both
-    read this, so the denominator cannot disagree with what runs.
+    The orchestrator's progress gate and its probe loop both read this, so the
+    denominator cannot disagree with what runs.
     """
     return bool(getattr(session, "post_raw", None) and getattr(session, "post_url", ""))
-
-
-def run_dpop_enforcement_checks(result: TargetResult, session: MCPSessionProtocol | None) -> None:
-    """Run all DPoP enforcement probes against *session*'s MCP endpoint.
-
-    Three targeted probes that need only ``tools/list`` — safe to run always,
-    and they never call a lab tool, so ``--no-invoke`` does not suppress them.
-
-    Skips transports with no HTTP header layer for a proof to live in (stdio),
-    and sessions whose endpoint is not yet resolved (SSE before handshake).
-
-    Not the path a scan takes: ``run_all_checks`` drives the three probes
-    individually through its ``_run`` helper so each one appears in the
-    progress count. This remains the entry point for callers outside the
-    orchestrator — do not add a second call to it from there.
-
-    A fourth probe must be added in both places. Nothing in production reads
-    this function, but every DPoP test enters through it, so a probe added
-    only here is fully tested and never runs;
-    tests/test_check_progress.py::TestDpopRunnerStaysInSync fails when the
-    chain below stops matching ``_DPOP_CHECK_NAMES``. The real fix is to delete
-    this function and have the orchestrator and the tests iterate one shared
-    table, leaving a single list to add to.
-    """
-    if not dpop_probeable(session):
-        return
-
-    _probe_no_dpop_header(result, session)
-    _probe_malformed_dpop(result, session)
-    _probe_missing_htm_htu(result, session)
 
 
 def _server_enforces_dpop(result: TargetResult) -> bool:
@@ -261,3 +232,14 @@ def _probe_missing_htm_htu(result: TargetResult, session: HTTPCapableSession) ->
             },
             taxonomy_id=_TAXONOMY_ID,
         )
+
+
+# The scan runs exactly this list, the tests iterate it, and the progress
+# count derives from it, so a probe added here is counted, run, and tested.
+# Each name is the probe's own time_check label. Order matters: probes 2 and
+# 3 read what probe 1 recorded.
+DPOP_PROBES: tuple[tuple[str, Callable[[TargetResult, HTTPCapableSession], None]], ...] = (
+    ("dpop_no_header", _probe_no_dpop_header),
+    ("dpop_malformed", _probe_malformed_dpop),
+    ("dpop_missing_binding", _probe_missing_htm_htu),
+)
