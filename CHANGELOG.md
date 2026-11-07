@@ -4,6 +4,17 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **An auto-detected token endpoint could receive the client secret on
+  any host.** With `--client-id` and `--client-secret` but no
+  `--oidc-url`, the issuer came from the realm the scanned server
+  advertised, and the secret was posted to whatever token endpoint that
+  issuer named. A hostile target could collect it. An auto-detected
+  issuer and token endpoint must now be on the target's host; another
+  port is fine. Anything else stops with an error that asks for
+  `--oidc-url`. An explicit `--oidc-url` is trusted as before.
+
 ### Fixed
 
 - **`protected_resource_metadata` and the inference guardrail probe

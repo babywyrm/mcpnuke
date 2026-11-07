@@ -372,6 +372,7 @@ def fetch_client_credentials_token(
     resource: str | None = None,
     verify_tls: bool = False,
     extra_headers: dict[str, str] | None = None,
+    pin_host: str | None = None,
 ) -> str:
     """Fetch an access token using OAuth2 client_credentials grant.
 
@@ -410,6 +411,8 @@ def fetch_client_credentials_token(
         if not token_endpoint:
             # Fallback: assume standard path
             token_endpoint = f"{oidc_url}/protocol/openid-connect/token"
+
+    _require_host(token_endpoint, pin_host)
 
     data: dict[str, str] = {
         "grant_type": "client_credentials",
@@ -470,6 +473,17 @@ def load_auth_secret_files(args: argparse.Namespace) -> None:
         args.client_secret = read_secret_file(secret_file)
 
 
+def _require_host(url: str, pin_host: str | None) -> None:
+    """Refuse an auto-detected auth URL that left the scanned host."""
+    if pin_host is not None and urlparse(url).hostname != pin_host:
+        raise RuntimeError(
+            f"Auto-detected token endpoint {url} is not on the scanned host "
+            f"{pin_host}. The scanned server chose it, so the client secret "
+            "is not sent there. Pass --oidc-url to trust an identity provider "
+            "explicitly."
+        )
+
+
 def resolve_auth_token(args: argparse.Namespace) -> str | None:
     """Resolve the auth token from CLI args (direct token or OIDC client credentials)."""
     token = getattr(args, "auth_token", None)
@@ -483,6 +497,7 @@ def resolve_auth_token(args: argparse.Namespace) -> str | None:
         return None
 
     oidc_url = getattr(args, "oidc_url", None)
+    pin_host: str | None = None
     verify_tls = bool(getattr(args, "tls_verify", False))
     scope = getattr(args, "oidc_scope", None)
     resource = getattr(args, "oidc_resource", None)
@@ -499,6 +514,11 @@ def resolve_auth_token(args: argparse.Namespace) -> str | None:
             if info.token_endpoint:
                 # Extract issuer from token endpoint
                 oidc_url = info.issuer or info.token_endpoint.rsplit("/protocol/", 1)[0]
+            # The scanned server named this issuer, so it would also choose
+            # where the client secret goes. Keep it on the scanned host.
+            pin_host = urlparse(targets[0]).hostname
+            if oidc_url:
+                _require_host(oidc_url, pin_host)
 
         if not oidc_url:
             raise RuntimeError(
@@ -514,4 +534,5 @@ def resolve_auth_token(args: argparse.Namespace) -> str | None:
         resource=resource,
         verify_tls=verify_tls,
         extra_headers=extra_headers,
+        pin_host=pin_host,
     )

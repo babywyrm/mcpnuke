@@ -116,7 +116,9 @@ def _add_auth_arguments(group: ArgumentGroup) -> None:
         metavar="URL",
         default=os.environ.get("MCP_OIDC_URL") or None,
         help="OIDC issuer URL for token fetch (e.g. http://keycloak:8080/realms/myapp). "
-        "Used with --client-id and --client-secret for automatic token acquisition.",
+        "Used with --client-id and --client-secret for automatic token acquisition. "
+        "Without it, an issuer the target advertises is used only if its token "
+        "endpoint is on the target's host.",
     )
     group.add_argument(
         "--oidc-scope",

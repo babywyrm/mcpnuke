@@ -24,7 +24,7 @@ Generated from the parser, so it cannot fall behind the code.
 | `--auth-token-file FILE` | Read the bearer token from FILE (avoids ps aux exposure). --auth-token wins when both are set. |
 | `--header KEY:VALUE` | Extra HTTP header (repeatable). Example: --header 'X-Tenant: blue' |
 | `--tls-verify` | Enable TLS certificate verification for outbound HTTP calls. Default is disabled for lab/self-signed targets. |
-| `--oidc-url URL` | OIDC issuer URL for token fetch (e.g. http://keycloak:8080/realms/myapp). Used with --client-id and --client-secret for automatic token acquisition. |
+| `--oidc-url URL` | OIDC issuer URL for token fetch (e.g. http://keycloak:8080/realms/myapp). Used with --client-id and --client-secret for automatic token acquisition. Without it, an issuer the target advertises is used only if its token endpoint is on the target's host. |
 | `--oidc-scope SCOPE` | Optional OAuth2 scope for client_credentials token requests. |
 | `--oidc-resource URL` | Optional RFC 8707 resource indicator for client_credentials token requests. Asks the issuer to set the access token audience to this URI (the MCP endpoint). Or set MCP_OIDC_RESOURCE env var. |
 | `--client-id ID` | OAuth2 client ID for client_credentials grant. Or set MCP_CLIENT_ID env var. |
