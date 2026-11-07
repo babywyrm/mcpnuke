@@ -25,7 +25,7 @@ All development on mcpnuke follows the superpowers skills framework:
 
 - Strong typing throughout: use `dict`, `list`, `frozenset`, `int`, `str` type hints on all functions
 - Module-level constants: `UPPER_SNAKE_CASE`, typed explicitly (e.g. `_NAME_MULTIPLIER: int = 3`)
-- Check functions signature: `check_name(result: TargetResult)` for static, `check_name(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None)` for behavioral
+- Check functions signature: `check_name(result: TargetResult)` for static, `check_name(session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None)` for behavioral
 - Credential regexes belong in `patterns/credentials.py` only, in the tier that matches their false-positive risk — never in `rules.py`, `probes.py`, or a check module
 - Every check wrapped in `with time_check("check_name", result):`
 - Findings via `result.add(check_name, severity, title, detail, evidence=...)`

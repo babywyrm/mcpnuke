@@ -8,12 +8,13 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
     grade_reflection,
+    no_log,
     payload_echo_removed,
     response_is_error,
     time_check,
 )
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     ACTIVE_INJECTION_PAYLOADS,
@@ -106,7 +107,9 @@ def check_tool_poisoning(result: TargetResult) -> None:
                     break
 
 
-def check_indirect_injection(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
+def check_indirect_injection(
+    session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None
+) -> None:
     with time_check("indirect_injection", result):
         # Phase 1: scan resource contents (original behavior)
         for resource in result.resources:
@@ -206,7 +209,7 @@ def check_indirect_injection(session: MCPSessionProtocol, result: TargetResult, 
 def check_active_prompt_injection(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Send injection payloads as tool inputs and confirm the server follows them.
 
@@ -215,7 +218,7 @@ def check_active_prompt_injection(
     injected instructions, leak system prompts, or accept role overrides.
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     with time_check("active_prompt_injection", result):
         invokable = [t for t in result.tools if _should_invoke(t, opts)]
         _log(f"    [dim]    testing {len(invokable)} tools for active prompt injection[/dim]")

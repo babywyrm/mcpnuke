@@ -8,6 +8,7 @@ from rich.markup import escape
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
     grade_reflection,
+    no_log,
     response_is_error,
     time_check,
 )
@@ -21,7 +22,7 @@ from mcpnuke.checks.tool_probes import (
     _should_invoke,
 )
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     CROSS_TOOL_PATTERNS,
@@ -32,7 +33,7 @@ from mcpnuke.patterns.probes import (
 def check_tool_response_injection(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Call each tool with safe inputs and scan responses for injection / manipulation.
 
@@ -41,7 +42,7 @@ def check_tool_response_injection(
     ends up in the LLM context via tool output).
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     with time_check("tool_response_injection", result):
         tool_names = {t["name"].lower() for t in result.tools}
         invokable = [t for t in result.tools if _should_invoke(t, opts)]

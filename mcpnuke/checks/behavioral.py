@@ -8,9 +8,9 @@ import time
 
 from rich.markup import escape
 
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _response_text
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import RESPONSE_INJECTION_PATTERNS
 
@@ -90,7 +90,7 @@ def check_rug_pull(session: MCPSessionProtocol, result: TargetResult) -> None:
 _extract_text = _response_text
 
 
-def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
+def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None) -> None:
     """Invoke tools between tool-list snapshots to trigger state-dependent rug pulls.
 
     Detects two flavours:
@@ -100,7 +100,7 @@ def check_deep_rug_pull(session: MCPSessionProtocol, result: TargetResult, probe
     """
     opts = probe_opts or {}
     calls_per_tool = opts.get("probe_calls", 10)
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     with time_check("deep_rug_pull", result):
         # Phase 1: snapshot tool list
         _log("    [dim]    phase 1: snapshot tool list[/dim]")

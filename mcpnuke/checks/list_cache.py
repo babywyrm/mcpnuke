@@ -20,7 +20,7 @@ from typing import Any
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.cache_hints import cache_fields_from_result
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _VALID_SCOPES: frozenset[str] = frozenset({"public", "private"})
@@ -126,7 +126,7 @@ def _grade_cache_pages(result: TargetResult) -> None:
 def check_list_cache(
     result: TargetResult,
     session: MCPSessionProtocol | None = None,
-    probe_opts: dict[str, Any] | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     opts = probe_opts or {}
     with time_check("list_cache", result):

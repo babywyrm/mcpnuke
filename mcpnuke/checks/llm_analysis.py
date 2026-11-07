@@ -32,7 +32,7 @@ from mcpnuke.core.chain_replay import (
     summarize_run,
 )
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
-from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.core.models import Finding, ProbeOpts, TargetResult
 from mcpnuke.core.oast import CanaryListener
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
@@ -128,7 +128,7 @@ def peer_tool_rows(
     return rows
 
 
-def _defer_cross_server(opts: dict) -> bool:
+def _defer_cross_server(opts: ProbeOpts) -> bool:
     """Multi-target cross-server replay waits until every catalog exists."""
     return bool(opts.get("cross_server")) and int(opts.get("target_count") or 1) > 1
 
@@ -214,7 +214,7 @@ def _prepare_replay_session(session: MCPSessionProtocol, result: TargetResult) -
 
 
 def _cross_server_opener(
-    result: TargetResult, opts: dict
+    result: TargetResult, opts: ProbeOpts
 ) -> Callable[[str], MCPSessionProtocol | None]:
     """Open one peer session per step. The caller closes it."""
     from mcpnuke.core.session import detect_transport
@@ -448,7 +448,7 @@ def _finding_digest(finding: Finding) -> dict:
     }
 
 
-def _resolve_phase2_workers(opts: dict) -> int:
+def _resolve_phase2_workers(opts: ProbeOpts) -> int:
     if opts.get("deterministic", False):
         return 1
     return max(1, min(int(opts.get("claude_phase2_workers", 1)), 8))
@@ -523,7 +523,7 @@ def _grade_proposed(
     backend: LLMBackend,
     model: str,
     log: Callable[[str], None],
-    opts: dict,
+    opts: ProbeOpts,
     peers: list[TargetResult] | None = None,
     allowed_targets: frozenset[str] | None = None,
 ) -> None:
@@ -579,7 +579,7 @@ def _grade_proposed(
 
 def replay_cross_server(
     results: list[TargetResult],
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
     *,
     backend: LLMBackend | None = None,
     console: Console | None = None,
@@ -652,7 +652,7 @@ def replay_cross_server(
 def run_llm_analysis(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
     model: str = DEFAULT_CLAUDE_MODEL,
     console: Console | None = None,
     llm_backend: LLMBackend | None = None,

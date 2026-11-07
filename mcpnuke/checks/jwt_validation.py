@@ -9,7 +9,7 @@ import time
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.auth import decode_jwt_claims, decode_jwt_header
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 
 DEFAULT_MAX_TTL: int = 14400  # 4 hours in seconds
 
@@ -127,7 +127,7 @@ def check_jwt_token_id(result: TargetResult) -> None:
             )
 
 
-def check_jwt_ttl(result: TargetResult, probe_opts: dict | None = None) -> None:
+def check_jwt_ttl(result: TargetResult, probe_opts: ProbeOpts | None = None) -> None:
     """Flag tokens with excessive time-to-live."""
     opts = probe_opts or {}
     max_ttl: int = opts.get("jwt_max_ttl", DEFAULT_MAX_TTL)

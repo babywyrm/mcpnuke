@@ -24,7 +24,7 @@ from pathlib import Path
 import httpx
 
 from mcpnuke.checks.base import time_check
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.reporting.files import write_private
 
 logger = logging.getLogger(__name__)
@@ -350,7 +350,7 @@ def _check_management_endpoints(
 
 def check_inference_backend(
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
     metas_out: list[dict] | None = None,
 ) -> None:
     """Probe for unauthenticated inference backends (MCP-T54).
@@ -461,7 +461,7 @@ def save_inference_baseline(
 
 def check_model_integrity(
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Compare current model digests against a known-good baseline (MCP-T55).
 

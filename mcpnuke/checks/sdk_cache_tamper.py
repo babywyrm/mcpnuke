@@ -30,9 +30,9 @@ import re
 import time
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 logger = logging.getLogger("mcpnuke.checks.sdk_cache_tamper")
@@ -232,7 +232,7 @@ def check_sdk_cache_tamper(result: TargetResult) -> None:
 def check_sdk_cache_poisoning(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Behavioral: attempt a full SDK cache-poisoning cycle (MCP-T33).
 
@@ -246,7 +246,7 @@ def check_sdk_cache_poisoning(
     (no explicit denial), warranting manual review.
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
 
     with time_check("sdk_cache_poisoning", result):
         # This probe writes a forged JWT to the target's token cache.

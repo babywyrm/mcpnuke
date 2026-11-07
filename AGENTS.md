@@ -36,7 +36,7 @@ CI gates all four on every push and PR. mypy runs in
   all functions. No `Any` to silence the checker.
 - Module-level constants: `UPPER_SNAKE_CASE`, typed explicitly.
 - Check signatures: `check_name(result: TargetResult)` for static checks;
-  `check_name(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None)`
+  `check_name(session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None)`
   for behavioral checks.
 - Every check body wrapped in `with time_check("check_name", result):`.
 - Findings via `result.add(check_name, severity, title, detail, evidence=...)`.

@@ -7,9 +7,9 @@ paths — even when individual credential patterns don't match.
 
 import re
 
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 CONFIG_TOOL_NAMES = re.compile(
@@ -35,10 +35,10 @@ INFRA_LEAK_PATTERNS: list[tuple[str, str, str]] = [
 ]
 
 
-def check_config_dump(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
+def check_config_dump(session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None) -> None:
     """Detect tools that dump internal configuration, service topology, or secret paths."""
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     cache = opts.get("_response_cache", {})
 
     with time_check("config_dump", result):

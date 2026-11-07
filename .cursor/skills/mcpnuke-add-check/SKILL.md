@@ -54,7 +54,7 @@ Create `mcpnuke/checks/your_check.py`:
 
 import re
 
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.checks.base import time_check
 from mcpnuke.patterns.rules import YOUR_CHECK_PATTERNS
 
@@ -83,7 +83,7 @@ def check_your_check(result: TargetResult):
 For **behavioral checks**, accept `session` and `probe_opts`:
 
 ```python
-def check_your_check(session, result: TargetResult, probe_opts: dict | None = None):
+def check_your_check(session, result: TargetResult, probe_opts: ProbeOpts | None = None):
     opts = probe_opts or {}
     with time_check("your_check", result):
         # Call tools, analyze responses

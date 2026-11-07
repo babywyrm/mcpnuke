@@ -29,7 +29,7 @@ def test_actuator_probe_verifies_when_asked() -> None:
     r = TargetResult(url="https://t")
     flags = _verify_flags(
         "mcpnuke.checks.actuator_probe.httpx.Client",
-        lambda: check_actuator_probe("https://t", r, auth_token="tok", verify_tls=True),
+        lambda: check_actuator_probe("https://t", r, verify_tls=True),
     )
     assert flags == [True]
 

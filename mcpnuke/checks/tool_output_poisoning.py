@@ -29,14 +29,14 @@ from __future__ import annotations
 import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import (
     _build_safe_args,
     _call_tool,
     _response_text,
     _should_invoke,
 )
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.rules import INJECTION_PATTERNS
 
@@ -53,7 +53,7 @@ _INJECTION_PATTERNS = INJECTION_PATTERNS
 def check_tool_output_poisoning(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Detect instruction-injection patterns in tool responses (MCP-T02).
 
@@ -61,7 +61,7 @@ def check_tool_output_poisoning(
     instructions that could manipulate a downstream agent consuming the output.
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
 
     with time_check("tool_output_poisoning", result):
         targets = [t for t in result.tools if _should_invoke(t, opts)]

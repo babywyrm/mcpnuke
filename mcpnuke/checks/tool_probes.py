@@ -12,6 +12,7 @@ import time
 
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.llm import _call_claude
+from mcpnuke.core.models import ProbeOpts
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     CANARY,
@@ -65,7 +66,7 @@ def _is_dangerous_tool(tool: dict) -> bool:
     return bool(any(kw in combined for kw in ("side effect", "irreversible", "destructive", "permanent")))
 
 
-def _should_invoke(tool: dict, probe_opts: dict) -> bool:
+def _should_invoke(tool: dict, probe_opts: ProbeOpts) -> bool:
     """Decide whether to invoke a tool given the current probe options."""
     if probe_opts.get("no_invoke"):
         return False

@@ -24,6 +24,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
+from mcpnuke.core.models import ProbeOpts
 from mcpnuke.server.models import ScanDepth, ScanJob, ScanRequest, ScanStatus
 
 # Default hard cap for a whole scan job. Overridable per-request via
@@ -36,14 +37,14 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _probe_opts_for(req: ScanRequest) -> dict:
+def _probe_opts_for(req: ScanRequest) -> ProbeOpts:
     """Translate a ScanRequest into mcpnuke probe options.
 
     Deterministic ordering is forced so portal-launched scans are stable and
     comparable across runs. safe_mode defaults on to keep destructive tool
     invocations off a browser-triggered code path.
     """
-    opts: dict = {
+    opts: ProbeOpts = {
         "max_pages": 20,
         "tls_verify": False,
         "deterministic": True,

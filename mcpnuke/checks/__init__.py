@@ -137,7 +137,7 @@ from mcpnuke.checks.tool_output_poisoning import check_credential_forwarding, ch
 from mcpnuke.checks.tool_response_injection import check_tool_response_injection
 from mcpnuke.checks.transport import check_sse_security
 from mcpnuke.checks.webhook_persistence import check_webhook_persistence
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _log_internal = logging.getLogger("mcpnuke.checks")
@@ -298,7 +298,7 @@ DeepCheck = tuple[str, Callable[..., Any], tuple[Any, ...], dict[str, Any]]
 def _build_deep_checks(
     session: MCPSessionProtocol,
     result: TargetResult,
-    opts: dict[str, Any],
+    opts: ProbeOpts,
     *,
     fast_mode: bool,
 ) -> tuple[list[DeepCheck], set[str]]:
@@ -396,7 +396,7 @@ def run_all_checks(
     base: str = "",
     sse_path: str = "",
     verbose: bool = False,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
     log: Callable[[str], None] | None = None,
 ) -> None:
     """Run all security checks against a target result.
@@ -660,7 +660,6 @@ def run_all_checks(
     if base:
         _run(
             "actuator_probe", check_actuator_probe, base, result,
-            auth_token=opts.get("auth_token"),
             verify_tls=bool(opts.get("tls_verify", False)),
         )
 

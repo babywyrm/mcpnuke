@@ -7,10 +7,11 @@ import re
 from rich.markup import escape
 
 from mcpnuke.checks.base import (
+    no_log,
     time_check,
 )
 from mcpnuke.checks.tool_probes import _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     ERROR_LEAKAGE_PATTERNS,
@@ -56,10 +57,10 @@ def _match_error_patterns(texts: list[str]) -> re.Match | None:
     return None
 
 
-def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
+def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None) -> None:
     """Send malformed inputs to tools and look for information disclosure in errors."""
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     with time_check("error_leakage", result):
         invokable = [t for t in result.tools if _should_invoke(t, opts)]
         _log(f"    [dim]    probing {len(invokable)} tools for error leakage[/dim]")

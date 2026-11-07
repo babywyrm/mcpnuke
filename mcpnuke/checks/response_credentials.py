@@ -4,9 +4,9 @@ import re
 
 from rich.markup import escape
 
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import CREDENTIAL_CONTENT_PATTERNS
 
@@ -30,7 +30,7 @@ def _scan_text_for_creds(text: str, source: str, result: TargetResult) -> None:
 def check_response_credentials(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Scan tool responses and resource content for credential patterns.
 
@@ -39,7 +39,7 @@ def check_response_credentials(
     that slip through incomplete server-side redaction.
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     cache = opts.get("_response_cache", {})
     with time_check("response_credentials", result):
         invokable = [t for t in result.tools if _should_invoke(t, opts)]

@@ -19,7 +19,7 @@ from rich.progress import (
 from mcpnuke.checks import run_all_checks
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.enumerator import enumerate_server
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.session import StdioSession, ToolServerSession, detect_transport
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.profile import attribute_findings
@@ -56,7 +56,7 @@ def _stdio_short_label(cmd: str) -> str:
 def _run_ai_analysis(
     session: MCPSessionProtocol,
     result: TargetResult,
-    opts: dict,
+    opts: ProbeOpts,
     _log: Callable[[str], None],
 ) -> None:
     """Optional AI pass after the deterministic checks: Claude or Ollama."""
@@ -68,9 +68,8 @@ def _run_ai_analysis(
             model=opts.get("claude_model", DEFAULT_CLAUDE_MODEL),
             console=console,
         )
-    elif opts.get("ollama_analysis"):
+    elif ollama_host := opts.get("ollama_analysis"):
         from mcpnuke.core.llm_ollama import OllamaBackend, run_ensemble_analysis
-        ollama_host = opts["ollama_analysis"]
         ensemble_spec = opts.get("ollama_ensemble")
         if ensemble_spec:
             models = [m.strip() for m in ensemble_spec.replace(",", " ").split() if m.strip()]
@@ -99,7 +98,7 @@ def scan_stdio_target(
     cmd: str,
     timeout: float = 25.0,
     verbose: bool = False,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
     inherit_env: tuple[str, ...] = (),
 ) -> TargetResult:
     """Scan a local MCP server launched via stdin/stdout."""
@@ -171,8 +170,8 @@ def scan_stdio_target(
     run_cross_target_checks([result], verbose=verbose)
 
     _run_ai_analysis(session, result, opts, _log)
-    if opts.get("profile"):
-        attribute_findings(opts["profile"], [result])
+    if profile := opts.get("profile"):
+        attribute_findings(profile, [result])
 
     session.close()
     result.timings["total"] = time.time() - t_start
@@ -189,7 +188,7 @@ def scan_target(
     timeout: float = 25.0,
     verbose: bool = False,
     auth_token: str | None = None,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> TargetResult:
     result = TargetResult(url=url)
     t_start = time.time()
@@ -295,8 +294,8 @@ def scan_target(
     )
 
     _run_ai_analysis(session, result, opts, _log)
-    if opts.get("profile"):
-        attribute_findings(opts["profile"], [result])
+    if profile := opts.get("profile"):
+        attribute_findings(profile, [result])
 
     session.close()
     result.timings["total"] = time.time() - t_start
@@ -313,7 +312,7 @@ def run_parallel(
     workers: int = 4,
     verbose: bool = False,
     auth_token: str | None = None,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> list[TargetResult]:
     results: list[TargetResult] = []
     lock = threading.Lock()

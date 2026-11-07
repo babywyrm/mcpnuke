@@ -2,15 +2,68 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from mcpnuke.patterns.credentials import redact_credentials
 
 if TYPE_CHECKING:
     # Import-only: reporting.diff imports this module, so a runtime import
     # here would be circular.
+    from mcpnuke.core.oast import CanaryListener
+    from mcpnuke.profile import ProfileData
     from mcpnuke.reporting.diff import ScanDiffResult
+
+
+class ProbeOpts(TypedDict, total=False):
+    """Scan options every check receives. A plain dict at runtime.
+
+    Typed so a misspelled key or a wrong value type fails mypy instead of
+    reading as None and silently switching a probe off.
+    """
+
+    # Built from the CLI by cli_steps._base_probe_opts.
+    no_invoke: bool
+    safe_mode: bool
+    probe_calls: bool
+    max_pages: int
+    protocol_mode: str
+    jwt_max_ttl: int
+    tool_names_file: str | None
+    claude: bool
+    chain_replay: bool
+    chain_replay_retries: int
+    cross_server: bool
+    claude_model: str
+    claude_max_tools: int
+    claude_phase2_workers: int
+    ollama_analysis: str | None
+    ollama_model: str
+    ollama_ensemble: str | None
+    fast: bool
+    coverage_n: int
+    probe_workers: int
+    deterministic: bool
+    tls_verify: bool
+    extra_headers: dict[str, str] | None
+    inference_host: str | None
+    inference_scan: bool
+    inference_baseline: str | None
+    save_inference_baseline: str | None
+    error_reflection: str
+    # Added by the scan entry points.
+    trust_sets: list[list[str]]
+    target_count: int
+    auth_context_summary: dict[str, Any]
+    profile: ProfileData | None
+    oast: CanaryListener
+    oast_wait: float
+    # Set during run_all_checks and shared between checks.
+    _log: Callable[[str], None]
+    _response_cache: dict[str, str]
+    # Test seam for protected_resource_metadata.
+    get_json: Callable[[str], dict[str, Any] | None]
 
 
 @dataclass

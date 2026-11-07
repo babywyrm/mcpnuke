@@ -48,7 +48,7 @@ from mcpnuke.core.llm_prompts import (
     taxonomy_id_clause,
     tool_analysis_system_prompt,
 )
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 if TYPE_CHECKING:
@@ -463,7 +463,7 @@ def run_ensemble_analysis(
     *,
     host: str,
     models: list[str],
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
     console: Console | None = None,
 ) -> list[EnsembleFinding]:
     """Run phases 1+3 for each model independently, cluster by taxonomy_id.
@@ -496,7 +496,7 @@ def run_ensemble_analysis(
         scratch.tools = result.tools
 
         # Force no-invoke for ensemble (would multiply latency by N models)
-        scratch_opts = {**opts, "no_invoke": True}
+        scratch_opts: ProbeOpts = {**opts, "no_invoke": True}
 
         run_llm_analysis(
             session, scratch,

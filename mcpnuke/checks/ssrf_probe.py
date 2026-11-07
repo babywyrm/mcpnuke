@@ -7,9 +7,9 @@ or differential behavior between internal and external URLs.
 
 import re
 
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _TAXONOMY_ID: str = "MCP-T06"
@@ -48,9 +48,9 @@ INTERNAL_INDICATORS = [
 ]
 
 
-def check_ssrf_probe(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
+def check_ssrf_probe(session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None) -> None:
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     with time_check("ssrf_probe", result):
         invokable = [t for t in result.tools if _should_invoke(t, opts)]
         _log(f"    [dim]    SSRF-probing {len(invokable)} tools[/dim]")

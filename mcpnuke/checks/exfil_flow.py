@@ -10,8 +10,8 @@ reachability of theoretical exfiltration paths.
 import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import response_is_error, time_check
-from mcpnuke.core.models import TargetResult
+from mcpnuke.checks.base import no_log, response_is_error, time_check
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 # All findings in this module are scoped to Lane 2 / Transport "B"
@@ -117,10 +117,10 @@ def _try_sink_send(session: MCPSessionProtocol, tool: dict, data: str) -> tuple[
 def check_exfil_flow(
     result: TargetResult,
     session: MCPSessionProtocol | None = None,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     with time_check("exfil_flow", result):
         sources = []
         sinks = []

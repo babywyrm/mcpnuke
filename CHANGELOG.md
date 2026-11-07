@@ -10,7 +10,22 @@ All notable changes to this submodule are documented here.
   back, for the bare `dict` and `list` annotations still in the package.
   The other strict checks already passed, so turning them on locks them
   in. The one fix needed was three log callbacks typed as an untyped
-  lambda.
+  lambda. CI now installs the `server` extra for the type check, so the
+  API is checked against real pydantic and fastapi types.
+- **Probe options are a `ProbeOpts` TypedDict.** Every check took
+  `probe_opts: dict`, so a misspelled key read as `None` and silently
+  turned a probe off. mypy now types every value, and
+  `tests/test_probe_opts_keys.py` fails on any key read that `ProbeOpts`
+  does not declare. That covers `.get()`, which mypy does not check.
+  Checks share one `no_log` default instead of nineteen untyped lambdas.
+
+### Removed
+
+- **Dead option plumbing.** The actuator probe took an `auth_token` that
+  no scan path ever set, so it always probed without credentials. That
+  is the intended meaning of "exposed", so the parameter is gone and the
+  docstring says so. The four `bedrock*` probe options were never read;
+  Bedrock is configured through `configure_bedrock`.
 
 ## [6.22.4] - 2026-11-06
 

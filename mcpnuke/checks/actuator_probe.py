@@ -105,14 +105,15 @@ _ACTUATOR_HEAPDUMP_PATH = "/actuator/heapdump"
 def check_actuator_probe(
     base_url: str,
     result: TargetResult,
-    auth_token: str | None = None,
     verify_tls: bool = False,
 ) -> None:
-    """Probe for exposed debug/admin endpoints on the target's base URL."""
+    """Probe for exposed debug/admin endpoints on the target's base URL.
+
+    Unauthenticated on purpose: an endpoint is exposed when it answers
+    without credentials.
+    """
     with time_check("actuator_probe", result):
-        headers = {}
-        if auth_token:
-            headers["Authorization"] = f"Bearer {auth_token}"
+        headers: dict[str, str] = {}
 
         client = httpx.Client(verify=verify_tls, timeout=5, follow_redirects=True)
         reachable_actuator_paths: set[str] = set()

@@ -30,9 +30,9 @@ import re
 import time
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=5, transport="A")
@@ -76,7 +76,7 @@ def _tools_advertise_per_caller_accounting(tools: list[dict]) -> bool:
     return False
 
 
-def _pick_burst_target(tools: list[dict], opts: dict) -> dict | None:
+def _pick_burst_target(tools: list[dict], opts: ProbeOpts) -> dict | None:
     """Pick the safest tool to burst: read-only, no destructive verbs."""
     safe = [
         t for t in tools
@@ -97,11 +97,11 @@ def _pick_burst_target(tools: list[dict], opts: dict) -> dict | None:
 
 
 def check_anon_budget_exhaust(
-    session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None,
+    session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Burst probe for anonymous rate-limit exhaustion (MCP-T51)."""
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda _msg: None)
+    _log = opts.get("_log", no_log)
 
     with time_check("anon_budget_exhaust", result):
         # stdio has no auth boundary: the transport is a pipe to a subprocess

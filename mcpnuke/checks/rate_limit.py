@@ -5,9 +5,9 @@ import time
 
 from rich.markup import escape
 
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.rules import RATE_LIMIT_PATTERNS
 
@@ -43,7 +43,7 @@ def check_rate_limit(result: TargetResult) -> None:
 
 
 def check_behavioral_rate_limit(
-    session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None,
+    session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Behavioral rate limit test: rapid-fire calls to detect missing throttling.
 
@@ -55,7 +55,7 @@ def check_behavioral_rate_limit(
     finding. Do not fold this into the stdio auth skip.
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     with time_check("behavioral_rate_limit", result):
         safe_tools = [
             t for t in result.tools

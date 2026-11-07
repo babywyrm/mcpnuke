@@ -8,6 +8,10 @@ from contextlib import contextmanager
 from mcpnuke.core.models import TargetResult
 
 
+def no_log(_msg: str) -> None:
+    """The _log fallback when a check runs without a progress logger."""
+
+
 def tool_text(tool: dict) -> str:
     """Build the searchable surface of a tool definition.
 

@@ -21,7 +21,7 @@ import httpx
 
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _CHECK: str = "protected_resource_metadata"
@@ -116,7 +116,7 @@ def _issuers_match(advertised: str, fetched: str) -> bool:
 def check_protected_resource_metadata(
     session: MCPSessionProtocol | None,
     result: TargetResult,
-    probe_opts: dict[str, Any] | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     with time_check(_CHECK, result):
         if session is None:

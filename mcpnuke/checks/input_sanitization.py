@@ -11,12 +11,13 @@ from rich.markup import escape
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
     grade_reflection,
+    no_log,
     payload_echo_removed,
     response_is_error,
     time_check,
 )
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     CANARY,
@@ -101,7 +102,7 @@ def _fuzz_single_tool(
     session: MCPSessionProtocol,
     tool: dict,
     result: TargetResult,
-    opts: dict,
+    opts: ProbeOpts,
     _log: Callable[[str], None],
     idx: int,
     total: int,
@@ -265,10 +266,12 @@ def _fuzz_single_tool(
                 break
 
 
-def check_input_sanitization(session: MCPSessionProtocol, result: TargetResult, probe_opts: dict | None = None) -> None:
+def check_input_sanitization(
+    session: MCPSessionProtocol, result: TargetResult, probe_opts: ProbeOpts | None = None
+) -> None:
     """Send injection probe payloads and detect missing sanitization."""
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     probe_workers = opts.get("probe_workers", 1)
     with time_check("input_sanitization", result):
         invokable = [t for t in result.tools if _should_invoke(t, opts)]

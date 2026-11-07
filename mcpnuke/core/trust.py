@@ -8,7 +8,7 @@ no set is not chained to the others.
 
 from __future__ import annotations
 
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 
 
 def parse_trust_sets(
@@ -62,7 +62,7 @@ def trusted_with(
     return [item for item in results if item.url != url and item.url in group]
 
 
-def trust_sets_from_opts(opts: dict | None) -> list[frozenset[str]]:
+def trust_sets_from_opts(opts: ProbeOpts | None) -> list[frozenset[str]]:
     """Read the probe_opts form (lists of URL strings)."""
     raw = (opts or {}).get("trust_sets") or []
     return [frozenset(str(url) for url in group) for group in raw]

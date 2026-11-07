@@ -21,6 +21,7 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
     grade_reflection,
+    no_log,
     payload_echo_removed,
     response_is_error,
     time_check,
@@ -31,7 +32,7 @@ from mcpnuke.checks.tool_probes import (
     _response_text,
     _should_invoke,
 )
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=2, transport="A")
@@ -104,7 +105,7 @@ def _get_string_params(tool: dict) -> list[str]:
 def check_command_injection_broad(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Probe all tools for command injection via string params (MCP-T05).
 
@@ -114,7 +115,7 @@ def check_command_injection_broad(
     filename, path parameters that get passed to a subprocess internally).
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
 
     with time_check("command_injection_broad", result):
         # Test tools NOT already covered by shell_injection.py

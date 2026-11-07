@@ -19,6 +19,7 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
     grade_reflection,
+    no_log,
     payload_echo_removed,
     response_is_error,
     time_check,
@@ -29,7 +30,7 @@ from mcpnuke.checks.tool_probes import (
     _response_text,
     _should_invoke,
 )
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=2, transport="A")
@@ -104,7 +105,7 @@ def _is_ai_tool(tool: dict) -> bool:
 def check_prompt_injection(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Probe tools for prompt injection via unsanitized arguments (MCP-T01).
 
@@ -112,7 +113,7 @@ def check_prompt_injection(
     sanitization, allowing an attacker to override model behavior.
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
 
     with time_check("prompt_injection", result):
         targets = [

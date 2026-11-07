@@ -7,6 +7,7 @@ import time
 from rich.markup import escape
 
 from mcpnuke.checks.base import (
+    no_log,
     time_check,
 )
 from mcpnuke.checks.tool_probes import (
@@ -16,7 +17,7 @@ from mcpnuke.checks.tool_probes import (
     _scan_response_threats,
     _should_invoke,
 )
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     RESPONSE_INJECTION_PATTERNS,
@@ -26,11 +27,11 @@ from mcpnuke.patterns.probes import (
 def check_temporal_consistency(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Call the same tool repeatedly and detect behavioral drift or escalation."""
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
     with time_check("temporal_consistency", result):
         capped = result.tools[:5]
         invokable = [t for t in capped if _should_invoke(t, opts)]

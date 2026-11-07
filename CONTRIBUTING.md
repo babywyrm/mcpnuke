@@ -88,7 +88,7 @@ Checks live in `mcpnuke/checks/<name>.py`. There are two shapes.
 ```python
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check, tool_text
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 
 _add = lane_tagged(lane=5, transport="A")
 
@@ -113,7 +113,7 @@ def check_my_thing(result: TargetResult):
 def check_my_probe(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ):
     opts = probe_opts or {}
     if opts.get("no_invoke"):

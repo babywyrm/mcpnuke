@@ -21,14 +21,14 @@ from __future__ import annotations
 import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
-from mcpnuke.checks.base import time_check
+from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import (
     _build_safe_args,
     _call_tool,
     _response_text,
     _should_invoke,
 )
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _add = lane_tagged(lane=2, transport="A")
@@ -133,7 +133,7 @@ def check_agentic_loop(
 def check_agentic_loop_behavioral(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Behavioral: detect tool-call patterns in responses (MCP-T10).
 
@@ -141,7 +141,7 @@ def check_agentic_loop_behavioral(
     look like tool-call instructions — which could cause an agent to recurse.
     """
     opts = probe_opts or {}
-    _log = opts.get("_log", lambda msg: None)
+    _log = opts.get("_log", no_log)
 
     with time_check("agentic_loop_behavioral", result):
         targets = [t for t in result.tools if _should_invoke(t, opts)]

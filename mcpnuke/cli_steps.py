@@ -22,7 +22,7 @@ from mcpnuke.core.auth import (
     summarize_jwks,
     summarize_jwt_claims,
 )
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.diff import (
     apply_diff_findings,
     diff_against_baseline,
@@ -117,7 +117,7 @@ def _watch_lanes(
     results: list[TargetResult],
     urls: list[str],
     auth_token: str | None,
-    probe_opts: dict,
+    probe_opts: ProbeOpts,
     baseline: dict,
     console: Console,
 ) -> None:
@@ -398,7 +398,7 @@ def _base_probe_opts(
     probe_workers: int,
     phase2_workers: int,
     deterministic: bool,
-) -> dict:
+) -> ProbeOpts:
     """Probe options every scan mode shares, read straight from the CLI."""
     return {
         "no_invoke": args.no_invoke,
@@ -413,10 +413,6 @@ def _base_probe_opts(
         "chain_replay_retries": getattr(args, "chain_replay_retries", 1),
         "cross_server": getattr(args, "cross_server", False),
         "claude_model": args.claude_model,
-        "bedrock": args.bedrock,
-        "bedrock_region": args.bedrock_region,
-        "bedrock_profile": args.bedrock_profile,
-        "bedrock_model": args.bedrock_model,
         "claude_max_tools": args.claude_max_tools,
         "claude_phase2_workers": phase2_workers,
         "ollama_analysis": getattr(args, "ollama_analysis", None),

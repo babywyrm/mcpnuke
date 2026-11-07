@@ -13,7 +13,7 @@ from __future__ import annotations
 from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.tool_probes import _call_tool, _response_text
-from mcpnuke.core.models import TargetResult
+from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 
@@ -29,7 +29,7 @@ _add = lane_tagged(lane=3, transport="A")
 def check_teleport_lab_bot_theft(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Chain: read tbot secret -> replay stolen identity -> check session binding.
 
@@ -122,7 +122,7 @@ def check_teleport_lab_bot_theft(
 def check_teleport_lab_role_escalation(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Chain: get current roles -> request escalation -> attempt privileged op.
 
@@ -213,7 +213,7 @@ def check_teleport_lab_role_escalation(
 def check_teleport_lab_cert_replay(
     session: MCPSessionProtocol,
     result: TargetResult,
-    probe_opts: dict | None = None,
+    probe_opts: ProbeOpts | None = None,
 ) -> None:
     """Chain: get expired cert -> replay it -> check replay detection.
 

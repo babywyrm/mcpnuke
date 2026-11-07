@@ -206,10 +206,10 @@ def _main_inner() -> None:
 
     _k8s_setup(args, urls, console)
 
-    if not urls and inference_only:
+    if not urls and inference_only and (inference_host := probe_opts.get("inference_host")):
         from mcpnuke.checks.inference_backend import check_inference_backend, check_model_integrity
         t0 = time.time()
-        result = TargetResult(url=probe_opts["inference_host"])
+        result = TargetResult(url=inference_host)
         result.transport = "inference-only"
         check_inference_backend(result, probe_opts=probe_opts)
         if probe_opts.get("inference_baseline") or probe_opts.get("save_inference_baseline"):
