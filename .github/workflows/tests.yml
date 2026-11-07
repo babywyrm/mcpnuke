@@ -47,8 +47,10 @@ jobs:
       - name: Check uv.lock is in sync with pyproject.toml
         run: uv lock --check
 
+      # server: under mypy strict, an unresolved pydantic BaseModel is Any
+      # and subclassing it is an error.
       - name: Install project
-        run: uv sync --frozen --extra dev
+        run: uv sync --frozen --extra dev --extra server
 
       # Strict: the tree is clean, so any new finding is a regression.
       - name: Ruff

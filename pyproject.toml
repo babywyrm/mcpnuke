@@ -123,9 +123,9 @@ strict = true
 # adds no checking; replacing them with real shapes is the open work.
 disallow_any_generics = false
 
-# Optional extras (ai, server). These are imported lazily inside
-# functions and are absent from the base install and from CI, so mypy cannot
-# resolve them. pyyaml is a core dependency and gets real stubs instead, via
+# Optional extras (ai, server). These are absent from the base install, so
+# mypy cannot always resolve them. CI installs the server extra so strict mode
+# checks the API against real pydantic and fastapi types. pyyaml is a core dependency and gets real stubs instead, via
 # types-PyYAML in the dev extra.
 [[tool.mypy.overrides]]
 module = [
