@@ -34,6 +34,7 @@ from mcpnuke.cli_steps import (
 )
 from mcpnuke.core.auth import parse_header_kv_pairs
 from mcpnuke.core.models import TargetResult
+from mcpnuke.core.terminal import guard_console
 from mcpnuke.core.trust import parse_trust_sets
 from mcpnuke.diff import (
     load_baseline,
@@ -58,7 +59,7 @@ def _main_inner() -> None:
         return
 
     args = parse_args()
-    console = Console(no_color=args.no_color, force_terminal=not args.no_color)
+    console = guard_console(Console(no_color=args.no_color, force_terminal=not args.no_color))
     from mcpnuke.core.llm import configure_bedrock
     configure_bedrock(enabled=False)
     try:

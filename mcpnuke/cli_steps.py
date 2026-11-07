@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
-from rich.markup import escape
 from rich.panel import Panel
 
 from mcpnuke import __version__
@@ -23,6 +22,7 @@ from mcpnuke.core.auth import (
     summarize_jwt_claims,
 )
 from mcpnuke.core.models import Finding, ProbeOpts, TargetResult
+from mcpnuke.core.terminal import escape
 from mcpnuke.diff import (
     apply_diff_findings,
     diff_against_baseline,

@@ -16,9 +16,9 @@ from collections.abc import Iterable
 from typing import Any
 
 from rich.console import Console
-from rich.markup import escape
 
 from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.core.terminal import escape
 
 # Canonical lane vocabulary — must match camazotz /api/lanes schema v1
 # and agentic-sec/docs/identity-flows.md.

@@ -7,11 +7,10 @@ import re
 import time
 from typing import Any
 
-from rich.markup import escape
-
 from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _response_text
 from mcpnuke.core.models import ProbeOpts, TargetResult
+from mcpnuke.core.terminal import escape
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import RESPONSE_INJECTION_PATTERNS
 

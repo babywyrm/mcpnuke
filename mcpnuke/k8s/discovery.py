@@ -20,7 +20,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from rich.console import Console
-from rich.markup import escape
+
+from mcpnuke.core.terminal import escape
 
 MCP_ANNOTATION_ENABLED = "mcp.io/enabled"
 MCP_ANNOTATION_TRANSPORT = "mcp.io/transport"

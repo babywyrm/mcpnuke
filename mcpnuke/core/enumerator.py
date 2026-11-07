@@ -5,12 +5,11 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from rich.markup import escape
-
 from mcpnuke.core.cache_hints import cache_fields_from_result
 from mcpnuke.core.constants import MCP_INIT_PARAMS
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.protocol import AUTO, LEGACY, STATELESS
+from mcpnuke.core.terminal import escape
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 DEFAULT_MAX_PAGES: int = 20

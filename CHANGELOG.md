@@ -13,6 +13,14 @@ All notable changes to this submodule are documented here.
   network. Requests that leave the target's host now refuse link-local
   addresses and `metadata.google.internal`. A hostname that resolves to
   a link-local address still passes.
+- **A target cannot drive the operator's terminal.** Rich prints escape
+  sequences in server text as-is, so a tool name, description, or
+  response could erase a CRITICAL row, clear the screen, retitle the
+  window, or plant a disguised hyperlink (CWE-150). Every console
+  mcpnuke creates now shows control characters as `\xNN`, and every
+  `escape()` call does the same. The bytes stay visible as evidence;
+  JSON and SARIF output are unchanged. Markup in a finding title no
+  longer crashes the grouped report table.
 
 ### Changed
 
@@ -21,8 +29,9 @@ All notable changes to this submodule are documented here.
   `disallow_any_generics` took more: bare `list` annotations now name
   their element (`Finding`, `TargetResult`, `LLMFinding`,
   `ProposedChain`), and bare `dict` JSON payloads are `dict[str, Any]`.
-  New code must spell its type arguments. CI now installs the `server` extra for the type check, so the
-  API is checked against real pydantic and fastapi types.
+  New code must spell its type arguments. CI now installs the `server`
+  extra for the type check, so the API is checked against real pydantic
+  and fastapi types.
 - **Probe options are a `ProbeOpts` TypedDict.** Every check took
   `probe_opts: dict`, so a misspelled key read as `None` and silently
   turned a probe off. mypy now types every value, and

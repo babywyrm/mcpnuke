@@ -6,7 +6,6 @@ from collections.abc import Callable
 from urllib.parse import urlparse
 
 from rich.console import Console
-from rich.markup import escape
 from rich.progress import (
     BarColumn,
     Progress,
@@ -21,10 +20,11 @@ from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.enumerator import enumerate_server
 from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.session import StdioSession, ToolServerSession, detect_transport
+from mcpnuke.core.terminal import escape, guard_console
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.profile import attribute_findings
 
-console = Console()
+console = guard_console(Console())
 
 
 def _quiet(_msg: str) -> None:

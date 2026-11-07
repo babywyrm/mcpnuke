@@ -44,6 +44,9 @@ CI gates all four on every push and PR. mypy runs in
 - Credential regexes live in `mcpnuke/patterns/credentials.py` only, in the
   tier matching their false-positive risk — never in `rules.py`, `probes.py`,
   or a check module.
+- Server-controlled text reaches the terminal through
+  `mcpnuke.core.terminal.escape`, never `rich.markup.escape`. Build a
+  console with `guard_console(Console(...))`.
 
 ## Adding a check
 
@@ -71,6 +74,7 @@ mcpnuke/core/transports/     MCPSessionProtocol and the sse/http/toolserver/stdi
 mcpnuke/core/chain_replay.py multi-hop attack chain replay (linear, OAST)
 mcpnuke/core/chain_args.py   chain step placeholders and filters
 mcpnuke/core/models.py       Finding, TargetResult dataclasses
+mcpnuke/core/terminal.py     escape() and guard_console() for server-controlled text
 mcpnuke/scanner.py           parallel scan orchestration
 mcpnuke/__main__.py          CLI entry point
 mcpnuke/cli_steps.py         scan-path helpers: auth, AI backend, k8s, report

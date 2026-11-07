@@ -9,8 +9,6 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-from rich.markup import escape
-
 from mcpnuke.checks.actuator_probe import check_actuator_probe
 from mcpnuke.checks.agentic_loop import check_agentic_loop, check_agentic_loop_behavioral
 from mcpnuke.checks.ai_guardrail_probe import check_ai_guardrail
@@ -138,6 +136,7 @@ from mcpnuke.checks.tool_response_injection import check_tool_response_injection
 from mcpnuke.checks.transport import check_sse_security
 from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 from mcpnuke.core.models import ProbeOpts, TargetResult
+from mcpnuke.core.terminal import escape
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 _log_internal = logging.getLogger("mcpnuke.checks")

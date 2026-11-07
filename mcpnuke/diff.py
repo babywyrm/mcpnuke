@@ -8,8 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from rich.markup import escape
-
+from mcpnuke.core.terminal import escape
 from mcpnuke.reporting.files import write_private
 
 if TYPE_CHECKING:
@@ -219,7 +218,9 @@ def print_diff_report(
     """Print differential scan report to console."""
     if not console:
         from rich.console import Console
-        console = Console()
+
+        from mcpnuke.core.terminal import guard_console
+        console = guard_console(Console())
 
     any_changes = any(d.has_changes() for d in diff_results)
     if not any_changes:

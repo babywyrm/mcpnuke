@@ -2,11 +2,10 @@
 
 import re
 
-from rich.markup import escape
-
 from mcpnuke.checks.base import no_log, time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import ProbeOpts, TargetResult
+from mcpnuke.core.terminal import escape
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import CREDENTIAL_CONTENT_PATTERNS
 

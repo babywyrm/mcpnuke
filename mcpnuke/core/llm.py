@@ -8,8 +8,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from rich.markup import escape
-
 from mcpnuke.core.constants import DEFAULT_BEDROCK_MODEL, DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.llm_prompts import (
     _findings_analysis_prompt,
@@ -21,6 +19,7 @@ from mcpnuke.core.llm_prompts import (
     _tool_analysis_prompt,
 )
 from mcpnuke.core.taxonomy import threat_ids
+from mcpnuke.core.terminal import escape
 
 if TYPE_CHECKING:
     from mcpnuke.core.chain_replay import ProposedChain

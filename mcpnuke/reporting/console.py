@@ -8,16 +8,16 @@ from typing import Any
 
 from rich import box
 from rich.console import Console
-from rich.markup import escape
 from rich.table import Table
 from rich.text import Text
 
 from mcpnuke.core.constants import SEV_COLOR
 from mcpnuke.core.models import Finding, TargetResult
+from mcpnuke.core.terminal import escape, guard_console
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 from mcpnuke.reporting.priority import rank_priority_actions
 
-_default_console = Console()
+_default_console = guard_console(Console())
 
 _TOOL_NAME_RE = re.compile(r"'([^']+)'")
 
@@ -104,8 +104,8 @@ def print_report(
                 row["check"],
                 Text(row["severity"], style=color),
                 str(row["count"]),
-                row["title"],
-                tool_str,
+                Text(row["title"]),
+                Text(tool_str),
             )
         console.print(table)
     else:

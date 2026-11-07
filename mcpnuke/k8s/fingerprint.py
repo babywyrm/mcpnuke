@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from rich.console import Console
-from rich.markup import escape
 
 from mcpnuke.core.models import Finding
+from mcpnuke.core.terminal import escape
 
 _ACTUATOR_PATHS = [
     "/actuator", "/actuator/env", "/actuator/health", "/actuator/beans",

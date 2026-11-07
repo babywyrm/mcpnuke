@@ -36,7 +36,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import httpx
-from rich.markup import escape
 
 from mcpnuke.core.chain_replay import ProposedChain
 from mcpnuke.core.llm import LLMFinding, _parse_findings
@@ -52,6 +51,7 @@ from mcpnuke.core.llm_prompts import (
     _tool_analysis_prompt,
 )
 from mcpnuke.core.models import ProbeOpts, TargetResult
+from mcpnuke.core.terminal import escape
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 if TYPE_CHECKING:

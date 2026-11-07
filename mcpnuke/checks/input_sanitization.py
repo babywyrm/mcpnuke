@@ -7,8 +7,6 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from rich.markup import escape
-
 from mcpnuke.checks.base import (
     ERROR_REFLECTION_SUFFIX,
     grade_reflection,
@@ -19,6 +17,7 @@ from mcpnuke.checks.base import (
 )
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import ProbeOpts, TargetResult
+from mcpnuke.core.terminal import escape
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.patterns.probes import (
     CANARY,

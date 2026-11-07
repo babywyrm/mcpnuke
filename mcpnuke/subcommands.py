@@ -63,7 +63,7 @@ def _run_doctor(console: Console) -> None:
         warn_count += 1
         console.print(f"  [yellow]✗[/yellow] {msg}")
         if hint:
-            from rich.markup import escape
+            from mcpnuke.core.terminal import escape
             console.print(f"    [dim]{escape(hint)}[/dim]")
 
     def _pkg_version(name: str) -> str:

@@ -14,7 +14,6 @@ from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 from rich.console import Console
-from rich.markup import escape
 
 from mcpnuke.checks.base import time_check
 from mcpnuke.checks.chaining import _TOOL_NAME_RE
@@ -35,6 +34,7 @@ from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.llm import LLMFinding
 from mcpnuke.core.models import Finding, ProbeOpts, TargetResult
 from mcpnuke.core.oast import CanaryListener
+from mcpnuke.core.terminal import escape
 from mcpnuke.core.transports.base import MCPSessionProtocol
 
 # Enough of each field to carry the substance without letting one verbose
