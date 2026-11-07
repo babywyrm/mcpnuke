@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.5] - 2026-11-07
+
 ### Security
 
 - **A target cannot steer the scanner at a cloud metadata service.** The
