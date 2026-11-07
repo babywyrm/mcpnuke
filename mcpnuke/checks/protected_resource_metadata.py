@@ -33,9 +33,9 @@ _WWW_META_RE = re.compile(
 GetJson = Callable[[str], dict[str, Any] | None]
 
 
-def _httpx_get_json(url: str) -> dict[str, Any] | None:
+def _httpx_get_json(url: str, verify: bool = False) -> dict[str, Any] | None:
     try:
-        with httpx.Client(timeout=5.0, follow_redirects=False) as client:
+        with httpx.Client(verify=verify, timeout=5.0, follow_redirects=False) as client:
             resp = client.get(url)
         if resp.status_code != 200:
             return None
@@ -125,7 +125,10 @@ def check_protected_resource_metadata(
         if urlparse(post_url).scheme not in {"http", "https"}:
             return
         opts = probe_opts or {}
-        get_json: GetJson = opts.get("get_json") or _httpx_get_json
+        verify = bool(opts.get("tls_verify", False))
+        get_json: GetJson = opts.get("get_json") or (
+            lambda url: _httpx_get_json(url, verify=verify)
+        )
 
         candidates: list[str] = []
         post_raw = getattr(session, "post_raw", None)

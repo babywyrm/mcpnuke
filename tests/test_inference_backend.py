@@ -687,3 +687,50 @@ class TestGuardrailVarianceRealMetaShape:
             check_inference_guardrail_variance(result, [meta])
 
         assert probe.call_count == inference_backend._GUARDRAIL_MAX_MODELS
+
+
+class TestGuardrailTlsVerify:
+    def _verify_values(self, **kwargs: object) -> list[object]:
+        seen: list[object] = []
+
+        def _client(**client_kwargs: object) -> MagicMock:
+            seen.append(client_kwargs.get("verify", True))
+            client = MagicMock()
+            client.__enter__.return_value = client
+            client.send.return_value = _mock_response(500)
+            return client
+
+        metas = [_meta("https://gpu:11434", InferenceBackend.OLLAMA, "tinyllama", "phi3")]
+        with patch("mcpnuke.checks.inference_backend.httpx.Client", side_effect=_client):
+            check_inference_guardrail_variance(
+                TargetResult(url="http://test/mcp"), metas, **kwargs
+            )
+        return seen
+
+    def test_probe_skips_tls_verification_by_default(self):
+        seen = self._verify_values()
+        assert seen and all(v is False for v in seen)
+
+    def test_probe_verifies_tls_when_asked(self):
+        seen = self._verify_values(verify=True)
+        assert seen and all(v is True for v in seen)
+
+
+    def test_scan_passes_tls_verify_to_the_probe(self):
+        from mcpnuke.checks import run_all_checks
+
+        result = TargetResult(url="http://t/mcp")
+        result.tools = [{"name": "tool0", "description": "does a thing", "inputSchema": {}}]
+        with patch(
+            "mcpnuke.checks.inference_backend.fingerprint_backend",
+            return_value=(InferenceBackend.UNKNOWN, {}),
+        ), patch("mcpnuke.checks.check_inference_guardrail_variance") as probe:
+            run_all_checks(
+                None, result, [result],
+                probe_opts={
+                    "no_invoke": True,
+                    "inference_host": "http://gpu:11434",
+                    "tls_verify": True,
+                },
+            )
+        assert probe.call_args.kwargs["verify"] is True

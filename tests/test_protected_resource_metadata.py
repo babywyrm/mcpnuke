@@ -232,3 +232,39 @@ def test_timing_recorded() -> None:
     r = _result()
     check_protected_resource_metadata(_HTTP(), r, _opts({}))
     assert "protected_resource_metadata" in r.timings
+
+
+class _RecordingClient:
+    seen: list[object] = []
+
+    def __init__(self, **kwargs: object) -> None:
+        _RecordingClient.seen.append(kwargs.get("verify", True))
+
+    def __enter__(self) -> _RecordingClient:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def get(self, url: str) -> SimpleNamespace:
+        return SimpleNamespace(status_code=404)
+
+
+def _fetch_verify_values(monkeypatch, probe_opts: dict[str, Any]) -> list[object]:
+    from mcpnuke.checks import protected_resource_metadata as prm
+
+    _RecordingClient.seen = []
+    monkeypatch.setattr(prm.httpx, "Client", _RecordingClient)
+    check_protected_resource_metadata(_HTTP(), _result(), probe_opts=probe_opts)
+    return _RecordingClient.seen
+
+
+def test_default_fetch_skips_tls_verification_like_the_scan(monkeypatch) -> None:
+    """A self-signed lab target must still be fetched, or the check goes silent."""
+    seen = _fetch_verify_values(monkeypatch, {})
+    assert seen and all(v is False for v in seen)
+
+
+def test_default_fetch_verifies_tls_with_tls_verify(monkeypatch) -> None:
+    seen = _fetch_verify_values(monkeypatch, {"tls_verify": True})
+    assert seen and all(v is True for v in seen)

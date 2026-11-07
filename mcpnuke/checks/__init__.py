@@ -678,6 +678,7 @@ def run_all_checks(
         _run(
             "inference_guardrail_variance", check_inference_guardrail_variance,
             result, inference_metas, _log=_log if verbose else None,
+            verify=bool(opts.get("tls_verify", False)),
         )
         if opts.get("inference_baseline") or opts.get("save_inference_baseline"):
             _run("model_integrity", check_model_integrity, result, probe_opts=opts)

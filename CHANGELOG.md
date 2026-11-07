@@ -4,6 +4,15 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`protected_resource_metadata` and the inference guardrail probe
+  ignored `--tls-verify`.** Both always verified certificates, unlike
+  every other request the scan makes. Against a self-signed HTTPS target
+  the metadata fetch failed, and the check went quiet instead of
+  reporting a missing authorization server or an issuer mismatch. Both
+  now follow `--tls-verify` like the rest of the scan.
+
 ### Removed
 
 - **The unused chain DAG, conditional steps, and lane templates.**

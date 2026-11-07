@@ -623,7 +623,9 @@ def _backend_base(host: str) -> str:
     return base.rstrip("/")
 
 
-def _score_guardrails(inference_metas: list[dict], _log: Callable[[str], None]) -> dict[str, str]:
+def _score_guardrails(
+    inference_metas: list[dict], _log: Callable[[str], None], verify: bool = False
+) -> dict[str, str]:
     """Probe each model on each supported backend, returning host/model → tier."""
     model_scores: dict[str, str] = {}
 
@@ -647,7 +649,7 @@ def _score_guardrails(inference_metas: list[dict], _log: Callable[[str], None]) 
 
         for model_name in names[:_GUARDRAIL_MAX_MODELS]:
             try:
-                resp = _guardrail_probe_model(host, backend, model_name)
+                resp = _guardrail_probe_model(host, backend, model_name, verify=verify)
             except Exception:
                 continue
             if not resp:
@@ -663,6 +665,7 @@ def check_inference_guardrail_variance(
     result: TargetResult,
     inference_metas: list[dict],
     _log: Callable[[str], None] | None = None,
+    verify: bool = False,
 ) -> None:
     """Test guardrail resistance across available models on the inference backend.
 
@@ -678,7 +681,7 @@ def check_inference_guardrail_variance(
             return None
 
     with time_check("inference_guardrail_variance", result):
-        model_scores = _score_guardrails(inference_metas, _log)
+        model_scores = _score_guardrails(inference_metas, _log, verify=verify)
         if not model_scores:
             return
 
@@ -713,7 +716,7 @@ def check_inference_guardrail_variance(
 
 
 def _guardrail_probe_model(
-    host: str, backend: InferenceBackend, model: str,
+    host: str, backend: InferenceBackend, model: str, verify: bool = False,
 ) -> str | None:
     """Send a single guardrail probe to a specific model and return the response."""
     if backend == InferenceBackend.OLLAMA:
@@ -737,7 +740,7 @@ def _guardrail_probe_model(
     try:
         req = httpx.Request("POST", url, content=payload,
                            headers={"Content-Type": "application/json"})
-        with httpx.Client(timeout=_GEN_TIMEOUT) as client:
+        with httpx.Client(verify=verify, timeout=_GEN_TIMEOUT) as client:
             resp = client.send(req)
         if resp.status_code != 200:
             return None
