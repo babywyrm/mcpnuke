@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.4] - 2026-11-06
+
 ### Security
 
 - **An auto-detected token endpoint could receive the client secret on
