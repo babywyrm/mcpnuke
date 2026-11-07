@@ -44,7 +44,6 @@ class MCPSession:
         # negotiated mode is readable from any transport.
         self.protocol_mode = LEGACY
         self._auth_token = auth_token
-        self._verify_tls = verify_tls
         self._extra_headers = extra_headers or {}
         self._req_id = 0
         self._session_id: str | None = None

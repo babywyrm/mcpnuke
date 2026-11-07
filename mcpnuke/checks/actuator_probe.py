@@ -113,15 +113,13 @@ def check_actuator_probe(
     without credentials.
     """
     with time_check("actuator_probe", result):
-        headers: dict[str, str] = {}
-
         client = httpx.Client(verify=verify_tls, timeout=5, follow_redirects=True)
         reachable_actuator_paths: set[str] = set()
         try:
             for path, default_sev, description in DEBUG_ENDPOINTS:
                 url = base_url.rstrip("/") + path
                 try:
-                    r = client.get(url, headers=headers)
+                    r = client.get(url)
                     if r.status_code != 200:
                         continue
                     text = r.text[:5000]
@@ -149,14 +147,13 @@ def check_actuator_probe(
         # confirms at least one Spring actuator is exposed
         if any(p.startswith("/actuator/") for p in reachable_actuator_paths):
             _check_actuator_exploitation(
-                base_url, result, headers, reachable_actuator_paths, verify_tls=verify_tls
+                base_url, result, reachable_actuator_paths, verify_tls=verify_tls
             )
 
 
 def _check_actuator_exploitation(
     base_url: str,
     result: TargetResult,
-    headers: dict,
     reachable_paths: set[str],
     verify_tls: bool = False,
 ) -> None:
@@ -173,7 +170,7 @@ def _check_actuator_exploitation(
         if _ACTUATOR_HEAPDUMP_PATH in reachable_paths:
             url = base_url.rstrip("/") + _ACTUATOR_HEAPDUMP_PATH
             try:
-                r = client.get(url, headers=headers, timeout=10)
+                r = client.get(url, timeout=10)
                 if r.status_code == 200 and len(r.content) > 1024:
                     size_kb = len(r.content) // 1024
                     result.add(
@@ -200,12 +197,7 @@ def _check_actuator_exploitation(
 
             url = base_url.rstrip("/") + path
             try:
-                r = client.request(
-                    method,
-                    url,
-                    json=payload,
-                    headers={**headers, "Content-Type": "application/json"},
-                )
+                r = client.request(method, url, json=payload)
                 # 200, 204, or 400 (accepted but rejected param) all indicate
                 # the endpoint accepted a write request
                 if r.status_code in (200, 204, 400, 405):

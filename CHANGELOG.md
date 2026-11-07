@@ -25,7 +25,9 @@ All notable changes to this submodule are documented here.
   no scan path ever set, so it always probed without credentials. That
   is the intended meaning of "exposed", so the parameter is gone and the
   docstring says so. The four `bedrock*` probe options were never read;
-  Bedrock is configured through `configure_bedrock`.
+  Bedrock is configured through `configure_bedrock`. The actuator's
+  always-empty `headers` argument and the SSE session's unread
+  `_verify_tls` went with them.
 
 ## [6.22.4] - 2026-11-06
 

@@ -39,7 +39,7 @@ def test_actuator_exploitation_verifies_when_asked() -> None:
     flags = _verify_flags(
         "mcpnuke.checks.actuator_probe.httpx.Client",
         lambda: _check_actuator_exploitation(
-            "https://t", r, {}, {"/actuator/heapdump"}, verify_tls=True
+            "https://t", r, {"/actuator/heapdump"}, verify_tls=True
         ),
     )
     assert flags == [True]
