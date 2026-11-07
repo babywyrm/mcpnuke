@@ -592,7 +592,7 @@ def replay_cross_server(
         return
     if backend is None and not (opts.get("claude") or opts.get("ollama_analysis")):
         return
-    log = console.print if console else (lambda _msg: None)
+    log: Callable[[str], None] = console.print if console else (lambda _msg: None)
     if backend is None and opts.get("ollama_analysis"):
         from mcpnuke.core.llm_ollama import OllamaBackend
 
@@ -666,7 +666,7 @@ def run_llm_analysis(
     replay them against the target, reporting only those that reproduce
     """
     opts = probe_opts or {}
-    _log = console.print if console else lambda msg: None
+    _log: Callable[[str], None] = console.print if console else (lambda msg: None)
     no_invoke = opts.get("no_invoke", False)
     backend: LLMBackend = llm_backend or _default_backend()
 

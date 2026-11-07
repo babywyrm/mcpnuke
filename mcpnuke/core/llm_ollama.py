@@ -479,7 +479,7 @@ def run_ensemble_analysis(
     from mcpnuke.checks.llm_analysis import run_llm_analysis
     from mcpnuke.core.models import TargetResult
 
-    _log = console.print if console else lambda msg: None
+    _log: Callable[[str], None] = console.print if console else (lambda msg: None)
     opts = probe_opts or {}
 
     # We need to collect per-model findings without mutating the live result.

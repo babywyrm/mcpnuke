@@ -4,6 +4,14 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **mypy runs in `strict` mode.** Only `disallow_any_generics` is held
+  back, for the bare `dict` and `list` annotations still in the package.
+  The other strict checks already passed, so turning them on locks them
+  in. The one fix needed was three log callbacks typed as an untyped
+  lambda.
+
 ## [6.22.4] - 2026-11-06
 
 ### Security
