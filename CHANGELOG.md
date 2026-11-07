@@ -4,6 +4,16 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **A target cannot steer the scanner at a cloud metadata service.** The
+  scanner follows URLs the target names: redirects, the
+  `WWW-Authenticate` realm, and RFC 9728 `resource_metadata`. Run in a
+  cloud pod, those reached `169.254.169.254` on the scanner's own
+  network. Requests that leave the target's host now refuse link-local
+  addresses and `metadata.google.internal`. A hostname that resolves to
+  a link-local address still passes.
+
 ### Changed
 
 - **mypy runs in `strict` mode.** Only `disallow_any_generics` is held

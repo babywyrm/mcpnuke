@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import ipaddress
 import json
 import time
 from collections.abc import Callable
@@ -31,12 +32,37 @@ _CROSS_HOST_SAFE_HEADERS: frozenset[str] = frozenset(
 )
 
 
+_METADATA_HOSTNAMES: frozenset[str] = frozenset({"metadata.google.internal"})
+
+
+def is_metadata_host(host: str) -> bool:
+    """True for a cloud instance metadata host: link-local or a known name.
+
+    ponytail: literal addresses and names only. A target-controlled name that
+    resolves to a link-local address still passes; pinning the resolved
+    address needs a custom transport.
+    """
+    if host.lower().rstrip(".") in _METADATA_HOSTNAMES:
+        return True
+    try:
+        ip = ipaddress.ip_address(host.strip("[]"))
+    except ValueError:
+        return False
+    mapped = getattr(ip, "ipv4_mapped", None)
+    return (mapped or ip).is_link_local
+
+
 def _same_host_hooks(home_url: str) -> dict[str, list[Callable[[httpx.Request], None]]]:
-    """httpx event hooks that strip credentials from requests that leave *home_url*'s host."""
+    """httpx event hooks for requests that leave *home_url*'s host.
+
+    They strip credentials, and refuse a cloud metadata host outright.
+    """
     home = httpx.URL(home_url).host
 
     def _strip(request: httpx.Request) -> None:
         if request.url.host != home:
+            if is_metadata_host(request.url.host):
+                raise httpx.RequestError(f"refusing metadata host {request.url.host}", request=request)
             for name in [n for n in request.headers if n.lower() not in _CROSS_HOST_SAFE_HEADERS]:
                 del request.headers[name]
 

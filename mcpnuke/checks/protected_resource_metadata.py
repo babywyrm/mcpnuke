@@ -23,6 +23,7 @@ from mcpnuke.checks._lane_helpers import lane_tagged
 from mcpnuke.checks.base import time_check
 from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.transports.base import MCPSessionProtocol
+from mcpnuke.core.transports.http import is_metadata_host
 
 _CHECK: str = "protected_resource_metadata"
 _add = lane_tagged(lane=5, transport="A")
@@ -34,6 +35,8 @@ GetJson = Callable[[str], dict[str, Any] | None]
 
 
 def _httpx_get_json(url: str, verify: bool = False) -> dict[str, Any] | None:
+    if is_metadata_host(urlparse(url).hostname or ""):
+        return None
     try:
         with httpx.Client(verify=verify, timeout=5.0, follow_redirects=False) as client:
             resp = client.get(url)
