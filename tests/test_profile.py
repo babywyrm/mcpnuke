@@ -53,47 +53,6 @@ class TestLoadProfile:
             load_profile(path)
 
 
-class TestProfileLookups:
-    def _make_profile(self, tmp_path: Path) -> object:
-        from mcpnuke.profile import load_profile
-        data = {
-            "name": "camazotz",
-            "version": "1",
-            "tools": [
-                {"name": "relay_message", "lane": 1, "transport": "A", "threat_id": "MCP-T02"},
-                {"name": "read_secret",   "lane": 2, "transport": "B", "threat_id": "MCP-T06"},
-            ]
-        }
-        p = tmp_path / "profile.json"
-        p.write_text(json.dumps(data))
-        return load_profile(str(p))
-
-    def test_lane_for_known_tool(self, tmp_path):
-        from mcpnuke.profile import lane_for
-        profile = self._make_profile(tmp_path)
-        assert lane_for(profile, "relay_message") == 1
-
-    def test_lane_for_unknown_tool_returns_none(self, tmp_path):
-        from mcpnuke.profile import lane_for
-        profile = self._make_profile(tmp_path)
-        assert lane_for(profile, "nonexistent_tool") is None
-
-    def test_transport_for_known_tool(self, tmp_path):
-        from mcpnuke.profile import transport_for
-        profile = self._make_profile(tmp_path)
-        assert transport_for(profile, "read_secret") == "B"
-
-    def test_threat_id_for_known_tool(self, tmp_path):
-        from mcpnuke.profile import threat_id_for
-        profile = self._make_profile(tmp_path)
-        assert threat_id_for(profile, "read_secret") == "MCP-T06"
-
-    def test_threat_id_for_unknown_returns_empty(self, tmp_path):
-        from mcpnuke.profile import threat_id_for
-        profile = self._make_profile(tmp_path)
-        assert threat_id_for(profile, "nope") == ""
-
-
 class TestAttributeFindings:
     def _profile(self):
         from mcpnuke.profile import ProfileData

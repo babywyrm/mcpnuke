@@ -237,14 +237,6 @@ class CanaryListener:
             time.sleep(_AWAIT_POLL_SECONDS)
         return self.hits(token)
 
-    def any_hit(self) -> bool:
-        with self._lock:
-            return any(c.token for c in self._callbacks)
-
-    def all_callbacks(self) -> list[Callback]:
-        with self._lock:
-            return list(self._callbacks)
-
 
 def _routable_host() -> str:
     """A local address a target on the same network could plausibly reach.

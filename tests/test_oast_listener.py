@@ -168,14 +168,6 @@ class TestLifecycle:
     def test_hits_for_an_unknown_token_are_empty_not_an_error(self, listener):
         assert listener.hits("never-issued") == []
 
-    def test_any_hit_reports_whether_anything_called_back(self, listener):
-        token = listener.issue()
-        assert not listener.any_hit()
-
-        _get(listener.url_for(token))
-
-        assert listener.any_hit()
-
     def test_await_hits_waits_for_a_delayed_callback(self, listener):
         import threading
         import time

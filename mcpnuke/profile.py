@@ -77,39 +77,6 @@ def _get_tool(profile: ProfileData, tool_name: str) -> dict | None:
     return profile._index.get(tool_name)
 
 
-def lane_for(profile: ProfileData, tool_name: str) -> int | None:
-    """Return the lane number for a tool, or None if not in profile."""
-    t = _get_tool(profile, tool_name)
-    if t is None:
-        return None
-    val = t.get("lane")
-    return int(val) if val is not None else None
-
-
-def transport_for(profile: ProfileData, tool_name: str) -> str | None:
-    """Return the transport surface (A|B|C|D) for a tool, or None."""
-    t = _get_tool(profile, tool_name)
-    if t is None:
-        return None
-    return t.get("transport") or None
-
-
-def threat_id_for(profile: ProfileData, tool_name: str) -> str:
-    """Return the OWASP MCP threat ID for a tool, or empty string."""
-    t = _get_tool(profile, tool_name)
-    if t is None:
-        return ""
-    return t.get("threat_id", "") or ""
-
-
-def notes_for(profile: ProfileData, tool_name: str) -> str:
-    """Return freeform notes for a tool, or empty string."""
-    t = _get_tool(profile, tool_name)
-    if t is None:
-        return ""
-    return t.get("notes", "") or ""
-
-
 def attribute_findings(profile: ProfileData, results: list[TargetResult]) -> None:
     """Fill threat ID, lane, and transport from the profile where a finding has none."""
     for r in results:
@@ -124,22 +91,3 @@ def attribute_findings(profile: ProfileData, results: list[TargetResult]) -> Non
                 f.lane = int(tool["lane"])
             if f.transport is None:
                 f.transport = tool.get("transport") or None
-
-
-def enrich_tool(profile: ProfileData, tool: dict) -> dict:
-    """Return a shallow copy of tool dict enriched with profile metadata."""
-    name = tool.get("name", "")
-    enriched = dict(tool)
-    lane = lane_for(profile, name)
-    tr = transport_for(profile, name)
-    tid = threat_id_for(profile, name)
-    n = notes_for(profile, name)
-    if lane is not None:
-        enriched["_profile_lane"] = lane
-    if tr is not None:
-        enriched["_profile_transport"] = tr
-    if tid:
-        enriched["_profile_threat_id"] = tid
-    if n:
-        enriched["_profile_notes"] = n
-    return enriched

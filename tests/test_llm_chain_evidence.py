@@ -149,15 +149,18 @@ class TestTheBudgetNeverEmitsBrokenJson:
             for i in range(n)
         ]
 
+    def _tools_json(self, tools: list[dict], budget: int) -> str:
+        return llm_prompts._chain_context(tools, [], tools_budget=budget)[0]
+
     def test_an_over_budget_payload_is_still_valid_json(self):
-        text = llm_prompts._budgeted_json([llm_prompts._tool_digest(t) for t in self._tools(138)], 3000)
+        text = self._tools_json(self._tools(138), 3000)
 
         json.loads(text)
 
     def test_it_drops_whole_items_rather_than_cutting_one(self):
         items = [llm_prompts._tool_digest(t) for t in self._tools(138)]
 
-        decoded = json.loads(llm_prompts._budgeted_json(items, 3000))
+        decoded = json.loads(self._tools_json(self._tools(138), 3000))
 
         assert 0 < len(decoded) < 138
         assert all(d in items for d in decoded)
@@ -165,12 +168,10 @@ class TestTheBudgetNeverEmitsBrokenJson:
     def test_everything_is_kept_when_it_fits(self):
         items = [llm_prompts._tool_digest(t) for t in self._tools(3)]
 
-        assert json.loads(llm_prompts._budgeted_json(items, 100_000)) == items
+        assert json.loads(self._tools_json(self._tools(3), 100_000)) == items
 
     def test_the_budget_is_respected(self):
-        items = [llm_prompts._tool_digest(t) for t in self._tools(138)]
-
-        assert len(llm_prompts._budgeted_json(items, 3000)) <= 3000
+        assert len(self._tools_json(self._tools(138), 3000)) <= 3000
 
 
 class TestEveryVulnerabilityClassIsRepresented:

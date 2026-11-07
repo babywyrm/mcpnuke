@@ -156,11 +156,6 @@ def _fit(items: list[dict], limit: int) -> list[dict]:
     return items[:low]
 
 
-def _budgeted_json(items: list[dict], limit: int) -> str:
-    """Serialize whole items up to a budget, never cutting one in half."""
-    return json.dumps(_fit(items, limit), indent=2, default=str)
-
-
 def _diverse_findings(findings: list[dict]) -> list[dict]:
     """Order findings so every check is represented before any check repeats.
 

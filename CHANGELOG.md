@@ -13,6 +13,11 @@ All notable changes to this submodule are documented here.
   `--chain-replay` only ever ran the linear `replay_chain`, so none of
   it could execute. About 390 lines and their tests are gone.
   `--chain-replay` behavior is unchanged.
+- **Helpers with no production caller.** `profile.enrich_tool`,
+  `notes_for`, `lane_for`, `transport_for`, `threat_id_for`,
+  `CanaryListener.any_hit` and `all_callbacks`, and
+  `llm_prompts._budgeted_json`. The prompt-budget tests now exercise
+  `_chain_context`, the path the scan takes.
 
 ## [6.22.3] - 2026-11-05
 
