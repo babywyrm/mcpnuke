@@ -4,6 +4,13 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Claude output cut off by the context window is reported.**
+  anthropic 2.x stops with `model_context_window_exceeded` when the
+  prompt leaves no room for the answer. Only `max_tokens` was reported
+  as truncation, so the partial parse looked complete.
+
 ### Changed
 
 - **Dependencies.** The `ai` extra now resolves `anthropic` 2.5.0; the

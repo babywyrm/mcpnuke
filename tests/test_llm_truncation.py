@@ -167,3 +167,10 @@ class TestTruncationIsReported:
         llm._call_claude("s", "u", model="m", max_tokens=10, log=lines.append)
 
         assert not any("truncat" in line.lower() for line in lines)
+
+    def test_context_window_exhaustion_is_reported(self) -> None:
+        """anthropic 2.x stops with this when prompt plus output overflow the window."""
+        lines: list[str] = []
+        llm._warn_if_truncated("model_context_window_exceeded", 10, lines.append)
+
+        assert any("truncat" in line.lower() and "context window" in line for line in lines)

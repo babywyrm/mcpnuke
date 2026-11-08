@@ -146,10 +146,14 @@ def _warn_if_truncated(
     stop_reason: str | None, max_tokens: int, log: Callable[[str], None]
 ) -> None:
     """Say so when the answer was cut, since the parse can only salvage a prefix."""
-    if stop_reason != "max_tokens":
+    if stop_reason == "max_tokens":
+        cause = f"at the {max_tokens}-token ceiling"
+    elif stop_reason == "model_context_window_exceeded":
+        cause = "when the prompt filled the model's context window"
+    else:
         return
     log(
-        f"  [yellow]  │ Response truncated at the {max_tokens}-token ceiling; "
+        f"  [yellow]  │ Response truncated {cause}; "
         "only the findings completed before the cut are parsed.[/yellow]"
     )
 
