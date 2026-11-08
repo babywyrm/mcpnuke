@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.6] - 2026-11-08
+
 ### Security
 
 - **The metadata-host guard resolves names.** A target could name a host
