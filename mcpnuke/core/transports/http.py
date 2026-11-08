@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import ipaddress
 import json
+import socket
 import time
 from collections.abc import Callable
 from typing import Any
@@ -36,21 +37,39 @@ _CROSS_HOST_SAFE_HEADERS: frozenset[str] = frozenset(
 _METADATA_HOSTNAMES: frozenset[str] = frozenset({"metadata.google.internal"})
 
 
+def _resolve(host: str) -> list[str]:
+    """Every address *host* resolves to, or [] if it does not resolve."""
+    try:
+        return [str(info[4][0]) for info in socket.getaddrinfo(host, None)]
+    except (OSError, UnicodeError):
+        return []
+
+
+def _is_link_local(address: str) -> bool | None:
+    """Whether *address* is link-local, or None if it is not an IP literal."""
+    try:
+        ip = ipaddress.ip_address(address.strip("[]"))
+    except ValueError:
+        return None
+    mapped = getattr(ip, "ipv4_mapped", None)
+    return (mapped or ip).is_link_local
+
+
 def is_metadata_host(host: str) -> bool:
     """True for a cloud instance metadata host: link-local or a known name.
 
-    ponytail: literal addresses and names only. A target-controlled name that
-    resolves to a link-local address still passes; pinning the resolved
+    A name counts when any address it resolves to is link-local.
+
+    ponytail: httpx resolves again when it connects, so a name that
+    rebinds between the two lookups still passes. Pinning the checked
     address needs a custom transport.
     """
     if host.lower().rstrip(".") in _METADATA_HOSTNAMES:
         return True
-    try:
-        ip = ipaddress.ip_address(host.strip("[]"))
-    except ValueError:
-        return False
-    mapped = getattr(ip, "ipv4_mapped", None)
-    return (mapped or ip).is_link_local
+    literal = _is_link_local(host)
+    if literal is not None:
+        return literal
+    return any(_is_link_local(addr) for addr in _resolve(host))
 
 
 def _same_host_hooks(home_url: str) -> dict[str, list[Callable[[httpx.Request], None]]]:

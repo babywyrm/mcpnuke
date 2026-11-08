@@ -58,3 +58,11 @@ def result_with_tools():
         return r
 
     return _make
+
+
+@pytest.fixture(autouse=True)
+def _no_metadata_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The metadata-host guard resolves cross-host names; keep tests off real DNS."""
+    from mcpnuke.core.transports import http
+
+    monkeypatch.setattr(http, "_resolve", lambda host: [])

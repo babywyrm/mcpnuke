@@ -4,6 +4,15 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **The metadata-host guard resolves names.** A target could name a host
+  whose DNS record points at `169.254.169.254`, and the 6.22.5 guard
+  only checked literal addresses and known names. A cross-host request
+  is now refused when any address the name resolves to is link-local.
+  A name that rebinds between that lookup and the connection still
+  passes.
+
 ### Fixed
 
 - **Claude output cut off by the context window is reported.**

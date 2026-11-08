@@ -14,6 +14,7 @@ import pytest
 
 from mcpnuke.checks.protected_resource_metadata import _httpx_get_json
 from mcpnuke.core import auth
+from mcpnuke.core.transports import http as http_transport
 from mcpnuke.core.transports.http import HTTPSession, is_metadata_host
 
 _TARGET = "http://mcp.lab:9000"
@@ -78,3 +79,38 @@ def test_redirect_to_metadata_host_is_refused(requested: list[str]) -> None:
 def test_prm_fetch_skips_metadata_host(requested: list[str]) -> None:
     assert _httpx_get_json(_IMDS) is None
     assert requested == []
+
+
+_DNS: dict[str, list[str]] = {
+    "imds.attacker.lab": ["10.0.0.9", "169.254.169.254"],
+    "internal.lab": ["10.0.0.5"],
+}
+
+
+@pytest.fixture
+def dns(monkeypatch) -> None:
+    monkeypatch.setattr(http_transport, "_resolve", lambda host: _DNS.get(host, []))
+
+
+def test_name_resolving_to_metadata_is_metadata(dns: None) -> None:
+    assert is_metadata_host("imds.attacker.lab")
+    assert not is_metadata_host("internal.lab")
+
+
+def test_redirect_to_name_resolving_to_metadata_is_refused(dns: None, requested: list[str]) -> None:
+    session = HTTPSession(_TARGET, f"{_TARGET}/redirect?to=http://imds.attacker.lab/latest")
+    with contextlib.suppress(httpx.HTTPError):
+        session.post_raw({"jsonrpc": "2.0", "id": 1, "method": "ping"})
+    assert requested == ["mcp.lab"]
+
+
+def test_prm_fetch_skips_name_resolving_to_metadata(dns: None, requested: list[str]) -> None:
+    assert _httpx_get_json("http://imds.attacker.lab/.well-known/x") is None
+    assert requested == []
+
+
+def test_redirect_to_private_name_is_still_followed(dns: None, requested: list[str]) -> None:
+    session = HTTPSession(_TARGET, f"{_TARGET}/redirect?to=http://internal.lab/mcp")
+    with contextlib.suppress(httpx.HTTPError):
+        session.post_raw({"jsonrpc": "2.0", "id": 1, "method": "ping"})
+    assert requested == ["mcp.lab", "internal.lab"]
