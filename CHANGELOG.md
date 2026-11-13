@@ -6,7 +6,7 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
-- **Dependencies.** anthropic 2.6.0, boto3 1.43.126, fastapi 0.162.2,
+- **Dependencies.** anthropic 2.7.0, boto3 1.43.127, fastapi 0.162.2,
   pydantic 2.14.3, and ruff 0.17.4. The anthropic client calls mcpnuke
   makes are unchanged.
 
