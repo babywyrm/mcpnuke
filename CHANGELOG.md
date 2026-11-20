@@ -15,7 +15,7 @@ All notable changes to this submodule are documented here.
 
 ### Changed
 
-- **Dependencies.** anthropic 2.8.0, boto3 1.44.3, fastapi 0.163.1,
+- **Dependencies.** anthropic 2.9.0, boto3 1.44.4, fastapi 0.163.1,
   pydantic 2.14.3, ruff 0.17.5, and types-PyYAML. The anthropic client
   calls and the Bedrock `InvokeModel` call mcpnuke makes are unchanged.
 
