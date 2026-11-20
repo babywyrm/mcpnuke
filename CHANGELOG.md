@@ -4,11 +4,20 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **opentelemetry-api 1.45.2 (CVE-2026-126360).** A crafted `traceparent`
+  caused quadratic regex backtracking in the W3C trace-context
+  propagator. It arrives transitively through anthropic and fastapi;
+  mcpnuke never extracts trace context, so the locked environment was
+  exposed in name only. Dependabot does not bump transitive packages,
+  so CI's pip-audit caught it.
+
 ### Changed
 
-- **Dependencies.** anthropic 2.7.0, boto3 1.43.127, fastapi 0.162.2,
-  pydantic 2.14.3, and ruff 0.17.4. The anthropic client calls mcpnuke
-  makes are unchanged.
+- **Dependencies.** anthropic 2.8.0, boto3 1.44.3, fastapi 0.163.1,
+  pydantic 2.14.3, ruff 0.17.5, and types-PyYAML. The anthropic client
+  calls and the Bedrock `InvokeModel` call mcpnuke makes are unchanged.
 
 ## [6.22.6] - 2026-11-08
 
