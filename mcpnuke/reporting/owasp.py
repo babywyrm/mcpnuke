@@ -123,6 +123,7 @@ CHECK_TO_OWASP: dict[str, str] = {
     # unauthenticated discovery endpoint.
     "teleport_proxy_discovery": "MCP07",
     "shadow_mcp_server": "MCP09",
+    "tool_poisoning": "MCP03",
 }
 
 

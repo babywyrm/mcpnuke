@@ -13,6 +13,12 @@ All notable changes to this submodule are documented here.
   exposed in name only. Dependabot does not bump transitive packages,
   so CI's pip-audit caught it.
 
+### Fixed
+
+- **Tool poisoning counts toward OWASP MCP03.** `tool_poisoning`
+  findings carry no taxonomy ID and had no check-name fallback, so
+  `--owasp` reported them as unmapped instead of under Tool Poisoning.
+
 ### Changed
 
 - **Dependencies.** anthropic 2.9.0, boto3 1.44.4, fastapi 0.163.1,

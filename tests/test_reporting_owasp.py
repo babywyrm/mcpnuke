@@ -95,6 +95,7 @@ class TestBuildOwasp:
             "resource_poisoning": "MCP06",
             "teleport_proxy_discovery": "MCP07",
             "shadow_mcp_server": "MCP09",
+            "tool_poisoning": "MCP03",
         }
         for check, cat in expected.items():
             report = build_owasp(_results(_finding("", check=check)))
