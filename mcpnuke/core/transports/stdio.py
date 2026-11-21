@@ -125,6 +125,14 @@ class StdioSession:
             except json.JSONDecodeError:
                 pass
 
+    @property
+    def stream_lost(self) -> Exception | None:
+        """Why the server went away before close(); every call then goes unanswered."""
+        code = self._proc.poll()
+        if code is None or self._stop.is_set():
+            return None
+        return ConnectionError(f"server process exited with code {code}")
+
     def wait_ready(self, timeout: float = 10.0) -> bool:
         deadline = time.time() + timeout
         while time.time() < deadline:
@@ -144,6 +152,8 @@ class StdioSession:
     ) -> dict[str, Any] | None:
         wait = timeout or self.timeout
         for attempt in range(retries + 1):
+            if self.stream_lost:
+                return None
             self._req_id += 1
             payload = _jrpc(method, params, self._req_id)
             try:
@@ -168,7 +178,8 @@ class StdioSession:
                         return msg
                     pending.append(msg)
                 except queue.Empty:
-                    pass
+                    if self.stream_lost:
+                        break
             for m in pending:
                 self._q.put(m)
             if attempt < retries:

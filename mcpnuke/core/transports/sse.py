@@ -51,6 +51,9 @@ class MCPSession:
         self._q: queue.Queue[dict[str, Any]] = queue.Queue()
         self._stop = threading.Event()
         self._endpoint_ready = threading.Event()
+        # Why the stream ended before close(). Responses only arrive on it,
+        # so once set every call goes unanswered.
+        self.stream_lost: Exception | None = None
         self._client = httpx.Client(
             verify=verify_tls, timeout=timeout, follow_redirects=True,
             event_hooks=_same_host_hooks(self.sse_url),
@@ -96,8 +99,12 @@ class MCPSession:
                             except json.JSONDecodeError:
                                 pass
                         event_type = "message"
-        except Exception:
-            pass
+        except Exception as exc:
+            if not self._stop.is_set():
+                self.stream_lost = exc
+        else:
+            if not self._stop.is_set():
+                self.stream_lost = ConnectionError("server closed the event stream")
         finally:
             self._endpoint_ready.set()
 
@@ -113,6 +120,8 @@ class MCPSession:
     ) -> dict[str, Any] | None:
         wait = timeout or self.timeout
         for attempt in range(retries + 1):
+            if self.stream_lost:
+                return None
             self._req_id += 1
             payload = _jrpc(method, params, self._req_id)
             headers = _mcp_headers(self._auth_token, self._extra_headers)
@@ -147,7 +156,8 @@ class MCPSession:
                         return msg
                     pending.append(msg)
                 except queue.Empty:
-                    pass
+                    if self.stream_lost:
+                        break
             for m in pending:
                 self._q.put(m)
             if attempt < retries:

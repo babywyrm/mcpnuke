@@ -19,7 +19,7 @@ from mcpnuke.checks import run_all_checks
 from mcpnuke.core.constants import DEFAULT_CLAUDE_MODEL
 from mcpnuke.core.enumerator import enumerate_server
 from mcpnuke.core.models import ProbeOpts, TargetResult
-from mcpnuke.core.session import StdioSession, ToolServerSession, detect_transport
+from mcpnuke.core.session import MCPSession, StdioSession, ToolServerSession, detect_transport
 from mcpnuke.core.terminal import escape, guard_console
 from mcpnuke.core.transports.base import MCPSessionProtocol
 from mcpnuke.profile import attribute_findings
@@ -173,6 +173,8 @@ def scan_stdio_target(
     if profile := opts.get("profile"):
         attribute_findings(profile, [result])
 
+    if session.stream_lost:
+        result.note_check_error("transport", session.stream_lost)
     session.close()
     result.timings["total"] = time.time() - t_start
     console.print(
@@ -297,6 +299,8 @@ def scan_target(
     if profile := opts.get("profile"):
         attribute_findings(profile, [result])
 
+    if isinstance(session, MCPSession) and session.stream_lost:
+        result.note_check_error("transport", session.stream_lost)
     session.close()
     result.timings["total"] = time.time() - t_start
     console.print(

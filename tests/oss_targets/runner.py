@@ -34,6 +34,8 @@ def scan_target(
     old output" can be checked against these snapshots rather than asserted.
     """
     result = scan_stdio_target(target.command, timeout=timeout, probe_opts=probe_opts)
+    # A matching finding set from a scan that stopped early proves nothing.
+    assert not result.check_errors, f"{target.command}: incomplete scan {result.check_errors}"
     return normalize_findings(result.findings)
 
 

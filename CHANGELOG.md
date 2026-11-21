@@ -28,6 +28,13 @@ All notable changes to this submodule are documented here.
   put `123` ahead of an injected block and pass all three. Each block is
   now read on its own. A tool response whose `text` is not a string no
   longer crashes every check that reads it.
+- **A server that drops its stream mid-scan makes the scan incomplete.**
+  SSE and stdio responses arrive on one long-lived stream. When the
+  server closed it, or the stdio process exited, every later call waited
+  out its timeout and returned nothing, and each check after that point
+  recorded a pass. The loss is now listed under `check_errors` as
+  `transport` and the scan exits `2`. Calls on a lost stream return at
+  once instead of waiting.
 
 ## [6.22.7] - 2026-11-21
 
