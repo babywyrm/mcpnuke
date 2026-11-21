@@ -57,9 +57,9 @@ def guard_console(console: Console) -> Console:
     Rich's own colour and cursor codes are generated from styles and
     control segments at write time, so they are untouched.
 
-    ponytail: a live display (Progress, status) renders through its own
-    later hook and is not covered. Keep server text out of task
-    descriptions, or wrap them in escape().
+    Lines printed while a live display (Progress, status) runs are
+    covered. The display's own text is not: keep server text out of task
+    descriptions, or wrap it in escape().
     """
     console.push_render_hook(_ControlFilter())
     return console

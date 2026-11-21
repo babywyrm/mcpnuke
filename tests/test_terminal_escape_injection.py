@@ -13,6 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from rich.console import Console
+from rich.progress import Progress
 
 from mcpnuke.core import terminal
 from mcpnuke.core.models import TargetResult
@@ -51,6 +52,19 @@ def test_report_does_not_emit_injected_sequences() -> None:
         out = _rendered(lambda c, g=group: print_report([result], group_findings=g, console=c))
         assert "pwned" in out
         assert not [seq for seq in _INJECTED if seq in out]
+
+
+def test_print_under_live_progress_is_still_guarded() -> None:
+    def render(console: Console) -> None:
+        with Progress(console=console) as progress:
+            task = progress.add_task("Scanning 1 target(s)", total=1)
+            console.print(_EVIL, markup=False)
+            progress.advance(task)
+
+    out = _rendered(render)
+    assert "pwned" in out
+    # Progress redraws with its own cursor-up and erase-line codes.
+    assert not [seq for seq in ("\x1b]0;", "\x1b]8;;", "\x1b[2J", "\x9b") if seq in out]
 
 
 def test_only_terminal_module_imports_rich_escape() -> None:
