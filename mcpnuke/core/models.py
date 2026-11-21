@@ -88,16 +88,13 @@ class Finding:
         if isinstance(self.evidence, str):
             self.evidence = redact_credentials(self.evidence)
         if self.taxonomy_id and (self.lane is None or self.transport is None):
-            try:
-                from mcpnuke.core.taxonomy import threat_metadata
-                meta = threat_metadata(self.taxonomy_id)
-                if meta:
-                    if self.lane is None and "lane" in meta:
-                        self.lane = meta["lane"]
-                    if self.transport is None and "transport" in meta:
-                        self.transport = meta["transport"]
-            except Exception:
-                pass
+            from mcpnuke.core.taxonomy import threat_metadata
+            meta = threat_metadata(self.taxonomy_id)
+            if meta:
+                if self.lane is None and "lane" in meta:
+                    self.lane = meta["lane"]
+                if self.transport is None and "transport" in meta:
+                    self.transport = meta["transport"]
 
 
 
