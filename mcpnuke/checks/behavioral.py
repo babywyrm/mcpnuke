@@ -308,6 +308,7 @@ def check_state_mutation(session: MCPSessionProtocol, result: TargetResult) -> N
                         result.add(
                             "state_mutation", "HIGH",
                             f"Resource '{uri}' disappeared after tool invocations",
+                            taxonomy_id="MCP-T16",
                         )
 
                     for uri in set(res_before) & after_uris:
@@ -320,6 +321,7 @@ def check_state_mutation(session: MCPSessionProtocol, result: TargetResult) -> N
                                         "state_mutation", "MEDIUM",
                                         f"Resource '{uri}' content changed after tool invocations",
                                         "Tool calls silently mutated server-side state",
+                                        taxonomy_id="MCP-T16",
                                     )
                         except Exception:
                             pass
@@ -355,6 +357,7 @@ def check_state_mutation(session: MCPSessionProtocol, result: TargetResult) -> N
                         f"Cross-tool state leak: '{w_name}' → '{r_name}'",
                         f"Data written via '{w_name}' is readable through '{r_name}'",
                         evidence=f"Canary '{_STATE_CANARY}' injected via write tool appeared in read tool response",
+                        taxonomy_id="MCP-T05",
                     )
 
 
@@ -407,6 +410,7 @@ def check_notification_abuse(session: MCPSessionProtocol, result: TargetResult) 
                     "Server sent unsolicited sampling/createMessage",
                     "Attempts to execute prompts on the client side",
                     evidence=json.dumps(msg)[:500],
+                    taxonomy_id="MCP-T17",
                 )
             elif method == "roots/list":
                 result.add(
@@ -414,6 +418,7 @@ def check_notification_abuse(session: MCPSessionProtocol, result: TargetResult) 
                     "Server sent unsolicited roots/list request",
                     "Probing client filesystem roots",
                     evidence=json.dumps(msg)[:300],
+                    taxonomy_id="MCP-T17",
                 )
             elif method.startswith("notifications/"):
                 pass  # normal notifications are fine
@@ -422,6 +427,7 @@ def check_notification_abuse(session: MCPSessionProtocol, result: TargetResult) 
                     "notification_abuse", "MEDIUM",
                     f"Server sent unsolicited request: {method}",
                     evidence=json.dumps(msg)[:300],
+                    taxonomy_id="MCP-T17",
                 )
 
 

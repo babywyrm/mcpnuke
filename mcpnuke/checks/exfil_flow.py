@@ -163,6 +163,7 @@ def check_exfil_flow(
                         "HIGH",
                         f"Data exfiltration path: {len(real_sources)} source(s) → '{sink_name}'",
                         f"Sources: {source_names}. Data read by source tools could be routed through sink.",
+                        taxonomy_id="MCP-T12",
                     )
 
         # Live verification: attempt source→sink canary transfer
@@ -211,6 +212,7 @@ def check_exfil_flow(
                                 f"Callback: {first.method} {first.path} from {first.peer}\n"
                                 f"Body: {first.body[:200]}"
                             ),
+                            taxonomy_id="MCP-T12",
                         )
                     else:
                         _add(result,
@@ -223,4 +225,5 @@ def check_exfil_flow(
                             f"this establishes the path is callable end to end, not that "
                             f"data reached a third party.",
                             evidence=f"Canary: {canary[:80]}\nSink response: {resp_text[:200]}",
+                            taxonomy_id="MCP-T12",
                         )

@@ -62,6 +62,7 @@ def check_temporal_consistency(
                     f"Tool '{name}' shows escalating injection across calls",
                     f"Injection indicator counts per call: {counts}",
                     evidence=responses[-1][:400],
+                    taxonomy_id="MCP-T16",
                 )
 
             # Wild response length divergence (same input, very different output)
@@ -72,6 +73,7 @@ def check_temporal_consistency(
                     "MEDIUM",
                     f"Tool '{name}' gives wildly inconsistent responses to identical input",
                     f"Response lengths: {lens}",
+                    taxonomy_id="MCP-T16",
                 )
 
             # New threats appearing in later calls but not the first
@@ -87,4 +89,5 @@ def check_temporal_consistency(
                             f"Tool '{name}' introduced new threat on subsequent call",
                             f"New: {cat} — {detail}",
                             evidence=later[:300],
+                            taxonomy_id="MCP-T16",
                         )

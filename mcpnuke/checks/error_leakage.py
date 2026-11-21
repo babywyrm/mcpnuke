@@ -86,6 +86,7 @@ def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe
                         f"Tool '{name}' leaks info on empty input",
                         f"Leaked: {m.group()[:200]}",
                         evidence=text[:400],
+                        taxonomy_id="MCP-T15",
                     )
 
             # 2) Call with wrong types (numbers where strings expected)
@@ -103,6 +104,7 @@ def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe
                             f"Tool '{name}' leaks info on type-mismatched input",
                             f"Leaked: {m.group()[:200]}",
                             evidence=text[:400],
+                            taxonomy_id="MCP-T15",
                         )
 
             # 3) Prototype pollution / __proto__ probe
@@ -119,4 +121,5 @@ def check_error_leakage(session: MCPSessionProtocol, result: TargetResult, probe
                     f"Tool '{name}' may be vulnerable to prototype pollution",
                     "Server reflected __proto__.admin=True in response",
                     evidence=text[:400],
+                    taxonomy_id="MCP-T44",
                 )

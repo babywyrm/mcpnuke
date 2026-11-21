@@ -66,6 +66,7 @@ def check_teleport_lab_bot_theft(
                 f"Secret accessible in namespace, cert_serial={cert_serial[:16]}..., "
                 f"roles={data.get('roles', [])}",
                 evidence=text[:300],
+                taxonomy_id="MCP-T18",
             )
 
             # Step 2: Replay the stolen identity
@@ -83,6 +84,7 @@ def check_teleport_lab_bot_theft(
                     "Bot identity replay succeeded — flag captured",
                     f"Replayed cert_serial was accepted. Flag: {replay_data.get('flag', 'N/A')}",
                     evidence=text2[:300],
+                    taxonomy_id="MCP-T18",
                 )
 
                 # Step 3: Check if session binding would catch it
@@ -172,6 +174,7 @@ def check_teleport_lab_role_escalation(
                 f"Escalated via social engineering. Flag: {esc_data.get('flag', 'N/A')}. "
                 f"New roles: {esc_data.get('new_roles', [])}",
                 evidence=text2[:300],
+                taxonomy_id="MCP-T28",
             )
 
             # Step 3: Attempt privileged operation
@@ -193,6 +196,7 @@ def check_teleport_lab_role_escalation(
                     f"Operation: {op_data.get('operation')}, target: {op_data.get('target')}, "
                     f"flag: {op_data.get('flag', 'N/A')}",
                     evidence=text3[:300],
+                    taxonomy_id="MCP-T28",
                 )
         elif esc_data.get("_held"):
             _add(result,
@@ -261,6 +265,7 @@ def check_teleport_lab_cert_replay(
                 f"Cert expired {cert_data.get('expired_seconds_ago', '?')}s ago but was accepted. "
                 f"Flag: {replay_data.get('flag', 'N/A')}",
                 evidence=text2[:300],
+                taxonomy_id="MCP-T19",
             )
         elif replay_data.get("access") == "denied":
             _add(result,
@@ -292,4 +297,5 @@ def check_teleport_lab_cert_replay(
                 "Replay detection did not flag reused cert ID",
                 "The cert_id was used in a previous replay but was not marked as seen. "
                 "This may indicate replay detection is not enabled.",
+                taxonomy_id="MCP-T19",
             )

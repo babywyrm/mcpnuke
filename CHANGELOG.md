@@ -37,6 +37,15 @@ All notable changes to this submodule are documented here.
 - **Hidden characters in parameter descriptions.** The schema was
   serialized with escapes, so a zero-width or bidirectional character
   in a parameter description never reached the patterns.
+- **Findings from 27 checks reach their OWASP category and threat ID.**
+  They recorded no taxonomy ID, or recorded one at some call sites
+  only, so `--owasp` and `--owasp-llm` listed them as unmapped and
+  `--by-lane` and `--taxonomy-coverage` could not see them. Affected
+  checks include `error_leakage`, `exfil_flow`, `state_mutation`,
+  `temporal_consistency`, `notification_abuse`, the JWT claim checks,
+  and the Teleport lab checks. INFO findings that report a defense
+  holding stay untagged, so coverage does not count them as a failure.
+  A test now walks every call site.
 - **Tool poisoning counts toward OWASP MCP03.** `tool_poisoning`
   findings carry no taxonomy ID and had no check-name fallback, so
   `--owasp` reported them as unmapped instead of under Tool Poisoning.

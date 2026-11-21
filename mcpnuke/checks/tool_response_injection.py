@@ -115,6 +115,7 @@ def check_tool_response_injection(
                             f"Tool '{name}' output directs LLM to invoke '{m.group(1)}'",
                             "Response attempts cross-tool orchestration",
                             evidence=text[:400],
+                            taxonomy_id="MCP-T05",
                         )
 
             # Input reflection — probe string params in the same pass

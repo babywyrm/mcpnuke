@@ -262,6 +262,7 @@ def _fuzz_single_tool(
                     f"Tool '{name}' leaks internals on {probe_type} probe",
                     f"Leaked: {m.group()[:200]}",
                     evidence=probe_text[:400],
+                    taxonomy_id="MCP-T15",
                 )
                 break
 

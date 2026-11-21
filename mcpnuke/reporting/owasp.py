@@ -176,6 +176,11 @@ CHECK_TO_OWASP: dict[str, str] = {
     "teleport_proxy_discovery": "MCP07",
     "shadow_mcp_server": "MCP09",
     "tool_poisoning": "MCP03",
+    # No threat ID fits. Same buckets as their sibling checks.
+    "actuator_exploitation": "MCP07",
+    "teleport_app_enumeration": "MCP07",
+    "remote_access": "MCP05",
+    "teleport_bot_overprivilege": "MCP02",
 }
 
 

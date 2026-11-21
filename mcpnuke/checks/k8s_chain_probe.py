@@ -67,4 +67,5 @@ def k8s_chain_probe(result: TargetResult) -> None:
                 f"K8s tools with namespace parameters. A chain could read from one "
                 f"namespace and write to another.",
                 evidence=f"Read: {[t['name'] for t in read_tools]}, Write: {[t['name'] for t in write_tools]}",
+                taxonomy_id="MCP-T20",
             )

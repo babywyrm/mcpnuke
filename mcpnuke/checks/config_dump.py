@@ -82,4 +82,5 @@ def check_config_dump(session: MCPSessionProtocol, result: TargetResult, probe_o
                     f"Tool '{name}' leaks infrastructure config",
                     f"Exposed: {', '.join(findings_for_tool[:6])}",
                     evidence=text[:500],
+                    taxonomy_id="MCP-T07",
                 )

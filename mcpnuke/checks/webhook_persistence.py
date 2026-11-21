@@ -64,6 +64,7 @@ def check_webhook_persistence(result: TargetResult) -> None:
                             "HIGH",
                             f"Webhook/callback param '{pname}' in tool '{name}'",
                             "Attacker-controlled callback URLs enable persistent re-injection across sessions",
+                            taxonomy_id="MCP-T14",
                         )
                         break
 
@@ -74,5 +75,6 @@ def check_webhook_persistence(result: TargetResult) -> None:
                         "HIGH",
                         f"Webhook registration capability in '{name}'",
                         f"Description: {desc[:200]}",
+                        taxonomy_id="MCP-T14",
                     )
                     break

@@ -64,6 +64,7 @@ def check_config_tampering(result: TargetResult) -> None:
                         "CRITICAL",
                         f"Config tampering capability in '{name}'",
                         f"Description: {desc[:200]}",
+                        taxonomy_id="MCP-T09",
                     )
                     break
 
@@ -75,5 +76,6 @@ def check_config_tampering(result: TargetResult) -> None:
                             "HIGH",
                             f"Config/prompt param '{pname}' in tool '{name}'",
                             "Tool accepts parameters that could modify agent behavior",
+                            taxonomy_id="MCP-T09",
                         )
                         break

@@ -243,4 +243,5 @@ def check_jwt_cross_role_replay(result: TargetResult) -> None:
             "attempting tools/call against one of the listed tools — if "
             "the server accepts it, role isolation is broken (MCP-T04).",
             evidence=f"{reason}; write-class tools visible: {sample}{more}",
+            taxonomy_id="MCP-T04",
         )

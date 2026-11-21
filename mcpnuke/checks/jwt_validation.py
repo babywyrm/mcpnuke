@@ -76,6 +76,7 @@ def check_jwt_algorithm(result: TargetResult) -> None:
                 "Symmetric HMAC algorithms require a shared secret; prefer "
                 "asymmetric RS256/ES256 for server-to-server auth",
                 evidence=f"alg={alg}",
+                taxonomy_id="MCP-T26",
             )
 
 
@@ -92,6 +93,7 @@ def check_jwt_issuer(result: TargetResult) -> None:
                 "MEDIUM",
                 "JWT missing iss (issuer) claim",
                 "Without an issuer claim, tokens cannot be scoped to a trusted authority",
+                taxonomy_id="MCP-T26",
             )
 
 
@@ -109,6 +111,7 @@ def check_jwt_audience(result: TargetResult) -> None:
                 "JWT missing aud (audience) claim",
                 "Without an audience claim, tokens can be replayed against any "
                 "service that trusts the same issuer",
+                taxonomy_id="MCP-T26",
             )
 
 
@@ -125,6 +128,7 @@ def check_jwt_token_id(result: TargetResult) -> None:
                 "LOW",
                 "JWT missing jti (token ID) claim",
                 "Without a unique token ID, replay detection is not possible",
+                taxonomy_id="MCP-T26",
             )
 
 
@@ -217,5 +221,6 @@ def check_jwt_weak_key(result: TargetResult) -> None:
                     f"Token signature verified with a well-known default key "
                     f"using {alg} — any attacker can forge valid tokens",
                     evidence=f"alg={alg}, key={display_key}",
+                    taxonomy_id="MCP-T26",
                 )
                 return
