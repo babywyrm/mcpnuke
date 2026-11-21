@@ -9,6 +9,7 @@ from mcpnuke.checks.base import (
     grade_reflection,
     no_log,
     payload_echo_removed,
+    resource_blocks,
     response_is_error,
     time_check,
 )
@@ -131,10 +132,8 @@ def check_indirect_injection(
                 resp = session.call(
                     "resources/read", {"uri": uri}, timeout=15
                 )
-                if not resp or "result" not in resp:
-                    continue
-                for content in resp["result"].get("contents", []):
-                    text = content.get("text", "") or content.get("blob", "")
+                for text, blob in resource_blocks(resp):
+                    text = text or blob
                     if not text:
                         continue
                     for pat in INJECTION_PATTERNS + POISON_PATTERNS:

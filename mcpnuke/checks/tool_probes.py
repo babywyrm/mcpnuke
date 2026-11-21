@@ -396,7 +396,7 @@ def _response_text(resp: dict[str, Any] | None) -> str:
             parts: list[str] = []
             for c in content:
                 if isinstance(c, dict):
-                    parts.append(c.get("text", "") or c.get("blob", "") or str(c))
+                    parts.append(str(c.get("text") or c.get("blob") or c))
                 else:
                     parts.append(str(c))
             structured = _serialize_structured(result.get("structuredContent"))

@@ -5,6 +5,7 @@ import base64
 import re
 
 from mcpnuke.checks.base import (
+    resource_blocks,
     time_check,
 )
 from mcpnuke.core.models import TargetResult
@@ -27,13 +28,7 @@ def check_resource_poisoning(session: MCPSessionProtocol, result: TargetResult) 
             uri = resource.get("uri", "")
             try:
                 resp = session.call("resources/read", {"uri": uri}, timeout=15)
-                if not resp or "result" not in resp:
-                    continue
-
-                for content_block in resp["result"].get("contents", []):
-                    text = content_block.get("text", "") or ""
-                    blob = content_block.get("blob", "") or ""
-
+                for text, blob in resource_blocks(resp):
                     if blob and not text:
                         try:
                             text = base64.b64decode(blob).decode("utf-8", errors="ignore")

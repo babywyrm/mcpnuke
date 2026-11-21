@@ -21,6 +21,13 @@ All notable changes to this submodule are documented here.
   documents now keep only string fields, so a scanned server can no longer
   put a list where the OIDC issuer goes. A target that cannot be reached
   during auth detection is reported, not read as "no auth advertised".
+- **A malformed content block no longer hides a poisoned one.**
+  `resource_poisoning`, `indirect_injection`, and `response_credentials`
+  stopped reading a resource at its first block that was not an object
+  with string fields, and still recorded the check as run. A server could
+  put `123` ahead of an injected block and pass all three. Each block is
+  now read on its own. A tool response whose `text` is not a string no
+  longer crashes every check that reads it.
 
 ## [6.22.7] - 2026-11-21
 

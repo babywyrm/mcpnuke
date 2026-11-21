@@ -48,6 +48,25 @@ def response_is_error(resp: dict[str, Any] | None) -> bool:
     return isinstance(result, dict) and bool(result.get("isError"))
 
 
+def resource_blocks(resp: object) -> list[tuple[str, str]]:
+    """``(text, blob)`` of each content block in a resources/read response.
+
+    The server shapes the response. A block that is not an object, or a
+    field that is not a string, reads as empty so it cannot end the scan of
+    the blocks after it.
+    """
+    result = resp.get("result") if isinstance(resp, dict) else None
+    contents = result.get("contents") if isinstance(result, dict) else None
+    if not isinstance(contents, list):
+        return []
+    blocks: list[tuple[str, str]] = []
+    for b in contents:
+        if isinstance(b, dict):
+            text, blob = b.get("text"), b.get("blob")
+            blocks.append((text if isinstance(text, str) else "", blob if isinstance(blob, str) else ""))
+    return blocks
+
+
 # Stated in the title rather than only the detail, because a triager scanning
 # a list of titles is exactly the reader who needs to know this one came from
 # a rejection.

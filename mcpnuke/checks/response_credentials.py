@@ -2,7 +2,7 @@
 
 import re
 
-from mcpnuke.checks.base import no_log, time_check
+from mcpnuke.checks.base import no_log, resource_blocks, time_check
 from mcpnuke.checks.tool_probes import _build_safe_args, _call_tool, _response_text, _should_invoke
 from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.terminal import escape
@@ -65,10 +65,8 @@ def check_response_credentials(
             uri = resource.get("uri", "")
             try:
                 resp = session.call("resources/read", {"uri": uri}, timeout=15)
-                if not resp or "result" not in resp:
-                    continue
-                for content in resp["result"].get("contents", []):
-                    text = content.get("text", "") or content.get("blob", "")
+                for text, blob in resource_blocks(resp):
+                    text = text or blob
                     if text:
                         _scan_text_for_creds(text, f"resource '{uri}'", result)
             except Exception:
