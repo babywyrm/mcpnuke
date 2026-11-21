@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.7] - 2026-11-21
+
 ### Security
 
 - **opentelemetry-api 1.45.2 (CVE-2026-126360).** A crafted `traceparent`
