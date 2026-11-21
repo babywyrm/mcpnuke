@@ -22,6 +22,7 @@ from mcpnuke.cli import build_url_list, parse_args
 from mcpnuke.cli_steps import (
     _apply_baseline,
     _base_probe_opts,
+    _exit_code,
     _k8s_setup,
     _print_mode_notices,
     _print_scan_panel,
@@ -145,9 +146,7 @@ def _main_inner() -> None:
         _report(args, [result], console)
         if args.save_baseline:
             save_baseline([result], args.save_baseline, console=console)
-        if _should_fail(result.findings, getattr(args, "fail_on", "high")):
-            sys.exit(EXIT_FINDINGS)
-        sys.exit(EXIT_CLEAN)
+        sys.exit(_exit_code([result], result.findings, getattr(args, "fail_on", "high")))
 
     inference_only = (
         getattr(args, "inference_host", None)
@@ -269,8 +268,7 @@ def _main_inner() -> None:
 
     from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
     all_findings = [f for r in results for f in r.findings] + GLOBAL_K8S_FINDINGS
-    if _should_fail(all_findings, getattr(args, "fail_on", "high")):
-        sys.exit(EXIT_FINDINGS)
+    sys.exit(_exit_code(results, all_findings, getattr(args, "fail_on", "high")))
 
 
 def main() -> None:

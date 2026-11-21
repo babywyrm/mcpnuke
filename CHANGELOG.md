@@ -4,6 +4,18 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **A crashing check or target no longer hides the scan.** One check
+  raising on unexpected server data aborted every check after it, and
+  with more than one target the crashing target was dropped from the
+  results. `--fail-on` then saw nothing and exited `0`, so a server that
+  tripped a check on purpose passed a CI gate. Each check now runs in
+  isolation. A crash is recorded under the target's `check_errors`
+  (redacted), shown as "Incomplete scan", and exits `2`. A crashed check
+  records no timing, so `--taxonomy-coverage` reports it untested, not
+  passed.
+
 ## [6.22.7] - 2026-11-21
 
 ### Security

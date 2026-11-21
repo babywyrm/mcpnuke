@@ -85,6 +85,7 @@ def _build_target_dict(r: TargetResult) -> dict[str, Any]:
         "tools_scanned_names": [t.get("name") for t in r.tools],
         "tools_unscanned_count": max(0, tools_total - tools_scanned),
         "timings": r.timings,
+        "check_errors": r.check_errors,
         "findings": [
             {
                 "check": f.check,

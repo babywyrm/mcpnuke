@@ -335,10 +335,15 @@ def run_parallel(
         def worker(url: str) -> None:
             with lock:
                 snapshot = list(results)
-            r = scan_target(
-                url, snapshot, timeout=timeout, verbose=verbose,
-                auth_token=auth_token, probe_opts=probe_opts,
-            )
+            try:
+                r = scan_target(
+                    url, snapshot, timeout=timeout, verbose=verbose,
+                    auth_token=auth_token, probe_opts=probe_opts,
+                )
+            except Exception as exc:
+                # Dropped, the target vanished and --fail-on passed.
+                r = TargetResult(url=url)
+                r.note_check_error("scan", exc)
             with lock:
                 results.append(r)
             progress.advance(task)

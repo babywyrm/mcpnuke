@@ -115,7 +115,8 @@ not a lab name, to pick the command.
 - `--generate-policy FILE`: proved chains become DENY on the sink and HOLD on
   earlier sources. Edit the YAML before applying it.
 - `--json FILE` and `--fail-on`: CI gate. Exit `1` is findings at the
-  threshold, not a crashed scan. `--coverage-report` does not change it.
+  threshold, not a crashed scan. A crashed check or target is exit `2`,
+  listed under `check_errors`. `--coverage-report` does not change it.
 - `--save-baseline` / `--baseline`: schema or description drift on an approved
   tool is CRITICAL; a tool added or removed is MEDIUM.
 - `--stdio CMD`: a local MCP process. No HTTP auth boundary, so those

@@ -35,12 +35,20 @@ from mcpnuke.scanner import run_parallel, scan_target
 from mcpnuke.subcommands import (
     EXIT_CLEAN,
     EXIT_ERROR,
+    EXIT_FINDINGS,
 )
 
 if TYPE_CHECKING:
     from mcpnuke.core.oast import CanaryListener
 
 _SEVERITY_ORDER: list[str] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+
+
+def _exit_code(results: list[TargetResult], findings: list[Finding], fail_on: str) -> int:
+    """An incomplete scan is an error before it is a verdict."""
+    if any(r.check_errors for r in results):
+        return EXIT_ERROR
+    return EXIT_FINDINGS if _should_fail(findings, fail_on) else EXIT_CLEAN
 
 
 def _should_fail(findings: list[Finding], fail_on: str) -> bool:

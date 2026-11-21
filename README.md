@@ -284,10 +284,15 @@ A scan that reports only LOW findings exits `0` under the default threshold.
 |------|---------|
 | **0** | Clean — nothing at or above the `--fail-on` threshold (default: `high`) |
 | **1** | Findings — at least one finding at or above that threshold |
-| **2** | Error — scan did not complete successfully (e.g. unreachable target, bad flags) |
+| **2** | Error — scan did not complete successfully (e.g. unreachable target, bad flags, a check that crashed) |
 
 `--fail-on any` exits `1` on any finding at all; `--fail-on none` always exits
 `0`, for informational scans.
+
+A check that crashes does not stop the others. The scan finishes, the report
+says "Incomplete scan" and names the check, `--json` carries it under the
+target's `check_errors`, and the exit is `2` even when findings meet the
+threshold.
 
 ---
 

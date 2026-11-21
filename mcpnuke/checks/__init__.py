@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import threading
 import time
 from collections.abc import Callable
@@ -138,8 +137,6 @@ from mcpnuke.checks.webhook_persistence import check_webhook_persistence
 from mcpnuke.core.models import ProbeOpts, TargetResult
 from mcpnuke.core.terminal import escape
 from mcpnuke.core.transports.base import MCPSessionProtocol
-
-_log_internal = logging.getLogger("mcpnuke.checks")
 
 # Checks that --fast mode skips (heavy, LLM-backed, slow, or state-mutating).
 # State-mutating checks are inappropriate for internet targets without explicit
@@ -485,7 +482,14 @@ def run_all_checks(
         if verbose:
             _log(f"  [dim]  [{num}/{total_checks}][/dim] [white]▸ {name}[/white]")
         t0 = time.time()
-        fn(*args, **kwargs)
+        try:
+            fn(*args, **kwargs)
+        except Exception as exc:
+            # One check tripped by server data must not hide the rest.
+            with _findings_lock:
+                result.note_check_error(name, exc)
+            _log(f"  [red]✗ {name} crashed: {escape(result.check_errors[name])}[/red]")
+            return
         elapsed = time.time() - t0
         new_findings = result.findings[before_count:]
         if verbose and new_findings:
@@ -628,16 +632,9 @@ def run_all_checks(
 
         if probe_workers > 1:
             with ThreadPoolExecutor(max_workers=probe_workers) as pool:
-                futures = {
-                    pool.submit(_run, name, fn, *a, **kw): name
-                    for name, fn, a, kw in deep_checks
-                }
+                futures = [pool.submit(_run, name, fn, *a, **kw) for name, fn, a, kw in deep_checks]
                 for f in as_completed(futures):
-                    try:
-                        f.result()
-                    except Exception as exc:
-                        check_name = futures[f]
-                        _log_internal.debug("Deep check %s failed: %s", check_name, exc)
+                    f.result()
         else:
             for name, fn, a, kw in deep_checks:
                 _run(name, fn, *a, **kw)

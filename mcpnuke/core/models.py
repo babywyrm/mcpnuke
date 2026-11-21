@@ -131,6 +131,9 @@ class TargetResult:
     attack_chains: list[AttackChain] = field(default_factory=list)
     timings: dict[str, float] = field(default_factory=dict)
     error: str = ""
+    # Check name -> exception summary for checks that crashed. Unlike
+    # ``error`` (routine probe failures), any entry makes the scan incomplete.
+    check_errors: dict[str, str] = field(default_factory=dict)
     tools_total: int = 0
     # Only ever a reporting.diff.ScanDiffResult. Typed as object it forced
     # every reader to guess, and json_out reached for four attributes mypy
@@ -187,6 +190,12 @@ class TargetResult:
         read it as one.
         """
         self.error = f"{self.error}; {msg}" if self.error else msg
+
+    def note_check_error(self, check: str, exc: Exception) -> None:
+        """Record a crashed check. The message may carry server text."""
+        from mcpnuke.patterns.credentials import redact_credentials
+
+        self.check_errors[check] = f"{type(exc).__name__}: {redact_credentials(str(exc))[:300]}"
 
     def risk_score(self) -> int:
         from mcpnuke.core.constants import SEVERITY_WEIGHTS

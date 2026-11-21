@@ -76,8 +76,18 @@ def print_report(
         [f for r in results for f in r.findings] + GLOBAL_K8S_FINDINGS
     )
 
+    incomplete = [(r.url, check, err) for r in results for check, err in r.check_errors.items()]
+    for url, check, err in incomplete:
+        console.print(
+            f"[bold red]  Incomplete scan[/bold red] {escape(url)}: "
+            f"{escape(check)} crashed — {escape(err)}"
+        )
+
     if not all_findings:
-        console.print("[green]  No vulnerabilities found.[/green]")
+        if incomplete:
+            console.print("[yellow]  No findings from the checks that completed.[/yellow]")
+        else:
+            console.print("[green]  No vulnerabilities found.[/green]")
         return
 
     sev_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}

@@ -99,9 +99,11 @@ def payload_echo_removed(text: str, payload: str) -> str:
 
 @contextmanager
 def time_check(name: str, result: TargetResult) -> Iterator[None]:
-    """Context manager to record check timing."""
+    """Context manager to record check timing.
+
+    Recorded only when the check completes: --taxonomy-coverage reads a
+    timing with no finding as a pass.
+    """
     t0 = time.time()
-    try:
-        yield
-    finally:
-        result.timings[name] = time.time() - t0
+    yield
+    result.timings[name] = time.time() - t0
