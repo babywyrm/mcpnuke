@@ -24,6 +24,8 @@ class AuthInfo:
     token_endpoint: str = ""
     issuer: str = ""
     www_authenticate: str = ""
+    # Set when detection did not finish; requires_auth=False then proves nothing.
+    error: str = ""
 
     def summary(self) -> str:
         parts = []
@@ -53,34 +55,53 @@ def parse_header_kv_pairs(values: list[str] | None) -> dict[str, str]:
     return headers
 
 
-def decode_jwt_header(token: str) -> dict[str, Any] | None:
-    """Decode the JWT header (JOSE header) without signature validation."""
+# What json.loads raises on bytes a server chose: bad syntax or encoding
+# is a ValueError, nesting deeper than the interpreter stack a RecursionError.
+_BAD_JSON: tuple[type[Exception], ...] = (ValueError, RecursionError)
+
+
+def _decode_jwt_part(token: str, index: int) -> dict[str, Any] | None:
     parts = token.split(".")
     if len(parts) < 2:
         return None
-    header = parts[0]
-    padding = "=" * ((4 - len(header) % 4) % 4)
+    part = parts[index]
     try:
-        decoded = base64.urlsafe_b64decode(header + padding)
-        data = json.loads(decoded.decode("utf-8"))
-    except Exception:
+        data = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)).decode("utf-8"))
+    except _BAD_JSON:
         return None
     return data if isinstance(data, dict) else None
+
+
+def decode_jwt_header(token: str) -> dict[str, Any] | None:
+    """Decode the JWT header (JOSE header) without signature validation."""
+    return _decode_jwt_part(token, 0)
 
 
 def decode_jwt_claims(token: str) -> dict[str, Any] | None:
     """Decode JWT payload claims without signature validation."""
-    parts = token.split(".")
-    if len(parts) < 2:
-        return None
-    payload = parts[1]
-    padding = "=" * ((4 - len(payload) % 4) % 4)
+    return _decode_jwt_part(token, 1)
+
+
+def _json_or_none(r: httpx.Response) -> object:
     try:
-        decoded = base64.urlsafe_b64decode(payload + padding)
-        data = json.loads(decoded.decode("utf-8"))
-    except Exception:
+        return r.json()
+    except _BAD_JSON:
         return None
-    return data if isinstance(data, dict) else None
+
+
+def _oidc_config(client: httpx.Client, url: str, timeout: float) -> dict[str, str]:
+    """The string fields of the discovery document at *url*, or {}.
+
+    The scanned server may have named *url*, so anything else is dropped.
+    """
+    try:
+        r = client.get(url, timeout=timeout)
+    except (httpx.HTTPError, httpx.InvalidURL):
+        return {}
+    doc = _json_or_none(r) if r.status_code == 200 else None
+    if not isinstance(doc, dict):
+        return {}
+    return {k: v for k, v in doc.items() if isinstance(v, str)}
 
 
 def summarize_jwt_claims(claims: dict[str, Any]) -> dict[str, Any]:
@@ -158,7 +179,7 @@ def fetch_token_introspection(
         if not isinstance(body, dict):
             raise RuntimeError("Token introspection response was not a JSON object")
         return body
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, ValueError, RecursionError) as e:
         raise RuntimeError(f"Token introspection error: {e}") from e
     finally:
         client.close()
@@ -212,7 +233,7 @@ def fetch_jwks(
         if not isinstance(body, dict):
             raise RuntimeError("JWKS response was not a JSON object")
         return body
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, ValueError, RecursionError) as e:
         raise RuntimeError(f"JWKS fetch error: {e}") from e
     finally:
         client.close()
@@ -274,15 +295,11 @@ def detect_auth_requirements(
                 info.auth_type = "bearer"  # assume bearer for MCP
 
             # Check JSON body for auth hints
-            try:
-                body = r.json()
-                err = body.get("error", {})
-                if isinstance(err, dict):
-                    msg = err.get("message", "")
-                    if "bearer" in msg.lower() or "token" in msg.lower():
-                        info.auth_type = "bearer"
-            except Exception:
-                pass
+            body = _json_or_none(r)
+            err = body.get("error") if isinstance(body, dict) else None
+            msg = err.get("message") if isinstance(err, dict) else None
+            if isinstance(msg, str) and ("bearer" in msg.lower() or "token" in msg.lower()):
+                info.auth_type = "bearer"
 
             # Try OIDC discovery if we have a realm URL
             if info.realm:
@@ -295,30 +312,27 @@ def detect_auth_requirements(
         elif r.status_code in (200, 202):
             info.requires_auth = False
             # Check if tools/list requires auth even though initialize doesn't
-            try:
-                body = r.json()
-                if "result" in body:
-                    tr = client.post(
-                        post_url,
-                        json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
-                        headers=base_headers,
-                    )
-                    if tr.status_code in (401, 403):
-                        info.requires_auth = True
-                        info.auth_type = "bearer"
-                        www_auth = tr.headers.get("www-authenticate", "")
-                        info.www_authenticate = www_auth
-                        import re
-                        realm_match = re.search(r'realm="([^"]+)"', www_auth, re.IGNORECASE)
-                        if realm_match:
-                            info.realm = realm_match.group(1)
-                        if info.realm:
-                            _discover_oidc(client, info.realm, info)
-            except Exception:
-                pass
+            body = _json_or_none(r)
+            if isinstance(body, dict) and "result" in body:
+                tr = client.post(
+                    post_url,
+                    json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+                    headers=base_headers,
+                )
+                if tr.status_code in (401, 403):
+                    info.requires_auth = True
+                    info.auth_type = "bearer"
+                    www_auth = tr.headers.get("www-authenticate", "")
+                    info.www_authenticate = www_auth
+                    import re
+                    realm_match = re.search(r'realm="([^"]+)"', www_auth, re.IGNORECASE)
+                    if realm_match:
+                        info.realm = realm_match.group(1)
+                    if info.realm:
+                        _discover_oidc(client, info.realm, info)
 
-    except Exception:
-        pass
+    except (httpx.HTTPError, httpx.InvalidURL) as e:
+        info.error = f"{type(e).__name__}: {redact_credentials(str(e))[:300]}"
     finally:
         client.close()
 
@@ -328,15 +342,10 @@ def detect_auth_requirements(
 def _discover_oidc(client: httpx.Client, issuer_url: str, info: AuthInfo) -> None:
     """Try to fetch OIDC configuration from an issuer URL."""
     issuer_url = issuer_url.rstrip("/")
-    well_known = f"{issuer_url}/.well-known/openid-configuration"
-    try:
-        r = client.get(well_known, timeout=5)
-        if r.status_code == 200:
-            data = r.json()
-            info.issuer = data.get("issuer", issuer_url)
-            info.token_endpoint = data.get("token_endpoint", "")
-    except Exception:
-        pass
+    doc = _oidc_config(client, f"{issuer_url}/.well-known/openid-configuration", 5)
+    if doc:
+        info.issuer = doc.get("issuer", issuer_url)
+        info.token_endpoint = doc.get("token_endpoint", "")
 
 
 def _try_keycloak_discovery(client: httpx.Client, base: str, info: AuthInfo) -> None:
@@ -354,17 +363,12 @@ def _try_keycloak_discovery(client: httpx.Client, base: str, info: AuthInfo) -> 
 
     for realm in realm_names:
         for keycloak_base in [base, f"{base}:8080"]:
-            well_known = f"{keycloak_base}/realms/{realm}/.well-known/openid-configuration"
-            try:
-                r = client.get(well_known, timeout=3)
-                if r.status_code == 200:
-                    data = r.json()
-                    info.issuer = data.get("issuer", "")
-                    info.token_endpoint = data.get("token_endpoint", "")
-                    if info.token_endpoint:
-                        return
-            except Exception:
-                pass
+            doc = _oidc_config(client, f"{keycloak_base}/realms/{realm}/.well-known/openid-configuration", 3)
+            if doc:
+                info.issuer = doc.get("issuer", "")
+                info.token_endpoint = doc.get("token_endpoint", "")
+                if info.token_endpoint:
+                    return
 
 
 def fetch_client_credentials_token(
@@ -401,16 +405,9 @@ def fetch_client_credentials_token(
         token_endpoint = oidc_url
     else:
         # Try OIDC discovery
-        client = httpx.Client(verify=verify_tls, timeout=timeout)
-        try:
-            well_known = f"{oidc_url}/.well-known/openid-configuration"
-            r = client.get(well_known)
-            if r.status_code == 200:
-                token_endpoint = r.json().get("token_endpoint", "")
-        except Exception:
-            pass
-        finally:
-            client.close()
+        with httpx.Client(verify=verify_tls, timeout=timeout) as client:
+            doc = _oidc_config(client, f"{oidc_url}/.well-known/openid-configuration", timeout)
+        token_endpoint = doc.get("token_endpoint", "")
 
         if not token_endpoint:
             # Fallback: assume standard path
@@ -445,12 +442,14 @@ def fetch_client_credentials_token(
                 f"Token fetch failed: HTTP {r.status_code} from {token_endpoint}\n"
                 f"Response: {redact_credentials(r.text)[:500]}"
             )
-        data = r.json()
-        token = data.get("access_token")
-        if not token:
-            raise RuntimeError(f"No access_token in response (keys: {', '.join(sorted(data))})")
+        body = r.json()
+        if not isinstance(body, dict):
+            raise RuntimeError("Token response was not a JSON object")
+        token = body.get("access_token")
+        if not isinstance(token, str) or not token:
+            raise RuntimeError(f"No access_token in response (keys: {', '.join(sorted(body))})")
         return token
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, ValueError, RecursionError) as e:
         raise RuntimeError(f"Token fetch error: {e}") from e
     finally:
         client.close()
@@ -515,6 +514,8 @@ def resolve_auth_token(args: argparse.Namespace) -> str | None:
                 verify_tls=verify_tls,
                 extra_headers=extra_headers,
             )
+            if info.error:
+                raise RuntimeError(f"Auth detection failed on {targets[0]}: {info.error}. Provide --oidc-url.")
             if info.token_endpoint:
                 # Extract issuer from token endpoint
                 oidc_url = info.issuer or info.token_endpoint.rsplit("/protocol/", 1)[0]

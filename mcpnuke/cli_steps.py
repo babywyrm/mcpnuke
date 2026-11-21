@@ -356,6 +356,8 @@ def _resolve_auth(
             verify_tls=args.tls_verify,
             extra_headers=extra_headers,
         )
+        if info.error:
+            console.print(f"  [yellow]⚠[/yellow]  Auth detection failed: {escape(info.error)}")
         if info.requires_auth:
             console.print(f"  [yellow]⚠[/yellow]  Target requires auth: {escape(info.summary())}")
             if info.token_endpoint:

@@ -15,6 +15,12 @@ All notable changes to this submodule are documented here.
   (redacted), shown as "Incomplete scan", and exits `2`. A crashed check
   records no timing, so `--taxonomy-coverage` reports it untested, not
   passed.
+- **A malformed auth response is an auth failure, not a crash.** A token,
+  introspection, or JWKS endpoint answering `200` with a body that is not
+  JSON ended the run instead of the warning the CLI prints. Discovery
+  documents now keep only string fields, so a scanned server can no longer
+  put a list where the OIDC issuer goes. A target that cannot be reached
+  during auth detection is reported, not read as "no auth advertised".
 
 ## [6.22.7] - 2026-11-21
 
