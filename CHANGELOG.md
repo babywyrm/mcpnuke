@@ -23,6 +23,14 @@ All notable changes to this submodule are documented here.
   config tool can name them honestly, and they are matched in the
   declared surface only, not in tool output or resource bodies. The
   five pinned open-source server snapshots are unchanged.
+- **`--owasp-llm`.** The same findings mapped onto the OWASP Top 10 for
+  LLM Applications (2025), printed and written to `--json` as
+  `owasp_llm`. Each finding follows its MCP category, except where the
+  LLM list fits better: cost and rate-limit exhaustion and an open
+  inference backend are LLM10, hallucination-driven destruction is
+  LLM06, and `prompt_leakage` is LLM07. LLM04, LLM08 and LLM09 are
+  model-side and reported as out of scope, not as gaps. `--owasp`
+  output is unchanged.
 
 ### Fixed
 

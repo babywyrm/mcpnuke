@@ -15,7 +15,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from mcpnuke.reporting.owasp import OWASP_MCP_TOP10
+from mcpnuke.reporting.owasp import (
+    LLM_OUT_OF_SCOPE,
+    OWASP_LLM_TOP10,
+    OWASP_MCP_TO_LLM,
+    OWASP_MCP_TOP10,
+)
 from tests.owasp_lab import start_owasp_lab
 from tests.test_owasp_lab import _MARKER
 
@@ -117,6 +122,42 @@ def test_cli_owasp_report_lights_every_category(tmp_path: Path) -> None:
     table = _alignment_markdown(buckets)
     print(table, flush=True)
     _publish_alignment(table)
+
+
+def test_cli_owasp_llm_report(tmp_path: Path) -> None:
+    """Every MCP category the lab lights reaches its LLM counterpart, and
+    the model-side categories stay empty and say why."""
+    server = start_owasp_lab()
+    report_path = tmp_path / "owasp.json"
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable, "-m", "mcpnuke",
+                "--targets", server.url,
+                "--no-invoke", "--fail-on", "none",
+                "--owasp-llm", "--json", str(report_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=_ROOT,
+            check=False,
+        )
+    finally:
+        server.stop()
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    plain = re.sub(r"\s+", " ", re.sub(r"\x1b\[[0-9;]*m", "", proc.stdout))
+    assert "OWASP Top 10 for LLM Applications (2025) alignment" in plain
+    for code in OWASP_LLM_TOP10:
+        assert f"{code} —" in plain
+    assert plain.count("model-side: out of scope for an MCP server scan") == 3
+
+    buckets = json.loads(report_path.read_text())["owasp_llm"]["owasp_llm"]
+    lit = {code for code, block in buckets.items() if block["finding_count"]}
+    expected = {llm for llm in OWASP_MCP_TO_LLM.values() if llm}
+    assert expected <= lit
+    assert not lit & LLM_OUT_OF_SCOPE
 
 
 def test_stdio_scan_honors_the_report_flags() -> None:

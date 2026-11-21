@@ -11,7 +11,7 @@ from rich.console import Console
 from mcpnuke.core.models import TargetResult
 from mcpnuke.k8s.scanner import GLOBAL_K8S_FINDINGS
 from mcpnuke.reporting.files import write_private
-from mcpnuke.reporting.owasp import build_owasp
+from mcpnuke.reporting.owasp import build_owasp, build_owasp_llm
 from mcpnuke.reporting.priority import priority_actions_as_dicts
 
 _REDACTED_KEYS: frozenset[str] = frozenset({"_raw_token"})
@@ -149,6 +149,7 @@ def build_report(results: list[TargetResult], *, include_k8s: bool = True) -> di
         "targets": [_build_target_dict(r) for r in results],
     }
     report["owasp_mcp"] = build_owasp(results)
+    report["owasp_llm"] = build_owasp_llm(results)
     if include_k8s:
         report["k8s_findings"] = [
             {

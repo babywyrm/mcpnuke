@@ -616,6 +616,13 @@ def _add_lane_arguments(group: ArgumentGroup) -> None:
         "coverage. Also emitted to --json.",
     )
     group.add_argument(
+        "--owasp-llm",
+        action="store_true",
+        help="Map findings to the OWASP Top 10 for LLM Applications (2025) "
+        "and print a per-category alignment report. Model-side categories "
+        "(LLM04, LLM08, LLM09) are marked out of scope. Also emitted to --json.",
+    )
+    group.add_argument(
         "--coverage-report",
         metavar="CAMAZOTZ_URL",
         help="Fetch camazotz /api/lanes (schema v1) from CAMAZOTZ_URL, "

@@ -240,6 +240,11 @@ human-direct → anonymous) and a **transport** (A–E, the *how*: MCP JSON-RPC
 through native LLM function-calling), resolved automatically from the
 agentic-sec taxonomy. `--by-lane` groups findings per lane.
 `--owasp` maps them onto the OWASP MCP Top 10 (2025) alignment view.
+`--owasp-llm` maps the same findings onto the OWASP Top 10 for LLM
+Applications (2025). Data and model poisoning, vector and embedding
+weaknesses, and misinformation are model-side: the report marks them out
+of scope, and [stoneburner](https://github.com/babywyrm/stoneburner)
+grades the model.
 `--coverage-report` intersects them with a live camazotz lane corpus.
 `tests/owasp_lab` is the positive fixture for that report, one planted
 marker per category. `tests/reference_target` is the quiet server, and

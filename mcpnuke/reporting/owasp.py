@@ -1,7 +1,9 @@
-"""OWASP MCP Top 10 alignment reporting.
+"""OWASP MCP Top 10 and LLM Top 10 alignment reporting.
 
 Maps findings to the canonical OWASP MCP Top 10 (2025) categories via their
-agentic-sec taxonomy_id and renders a per-category alignment summary.
+agentic-sec taxonomy_id and renders a per-category alignment summary. The
+OWASP Top 10 for LLM Applications (2025) view is derived from the MCP
+category, with overrides where the LLM list has a sharper fit.
 
 The vendored lanes.yaml carries an `owasp_mcp` field, but those values mirror
 camazotz scenario numbering (MCP11..MCP32 appear; early entries are sequential
@@ -12,7 +14,7 @@ canonical list and owned by this repo.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from rich.console import Console
@@ -32,6 +34,56 @@ OWASP_MCP_TOP10: dict[str, str] = {
     "MCP08": "Lack of Audit and Telemetry",
     "MCP09": "Shadow MCP Servers",
     "MCP10": "Context Injection & Over-Sharing",
+}
+
+# Canonical OWASP Top 10 for LLM Applications (2025), in order.
+OWASP_LLM_TOP10: dict[str, str] = {
+    "LLM01": "Prompt Injection",
+    "LLM02": "Sensitive Information Disclosure",
+    "LLM03": "Supply Chain",
+    "LLM04": "Data and Model Poisoning",
+    "LLM05": "Improper Output Handling",
+    "LLM06": "Excessive Agency",
+    "LLM07": "System Prompt Leakage",
+    "LLM08": "Vector and Embedding Weaknesses",
+    "LLM09": "Misinformation",
+    "LLM10": "Unbounded Consumption",
+}
+
+# Properties of the model and its training or retrieval data. A server scan
+# cannot observe them, so nothing maps here; model resistance is graded by
+# stoneburner.
+LLM_OUT_OF_SCOPE: frozenset[str] = frozenset({"LLM04", "LLM08", "LLM09"})
+
+# MCP category -> LLM category. MCP05 is LLM05: model output reaching a
+# shell unvalidated is that entry's definition. MCP08 (audit) has no
+# counterpart.
+OWASP_MCP_TO_LLM: dict[str, str | None] = {
+    "MCP01": "LLM02",
+    "MCP02": "LLM06",
+    "MCP03": "LLM01",
+    "MCP04": "LLM03",
+    "MCP05": "LLM05",
+    "MCP06": "LLM01",
+    "MCP07": "LLM06",
+    "MCP08": None,
+    "MCP09": "LLM03",
+    "MCP10": "LLM02",
+}
+
+# Where the LLM list names the risk more precisely than the MCP category.
+TAXONOMY_TO_OWASP_LLM: dict[str, str] = {
+    "MCP-T10": "LLM06",  # Hallucination-Driven Destruction
+    "MCP-T27": "LLM10",  # LLM Cost Exhaustion & Misattribution
+    "MCP-T31": "LLM10",  # Budget Tuning
+    "MCP-T51": "LLM10",  # Anonymous Rate-Limit Exhaustion
+    "MCP-T54": "LLM10",  # Unauthenticated Inference Backend Exposure
+}
+
+# Checked first: prompt_leakage is tagged MCP-T01 (injection), but what it
+# finds is LLM07 by name.
+CHECK_TO_OWASP_LLM: dict[str, str] = {
+    "prompt_leakage": "LLM07",
 }
 
 # agentic-sec taxonomy_id -> OWASP MCP category. Curated per threat title.
@@ -131,9 +183,66 @@ def _category_for(f: Finding) -> str | None:
     return TAXONOMY_TO_OWASP.get(f.taxonomy_id) or CHECK_TO_OWASP.get(f.check)
 
 
+def _llm_category_for(f: Finding) -> str | None:
+    mcp = _category_for(f)
+    return (
+        CHECK_TO_OWASP_LLM.get(f.check)
+        or TAXONOMY_TO_OWASP_LLM.get(f.taxonomy_id)
+        or (OWASP_MCP_TO_LLM[mcp] if mcp else None)
+    )
+
+
 def _tally(findings: Iterable[Finding]) -> dict[str, int]:
     c: Counter[str] = Counter(f.severity for f in findings)
     return {s: c[s] for s in _SEV_ORDER if c.get(s, 0) > 0}
+
+
+def _block(findings: list[Finding]) -> dict[str, Any]:
+    return {
+        "finding_count": len(findings),
+        "severity_tally": _tally(findings),
+        "findings": [
+            {
+                "target": f.target,
+                "check": f.check,
+                "severity": f.severity,
+                "title": f.title,
+                "taxonomy_id": f.taxonomy_id,
+            }
+            for f in findings
+        ],
+    }
+
+
+def _build(
+    results: list[TargetResult],
+    key: str,
+    categories: dict[str, str],
+    category_for: Callable[[Finding], str | None],
+    extra: Callable[[str], dict[str, Any]] = lambda _cat: {},
+) -> dict[str, Any]:
+    by_cat: dict[str, list[Finding]] = defaultdict(list)
+    unmapped: list[Finding] = []
+
+    for r in results:
+        for f in r.findings:
+            cat = category_for(f)
+            if cat:
+                by_cat[cat].append(f)
+            else:
+                unmapped.append(f)
+
+    out: dict[str, Any] = {"schema": "v1", key: {}}
+    total = 0
+    for cat_id, name in categories.items():
+        findings = by_cat.get(cat_id, [])
+        total += len(findings)
+        out[key][cat_id] = {"name": name, **extra(cat_id), **_block(findings)}
+    if unmapped:
+        out["unmapped"] = _block(unmapped)
+        total += len(unmapped)
+    out["total_findings"] = total
+    return out
 
 
 def build_owasp(results: list[TargetResult]) -> dict[str, Any]:
@@ -143,51 +252,58 @@ def build_owasp(results: list[TargetResult]) -> dict[str, Any]:
     buckets included — an alignment report exists to show coverage gaps),
     plus an "unmapped" bucket for findings with no recognized taxonomy_id.
     """
-    by_cat: dict[str, list[Finding]] = defaultdict(list)
-    unmapped: list[Finding] = []
+    return _build(results, "owasp_mcp", OWASP_MCP_TOP10, _category_for)
 
-    for r in results:
-        for f in r.findings:
-            cat = _category_for(f)
-            if cat:
-                by_cat[cat].append(f)
-            else:
-                unmapped.append(f)
 
-    def _block(findings: list[Finding]) -> dict[str, Any]:
-        return {
-            "finding_count": len(findings),
-            "severity_tally": _tally(findings),
-            "findings": [
-                {
-                    "target": f.target,
-                    "check": f.check,
-                    "severity": f.severity,
-                    "title": f.title,
-                    "taxonomy_id": f.taxonomy_id,
-                }
-                for f in findings
-            ],
-        }
+def build_owasp_llm(results: list[TargetResult]) -> dict[str, Any]:
+    """Group findings by OWASP Top 10 for LLM Applications (2025) category.
 
-    out: dict[str, Any] = {"schema": "v1", "owasp_mcp": {}}
-    total = 0
-    for cat_id, name in OWASP_MCP_TOP10.items():
-        findings = by_cat.get(cat_id, [])
-        total += len(findings)
-        out["owasp_mcp"][cat_id] = {"name": name, **_block(findings)}
-    if unmapped:
-        out["unmapped"] = _block(unmapped)
-        total += len(unmapped)
-    out["total_findings"] = total
-    return out
+    Same shape as build_owasp, keyed "owasp_llm". Each category carries
+    in_scope; out-of-scope ones are model-side and never receive findings.
+    """
+    return _build(
+        results,
+        "owasp_llm",
+        OWASP_LLM_TOP10,
+        _llm_category_for,
+        lambda cat: {"in_scope": cat not in LLM_OUT_OF_SCOPE},
+    )
 
 
 def print_owasp(results: list[TargetResult], console: Console | None = None) -> None:
     """Render the OWASP MCP Top 10 alignment report."""
+    _render(
+        build_owasp(results),
+        "owasp_mcp",
+        OWASP_MCP_TOP10,
+        "OWASP MCP Top 10 alignment",
+        "no taxonomy mapping",
+        console,
+    )
+
+
+def print_owasp_llm(results: list[TargetResult], console: Console | None = None) -> None:
+    """Render the OWASP Top 10 for LLM Applications alignment report."""
+    _render(
+        build_owasp_llm(results),
+        "owasp_llm",
+        OWASP_LLM_TOP10,
+        "OWASP Top 10 for LLM Applications (2025) alignment",
+        "no LLM Top 10 counterpart",
+        console,
+    )
+
+
+def _render(
+    report: dict[str, Any],
+    key: str,
+    categories: dict[str, str],
+    title: str,
+    unmapped_reason: str,
+    console: Console | None,
+) -> None:
     from mcpnuke.core.constants import SEV_COLOR
 
-    report = build_owasp(results)
     total = report["total_findings"]
 
     def _write(line: str = "") -> None:
@@ -196,17 +312,20 @@ def print_owasp(results: list[TargetResult], console: Console | None = None) -> 
         else:
             print(line)
 
-    header = f"── OWASP MCP Top 10 alignment ({total} finding(s)) ──"
+    header = f"── {title} ({total} finding(s)) ──"
     _write()
     _write(f"[bold]{header}[/bold]" if console else header)
 
-    for cat_id, name in OWASP_MCP_TOP10.items():
-        block = report["owasp_mcp"][cat_id]
+    for cat_id, name in categories.items():
+        block = report[key][cat_id]
         count = block["finding_count"]
         if console is not None:
             _write(f"\n[bold cyan]{cat_id} — {name}[/]")
         else:
             _write(f"\n{cat_id} — {name}")
+        if not block.get("in_scope", True):
+            _write("  (model-side: out of scope for an MCP server scan)")
+            continue
         if count == 0:
             _write("  (no findings fired)")
             continue
@@ -225,7 +344,7 @@ def print_owasp(results: list[TargetResult], console: Console | None = None) -> 
     unmapped = report.get("unmapped")
     if unmapped:
         _write()
-        line = f"Unmapped (no taxonomy mapping — {unmapped['finding_count']} finding(s))"
+        line = f"Unmapped ({unmapped_reason} — {unmapped['finding_count']} finding(s))"
         _write(f"[bold]{line}[/bold]" if console else line)
         for f in unmapped["findings"][:10]:
             title = escape(f['title']) if console is not None else f['title']

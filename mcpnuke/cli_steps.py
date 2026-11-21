@@ -512,6 +512,10 @@ def _report(args: argparse.Namespace, results: list[TargetResult], console: Cons
         from mcpnuke.reporting import print_owasp
         print_owasp(results, console=console)
 
+    if getattr(args, "owasp_llm", False):
+        from mcpnuke.reporting import print_owasp_llm
+        print_owasp_llm(results, console=console)
+
     if getattr(args, "coverage_report", None):
         import httpx as _httpx
 
