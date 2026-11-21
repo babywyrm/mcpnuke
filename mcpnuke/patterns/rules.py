@@ -44,7 +44,30 @@ POISON_PATTERNS = [
     r"[\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]",
     r"data:text/html",
     r"javascript:",
+    # Model-directed imperatives (OWASP MCP03 static indicators).
+    r"<\s*/?\s*important\s*>",
+    r"(do\s+not|don'?t)\s+(tell|inform|notify|alert|warn)\s+the\s+user",
+    r"without\s+(telling|informing|notifying|alerting)\s+the\s+user",
+    r"before\s+(answering|responding|replying)(\s+to\s+the\s+user)?\s*,\s*(first\s+)?"
+    r"(read|call|invoke|fetch|run|use|send|include|check)\b",
 ]
+
+# Matched against a tool's declared surface only, never tool output or
+# resource bodies, where a file listing or a forwarded email carries these
+# honestly (OWASP MCP03 static indicators). label -> (pattern, severity).
+DECLARED_POISON_PATTERNS: dict[str, tuple[str, str]] = {
+    # MEDIUM: an SSH or config tool can name these legitimately.
+    "sensitive path": (
+        r"~/\.ssh\b|\bid_(rsa|dsa|ecdsa|ed25519)\b|\.aws/credentials"
+        r"|/etc/(passwd|shadow)\b|(^|[\s'\"`(/~])\.env\b(?![.\w-])"
+        r"|\.(netrc|git-credentials|pgpass)\b",
+        "MEDIUM",
+    ),
+    "email exfil": (
+        r"\b(forward|bcc|cc|copy)\b.{0,40}\bto\s+[\w.+-]+@[\w-]+(\.[\w-]+)+",
+        "CRITICAL",
+    ),
+}
 
 # Anchored, and matched against the normalized identifier (patterns/tokens.py),
 # so `run_command` matches and `trigger-long-running-operation` does not.

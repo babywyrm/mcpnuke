@@ -13,8 +13,22 @@ All notable changes to this submodule are documented here.
   exposed in name only. Dependabot does not bump transitive packages,
   so CI's pip-audit caught it.
 
+### Added
+
+- **OWASP MCP03 static indicators.** `tool_poisoning` now detects all
+  five signals OWASP lists for description-based tool poisoning.
+  New: model-directed imperatives ("do not tell the user", "before
+  answering, read", `<IMPORTANT>` tags), forwarding to an email
+  address, and sensitive paths. Paths are MEDIUM because an SSH or
+  config tool can name them honestly, and they are matched in the
+  declared surface only, not in tool output or resource bodies. The
+  five pinned open-source server snapshots are unchanged.
+
 ### Fixed
 
+- **Hidden characters in parameter descriptions.** The schema was
+  serialized with escapes, so a zero-width or bidirectional character
+  in a parameter description never reached the patterns.
 - **Tool poisoning counts toward OWASP MCP03.** `tool_poisoning`
   findings carry no taxonomy ID and had no check-name fallback, so
   `--owasp` reported them as unmapped instead of under Tool Poisoning.

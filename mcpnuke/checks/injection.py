@@ -1,5 +1,6 @@
 """Prompt injection, tool poisoning, indirect injection, active injection checks."""
 
+import json
 import re
 
 from mcpnuke.checks._lane_helpers import lane_tagged
@@ -23,6 +24,7 @@ from mcpnuke.patterns.probes import (
     SYSTEM_PROMPT_INDICATORS,
 )
 from mcpnuke.patterns.rules import (
+    DECLARED_POISON_PATTERNS,
     INJECTION_PATTERNS,
     POISON_PATTERNS,
 )
@@ -79,8 +81,10 @@ def check_tool_poisoning(result: TargetResult) -> None:
     with time_check("tool_poisoning", result):
         for tool in result.tools:
             name = tool.get("name", "")
-            full = tool.get("description", "") + " " + str(
-                tool.get("inputSchema", {})
+            # ensure_ascii=False: escaped, a zero-width character in a
+            # parameter description never reaches the patterns.
+            full = tool.get("description", "") + " " + json.dumps(
+                tool.get("inputSchema", {}), ensure_ascii=False, default=str
             )
 
             for pat in POISON_PATTERNS:
@@ -93,6 +97,16 @@ def check_tool_poisoning(result: TargetResult) -> None:
                         evidence=full[:400],
                     )
                     break
+
+            for label, (pat, severity) in DECLARED_POISON_PATTERNS.items():
+                if re.search(pat, full, re.IGNORECASE):
+                    _add(result,
+                        "tool_poisoning",
+                        severity,
+                        f"Tool poisoning indicator ({label}) in '{name}'",
+                        f"OWASP MCP03 indicator. Pattern: {pat}",
+                        evidence=full[:400],
+                    )
 
             for ch in tool.get("description", ""):
                 if ord(ch) in range(0x200B, 0x2010) or ord(ch) == 0xFEFF:

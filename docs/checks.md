@@ -100,7 +100,7 @@ but also attempts a live canary transfer when invocation is allowed.
 | Check | Severity | What It Detects |
 |-------|----------|----------------|
 | `prompt_injection` | CRITICAL | Injection payloads in tool/resource/prompt descriptions. MCP-T01 |
-| `tool_poisoning` | CRITICAL | Hidden instructions, invisible Unicode in tool descriptions |
+| `tool_poisoning` | CRITICAL | OWASP MCP03 static indicators in descriptions and parameter descriptions: model-directed imperatives, hidden or invisible characters, comment-smuggled instructions, exfiltration to a URL or email address. A sensitive path (`~/.ssh`, `.env`, `/etc/passwd`) is MEDIUM |
 | `excessive_permissions` | CRITICAL–LOW | Dangerous capabilities (shell, filesystem, network, DB, cloud). A tool with no input schema at all is MEDIUM, an untyped parameter LOW. MCP-T20 |
 | `code_execution` | CRITICAL–HIGH | Tools with exec/eval/shell parameters or descriptions |
 | `remote_access` | CRITICAL–HIGH | Reverse shells, C2 beacons, port forwarding, data exfil |
