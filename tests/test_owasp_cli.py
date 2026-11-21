@@ -18,7 +18,6 @@ from typing import Any
 from mcpnuke.reporting.owasp import (
     LLM_OUT_OF_SCOPE,
     OWASP_LLM_TOP10,
-    OWASP_MCP_TO_LLM,
     OWASP_MCP_TOP10,
 )
 from tests.owasp_lab import start_owasp_lab
@@ -125,8 +124,8 @@ def test_cli_owasp_report_lights_every_category(tmp_path: Path) -> None:
 
 
 def test_cli_owasp_llm_report(tmp_path: Path) -> None:
-    """Every MCP category the lab lights reaches its LLM counterpart, and
-    the model-side categories stay empty and say why."""
+    """Every in-scope LLM category lights, and the model-side categories
+    stay empty and say why."""
     server = start_owasp_lab()
     report_path = tmp_path / "owasp.json"
     try:
@@ -155,9 +154,7 @@ def test_cli_owasp_llm_report(tmp_path: Path) -> None:
 
     buckets = json.loads(report_path.read_text())["owasp_llm"]["owasp_llm"]
     lit = {code for code, block in buckets.items() if block["finding_count"]}
-    expected = {llm for llm in OWASP_MCP_TO_LLM.values() if llm}
-    assert expected <= lit
-    assert not lit & LLM_OUT_OF_SCOPE
+    assert lit == set(OWASP_LLM_TOP10) - LLM_OUT_OF_SCOPE
 
 
 def test_stdio_scan_honors_the_report_flags() -> None:

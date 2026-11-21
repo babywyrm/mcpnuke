@@ -1,4 +1,6 @@
-"""One planted marker per OWASP MCP Top 10 category the scanner can see.
+"""One planted marker per OWASP MCP Top 10 category the scanner can see,
+plus the two in-scope OWASP LLM Top 10 categories (LLM07 System Prompt
+Leakage, LLM10 Unbounded Consumption) that no MCP marker reaches.
 
 MCP07 is the missing credential on initialize, not a tool. MCP09 names a
 second endpoint and does not start one. MCP08 is the curated MCP-T13
@@ -99,5 +101,16 @@ TOOL_DEFINITIONS: list[LabTool] = [
         "read_context",
         "Read stored context for one tenant.",
         _string("tenant_id"),
+    ),
+    # LLM Top 10 only: both fall in MCP categories already marked above.
+    _tool(
+        "debug_session",
+        "Returns the internal prompt for this lab session.",
+        _LABEL,
+    ),
+    _tool(
+        "bulk_lookup",
+        "Looks up records with unlimited requests per caller.",
+        _LABEL,
     ),
 ]

@@ -12,7 +12,14 @@ from mcpnuke.checks import run_all_checks
 from mcpnuke.core.enumerator import enumerate_server
 from mcpnuke.core.models import TargetResult
 from mcpnuke.core.session import detect_transport
-from mcpnuke.reporting.owasp import OWASP_MCP_TOP10, build_owasp, print_owasp
+from mcpnuke.reporting.owasp import (
+    LLM_OUT_OF_SCOPE,
+    OWASP_LLM_TOP10,
+    OWASP_MCP_TOP10,
+    build_owasp,
+    build_owasp_llm,
+    print_owasp,
+)
 from tests.owasp_lab import start_owasp_lab
 
 # Planted signal, one per category. Side findings may share a bucket.
@@ -27,6 +34,17 @@ _MARKER: dict[str, str] = {
     "MCP08": "insecure_agent_comms",
     "MCP09": "shadow_mcp_server",
     "MCP10": "cross_tenant_memory_leak",
+}
+
+# Every in-scope OWASP LLM Top 10 category, by the check that proves it.
+_LLM_MARKER: dict[str, str] = {
+    "LLM01": "prompt_injection",
+    "LLM02": "credential_in_schema",
+    "LLM03": "remote_package_execution",
+    "LLM05": "code_execution",
+    "LLM06": "delegation_chain_abuse",
+    "LLM07": "prompt_leakage",
+    "LLM10": "rate_limit",
 }
 
 
@@ -53,6 +71,19 @@ def test_each_category_has_its_planted_marker(scanned: TargetResult) -> None:
         if check not in names:
             missing.append(f"{code} wanted {check}, saw {sorted(names)}")
     assert missing == []
+
+
+def test_each_in_scope_llm_category_has_its_marker(scanned: TargetResult) -> None:
+    assert set(_LLM_MARKER) == set(OWASP_LLM_TOP10) - LLM_OUT_OF_SCOPE
+    report = build_owasp_llm([scanned])
+    missing: list[str] = []
+    for code, check in _LLM_MARKER.items():
+        names = {item["check"] for item in report["owasp_llm"][code]["findings"]}
+        if check not in names:
+            missing.append(f"{code} wanted {check}, saw {sorted(names)}")
+    assert missing == []
+    for code in LLM_OUT_OF_SCOPE:
+        assert report["owasp_llm"][code]["finding_count"] == 0
 
 
 def test_the_planted_secret_is_the_documented_example(scanned: TargetResult) -> None:
