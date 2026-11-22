@@ -36,7 +36,9 @@ uv run pytest tests/ -v -s
 | File | What it tests | Needs network? |
 |------|--------------|----------------|
 | `test_dvmcp.py` | All 10 DVMCP challenges (offline) | No |
-| `test_dvmcp.py::TestDVMCPLive` | Live DVMCP servers | Yes (`DVMCP_LIVE=1`) |
+| `test_dvmcp.py::TestDVMCPLive` | Live DVMCP servers; each scan must finish complete | Yes (`DVMCP_LIVE=1`, `DVMCP_HOST`, `DVMCP_PORT_OFFSET`) |
+| `test_lab_baselines.py` (live tests) | Live camazotz; static and safe invoke scans must finish complete | Yes (`CAMAZOTZ_LIVE=1`, `CAMAZOTZ_URL`) |
+| `test_oss_targets.py` | Real OSS servers over stdio; snapshot match and complete scan | Yes (`MCPNUKE_OSS_TARGETS=1`) |
 | `test_cli.py` | CLI argument parsing | No |
 | `test_diff.py` | Differential scanning | No |
 | `test_patterns.py` | Regex pattern matching | No |

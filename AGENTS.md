@@ -149,8 +149,9 @@ Use these project skills when available:
 - Never commit secrets, tokens, flags, or live credentials. Synthetic test
   values only.
 - Redact before pasting output into docs or issues.
-- DVMCP live tests are gated behind `DVMCP_LIVE=1`; OSS target snapshots
-  behind `MCPNUKE_OSS_TARGETS=1`. Keep network-dependent tests opt-in.
+- DVMCP live tests are gated behind `DVMCP_LIVE=1`, camazotz behind
+  `CAMAZOTZ_LIVE=1`, OSS target snapshots behind `MCPNUKE_OSS_TARGETS=1`.
+  Keep network-dependent tests opt-in.
 
 Further reading: [CONTRIBUTING.md](CONTRIBUTING.md),
 [docs/checks.md](docs/checks.md), [SECURITY.md](SECURITY.md).
