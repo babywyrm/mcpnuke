@@ -110,10 +110,30 @@ def test_dvmcp_challenge_shapes_still_get_guidance():
     assert proved_reasons == []
 
 
-@pytest.mark.skipif(
+_SKIP_CAMAZOTZ = pytest.mark.skipif(
     os.environ.get("CAMAZOTZ_LIVE") != "1",
     reason="Set CAMAZOTZ_LIVE=1 when Camazotz is reachable",
 )
+
+
+@_SKIP_CAMAZOTZ
+@pytest.mark.parametrize(
+    "probe_opts",
+    [{"no_invoke": True, "fast": True}, {"safe_mode": True, "fast": True}],
+    ids=["static", "invoke-safe"],
+)
+def test_live_camazotz_scan_completes(probe_opts: dict) -> None:
+    """A real scan of the lab finishes: tools enumerated, no crashed check."""
+    from mcpnuke.scanner import scan_target
+
+    url = os.environ.get("CAMAZOTZ_URL", "http://localhost:8080/mcp")
+    result = scan_target(url, [], timeout=20, probe_opts=probe_opts)
+    assert result.transport != "none", f"Camazotz unreachable at {url}"
+    assert result.check_errors == {}, f"incomplete scan {result.check_errors}"
+    assert result.tools and result.findings
+
+
+@_SKIP_CAMAZOTZ
 def test_live_camazotz_priority_soft_oracle():
     """If live scan emits OOB/reproduced, it must appear among top priority actions."""
     from mcpnuke.scanner import scan_target
@@ -127,6 +147,7 @@ def test_live_camazotz_priority_soft_oracle():
     )
     if result.transport == "none":
         pytest.skip(f"Camazotz unreachable at {url}")
+    assert result.check_errors == {}, f"incomplete scan {result.check_errors}"
 
     actions = rank_priority_actions(result.findings, limit=10)
     proved = [

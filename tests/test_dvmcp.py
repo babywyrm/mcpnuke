@@ -772,16 +772,15 @@ class TestDVMCPLive:
 
     @pytest.mark.parametrize("port", DVMCP_PORTS)
     def test_findings_detected(self, port):
-        """Each DVMCP challenge should produce at least one finding."""
-        from mcpnuke.checks import run_all_checks
-        from mcpnuke.core.enumerator import enumerate_server
-        from mcpnuke.core.session import detect_transport
+        """Each challenge scans to completion over SSE and produces a finding.
+
+        Goes through scan_target, the path --targets uses: a dropped stream
+        or a crashed check is only recorded there.
+        """
+        from mcpnuke.scanner import scan_target
 
         url = _dvmcp_url(port)
-        session = detect_transport(url, connect_timeout=10.0)
-        assert session is not None
-        result = TargetResult(url=url)
-        enumerate_server(session, result)
-        run_all_checks(session, result, [result], probe_opts={"safe_mode": True})
-        session.close()
+        result = scan_target(url, [], timeout=20, probe_opts={"safe_mode": True})
+        assert result.transport == "SSE", f"{url}: transport {result.transport}"
+        assert result.check_errors == {}, f"{url}: incomplete scan {result.check_errors}"
         assert len(result.findings) > 0, f"{url}: no findings — expected vuln detection"
