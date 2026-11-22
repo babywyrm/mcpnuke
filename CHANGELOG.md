@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.9] - 2026-11-22
+
 ### Security
 
 - **One malformed tool no longer blinds 40 checks to the rest.** Tools,
