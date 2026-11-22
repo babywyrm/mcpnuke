@@ -4,6 +4,8 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+## [6.22.8] - 2026-11-22
+
 ### Security
 
 - **A crashing check or target no longer hides the scan.** One check
