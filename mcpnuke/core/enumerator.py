@@ -20,6 +20,75 @@ _LIST_ITEM_KEYS: dict[str, str] = {
     "prompts/list": "prompts",
 }
 
+# Fields every check reads as text. A server that sends another type gets
+# it as JSON text: still scanned, never a crash.
+_TEXT_FIELDS: frozenset[str] = frozenset({"name", "title", "description", "uri", "uriTemplate", "mimeType"})
+# Schema parts of the wrong shape are kept here, where tool_text still sees them.
+_MALFORMED_KEY: str = "x-mcpnuke-malformed"
+
+
+def _as_text(value: object) -> str:
+    if isinstance(value, str):
+        return value
+    return "" if value is None else json.dumps(value, default=str, ensure_ascii=False)
+
+
+def _with_text_fields(item: dict[str, Any]) -> dict[str, Any]:
+    return {k: _as_text(v) if k in _TEXT_FIELDS else v for k, v in item.items()}
+
+
+def _schema(raw: object) -> dict[str, Any]:
+    """An inputSchema whose properties are objects and whose required are names."""
+    if not isinstance(raw, dict):
+        return {_MALFORMED_KEY: [raw]}
+    schema = dict(raw)
+    bad: list[object] = []
+    props = schema.get("properties")
+    if props is not None:
+        if not isinstance(props, dict):
+            bad.append(props)
+            props = {}
+        clean: dict[str, Any] = {}
+        for name, prop in props.items():
+            if isinstance(prop, dict):
+                clean[name] = _with_text_fields(prop)
+            else:
+                bad.append({name: prop})
+        schema["properties"] = clean
+    required = schema.get("required")
+    if required is not None:
+        names = [r for r in required if isinstance(r, str)] if isinstance(required, list) else []
+        if names != required:
+            bad.append(required)
+        schema["required"] = names
+    if bad:
+        schema[_MALFORMED_KEY] = bad
+    return schema
+
+
+def _normalize(method: str, items: object) -> list[dict[str, Any]]:
+    """The listed entries in the shapes checks read. Non-objects are dropped."""
+    if not isinstance(items, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        entry = _with_text_fields(item)
+        if method == "tools/list":
+            entry.setdefault("name", "")
+            if "inputSchema" in entry:
+                entry["inputSchema"] = _schema(entry["inputSchema"])
+        elif method == "prompts/list":
+            entry.setdefault("name", "")
+            args = entry.get("arguments")
+            if args is not None:
+                entry["arguments"] = (
+                    [_with_text_fields(a) for a in args if isinstance(a, dict)] if isinstance(args, list) else []
+                )
+        out.append(entry)
+    return out
+
 
 def _jsonrpc_error(resp: dict[str, Any] | None) -> dict[str, Any] | None:
     """Return the JSON-RPC error object, or None if this was not an error reply."""
@@ -65,12 +134,13 @@ def _paginated_list(
             break
 
         result = resp["result"]
-        items = result.get(item_key, [])
-        all_items.extend(items)
+        if not isinstance(result, dict):
+            break
+        all_items.extend(_normalize(method, result.get(item_key)))
         cache_pages.append(cache_fields_from_result(result))
 
         cursor = result.get("nextCursor") or result.get("cursor")
-        if not cursor:
+        if not isinstance(cursor, str) or not cursor:
             break
 
         if page == max_pages - 1:
@@ -265,8 +335,7 @@ def enumerate_server(
     if verbose and result.tools:
         _log(f"  [dim]Tools ({len(result.tools)}):[/dim]")
         for t in result.tools:
-            desc = t.get("description", "")[:60]
-            _log(f"  [dim]    {escape(str(t['name']))}: {escape(desc)}[/dim]")
+            _log(f"  [dim]    {escape(t['name'])}: {escape(t.get('description', '')[:60])}[/dim]")
 
     if verbose:
         _log("  [dim]Enumerating resources...[/dim]")
@@ -289,7 +358,7 @@ def enumerate_server(
     if verbose and result.resources:
         _log(f"  [dim]Resources ({len(result.resources)}):[/dim]")
         for r_item in result.resources[:10]:
-            _log(f"  [dim]    {r_item.get('uri', r_item.get('name', '?'))}[/dim]")
+            _log(f"  [dim]    {escape(r_item.get('uri', r_item.get('name', '?')))}[/dim]")
 
     if verbose:
         _log("  [dim]Enumerating prompts...[/dim]")

@@ -4,6 +4,18 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **One malformed tool no longer blinds 40 checks to the rest.** Tools,
+  resources, and prompts went from the server to every check unchecked.
+  A single entry with a list for a name or a string for a schema crashed
+  40 checks, so the well-formed tools beside it went unscanned and the
+  scan came back incomplete. Enumeration now normalizes each entry once:
+  non-objects are dropped, text fields of another type become JSON text
+  that is still scanned, and schema parts of the wrong shape are kept
+  under `x-mcpnuke-malformed`, where tool poisoning still reads them.
+  `--verbose` now escapes resource URIs.
+
 ## [6.22.8] - 2026-11-22
 
 ### Security
