@@ -15,6 +15,10 @@ All notable changes to this submodule are documented here.
   that is still scanned, and schema parts of the wrong shape are kept
   under `x-mcpnuke-malformed`, where tool poisoning still reads them.
   `--verbose` now escapes resource URIs.
+- **A malformed handshake no longer makes a server unscannable.** An
+  `initialize` or `server/discover` result that was not an object, or
+  whose `serverInfo` was a string, crashed enumeration before any check
+  ran. The handshake result is now normalized the same way.
 
 ## [6.22.8] - 2026-11-22
 

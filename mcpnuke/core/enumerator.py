@@ -66,6 +66,20 @@ def _schema(raw: object) -> dict[str, Any]:
     return schema
 
 
+def _server_info(raw: object) -> dict[str, Any]:
+    """The handshake result with serverInfo and capabilities as objects."""
+    if not isinstance(raw, dict):
+        return {_MALFORMED_KEY: [raw]}
+    info = dict(raw)
+    bad = [info[k] for k in ("serverInfo", "capabilities") if k in info and not isinstance(info[k], dict)]
+    for k in ("serverInfo", "capabilities"):
+        if not isinstance(info.get(k, {}), dict):
+            info[k] = {}
+    if bad:
+        info[_MALFORMED_KEY] = bad
+    return info
+
+
 def _normalize(method: str, items: object) -> list[dict[str, Any]]:
     """The listed entries in the shapes checks read. Non-objects are dropped."""
     if not isinstance(items, list):
@@ -173,7 +187,7 @@ def negotiate_protocol(
             _log("  [dim]Sending initialize...[/dim]")
         resp = session.call("initialize", MCP_INIT_PARAMS, retries=3)
         if resp and "result" in resp:
-            result.server_info = resp["result"]
+            result.server_info = _server_info(resp["result"])
             result.protocol_mode = LEGACY
             session.protocol_mode = LEGACY
             return LEGACY
@@ -191,9 +205,9 @@ def negotiate_protocol(
         _log("  [dim]Trying stateless server/discover...[/dim]")
     resp = session.call("server/discover", None, retries=2)
     if resp and "result" in resp:
-        result.server_info = resp["result"]
+        result.server_info = _server_info(resp["result"])
         result.protocol_mode = STATELESS
-        info = resp["result"].get("serverInfo", {})
+        info = result.server_info.get("serverInfo", {})
         result.add(
             "auth",
             "HIGH",

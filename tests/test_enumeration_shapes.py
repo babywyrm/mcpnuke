@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from mcpnuke import checks
 from mcpnuke.core.enumerator import _paginated_list, enumerate_server
 from mcpnuke.core.models import TargetResult
@@ -95,6 +97,26 @@ def test_malformed_page_is_empty() -> None:
     for page in ([], "x", {"tools": "abc"}, {"tools": None}):
         items, _, _ = _paginated_list(_Session({"tools/list": page}), "tools/list")
         assert items == []
+
+
+class _Handshake(_Session):
+    def __init__(self, method: str, answer: object) -> None:
+        super().__init__({})
+        self._method, self._answer = method, answer
+
+    def call(self, method: str, params: dict[str, Any] | None = None, **_: object) -> dict[str, Any] | None:
+        return {"result": self._answer} if method == self._method else None
+
+
+@pytest.mark.parametrize("method", ["initialize", "server/discover"])
+@pytest.mark.parametrize("answer", ["str-result", {"serverInfo": "x", "capabilities": ["a"]}])
+def test_malformed_handshake_still_enumerates(method: str, answer: object) -> None:
+    result = TargetResult(url="http://mcp.lab/mcp")
+    enumerate_server(_Handshake(method, answer), result, verbose=True, log=lambda _: None)
+    info = result.server_info
+    assert isinstance(info.get("serverInfo", {}), dict)
+    assert isinstance(info.get("capabilities", {}), dict)
+    assert "x-mcpnuke-malformed" in info
 
 
 def test_verbose_enumeration_escapes_server_text() -> None:
