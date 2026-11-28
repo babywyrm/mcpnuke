@@ -4,6 +4,14 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Authenticated stateless scans no longer report anonymous discover.**
+  "Unauthenticated MCP server/discover accepted" (HIGH) fired whenever
+  `server/discover` answered, even when the scan sent a token. It told
+  operators their access control was broken when it was working. It now
+  fires only on a scan that carried no credential.
+
 ### Changed
 
 - **Dependencies.** pyyaml 6.0.4, fastapi 0.165.0, pydantic 2.14.4,

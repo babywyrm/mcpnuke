@@ -95,6 +95,14 @@ def test_stateless_server_records_anonymous_discovery_finding():
     assert finding.transport == "A"
 
 
+def test_authenticated_discover_is_not_reported_as_anonymous():
+    session = FakeSession({"server/discover": {"result": {"serverInfo": {"name": "new"}}}})
+    result = TargetResult(url="http://t/mcp", auth_context={"_raw_token": "synthetic"})
+
+    assert negotiate_protocol(session, result, AUTO) == STATELESS
+    assert not [f for f in result.findings if f.check == "auth"]
+
+
 _IDENTITY_ERR = {
     "jsonrpc": "2.0",
     "id": 1,

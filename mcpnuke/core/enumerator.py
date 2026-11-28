@@ -207,6 +207,8 @@ def negotiate_protocol(
     if resp and "result" in resp:
         result.server_info = _server_info(resp["result"])
         result.protocol_mode = STATELESS
+        if not result.scanned_anonymously():
+            return STATELESS
         info = result.server_info.get("serverInfo", {})
         result.add(
             "auth",
