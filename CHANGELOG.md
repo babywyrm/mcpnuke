@@ -4,6 +4,14 @@ All notable changes to this submodule are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependencies.** pyyaml 6.0.4, fastapi 0.165.0, pydantic 2.14.4,
+  ruff 0.17.6, types-PyYAML, and `setup-uv` 10.4.0 in CI. pyyaml 6.0.4
+  fixes exponential merge-key expansion, a denial of service on hostile
+  YAML. mcpnuke parses only its vendored taxonomy file, so no scan input
+  reached it.
+
 ## [6.22.9] - 2026-11-22
 
 ### Security
